@@ -41,6 +41,7 @@ pub fn jagged_lightning() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: R::Creature,
             effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) }),
         },

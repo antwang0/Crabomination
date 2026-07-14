@@ -216,6 +216,7 @@ pub fn aang_the_last_airbender() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::Nonland.and(SelectionRequirement::OtherThanSource),
             effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
         })],
@@ -234,6 +235,7 @@ pub fn airbender_ascension() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
             }),
@@ -257,6 +259,7 @@ pub fn airbender_ascension() -> CardDefinition {
                     )),
                 effect: Effect::ApplyToTargets {
                     max_targets: 1,
+                    min_targets: 0,
                     filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     effect: Box::new(Effect::Seq(vec![
                         Effect::Exile { what: Selector::Target(0) },
@@ -288,6 +291,7 @@ pub fn whirlwind_technique() -> CardDefinition {
             Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
             },
@@ -316,6 +320,7 @@ pub fn glider_staff() -> CardDefinition {
         }),
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
         })],

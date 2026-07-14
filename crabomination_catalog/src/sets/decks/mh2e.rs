@@ -385,6 +385,7 @@ pub fn graceful_restoration() -> CardDefinition {
             ]),
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: R::Creature.and(R::PowerAtMost(2)),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),

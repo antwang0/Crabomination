@@ -2675,6 +2675,7 @@ pub fn sea_gods_scorn() -> CardDefinition {
         affinity_filter: Some(SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou)),
         effect: Effect::ApplyToTargets {
             max_targets: 3,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
@@ -2694,6 +2695,7 @@ pub fn wrap_in_flames() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ApplyToTargets {
             max_targets: 3,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::Seq(vec![
                 Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
@@ -5482,6 +5484,7 @@ pub fn elspeth_suns_nemesis() -> CardDefinition {
                 loyalty_cost: -1,
                 effect: Effect::ApplyToTargets {
                     max_targets: 2,
+                    min_targets: 0,
                     filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByYou),
                     effect: Box::new(Effect::PumpPT {
@@ -5831,6 +5834,7 @@ pub fn elspeth_undaunted_hero() -> CardDefinition {
                 loyalty_cost: 2,
                 effect: Effect::ApplyToTargets {
                     max_targets: 2,
+                    min_targets: 0,
                     filter: SelectionRequirement::Creature,
                     effect: Box::new(Effect::AddCounter {
                         what: Selector::Target(0),

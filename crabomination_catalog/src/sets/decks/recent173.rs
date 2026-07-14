@@ -147,6 +147,7 @@ pub fn aggressive_negotiations() -> CardDefinition {
             },
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Creature.and(R::ControlledByYou),
                 effect: Box::new(Effect::AddCounter {
                     what: Selector::Target(0),

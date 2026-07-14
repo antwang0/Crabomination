@@ -2052,6 +2052,36 @@ impl Effect {
         self.target_filter_for_slot_in_mode(slot, None)
     }
 
+    /// The number of targets the effect's multi-target instance *requires*
+    /// (`ApplyToTargets.min_targets`), or `None` when the slot-bearing
+    /// effect is not an `ApplyToTargets` (conventional effects keep their
+    /// mandatory slot 0). Slot `n` is an optional pick iff
+    /// `n >= min_targets_in_mode(mode).unwrap_or(u8::MAX)` — i.e. every
+    /// slot of an "up to N" (`min_targets: 0`) shape may be declined,
+    /// while "one or two targets" (`min_targets: 1`) requires slot 0.
+    /// Walks `Seq`/modal/may wrappers like `distinct_target_count`.
+    pub fn min_targets_in_mode(&self, mode: Option<usize>) -> Option<u8> {
+        match self {
+            Effect::ApplyToTargets { min_targets, .. } => Some(*min_targets),
+            Effect::Seq(v) => v.iter().find_map(|e| e.min_targets_in_mode(None)),
+            Effect::ChooseMode(modes) => match mode {
+                Some(m) => modes.get(m).and_then(|e| e.min_targets_in_mode(None)),
+                None => modes.iter().find_map(|e| e.min_targets_in_mode(None)),
+            },
+            Effect::MayDo { body, .. }
+            | Effect::MayPay { body, .. }
+            | Effect::MayPayLife { body, .. } => body.min_targets_in_mode(mode),
+            _ => None,
+        }
+    }
+
+    /// True when the effect's slot-`slot` target pick may be declined by
+    /// the chooser ("up to N targets" / "any number of targets").
+    pub fn target_slot_optional(&self, slot: u8, mode: Option<usize>) -> bool {
+        self.min_targets_in_mode(mode)
+            .is_some_and(|min| slot >= min)
+    }
+
     /// CR 115.3 — the count of mutually-distinct targets a *single* multi-target
     /// instance consumes (the "up to / any number of / N target …" effects:
     /// `DealDamageDivided`, `SupportCounters`). Those N targets occupy slots

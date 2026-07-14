@@ -64,6 +64,7 @@ pub fn water_whip() -> CardDefinition {
             Effect::ApplyToTargets {
                 filter: SelectionRequirement::Creature,
                 max_targets: 2,
+                min_targets: 0,
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
@@ -136,6 +137,7 @@ pub fn waterbenders_restoration() -> CardDefinition {
         effect: Effect::ApplyToTargets {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             max_targets: u8::MAX,
+            min_targets: 0,
             effect: Box::new(Effect::ExileReturnNextEndStep { what: Selector::Target(0) }),
         },
         ..Default::default()
@@ -646,6 +648,7 @@ pub fn crashing_wave() -> CardDefinition {
             Effect::ApplyToTargets {
                 filter: SelectionRequirement::Creature,
                 max_targets: u8::MAX,
+                min_targets: 0,
                 effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
             },
             Effect::DistributeCounters {

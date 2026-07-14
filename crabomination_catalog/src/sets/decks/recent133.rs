@@ -40,6 +40,7 @@ pub fn rat_out() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Creature,
                 effect: Box::new(Effect::PumpPT {
                     what: Selector::Target(0),
@@ -165,6 +166,7 @@ pub fn spider_food() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Artifact
                     .or(R::Enchantment)
                     .or(R::Creature.and(R::HasKeyword(Keyword::Flying))),

@@ -370,6 +370,7 @@ pub fn cunning_coyote() -> CardDefinition {
         plot_cost: Some(cost(&[generic(1), r()])),
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::Creature
                 .and(SelectionRequirement::ControlledByYou)
                 .and(SelectionRequirement::OtherThanSource),
@@ -412,6 +413,7 @@ pub fn monastery_messenger() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::InGraveyard
                 .and(SelectionRequirement::Creature.negate())
                 .and(SelectionRequirement::Land.negate()),
@@ -2862,6 +2864,7 @@ pub fn sunpearl_kirin() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::Nonland
                 .and(SelectionRequirement::ControlledByYou)
                 .and(SelectionRequirement::OtherThanSource),
@@ -3086,6 +3089,7 @@ pub fn wail_of_war() -> CardDefinition {
             },
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),

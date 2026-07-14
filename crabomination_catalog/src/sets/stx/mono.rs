@@ -549,6 +549,7 @@ pub fn elemental_expressionism() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),

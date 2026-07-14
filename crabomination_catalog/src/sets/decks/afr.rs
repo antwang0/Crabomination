@@ -370,6 +370,7 @@ pub fn fates_reversal() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Creature.and(R::InYourGraveyard),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),

@@ -309,12 +309,26 @@ impl GameState {
         eff: &crate::effect::Effect,
         controller: usize,
     ) -> Vec<Target> {
+        self.enumerate_legal_targets_with_source(eff, controller, None)
+    }
+
+    /// As `enumerate_legal_targets`, but source-relative filter clauses
+    /// (`OtherThanSource`, counter-relative MV gates) evaluate against
+    /// `source` instead of silently passing — the trigger-queue picker
+    /// passes the triggering permanent so an "other target creature"
+    /// prompt doesn't offer the source itself.
+    pub fn enumerate_legal_targets_with_source(
+        &self,
+        eff: &crate::effect::Effect,
+        controller: usize,
+        source: Option<CardId>,
+    ) -> Vec<Target> {
         use crate::card::SelectionRequirement;
         let any_filter = SelectionRequirement::Any;
         let req = eff.primary_target_filter().unwrap_or(&any_filter);
         let accepts_player = eff.accepts_player_target();
         let is_legal = |t: &Target| -> bool {
-            self.evaluate_requirement_static(req, t, controller, None)
+            self.evaluate_requirement_static(req, t, controller, source)
                 && self.check_target_legality(t, controller).is_ok()
         };
 

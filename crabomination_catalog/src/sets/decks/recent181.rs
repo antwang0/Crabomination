@@ -104,6 +104,7 @@ pub fn byrke_long_ear_of_the_law() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: R::Creature,
                 effect: Box::new(Effect::AddCounter {
                     what: Selector::Target(0),

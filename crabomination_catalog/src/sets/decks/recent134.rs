@@ -79,6 +79,7 @@ pub fn succumb_to_the_cold() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: R::Creature.and(R::ControlledByOpponent),
             effect: Box::new(Effect::Seq(vec![
                 Effect::Tap { what: Selector::Target(0) },
@@ -108,6 +109,7 @@ pub fn bellowing_bruiser() -> CardDefinition {
             card_types: vec![CardType::Sorcery],
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: R::Creature,
                 effect: Box::new(Effect::GrantKeyword {
                     what: Selector::Target(0),

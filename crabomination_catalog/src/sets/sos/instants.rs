@@ -1362,25 +1362,19 @@ pub fn suspend_aggression() -> CardDefinition {
 /// "Until end of turn, any number of target creatures you control each
 /// get +1/+0 and gain 'When this creature dies, draw a card.'"
 ///
-/// Push (modern_decks): "any number of target creatures" promoted from
-/// single-target to a three-slot multi-target shape — slot 0
-/// (mandatory) + slots 1 + 2 (optional). The pump lands on each filled
-/// slot; the unfilled slots resolve to no-op via `TargetFiltered`.
-/// AutoDecider fills slot 0 only; scripted tests can wire up to three.
+/// "Any number of target creatures" is wired via
+/// `Effect::ApplyToTargets { max_targets: 16, min_targets: 0 }` — every
+/// slot is an optional pick (a `wants_ui` caster declines to stop; the
+/// bot max-fills), and the body runs once per supplied target with
+/// `Selector::Target(0)` rebound. 16 matches the engine-wide slot cap.
 /// The transient die-to-draw rider is wired via
 /// `Effect::GrantTriggeredAbility` — each pumped target gains a
-/// CreatureDied/SelfSource draw-a-card trigger until end of turn.
+/// CreatureDied/SelfSource draw-a-card trigger until end of turn (the
+/// grant lives on `granted_triggers_eot`; the SBA dies handler walks
+/// printed + granted Dies triggers, so the draw fires even though the
+/// creature has left the battlefield by trigger-resolution time).
 pub fn rabid_attack() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
-    // Push (modern_decks, batch 85): "When this creature dies, draw a
-    // card" granted trigger. Wired via `Effect::GrantTriggeredAbility`
-    // — each pumped target receives a CreatureDied/SelfSource trigger
-    // for the rest of the turn. The grant lives on
-    // `granted_triggers_eot`; the SBA dies handler in
-    // `apply_state_based_actions` (and `remove_to_graveyard_with_triggers`)
-    // walks both printed Dies triggers + granted ones, so the
-    // draw-on-die fires faithfully even though the creature has left
-    // the battlefield by trigger-resolution time.
     let die_draw_trigger = TriggeredAbility {
         event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
         effect: Effect::Draw {
@@ -1388,41 +1382,28 @@ pub fn rabid_attack() -> CardDefinition {
             amount: Value::Const(1),
         },
     };
-    let pump_and_grant = |slot: u8| -> Vec<Effect> {
-        let target: Selector = if slot == 0 {
-            target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            )
-        } else {
-            Selector::TargetFiltered {
-                slot,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
-            }
-        };
-        vec![
-            Effect::PumpPT {
-                what: target.clone(),
-                power: Value::Const(1),
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantTriggeredAbility {
-                what: target,
-                trigger: Box::new(die_draw_trigger.clone()),
-                duration: Duration::EndOfTurn,
-            },
-        ]
-    };
-    let mut all_effects = Vec::with_capacity(6);
-    all_effects.extend(pump_and_grant(0));
-    all_effects.extend(pump_and_grant(1));
-    all_effects.extend(pump_and_grant(2));
     CardDefinition {
         name: "Rabid Attack",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(all_effects),
+        effect: Effect::ApplyToTargets {
+            max_targets: 16,
+            min_targets: 0,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            effect: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantTriggeredAbility {
+                    what: Selector::Target(0),
+                    trigger: Box::new(die_draw_trigger),
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        },
         ..Default::default()
     }
 }
@@ -1678,11 +1659,11 @@ pub fn muses_encouragement() -> CardDefinition {
 /// deals 1 damage to each of one or two targets. / • Return target
 /// nonland permanent to its owner's hand."
 ///
-/// Wired as a 3-mode `ChooseMode`: Surveil 2 + draw / 1 dmg to any
-/// target (creature/player/planeswalker) / bounce nonland to owner's
-/// hand. The "1 or 2 targets" fan-out on mode 1 is collapsed to a
-/// single target (multi-target prompt gap — TODO.md). Standard
-/// primitives throughout.
+/// Wired as a 3-mode `ChooseMode`: Surveil 2 + draw / 1 dmg to each of
+/// one or two any-targets (creature/player/planeswalker) / bounce
+/// nonland to owner's hand. Mode 1's "each of one or two targets" is
+/// the printed shape via `ApplyToTargets { max_targets: 2,
+/// min_targets: 1 }` — slot 0 required, slot 1 an optional pick.
 pub fn prismari_charm() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::{r, u};
@@ -1702,16 +1683,18 @@ pub fn prismari_charm() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             ]),
-            // Mode 1: 1 damage to any target — the printed text has no
-            // type restriction, so players are legal targets too
-            // (single-target collapse of the printed "one or two targets").
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(1),
+            // Mode 1: 1 damage to each of one or two targets — no type
+            // restriction, so players are legal targets too.
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 1,
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+                effect: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(1),
+                }),
             },
             // Mode 2: Return target nonland permanent to its owner's hand.
             Effect::Move {

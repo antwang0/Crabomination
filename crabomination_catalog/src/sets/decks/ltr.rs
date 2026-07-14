@@ -1146,6 +1146,7 @@ pub fn quickbeam_upstart_ent() -> CardDefinition {
                 }),
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::Seq(vec![
                     Effect::PumpPT {
@@ -1479,6 +1480,7 @@ pub fn cast_into_the_fire() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::DealDamage {
                     to: Selector::Target(0),

@@ -2063,6 +2063,7 @@ pub fn abandon_the_post() -> CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(3), r()]))],
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::GrantKeyword {
                 what: Selector::Target(0),
@@ -2382,6 +2383,7 @@ pub fn blood_fountain() -> CardDefinition {
             sac_cost: true,
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
@@ -2489,6 +2491,7 @@ pub fn voldaren_ambusher() -> CardDefinition {
             cond: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
             then: Box::new(Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                 effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: vampires }),
             }),
@@ -3027,6 +3030,7 @@ pub fn bleeding_edge() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::PumpPT {
                     what: Selector::Target(0),
@@ -3418,6 +3422,7 @@ pub fn soul_guide_gryff() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::InGraveyard,
             effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
         })],
@@ -3761,6 +3766,7 @@ pub fn crossroads_candleguide() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::InGraveyard,
             effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
         })],
@@ -4401,6 +4407,7 @@ pub fn nebelgast_intruder() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::Creature
                 .and(SelectionRequirement::ControlledByOpponent),
             effect: Box::new(Effect::PumpPT {
@@ -4580,6 +4587,7 @@ pub fn jack_o_lantern() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::ApplyToTargets {
                     max_targets: 1,
+                    min_targets: 0,
                     filter: SelectionRequirement::InGraveyard,
                     effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
                 },
@@ -4656,6 +4664,7 @@ pub fn turn_the_earth() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 3,
+                min_targets: 0,
                 filter: SelectionRequirement::InGraveyard,
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),

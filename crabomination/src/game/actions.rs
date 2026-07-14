@@ -2393,7 +2393,16 @@ impl GameState {
         // printed "up to one" behavior.
         {
             let p = self.priority.player_with_priority;
-            let slot_info = if target.is_some() && self.players[p].wants_ui {
+            // A `DeclineTarget` answer replays the cast with this card id
+            // stamped in the suppress scratch — consume it and skip the
+            // prompt so declining ends target selection.
+            let suppressed = if self.suppress_extra_target_prompts == Some(card_id) {
+                self.suppress_extra_target_prompts = None;
+                true
+            } else {
+                false
+            };
+            let slot_info = if !suppressed && target.is_some() && self.players[p].wants_ui {
                 self.find_card_anywhere(card_id).and_then(|card| {
                     // "Extra target only on your main phase" spells (Return
                     // to Dust) genuinely cast single-target off-main — don't
@@ -2411,26 +2420,39 @@ impl GameState {
                             (
                                 f.resolve_x(x_value.unwrap_or(0)),
                                 card.definition.name.to_string(),
+                                // "Up to N targets" slots past the printed
+                                // minimum may be declined.
+                                card.definition.effect.target_slot_optional(slot, mode),
+                                // CR 601.4d — the slots of one multi-target
+                                // instance must name distinct objects.
+                                card.definition
+                                    .effect
+                                    .distinct_target_count(mode)
+                                    .is_some_and(|n| slot < n),
                             )
                         })
                 })
             } else {
                 None
             };
-            if let Some((filter, source_name)) = slot_info {
+            if let Some((filter, source_name, optional, distinct)) = slot_info {
+                let chosen: Vec<&Target> =
+                    target.iter().chain(additional_targets.iter()).collect();
                 let candidates: Vec<Target> = self
                     .battlefield
                     .iter()
                     .map(|c| Target::Permanent(c.id))
                     .chain((0..self.players.len()).map(Target::Player))
                     .filter(|t| {
-                        self.evaluate_requirement_static(&filter, t, p, Some(card_id))
+                        (!distinct || !chosen.contains(&t))
+                            && self.evaluate_requirement_static(&filter, t, p, Some(card_id))
                             && self.check_target_legality(t, p).is_ok()
                     })
                     .collect();
                 if !candidates.is_empty() {
                     self.pending_decision = Some(crate::game::types::PendingDecision {
                         decision: crate::decision::Decision::ChooseTarget {
+                            optional,
                             source: card_id,
                             legal: candidates,
                             source_name,
@@ -4315,6 +4337,7 @@ impl GameState {
                             if legal.len() > 1 {
                                 self.pending_decision = Some(crate::game::types::PendingDecision {
                                     decision: crate::decision::Decision::ChooseTarget {
+                                        optional: false,
                                         source: card_id,
                                         legal,
                                         source_name: name.clone(),
@@ -4353,6 +4376,7 @@ impl GameState {
                             if legal.len() > 1 {
                                 self.pending_decision = Some(crate::game::types::PendingDecision {
                                     decision: crate::decision::Decision::ChooseTarget {
+                                        optional: false,
                                         source: card_id,
                                         legal,
                                         source_name: name.clone(),
@@ -10173,6 +10197,7 @@ impl GameState {
                     .unwrap_or_default();
                 self.pending_decision = Some(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseTarget {
+                        optional: false,
                         source: card_id,
                         legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
                         source_name,
@@ -10242,6 +10267,7 @@ impl GameState {
                     .unwrap_or_default();
                 self.pending_decision = Some(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseTarget {
+                        optional: false,
                         source: card_id,
                         legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
                         source_name,

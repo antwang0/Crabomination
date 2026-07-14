@@ -144,6 +144,7 @@ pub fn rishkar_peema_renegade() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: R::Creature,
                 effect: Box::new(Effect::AddCounter {
                     what: Selector::Target(0),

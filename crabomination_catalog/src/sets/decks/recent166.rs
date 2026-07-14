@@ -344,6 +344,7 @@ pub fn invasion_submersible() -> CardDefinition {
         toughness: 0,
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: R::Nonland.and(R::OtherThanSource),
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
@@ -981,6 +982,7 @@ pub fn wingshield_agent() -> CardDefinition {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Creature.and(R::OtherThanSource),
                 effect: Box::new(Effect::GrantKeyword {
                     what: Selector::Target(0),

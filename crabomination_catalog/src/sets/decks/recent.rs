@@ -518,6 +518,7 @@ pub fn ardenvale_tactician() -> CardDefinition {
             card_types: vec![CardType::Instant],
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
             },
@@ -796,6 +797,7 @@ pub fn markov_waltzer() -> CardDefinition {
             ),
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 effect: Box::new(Effect::PumpPT {
                     what: Selector::Target(0),
@@ -3019,6 +3021,7 @@ pub fn nightbirds_clutches() -> CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(3), r()]))],
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::GrantKeyword {
                 what: Selector::Target(0),
@@ -3049,6 +3052,7 @@ pub fn get_out() -> CardDefinition {
             },
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: (SelectionRequirement::Creature.or(SelectionRequirement::Enchantment))
                     .and(SelectionRequirement::ControlledByYou),
                 effect: Box::new(Effect::Move {
@@ -3423,6 +3427,7 @@ pub fn banishing_slash() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Artifact
                     .or(SelectionRequirement::Enchantment)
                     .or(SelectionRequirement::Creature.and(SelectionRequirement::Tapped)),
@@ -3604,6 +3609,7 @@ pub fn this_town_aint_big_enough() -> CardDefinition {
         self_cost_reduction_if_target: Some((SelectionRequirement::ControlledByYou, 3)),
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Nonland,
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
@@ -3901,6 +3907,7 @@ pub fn gird_for_battle() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::AddCounter {
                 what: Selector::Target(0),
@@ -8973,6 +8980,7 @@ pub fn gavony_silversmith() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::AddCounter {
                 what: Selector::Target(0),
@@ -10073,6 +10081,7 @@ pub fn voldaren_estate() -> CardDefinition {
 pub fn sigardas_vanguard() -> CardDefinition {
     let grant = || Effect::ApplyToTargets {
         max_targets: 3,
+        min_targets: 0,
         filter: SelectionRequirement::Creature,
         effect: Box::new(Effect::GrantKeyword {
             what: Selector::Target(0),
@@ -12179,6 +12188,7 @@ pub fn felidar_savior() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Creature
                 .and(SelectionRequirement::ControlledByYou)
                 .and(SelectionRequirement::OtherThanSource),

@@ -42475,6 +42475,7 @@ pub fn frostveil_ambush() -> CardDefinition {
         keywords: vec![Keyword::Cycling(cost(&[generic(1)]))],
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::Seq(vec![
                 Effect::Tap { what: Selector::Target(0) },
@@ -56506,6 +56507,7 @@ pub fn barrier_breach() -> CardDefinition {
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         effect: Effect::ApplyToTargets {
             max_targets: 3,
+            min_targets: 0,
             filter: SelectionRequirement::Enchantment,
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
@@ -57616,6 +57618,7 @@ pub fn essence_capture() -> CardDefinition {
             },
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 effect: Box::new(Effect::AddCounter {
                     what: Selector::Target(0),

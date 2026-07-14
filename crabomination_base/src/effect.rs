@@ -3759,14 +3759,26 @@ pub enum Effect {
     /// `Decision::DivideDamage` (AutoDecider spreads as evenly as possible).
     DistributeCounters { total: Value, counter: CounterType, filter: SelectionRequirement, max_targets: u8 },
     /// "Do X to each of up to N target permanents" (CR 115 — the generic
-    /// multi-target rider). Slots `0..max_targets` are optional targets
-    /// filtered by `filter`; at resolution `effect` runs once per supplied
-    /// target with `Selector::Target(0)` bound to that target. Powers
-    /// "return up to three target creatures" (Sea God's Scorn), "deal 1
-    /// damage to each of up to three target creatures" (Wrap in Flames),
-    /// "tap up to N target permanents", etc. The inner effect must address
-    /// its operand via `Selector::Target(0)`.
-    ApplyToTargets { max_targets: u8, filter: SelectionRequirement, effect: Box<Effect> },
+    /// multi-target rider). Slots `0..max_targets` are targets filtered by
+    /// `filter`; at resolution `effect` runs once per supplied target with
+    /// `Selector::Target(0)` bound to that target. Powers "return up to
+    /// three target creatures" (Sea God's Scorn), "deal 1 damage to each
+    /// of up to three target creatures" (Wrap in Flames), "tap up to N
+    /// target permanents", etc. The inner effect must address its operand
+    /// via `Selector::Target(0)`.
+    ///
+    /// `min_targets` is how many targets the printed text *requires*:
+    /// 0 = "up to N / any number" (every slot optional, including slot 0 —
+    /// a `wants_ui` caster may decline each pick); 1 = "one or two
+    /// targets" (Prismari Charm). Targets fill left-to-right; declining
+    /// ends selection.
+    ApplyToTargets {
+        max_targets: u8,
+        #[serde(default)]
+        min_targets: u8,
+        filter: SelectionRequirement,
+        effect: Box<Effect>,
+    },
     /// Eerie Ultimatum — return any number of permanent cards with different
     /// names from the controller's graveyard to the battlefield. The controller
     /// picks at resolution (`Decision::ChooseCards`); duplicate names are

@@ -665,6 +665,7 @@ pub fn said_done() -> CardDefinition {
                 card_types: vec![CardType::Instant],
                 effect: Effect::ApplyToTargets {
                     max_targets: 2,
+                    min_targets: 0,
                     filter: R::Creature,
                     effect: Box::new(Effect::Seq(vec![
                         Effect::Tap { what: Selector::Target(0) },

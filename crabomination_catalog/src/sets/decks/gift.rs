@@ -363,6 +363,7 @@ pub fn sazacaps_brew() -> CardDefinition {
 pub fn dewdrop_cure() -> CardDefinition {
     let reanimate = |max| Effect::ApplyToTargets {
         max_targets: max,
+        min_targets: 0,
         filter: SelectionRequirement::Creature
             .and(SelectionRequirement::InYourGraveyard)
             .and(SelectionRequirement::ManaValueAtMost(2)),

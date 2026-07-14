@@ -522,6 +522,7 @@ impl GameState {
             _ => crate::card::CardId(0),
         };
         let answer = self.decider.decide(&Decision::ChooseTarget {
+            optional: false,
             source,
             legal: legal.clone(),
             source_name: def.name.to_string(),
@@ -5515,6 +5516,7 @@ impl GameState {
                     std::collections::HashMap::new();
                 for seat in seats {
                     let answer = self.decider.decide(&crate::decision::Decision::ChooseTarget {
+                        optional: false,
                         source: ctx.source.unwrap_or(crate::card::CardId(0)),
                         legal: legal.clone(),
                         source_name: ctx.source_name.unwrap_or("").to_string(),
@@ -7158,6 +7160,7 @@ impl GameState {
                     candidates[0]
                 } else {
                     let answer = self.decider.decide(&Decision::ChooseTarget {
+                        optional: false,
                         source: ctx.source.unwrap_or(CardId(0)),
                         legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
                         source_name: ctx.source_name.unwrap_or("").to_string(),
@@ -9059,6 +9062,7 @@ impl GameState {
                         let source = source_id.unwrap_or(crate::card::CardId(0));
                         let decision = if n == 1 {
                             crate::decision::Decision::ChooseTarget {
+                                optional: false,
                                 source,
                                 legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
                                 source_name: ctx.source_name.unwrap_or("").to_string(),
@@ -9256,6 +9260,7 @@ impl GameState {
                     let options: Vec<Target> =
                         tied.iter().map(|id| Target::Permanent(*id)).collect();
                     let decision = crate::decision::Decision::ChooseTarget {
+                        optional: false,
                         source: source_id.unwrap_or(crate::card::CardId(0)),
                         legal: options,
                         source_name: ctx.source_name.unwrap_or("").to_string(),

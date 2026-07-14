@@ -706,13 +706,14 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
         })
         // Battlefield-granted typecycling (Homing Sliver's slivercycling).
         .or_else(|| state.and_then(|st| st.granted_typecycling_for(card)).map(|(c, _)| c));
-    let (modal_descriptions, modal_needs_target) =
+    let (modal_descriptions, modal_needs_target, modal_target_optional) =
         if let crate::effect::Effect::ChooseMode(modes) = &card.definition.effect {
             let descs = modes.iter().map(|m| m.effect_short_text()).collect();
             let needs = modes.iter().map(cursor_needs_target).collect();
-            (descs, needs)
+            let opt = modes.iter().map(|m| m.target_slot_optional(0, None)).collect();
+            (descs, needs, opt)
         } else {
-            (Vec::new(), Vec::new())
+            (Vec::new(), Vec::new(), Vec::new())
         };
     KnownCard {
         id: card.id,
@@ -720,6 +721,7 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
         cost: card.definition.cost.clone(),
         card_types: card.definition.card_types.clone(),
         needs_target: cursor_needs_target(&card.definition.effect),
+        target_optional: card.definition.effect.target_slot_optional(0, None),
         has_alternative_cost: card.definition.alternative_cost.is_some(),
         alt_cost_needs_pitch: card
             .definition
@@ -815,6 +817,7 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .unwrap_or_default(),
         modal_descriptions,
         modal_needs_target,
+        modal_target_optional,
         saga_final_chapter: card
             .definition
             .saga_chapters

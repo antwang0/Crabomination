@@ -117,6 +117,7 @@ pub fn dream_spoilers() -> CardDefinition {
                 .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Creature.and(R::ControlledByOpponent),
                 effect: Box::new(Effect::PumpPT {
                     what: Selector::Target(0),
@@ -304,6 +305,7 @@ pub fn curse_of_the_werefox() -> CardDefinition {
             },
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Creature.and(R::ControlledByOpponent),
                 effect: Box::new(Effect::Fight {
                     attacker: Selector::Target(0),
@@ -655,6 +657,7 @@ pub fn plunge_into_winter() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Creature,
                 effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
             },

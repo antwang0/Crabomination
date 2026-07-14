@@ -563,6 +563,7 @@ pub fn unnerving_grasp() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Nonland,
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
@@ -675,6 +676,7 @@ pub fn agonasaur_rex() -> CardDefinition {
             event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::Seq(vec![
                     Effect::AddCounter {

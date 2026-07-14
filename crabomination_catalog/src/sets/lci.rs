@@ -2797,6 +2797,7 @@ pub fn daring_discovery() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 3,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::GrantKeyword {
                     what: Selector::Target(0),
@@ -3439,6 +3440,7 @@ pub fn calamitous_tide() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
@@ -3937,6 +3939,7 @@ pub fn council_of_echoes() -> CardDefinition {
             cond: Predicate::DescendActive { who: PlayerRef::You, count: 4 },
             then: Box::new(Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Nonland.and(SelectionRequirement::Permanent),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
@@ -4713,6 +4716,7 @@ pub fn pit_of_offerings() -> CardDefinition {
         }],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 3,
+            min_targets: 0,
             filter: SelectionRequirement::InGraveyard,
             effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
         })],
@@ -5124,6 +5128,7 @@ pub fn zoetic_glyph() -> CardDefinition {
 pub fn queens_bay_paladin() -> CardDefinition {
     let reanimate = || Effect::ApplyToTargets {
         max_targets: 1,
+        min_targets: 0,
         filter: SelectionRequirement::InGraveyard
             .and(SelectionRequirement::HasCreatureType(CreatureType::Vampire)),
         effect: Box::new(Effect::Seq(vec![

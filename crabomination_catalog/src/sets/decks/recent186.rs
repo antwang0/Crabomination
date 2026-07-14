@@ -97,6 +97,7 @@ pub fn tidecaller_mentor() -> CardDefinition {
             cond: Predicate::ThresholdActive { who: PlayerRef::You },
             then: Box::new(Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Nonland.and(R::Permanent),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),

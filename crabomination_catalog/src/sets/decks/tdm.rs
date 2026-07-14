@@ -352,6 +352,7 @@ pub fn seize_opportunity() -> CardDefinition {
             },
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: R::Creature,
                 effect: Box::new(Effect::PumpPT {
                     what: Selector::Target(0),
@@ -531,6 +532,7 @@ pub fn rally_the_monastery() -> CardDefinition {
             },
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: R::Creature.and(R::ControlledByYou),
                 effect: Box::new(Effect::PumpPT {
                     what: Selector::Target(0),
@@ -1965,6 +1967,7 @@ pub fn smile_at_death() -> CardDefinition {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: R::Creature.and(R::InYourGraveyard).and(R::PowerAtMost(2)),
                 effect: Box::new(Effect::Seq(vec![
                     Effect::Move {

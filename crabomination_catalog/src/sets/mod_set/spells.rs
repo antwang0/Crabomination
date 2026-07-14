@@ -319,6 +319,7 @@ pub fn return_to_dust() -> CardDefinition {
         extra_targets_main_phase_only: true,
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
             effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
         },

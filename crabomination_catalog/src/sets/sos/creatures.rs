@@ -1028,10 +1028,10 @@ pub fn snooping_page() -> CardDefinition {
 /// counter count. The trigger is gated via `Effect::If` on
 /// `ValueAtLeast(CountersOn(This), 1)` so the trigger only fires the
 /// AddCounter body when Scolding Administrator had at least one
-/// +1/+1 counter at death. The printed "up to one target creature"
-/// collapses to a required Creature target (engine has no "up to one"
-/// optional-target primitive — the trigger fizzles benignly if no
-/// legal creature exists at resolution).
+/// +1/+1 counter at death. The printed "up to one target creature" is
+/// wired via `ApplyToTargets { max_targets: 1, min_targets: 0 }` — a
+/// `wants_ui` controller may decline the pick; the trigger no-ops
+/// benignly if no legal creature exists at resolution.
 ///
 /// Per CR 122.8, the printed "those counters" wording would cancel
 /// the move if the source had left the battlefield; the engine's
@@ -1044,7 +1044,7 @@ pub fn snooping_page() -> CardDefinition {
 /// multiple counters on it before death).
 pub fn scolding_administrator() -> CardDefinition {
     use crate::card::{CounterType, Predicate, SelectionRequirement};
-    use crate::effect::shortcut::{repartee, target_filtered};
+    use crate::effect::shortcut::repartee;
     CardDefinition {
         name: "Scolding Administrator",
         cost: cost(&[w(), b()]),
@@ -1076,13 +1076,18 @@ pub fn scolding_administrator() -> CardDefinition {
                         },
                         Value::Const(1),
                     ),
-                    then: Box::new(Effect::AddCounter {
-                        what: target_filtered(SelectionRequirement::Creature),
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::CountersOn {
-                            what: Box::new(Selector::This),
+                    then: Box::new(Effect::ApplyToTargets {
+                        max_targets: 1,
+                        min_targets: 0,
+                        filter: SelectionRequirement::Creature,
+                        effect: Box::new(Effect::AddCounter {
+                            what: Selector::Target(0),
                             kind: CounterType::PlusOnePlusOne,
-                        },
+                            amount: Value::CountersOn {
+                                what: Box::new(Selector::This),
+                                kind: CounterType::PlusOnePlusOne,
+                            },
+                        }),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -3147,18 +3152,15 @@ pub fn geometers_arthropod() -> CardDefinition {
 /// to its owner's hand. / Whenever you cast a spell with {X} in its
 /// mana cost, this creature can't be blocked this turn."
 ///
-/// Now wired (push XVI): both abilities. ETB bounce wired faithfully
-/// (target a creature other than this one; the auto-target picker
-/// prefers another creature when one exists). Approximation: printed
-/// "up to one other target creature" makes the bounce optional, but the
-/// target here is mandatory — there is no decline path when a legal
-/// target exists. The X-cost spell-cast
-/// trigger uses the new `Predicate::CastSpellHasX` primitive + grants
-/// `Keyword::Unblockable` (EOT) to the Mage itself via
-/// `Selector::This`.
+/// Now wired (push XVI): both abilities. ETB bounce is the printed
+/// "up to one" via `ApplyToTargets { max_targets: 1, min_targets: 0 }`
+/// — a `wants_ui` controller may decline; auto seats pick another
+/// creature when one exists. The X-cost spell-cast trigger uses the
+/// `Predicate::CastSpellHasX` primitive + grants `Keyword::Unblockable`
+/// (EOT) to the Mage itself via `Selector::This`.
 pub fn matterbending_mage() -> CardDefinition {
-    use crate::effect::shortcut::{cast_has_x_trigger, target_filtered};
     use crate::effect::ZoneDest;
+    use crate::effect::shortcut::cast_has_x_trigger;
     use crate::mana::u;
     CardDefinition {
         name: "Matterbending Mage",
@@ -3173,15 +3175,18 @@ pub fn matterbending_mage() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Move {
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
                     // Printed "one OTHER target creature" — without
                     // OtherThanSource the auto-targeter could bounce the
                     // Mage itself.
-                    what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::OtherThanSource),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    }),
                 },
             },
             cast_has_x_trigger(Effect::GrantKeyword {
@@ -3825,14 +3830,12 @@ pub fn mage_tower_referee() -> CardDefinition {
 /// counter on Ennis."
 ///
 /// Both abilities wired:
-/// - ETB flicker: exiles a target creature (auto-picker prefers a
-///   friendly utility creature with a useful ETB) and schedules a
-///   delayed return at next end step. Uses the same
+/// - ETB flicker: "up to one" via `ApplyToTargets { max_targets: 1,
+///   min_targets: 0 }` — a `wants_ui` controller may decline the pick
+///   (auto seats keep maximizing, preferring a friendly utility creature
+///   with a useful ETB). The body is the same
 ///   `Exile + DelayUntil(NextEndStep, Move(Target → Battlefield(OwnerOf)))`
-///   pattern as Restoration Angel-style flickers. Approximation:
-///   printed "up to one other target creature" makes the flicker
-///   optional, but the target here is mandatory — there is no decline
-///   path when a legal target exists.
+///   pattern as Restoration Angel-style flickers.
 /// - End-step counter: gated on the exact-printed
 ///   `Predicate::CardsExiledThisTurnAtLeast` (backed by
 ///   `Player.cards_exiled_this_turn`), so exile-from-hand and
@@ -3856,33 +3859,38 @@ pub fn ennis_debate_moderator() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![
-            // ETB: exile a target creature you control + delayed return at
-            // next end step.
+            // ETB: exile up to one target creature you control + delayed
+            // return at next end step. `ApplyToTargets { min_targets: 0 }`
+            // makes the pick declinable (a `wants_ui` controller may skip
+            // the self-flicker; zero targets skips the whole body).
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Seq(vec![
-                    Effect::Move {
-                        // Printed "one OTHER target creature you control" —
-                        // without OtherThanSource the auto-targeter could
-                        // flicker Ennis itself.
-                        what: crate::effect::shortcut::target_filtered(
-                            SelectionRequirement::Creature
-                                .and(SelectionRequirement::ControlledByYou)
-                                .and(SelectionRequirement::OtherThanSource),
-                        ),
-                        to: ZoneDest::Exile,
-                    },
-                    Effect::DelayUntil {
-                        kind: DelayedTriggerKind::NextEndStep,
-                        body: Box::new(Effect::Move {
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    // Printed "one OTHER target creature you control" —
+                    // without OtherThanSource the auto-targeter could
+                    // flicker Ennis itself.
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::Move {
                             what: Selector::Target(0),
-                            to: ZoneDest::Battlefield {
-                                controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                                tapped: false,
-                            },
-                        }),
-                    },
-                ]),
+                            to: ZoneDest::Exile,
+                        },
+                        Effect::DelayUntil {
+                            kind: DelayedTriggerKind::NextEndStep,
+                            body: Box::new(Effect::Move {
+                                what: Selector::Target(0),
+                                to: ZoneDest::Battlefield {
+                                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                                    tapped: false,
+                                },
+                            }),
+                        },
+                    ])),
+                },
             },
             // Your end step: if one or more cards were put into exile
             // this turn, +1/+1 counter on Ennis. Uses the exact-printed

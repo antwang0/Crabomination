@@ -3385,6 +3385,7 @@ pub fn terashis_cry() -> CardDefinition {
         subtypes: arcane(),
         effect: Effect::ApplyToTargets {
             max_targets: 3,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
         },
@@ -4174,6 +4175,7 @@ pub fn unearthly_blizzard() -> CardDefinition {
         subtypes: arcane(),
         effect: Effect::ApplyToTargets {
             max_targets: 3,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::GrantKeyword {
                 what: Selector::Target(0),

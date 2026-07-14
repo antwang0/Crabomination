@@ -67,6 +67,7 @@ pub fn outpace_oblivion() -> CardDefinition {
         keywords: vec![Keyword::StartYourEngines],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: R::Creature.or(R::Planeswalker),
             effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) }),
         })],
@@ -206,6 +207,7 @@ pub fn explosive_getaway() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Artifact.or(R::Creature),
                 effect: Box::new(Effect::ExileReturnNextEndStep { what: Selector::Target(0) }),
             },
@@ -437,6 +439,7 @@ pub fn wreck_remover() -> CardDefinition {
     let ability = || Effect::Seq(vec![
         Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: R::InGraveyard,
             effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
         },
@@ -485,6 +488,7 @@ pub fn lagorin_soul_of_alacria() -> CardDefinition {
                 .with_filter(Predicate::SourceSaddled),
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: R::HasCreatureType(CreatureType::Mount)
                     .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
                 effect: Box::new(Effect::AddCounter {

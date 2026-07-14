@@ -35,6 +35,7 @@ pub fn marang_river_regent() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Nonland
                     .and(SelectionRequirement::OtherThanSource),
                 effect: Box::new(Effect::Move {
@@ -152,6 +153,7 @@ pub fn dirgur_island_dragon() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::ApplyToTargets {
                     max_targets: 1,
+                    min_targets: 0,
                     filter: SelectionRequirement::Creature,
                     effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
                 },
@@ -209,6 +211,7 @@ pub fn disruptive_stormbrood() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
                 effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
             },
@@ -298,6 +301,7 @@ pub fn riling_dawnbreaker() -> CardDefinition {
             ),
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature
                     .and(SelectionRequirement::ControlledByYou)
                     .and(SelectionRequirement::OtherThanSource),
@@ -348,6 +352,7 @@ pub fn feral_deathgorger() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             // "From a single graveyard" isn't enforced — any graveyard cards.
             filter: SelectionRequirement::InGraveyard,
             effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
@@ -359,6 +364,7 @@ pub fn feral_deathgorger() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::ApplyToTargets {
                     max_targets: 1,
+                    min_targets: 0,
                     filter: SelectionRequirement::Creature,
                     effect: Box::new(Effect::AddCounter {
                         what: Selector::Target(0),
@@ -387,6 +393,7 @@ pub fn purging_stormbrood() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Life(2))],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::RemoveAllCounters { what: Selector::Target(0) }),
         })],

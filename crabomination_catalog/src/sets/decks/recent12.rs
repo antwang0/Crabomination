@@ -517,6 +517,7 @@ pub fn curtains_call() -> CardDefinition {
         static_abilities: vec![undaunted()],
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
         },

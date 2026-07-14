@@ -1361,6 +1361,14 @@ pub struct GameState {
     /// to empty between independent resolutions.
     #[serde(skip)]
     pub(crate) discarded_card_ids_this_resolution: Vec<CardId>,
+    /// Transient: set when a `wants_ui` caster answers an optional extra-
+    /// target prompt with `DecisionAnswer::DeclineTarget`. The cast replay
+    /// (`ResumeContext::CastExtraTargetPick`) re-enters `perform_action`,
+    /// and the extra-target prompt block skips this card so declining ends
+    /// target selection ("up to N targets" — targets fill left-to-right).
+    /// Cleared by the prompt block on the replay pass.
+    #[serde(skip)]
+    pub(crate) suppress_extra_target_prompts: Option<CardId>,
     /// Transient: the `CardId`s of cards put into exile within the current
     /// effect resolution (any source zone, via `place_card_in_dest`). Powers
     /// `Selector::ExiledThisResolution` — "if you exiled a [type] card this
@@ -1994,6 +2002,7 @@ impl Clone for GameState {
             cipher_encode_pending: self.cipher_encode_pending,
             haunt_pending: self.haunt_pending.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
+            suppress_extra_target_prompts: self.suppress_extra_target_prompts,
             exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             excess_damage_this_resolution: self.excess_damage_this_resolution,
@@ -2164,6 +2173,7 @@ impl GameState {
             cipher_encode_pending: None,
             haunt_pending: None,
             discarded_card_ids_this_resolution: Vec::new(),
+            suppress_extra_target_prompts: None,
             exiled_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             excess_damage_this_resolution: 0,
@@ -10651,7 +10661,11 @@ impl GameState {
                     .map(|p| p.wants_ui)
                     .unwrap_or(false);
             if needs && wants_ui {
-                let legal = self.enumerate_legal_targets(&pending.effect, pending.controller);
+                let legal = self.enumerate_legal_targets_with_source(
+                    &pending.effect,
+                    pending.controller,
+                    Some(pending.source),
+                );
                 // No legal targets → fall back to auto (which returns
                 // None) so the trigger still resolves CR-correctly as
                 // a no-op rather than blocking the game on an
@@ -10709,6 +10723,10 @@ impl GameState {
                     }
                 } else {
                     Decision::ChooseTarget {
+                        // "Up to one target …" triggers (Ennis, Debate
+                        // Moderator's ETB) may be declined — the trigger
+                        // then resolves targetless as a no-op.
+                        optional: pending.effect.target_slot_optional(0, None),
                         source: pending.source,
                         legal: clickable,
                         source_name,
@@ -11370,6 +11388,9 @@ impl GameState {
                         };
                         Some(Target::Permanent(id))
                     }
+                    // "Up to one target" decline: the trigger resolves
+                    // targetless (its body no-ops on the empty slot).
+                    DecisionAnswer::DeclineTarget => None,
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 };
                 self.push_pending_trigger(pending, target);
@@ -11497,15 +11518,21 @@ impl GameState {
                 };
             }
             ResumeContext::CastExtraTargetPick { caster, action } => {
-                let DecisionAnswer::Target(t) = answer else {
-                    return Err(GameError::DecisionAnswerMismatch);
-                };
                 let _ = caster;
                 let mut action = *action;
-                let GameAction::CastSpell { additional_targets, .. } = &mut action else {
+                let GameAction::CastSpell { additional_targets, card_id, .. } = &mut action else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                additional_targets.push(t);
+                match answer {
+                    DecisionAnswer::Target(t) => additional_targets.push(t),
+                    // "Up to N targets" decline: replay the cast without
+                    // appending, suppressing further slot prompts so the
+                    // selection ends here.
+                    DecisionAnswer::DeclineTarget => {
+                        self.suppress_extra_target_prompts = Some(*card_id);
+                    }
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                }
                 // Prepare-spell copies suspend/resume through plain CastSpell
                 // replays — settle their bookkeeping wherever the cast lands.
                 let cast_card = action.cast_card_id();

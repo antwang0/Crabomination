@@ -1747,6 +1747,7 @@ pub fn pinnacle_kill_ship() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::DealDamage {
                 amount: Value::Const(10),
@@ -1833,6 +1834,7 @@ pub fn specimen_freighter() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature
                     .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasArtifactSubtype(
                         ArtifactSubtype::Spacecraft,
@@ -1931,6 +1933,7 @@ pub fn synthesizer_labship() -> CardDefinition {
                     ),
                     effect: Effect::ApplyToTargets {
                         max_targets: 1,
+                        min_targets: 0,
                         filter: SelectionRequirement::Artifact
                             .and(SelectionRequirement::ControlledByYou)
                             .and(SelectionRequirement::OtherThanSource),
@@ -2558,6 +2561,7 @@ pub fn dubious_delicacy() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::PumpPT {
                 what: Selector::Target(0),
@@ -3689,6 +3693,7 @@ pub fn cryogen_relic() -> CardDefinition {
             sac_cost: true,
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
                 effect: Box::new(Effect::AddCounter {
                     what: Selector::Target(0),
@@ -4530,6 +4535,7 @@ pub fn weftblade_enhancer() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::AddCounter {
                 what: Selector::Target(0),
@@ -6509,6 +6515,7 @@ pub fn dawnsire_sunstar_dreadnought() -> CardDefinition {
                     event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
                     effect: Effect::ApplyToTargets {
                         max_targets: 1,
+                        min_targets: 0,
                         filter: SelectionRequirement::Creature
                             .or(SelectionRequirement::Planeswalker),
                         effect: Box::new(Effect::DealDamage {
@@ -6887,6 +6894,7 @@ pub fn atomic_microsizer() -> CardDefinition {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::ApplyToTargets {
                     max_targets: 1,
+                    min_targets: 0,
                     filter: SelectionRequirement::Creature,
                     effect: Box::new(Effect::Seq(vec![
                         Effect::GrantKeyword {

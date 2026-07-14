@@ -207,6 +207,7 @@ pub fn snaremaster_sprite() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             body: Box::new(Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Creature.and(R::ControlledByOpponent),
                 effect: Box::new(Effect::Seq(vec![
                     Effect::Tap { what: Selector::Target(0) },

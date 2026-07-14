@@ -88,6 +88,7 @@ pub fn moonsnare_specialist() -> CardDefinition {
         keywords: vec![Keyword::Ninjutsu(cost(&[generic(2), u()]))],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: R::Creature,
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),

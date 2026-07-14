@@ -148,6 +148,7 @@ pub fn kami_of_restless_shadows() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::InYourGraveyard
                     .and(R::Creature)
                     .and(R::HasCreatureType(CreatureType::Ninja).or(R::HasCreatureType(CreatureType::Rogue))),

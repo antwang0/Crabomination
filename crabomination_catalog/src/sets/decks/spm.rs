@@ -898,6 +898,7 @@ pub fn spider_byte_web_warden() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: R::Permanent.and(R::Nonland),
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),

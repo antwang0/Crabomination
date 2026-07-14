@@ -512,6 +512,7 @@ pub fn travel_preparations() -> CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(1), w()]))],
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: R::Creature,
             effect: Box::new(plus_one(Selector::Target(0), Value::ONE)),
         },

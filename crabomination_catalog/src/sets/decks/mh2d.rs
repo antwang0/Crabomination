@@ -944,6 +944,7 @@ pub fn unbounded_potential() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: R::Creature,
                 effect: Box::new(Effect::AddCounter {
                     what: Selector::Target(0),

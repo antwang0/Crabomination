@@ -907,6 +907,7 @@ pub fn windcaller_aven() -> CardDefinition {
             event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::GrantKeyword {
                     what: Selector::Target(0),

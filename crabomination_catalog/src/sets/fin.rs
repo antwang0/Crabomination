@@ -4445,6 +4445,7 @@ pub fn aerith_rescue_mission() -> CardDefinition {
             Effect::Seq(vec![
                 Effect::ApplyToTargets {
                     max_targets: 3,
+                    min_targets: 0,
                     filter: SelectionRequirement::Creature,
                     effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
                 },
@@ -5048,6 +5049,7 @@ pub fn qutrub_forayer() -> CardDefinition {
             },
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::InGraveyard,
                 effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
             },
@@ -5242,6 +5244,7 @@ pub fn opera_love_song() -> CardDefinition {
             },
             Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::PumpPT {
                     what: Selector::Target(0),

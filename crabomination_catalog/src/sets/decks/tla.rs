@@ -345,6 +345,7 @@ pub fn fancy_footwork() -> CardDefinition {
         effect: Effect::ApplyToTargets {
             filter: SelectionRequirement::Creature,
             max_targets: 2,
+            min_targets: 0,
             effect: Box::new(Effect::Seq(vec![
                 Effect::Untap { what: Selector::Target(0), up_to: None },
                 Effect::PumpPT {
@@ -647,6 +648,7 @@ pub fn earth_kingdom_soldier() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             max_targets: 2,
+            min_targets: 0,
             effect: Box::new(Effect::AddCounter {
                 what: Selector::Target(0),
                 kind: CounterType::PlusOnePlusOne,
@@ -2533,6 +2535,7 @@ pub fn ty_lee_chi_blocker() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Prowess],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::Seq(vec![
                 Effect::Tap { what: Selector::Target(0) },
@@ -3115,6 +3118,7 @@ pub fn jet_freedom_fighter() -> CardDefinition {
             }),
             on_dies(Effect::ApplyToTargets {
                 max_targets: 2,
+                min_targets: 0,
                 filter: SelectionRequirement::Creature,
                 effect: Box::new(Effect::AddCounter {
                     what: Selector::Target(0),
@@ -5169,6 +5173,7 @@ pub fn appa_steadfast_guardian() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::ApplyToTargets {
                 max_targets: 8,
+                min_targets: 0,
                 filter: SelectionRequirement::Nonland
                     .and(SelectionRequirement::ControlledByYou)
                     .and(SelectionRequirement::OtherThanSource),

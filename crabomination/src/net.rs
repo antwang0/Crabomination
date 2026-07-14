@@ -850,6 +850,11 @@ pub struct KnownCard {
     pub cost: ManaCost,
     pub card_types: Vec<CardType>,
     pub needs_target: bool,
+    /// True when the slot-0 target pick may be declined ("up to N targets"
+    /// / "any number of targets" — `ApplyToTargets { min_targets: 0 }`).
+    /// The client may submit the cast with no target.
+    #[serde(default)]
+    pub target_optional: bool,
     /// True if this card has an `alternative_cost` (Force of Will / Force of
     /// Negation pitch, Solitude evoke). Drives the client's right-click
     /// "Cast for alt cost" menu entry.
@@ -925,6 +930,12 @@ pub struct KnownCard {
     /// mode pick or to fire the cast immediately.
     #[serde(default)]
     pub modal_needs_target: Vec<bool>,
+    /// Parallel to `modal_descriptions`: `true` at index `i` when mode
+    /// `i`'s slot-0 pick may be declined ("up to N targets" inside that
+    /// mode — Prismari Charm's "each of one or two targets" is `false`
+    /// here since it requires the first target).
+    #[serde(default)]
+    pub modal_target_optional: Vec<bool>,
     /// CR 714 — for a Saga, its final (highest) chapter number, so the client
     /// can render "Chapter N / final" alongside the lore-counter chip. `None`
     /// for non-Saga cards. The current chapter is the card's Lore counter
@@ -1632,6 +1643,11 @@ pub enum DecisionWire {
         /// when the effect's shape isn't covered by `effect_short_text`.
         #[serde(default)]
         description: String,
+        /// True when the pick may be declined ("up to N targets") — the
+        /// client should offer a Skip/Done control and answer
+        /// `DecisionAnswer::DeclineTarget`.
+        #[serde(default)]
+        optional: bool,
     },
     ChooseMode {
         source: CardId,
@@ -1795,12 +1811,13 @@ pub enum DecisionWire {
 impl From<&Decision> for DecisionWire {
     fn from(d: &Decision) -> Self {
         match d {
-            Decision::ChooseTarget { source, legal, source_name, description } => {
+            Decision::ChooseTarget { source, legal, source_name, description, optional } => {
                 DecisionWire::ChooseTarget {
                     source: *source,
                     legal: legal.clone(),
                     source_name: source_name.clone(),
                     description: description.clone(),
+                    optional: *optional,
                 }
             }
             Decision::ChooseMode { source, num_modes, mode_texts } => DecisionWire::ChooseMode {

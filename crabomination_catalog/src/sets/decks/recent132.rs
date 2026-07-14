@@ -32,6 +32,7 @@ pub fn cheeky_house_mouse() -> CardDefinition {
             card_types: vec![CardType::Sorcery],
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::Creature.and(R::ControlledByYou),
                 effect: Box::new(Effect::Seq(vec![
                     Effect::PumpPT {

@@ -6335,6 +6335,7 @@ pub fn red_suns_twilight() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ApplyToTargets {
             max_targets: 5,
+            min_targets: 0,
             filter: SelectionRequirement::Artifact,
             effect: Box::new(Effect::Seq(vec![
                 Effect::If {

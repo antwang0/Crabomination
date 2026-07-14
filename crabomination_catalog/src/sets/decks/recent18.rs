@@ -228,6 +228,7 @@ pub fn run_away_together() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),

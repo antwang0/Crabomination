@@ -135,6 +135,7 @@ pub fn twisted_riddlekeeper() -> CardDefinition {
         alternative_cost: Some(emerge(cost(&[generic(5), colorless(1), u()]))),
         triggered_abilities: vec![on_cast(Effect::ApplyToTargets {
             max_targets: 2,
+            min_targets: 0,
             filter: R::Permanent,
             effect: Box::new(Effect::Seq(vec![
                 Effect::Tap { what: Selector::Target(0) },
@@ -212,6 +213,7 @@ pub fn thief_of_existence() -> CardDefinition {
         keywords: vec![Keyword::Devoid],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
+            min_targets: 0,
             filter: R::Permanent
                 .and(R::Noncreature)
                 .and(R::Nonland)
@@ -260,6 +262,7 @@ pub fn emperor_of_bones() -> CardDefinition {
             ),
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
+                min_targets: 0,
                 filter: R::InGraveyard,
                 effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
             },

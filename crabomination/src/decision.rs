@@ -55,6 +55,12 @@ pub enum Decision {
         source_name: String,
         #[serde(default)]
         description: String,
+        /// True when the pick may be declined ("up to N targets" — CR 601.4d
+        /// lets the chooser take fewer). A decliner answers
+        /// `DecisionAnswer::DeclineTarget`; declining ends target selection
+        /// for the effect (targets fill left-to-right).
+        #[serde(default)]
+        optional: bool,
     },
 
     /// Pick a mode index from a modal spell or trigger (e.g. Command suite,
@@ -331,6 +337,9 @@ pub enum LearnChoice {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DecisionAnswer {
     Target(Target),
+    /// Decline an optional target pick (`ChooseTarget { optional: true }` —
+    /// "up to N targets"). Ends target selection for the effect.
+    DeclineTarget,
     Mode(usize),
     Color(Color),
     /// `kept_top` goes on top in listed order; `bottom` goes to the bottom in

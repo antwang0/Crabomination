@@ -4364,6 +4364,50 @@ fn scolding_administrator_transfers_counters_on_death() {
         "death trigger transferred {counters_now} counters to the target creature");
 }
 
+#[test]
+fn queue_routed_up_to_one_trigger_offers_decline_to_ui_controller() {
+    // Printed "exile up to one other target creature you control" —
+    // Ennis's ETB is `ApplyToTargets { min_targets: 0 }`, so a trigger
+    // routed through `drain_trigger_queue` (step/event triggers) poses
+    // `ChooseTarget { optional: true }` to a `wants_ui` controller;
+    // answering `DeclineTarget` resolves the trigger targetless (the
+    // whole body no-ops — nothing exiled).
+    use crate::decision::{Decision, DecisionAnswer};
+    use crate::game::types::PendingTriggerPush;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let ennis = g.add_card_to_battlefield(0, catalog::ennis_debate_moderator());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let effect = catalog::ennis_debate_moderator().triggered_abilities[0]
+        .effect
+        .clone();
+
+    g.drain_trigger_queue(vec![PendingTriggerPush {
+        source: ennis,
+        controller: 0,
+        effect,
+        subject: Some(crate::game::effects::EntityRef::Permanent(ennis)),
+        event_amount: 0,
+        mode: None,
+        intervening_if: None,
+    }]);
+
+    let pending = g.pending_decision.as_ref().expect("flicker target pick pending");
+    match &pending.decision {
+        Decision::ChooseTarget { optional, legal, .. } => {
+            assert!(*optional, "up-to-one pick must be declinable");
+            assert!(legal.contains(&Target::Permanent(bear)), "bear offered");
+            assert!(!legal.contains(&Target::Permanent(ennis)), "OtherThanSource excludes Ennis");
+        }
+        other => panic!("expected ChooseTarget, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::DeclineTarget).expect("decline accepted");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "bear stays — nothing exiled");
+    assert!(g.exile.is_empty(), "declined flicker exiles nothing");
+}
+
 /// Scolding Administrator's dies-trigger is gated on the printed "if it
 /// had counters on it" intervening clause. Verify the counter-bearing
 /// gate: an Admin that dies with zero counters should NOT add any
@@ -5138,6 +5182,103 @@ fn rabid_attack_pumps_multiple_creatures_via_multi_target() {
         let view = g.computed_permanent(bid).expect("creature alive");
         assert_eq!(view.power, 3, "creature {bid:?} should be 3 power (2 base + 1 pump)");
     }
+}
+
+#[test]
+fn rabid_attack_pumps_four_targets_beyond_old_cap() {
+    // "Any number of target creatures" — `ApplyToTargets { max_targets:
+    // 16 }` replaced the old hand-unrolled 3-slot shape; four targets
+    // all get the pump.
+    let mut g = two_player_game();
+    let bears: Vec<_> = (0..4)
+        .map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears()))
+        .collect();
+    let id = g.add_card_to_hand(0, catalog::rabid_attack());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bears[0])),
+        additional_targets: bears[1..].iter().map(|b| Target::Permanent(*b)).collect(),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Rabid Attack castable with four targets");
+    drain_stack(&mut g);
+
+    for bid in &bears {
+        let view = g.computed_permanent(*bid).expect("creature alive");
+        assert_eq!(view.power, 3, "all four creatures pumped");
+    }
+}
+
+#[test]
+fn rabid_attack_rejects_duplicate_targets() {
+    // CR 115.3 — the slots of one multi-target instance must name
+    // distinct objects.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::rabid_attack());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_err(), "same creature twice must be rejected");
+}
+
+#[test]
+fn rabid_attack_ui_caster_declines_after_two_targets() {
+    // A `wants_ui` caster is prompted slot-by-slot; every Rabid Attack
+    // slot is optional (`min_targets: 0`), and answering `DeclineTarget`
+    // ends selection — exactly the two chosen creatures get pumped.
+    use crate::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b3 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::rabid_attack());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(b1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast suspends on the slot-1 prompt");
+    let pending = g.pending_decision.as_ref().expect("slot-1 ChooseTarget pending");
+    match &pending.decision {
+        Decision::ChooseTarget { optional, legal, .. } => {
+            assert!(*optional, "up-to-N slot must be declinable");
+            assert!(
+                !legal.contains(&Target::Permanent(b1)),
+                "already-chosen target excluded (CR 115.3)"
+            );
+        }
+        other => panic!("expected ChooseTarget, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::Target(Target::Permanent(b2)))
+        .expect("slot 1 accepted");
+    // Slot-2 prompt arrives; decline it.
+    assert!(g.pending_decision.is_some(), "slot-2 prompt pending");
+    g.submit_decision(DecisionAnswer::DeclineTarget)
+        .expect("decline replays and completes the cast");
+    assert!(g.pending_decision.is_none(), "no further prompts after decline");
+    drain_stack(&mut g);
+
+    assert_eq!(g.computed_permanent(b1).unwrap().power, 3, "b1 pumped");
+    assert_eq!(g.computed_permanent(b2).unwrap().power, 3, "b2 pumped");
+    assert_eq!(g.computed_permanent(b3).unwrap().power, 2, "b3 untouched");
 }
 
 #[test]
@@ -7575,6 +7716,32 @@ fn prismari_charm_mode1_deals_one_damage() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == savannah_lions),
         "Mode 1 should kill the 2/1 Savannah Lions with 1 damage");
+}
+
+#[test]
+fn prismari_charm_mode1_hits_two_targets_including_a_player() {
+    // Printed "deals 1 damage to each of one or two targets" — mode 1 is
+    // `ApplyToTargets { max_targets: 2, min_targets: 1 }` with no type
+    // restriction, so a creature and a player can both be hit.
+    let mut g = two_player_game();
+    let lions = g.add_card_to_battlefield(1, catalog::savannah_lions());
+    let id = g.add_card_to_hand(0, catalog::prismari_charm());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(lions)),
+        additional_targets: vec![Target::Player(1)],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Prismari Charm castable at two targets");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == lions),
+        "1 damage kills the 2/1");
+    assert_eq!(g.players[1].life, 19, "player took 1 damage");
 }
 
 #[test]
