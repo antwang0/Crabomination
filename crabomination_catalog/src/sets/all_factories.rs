@@ -6345,6 +6345,10 @@ static DECKS: &[Factory] = &[
     super::decks::double_down,
     super::decks::mystical_tether,
     super::decks::high_noon,
+    super::decks::malcolm_the_eyes,
+    super::decks::reach_for_the_sky,
+    super::decks::tomb_trawler,
+    super::decks::steer_clear,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
