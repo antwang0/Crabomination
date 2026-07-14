@@ -6326,6 +6326,8 @@ static DECKS: &[Factory] = &[
     super::decks::rowdy_research,
     super::decks::brave_the_wilds,
     super::decks::redrock_sentinel,
+    super::decks::aloe_alchemist,
+    super::decks::longhorn_sharpshooter,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

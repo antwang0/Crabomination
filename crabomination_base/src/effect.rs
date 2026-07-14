@@ -1846,6 +1846,11 @@ pub enum EventKind {
     /// ("whenever you commit a crime" — Kaervek, Gisa). Matched to
     /// `GameEvent::CommittedCrime`.
     CommittedCrime,
+    /// CR 702.170 — "When this card becomes plotted, …". Fires from exile as a
+    /// card is plotted; the just-plotted card is the event source (Aloe
+    /// Alchemist, Longhorn Sharpshooter). Modeled as a `SelfSource` trigger
+    /// dispatched directly by `plot_card`.
+    BecomesPlotted,
 }
 
 /// Whose events does this trigger listen for?

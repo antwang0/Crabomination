@@ -126,8 +126,9 @@ skipped this run, each needing one primitive:
   the `Enchantment — Room` split cards).
 - **BLB Gift / Valiant / Offspring / Expend** ability words (Jolly Gerbils,
   Flowerfoot Swordmaster, Junkblade Bruiser, the Gift spells).
-- **"Becomes plotted" trigger** (Aloe Alchemist) and **"becomes the target of an
-  opponent's spell/ability"** (Cactarantula).
+- **"Becomes the target of an opponent's spell/ability"** (Cactarantula).
+  ("Becomes plotted" ✅ — `EventKind::BecomesPlotted`, a SelfSource self-trigger
+  dispatched by `plot_card`; Aloe Alchemist + Longhorn Sharpshooter shipped.)
 - **Delirium widens a modal to choose-one-or-more** (Let's Play a Game).
 
 `decks::recent177-178` shipped ~14 FDN/BLB/DSK cards (Exemplar of Light,
@@ -3681,9 +3682,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Boneyard Desecrator** — the effect-path sacrifice (`SacrificeAndRemember`)
     doesn't stamp `sacrificed_was_outlaw` (only the activated `sac_other_filter`
     path does); wire the tuple if a spell ever needs it.
-  - **Cactarantula / Consuming Ashes / Aloe Alchemist** (OTJ) still need a
-    control-a-Desert cost reduction, a target-mana-value reflexive predicate, and
-    a "becomes plotted" trigger event, respectively.
+  - **Cactarantula / Consuming Ashes** (OTJ) still need a control-a-Desert cost
+    reduction and a target-mana-value reflexive predicate, respectively. (Aloe
+    Alchemist ✅ via the new `EventKind::BecomesPlotted` trigger.)
 - ⏳ **recent131-134 (WOE waves 4-7) follow-ups / noticed:**
   - New primitives this run: `DynamicPt::NonlandPermanentsControlled` (Regal
     Bunnicorn `*/*`), `Keyword::CantBeBlockedByPowerAtLeast(N)` (Squeak By —

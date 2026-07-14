@@ -4047,10 +4047,35 @@ impl GameState {
             .players[p]
             .remove_from_hand(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
+        // CR 702.170 — "When this card becomes plotted, …" self-triggers fire
+        // from exile as the card is plotted (Aloe Alchemist, Longhorn
+        // Sharpshooter). Gather them off the card before it settles in exile.
+        let plot_triggers: Vec<crate::effect::Effect> = card
+            .definition
+            .triggered_abilities
+            .iter()
+            .filter(|t| t.event.kind == crate::effect::EventKind::BecomesPlotted)
+            .map(|t| t.effect.clone())
+            .collect();
         self.exile.push(card);
         self.plotted_cards.insert(card_id);
         self.plotted_this_turn.insert(card_id);
         events.push(GameEvent::PermanentExiled { card_id });
+        for effect in plot_triggers {
+            let auto_target = self.auto_target_for_effect_avoiding(&effect, p, Some(card_id));
+            self.push_pending_trigger(
+                crate::game::types::PendingTriggerPush {
+                    source: card_id,
+                    controller: p,
+                    effect,
+                    subject: Some(crate::game::effects::EntityRef::Card(card_id)),
+                    event_amount: 0,
+                    mode: None,
+                    intervening_if: None,
+                },
+                auto_target,
+            );
+        }
         Ok(events)
     }
 
