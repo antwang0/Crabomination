@@ -6313,6 +6313,11 @@ static DECKS: &[Factory] = &[
     super::decks::strongbox_raider,
     super::decks::fireglass_mentor,
     super::decks::menagerie_liberator,
+    super::decks::map_the_frontier,
+    super::decks::neutralize_the_guards,
+    super::decks::rise_of_the_varmints,
+    super::decks::overzealous_muscle,
+    super::decks::outlaws_fury,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

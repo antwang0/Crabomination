@@ -551,11 +551,18 @@ impl Bot for RandomBot {
 fn attacker_damage_value(state: &GameState, id: CardId) -> i32 {
     use crate::card::Keyword;
     if let Some(cp) = state.computed_permanent(id) {
-        if cp.keywords.contains(&Keyword::AssignsCombatDamageByToughness) {
+        let mut base = if cp.keywords.contains(&Keyword::AssignsCombatDamageByToughness) {
             cp.toughness
         } else {
             cp.power
+        };
+        // CR 702.121 — Melee grows the attacker +1/+1 per opponent it attacks
+        // this combat. In a duel that's a guaranteed +1 the moment it's
+        // declared, so the planner should weigh it in.
+        if cp.keywords.contains(&Keyword::Melee) {
+            base += 1;
         }
+        base
     } else {
         state.battlefield_find(id).map(|c| c.power()).unwrap_or(0)
     }
