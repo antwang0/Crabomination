@@ -854,6 +854,10 @@ pub enum Predicate {
     /// `life`. Powers "unless an opponent has N or less life" gates (Vampire
     /// Lacerator).
     PlayerLifeAtMost { who: PlayerRef, life: i32 },
+    /// True if any player matched by `who` has an effective life total exactly
+    /// `life`. Powers "if target player has exactly N life" gates (Hidetsugu's
+    /// Second Rite).
+    PlayerLifeExactly { who: PlayerRef, life: i32 },
     /// True if any player matched by `who` has an effective life total at least
     /// `life`. Powers "as long as you have N or more life" statics (Angel of
     /// Vitality).

@@ -961,6 +961,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.effective_life(p) <= *life),
+            Predicate::PlayerLifeExactly { who, life } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.effective_life(p) == *life),
             Predicate::PlayerLifeAtLeast { who, life } => self
                 .resolve_players(who, ctx)
                 .into_iter()

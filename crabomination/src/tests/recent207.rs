@@ -252,6 +252,32 @@ fn dive_down_grants_hexproof() {
     assert!(cp.keywords.contains(&Keyword::Hexproof));
 }
 
+/// Hidetsugu's Second Rite only burns a player who is at exactly 10 life.
+#[test]
+fn hidetsugus_second_rite_needs_exactly_ten() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_hand(0, catalog::hidetsugus_second_rite());
+    g.players[1].life = 11; // not exactly 10
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: s, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 11, "not at 10 → no damage");
+
+    let s2 = g.add_card_to_hand(0, catalog::hidetsugus_second_rite());
+    g.players[1].life = 10;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s2, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 0, "exactly 10 → dealt 10");
+}
+
 /// Magnigoth Sentry has reach; Raging Redcap has double strike (french vanillas).
 #[test]
 fn vanilla_keyword_bodies() {

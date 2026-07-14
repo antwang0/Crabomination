@@ -6412,6 +6412,7 @@ static DECKS: &[Factory] = &[
     super::decks::harmless_offering,
     super::decks::dive_down,
     super::decks::syr_alin_the_lions_claw,
+    super::decks::hidetsugus_second_rite,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

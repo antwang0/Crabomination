@@ -4,10 +4,11 @@
 //! `tests/recent207.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword, Selector,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate, Selector,
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility, Value,
+    Value,
 };
+use crate::card::TriggeredAbility;
 use crate::effect::shortcut::{deal, drain, etb, target_filtered};
 use crate::effect::{Duration, EventKind, EventScope, EventSpec, PlayerRef, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
@@ -346,6 +347,25 @@ pub fn harmless_offering() -> CardDefinition {
             what: target_filtered(R::Permanent.and(R::ControlledByYou)),
             to: Some(PlayerRef::EachOpponent),
             duration: Duration::Permanent,
+        },
+        ..Default::default()
+    }
+}
+
+/// Hidetsugu's Second Rite — {3}{R} Instant. If target player has exactly 10
+/// life, deal 10 damage to that player.
+pub fn hidetsugus_second_rite() -> CardDefinition {
+    CardDefinition {
+        name: "Hidetsugu's Second Rite",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::PlayerLifeExactly { who: PlayerRef::Target(0), life: 10 },
+            then: Box::new(Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(10),
+            }),
+            else_: Box::new(Effect::Noop),
         },
         ..Default::default()
     }
