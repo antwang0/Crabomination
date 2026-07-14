@@ -6309,6 +6309,9 @@ static DECKS: &[Factory] = &[
     super::decks::inquisitive_glimmer,
     super::decks::tidecaller_mentor,
     super::decks::thought_stalker_warlock,
+    super::decks::split_up,
+    super::decks::strongbox_raider,
+    super::decks::fireglass_mentor,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
