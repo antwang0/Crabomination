@@ -1483,6 +1483,39 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Spree (CR 702.172): a Spree spell must be cast via `CastSpellSpree` with
+    // at least one chosen mode — a plain `CastSpell` resolves it as a no-op. For
+    // each Spree card, offer each single mode whose (base + mode) cost is
+    // payable and whose effect has a legal target; `would_accept` is the final
+    // gate. One mode per candidate keeps the search small while still letting
+    // the bot leverage removal / draw Spree spells (Explosive Derailment,
+    // Final Showdown, Jailbreak Scheme, …).
+    for c in state.players[seat].hand.iter() {
+        let Effect::Spree { modes } = &c.definition.effect else { continue };
+        for (i, sm) in modes.iter().enumerate() {
+            let mode_effect = &sm.effect;
+            let (target, additional_targets) = if mode_effect.requires_target() {
+                let (t, extras) = state.auto_targets_for_effect_all_slots(mode_effect, seat, None);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, vec![])
+            };
+            let action = GameAction::CastSpellSpree {
+                card_id: c.id,
+                spree_modes: vec![i as u8],
+                target,
+                additional_targets,
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+            }
+        }
+    }
+
     // Conspire (CR 702.78): for any hand card with `Keyword::Conspire`, tap
     // the first two untapped creatures sharing a color with it to copy the
     // spell. The bot conspires whenever it can — the copy is strictly upside
@@ -6591,5 +6624,28 @@ mod stack_response_tests {
         assert!(matches!(pick_token_maker(&g, 0),
             Some(GameAction::ActivateAbility { card_id, .. }) if card_id == sw),
             "bot makes an Ally token with leftover mana");
+    }
+
+    /// The bot casts a Spree spell via `CastSpellSpree` (not a no-op plain
+    /// cast), choosing an affordable mode with a legal target.
+    #[test]
+    fn bot_casts_spree_spell() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // A juicy opposing creature for Explosive Derailment's +{2} "deal 4" mode.
+        g.add_card_to_battlefield(1, catalog::serra_angel());
+        let spell = g.add_card_to_hand(0, catalog::explosive_derailment());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2); // base {R} + mode {2}
+        match main_phase_action(&g, 0) {
+            GameAction::CastSpellSpree { card_id, spree_modes, target, .. } => {
+                assert_eq!(card_id, spell, "cast the Spree spell");
+                assert!(!spree_modes.is_empty(), "chose at least one mode");
+                assert!(target.is_some(), "aimed the damage mode at a target");
+            }
+            other => panic!("expected a Spree cast, got {other:?}"),
+        }
     }
 }
