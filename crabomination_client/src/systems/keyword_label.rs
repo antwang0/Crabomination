@@ -102,6 +102,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Flanking => "Flk",
         // Combat-pump statics from the Kamigawa/legacy sets read at a glance.
         Bushido(_) => "Bsd",
+        Melee => "Mle",
         Rampage(_) => "Rmp",
         Frenzy(_) => "Frz",
         Banding => "Bnd",

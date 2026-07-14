@@ -3245,6 +3245,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 701.30 — Clash
 - ✅ CR 510.1d — full damage assignment
 - ✅ CR 701.37 / 712.16 — Meld
+- ✅ CR 702.121 — Melee (`Keyword::Melee`; declare-attackers pumps +1/+1 per
+  distinct opponent attacked this combat — Menagerie Liberator;
+  `cr_702_121_melee_pumps_per_opponent_attacked`)
 - ✅ CR 702.146 — Disturb
 - ✅ CR 104.3c (with the 104.2 win override)
 - ✅ "When this card is milled" triggers

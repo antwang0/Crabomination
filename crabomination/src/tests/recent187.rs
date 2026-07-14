@@ -70,3 +70,24 @@ fn fireglass_mentor_second_main_impulse() {
     drain_stack(&mut g);
     assert_eq!(g.exile.len(), 2, "second main + opponent lost life → impulse two");
 }
+
+/// Menagerie Liberator's Melee grows it by the number of opponents attacked.
+#[test]
+fn menagerie_liberator_melee_pumps_on_attack() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let lib = g.add_card_to_battlefield(0, catalog::menagerie_liberator());
+    g.clear_sickness(lib);
+    // Before combat: base 3/2.
+    assert_eq!(g.computed_permanent(lib).unwrap().power, 3);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: lib,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack the lone opponent");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(lib).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "melee: +1/+1 for one opponent");
+}

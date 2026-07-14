@@ -1,15 +1,16 @@
 //! DSK/FDN/BLB gap batch on existing primitives: Split Up (modal wrath),
 //! Strongbox Raider (Raid impulse), and Fireglass Mentor (life-loss-gated
-//! second-main impulse). Tests in `crabomination/src/tests/recent187.rs`.
+//! second-main impulse). Menagerie Liberator exercises the new Melee keyword
+//! (CR 702.121). Tests in `crabomination/src/tests/recent187.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, MayPlayDuration,
-    SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
+    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
+    MayPlayDuration, SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Effect, PlayerRef, Predicate, Selector};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, generic, r, w};
+use crate::mana::{b, cost, g, generic, r, w};
 
 /// Split Up — {1}{W}{W} Sorcery. Choose one — destroy all tapped creatures; or
 /// destroy all untapped creatures.
@@ -84,6 +85,24 @@ pub fn fireglass_mentor() -> CardDefinition {
                 uncast_penalty: None,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Menagerie Liberator — {3}{G} 3/2 Human Warrior with trample and melee (CR
+/// 702.121 — +1/+1 until end of turn per opponent it attacked this combat).
+pub fn menagerie_liberator() -> CardDefinition {
+    CardDefinition {
+        name: "Menagerie Liberator",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample, Keyword::Melee],
         ..Default::default()
     }
 }

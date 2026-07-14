@@ -554,6 +554,9 @@ pub enum Keyword {
     Flanking,
     /// Bushido N (CR 702.45) — when this blocks or becomes blocked, it gets +N/+N until EOT.
     Bushido(u32),
+    /// Melee (CR 702.121) — whenever this attacks, it gets +1/+1 until end of
+    /// turn for each opponent this player attacked this combat.
+    Melee,
     /// Absorb N (CR 702.64) — if a source would deal damage to this
     /// creature, prevent N of that damage (per source, per event; multiple
     /// instances each apply).

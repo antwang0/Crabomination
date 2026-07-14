@@ -6312,6 +6312,7 @@ static DECKS: &[Factory] = &[
     super::decks::split_up,
     super::decks::strongbox_raider,
     super::decks::fireglass_mentor,
+    super::decks::menagerie_liberator,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

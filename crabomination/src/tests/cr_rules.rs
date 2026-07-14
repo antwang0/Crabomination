@@ -8994,3 +8994,75 @@ fn cr_614_5_one_sided_doubler_spares_own_side() {
     // Opponent unaffected.
     assert_eq!(g.players[1].life, 20, "no damage leaked to the opponent");
 }
+
+// ── CR 702.121 — Melee ───────────────────────────────────────────────────────
+
+/// A creature with melee gets +1/+1 until end of turn for each opponent it
+/// attacked this combat (one, in a duel).
+#[test]
+fn cr_702_121_melee_pumps_per_opponent_attacked() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let m = g.add_card_to_battlefield(0, catalog::menagerie_liberator()); // 3/2, trample+melee
+    g.clear_sickness(m);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: m,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(m).unwrap().power, 4, "melee: +1/+1 for the one opponent");
+}
+
+// ── CR 614.5 — additive damage-replacement (typed) ───────────────────────────
+
+/// Valley Flamecaller's static adds 1 to the damage a typed creature you control
+/// deals — an additive CR 614.5 replacement applied before doublers.
+#[test]
+fn cr_614_5_typed_creatures_deal_extra_damage() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.players[1].life = 20;
+    let fc = g.add_card_to_battlefield(0, catalog::valley_flamecaller()); // 3/3 Lizard
+    g.clear_sickness(fc);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: fc,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, 16, "3 power + 1 = 4 combat damage");
+}
+
+// ── CR 401 — library / graveyard recursion ───────────────────────────────────
+
+/// `Effect::ShuffleGraveyardCardsIntoLibrary` moves up to N chosen graveyard
+/// cards into the owner's library (Cathartic Parting's recursion rider).
+#[test]
+fn cr_401_shuffle_graveyard_cards_into_library() {
+    use crate::effect::{Effect, PlayerRef, Value};
+    use crate::card::SelectionRequirement as R;
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let lib_before = g.players[0].library.len();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_ability(src, 0, None);
+    g.resolve_effect(
+        &Effect::ShuffleGraveyardCardsIntoLibrary {
+            who: PlayerRef::You,
+            filter: R::Any,
+            max: Value::Const(4),
+        },
+        &ctx,
+    )
+    .unwrap();
+    assert_eq!(g.players[0].graveyard.len(), 1, "four of five reshuffled out of the graveyard");
+    assert_eq!(g.players[0].library.len(), lib_before + 4, "into the library");
+}

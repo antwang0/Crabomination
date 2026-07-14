@@ -389,6 +389,24 @@ impl GameState {
         }
 
         let any_attackers = !attacks.is_empty();
+        // CR 702.121 — Melee counts the distinct opponents this player attacked
+        // this combat (a player targeted directly, or the controller of a
+        // planeswalker/battle attacked). Computed over the whole batch up front.
+        let melee_opponents: i32 = {
+            let mut seats: std::collections::HashSet<usize> = std::collections::HashSet::new();
+            for atk in &attacks {
+                let seat = match atk.target {
+                    AttackTarget::Player(s) => Some(s),
+                    AttackTarget::Planeswalker(cid) | AttackTarget::Battle(cid) => {
+                        self.battlefield_find(cid).map(|c| c.controller)
+                    }
+                };
+                if let Some(s) = seat.filter(|s| !self.same_team(*s, p)) {
+                    seats.insert(s);
+                }
+            }
+            seats.len() as i32
+        };
         for atk in attacks {
             let id = atk.attacker;
             // Statics-granted triggers ("Slivers you control have
@@ -440,6 +458,11 @@ impl GameState {
                     id,
                     crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
                 ));
+            }
+            // CR 702.121 — Melee: +1/+1 until end of turn per opponent attacked.
+            if melee_opponents > 0 && computed_kw(id).contains(&Keyword::Melee) {
+                card.power_bonus += melee_opponents;
+                card.toughness_bonus += melee_opponents;
             }
             // CR 702.142 — record that this creature attacked (gates Boast).
             card.attacked_this_turn = true;
