@@ -63096,6 +63096,78 @@ fn gift_mind_spiral_promised_taps_and_stuns() {
     assert!(c.counters.iter().any(|(k, n)| *k == CounterType::Stun && *n >= 1), "gift stunned it");
 }
 
+/// Sazacap's Brew discards a card as an additional cost and draws two; its gift
+/// also pumps a creature you control.
+#[test]
+fn gift_sazacaps_brew_discards_draws_and_pumps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::sazacaps_brew());
+    let pitch = g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastGift {
+        card_id: spell,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None, x_value: None,
+    }).expect("cast Sazacap's Brew (gift)");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "discarded a card as additional cost");
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 2), "gift pumped +2/+0");
+}
+
+/// Dewdrop Cure reanimates up to two small creatures; its gift lifts the cap to
+/// three.
+#[test]
+fn gift_dewdrop_cure_promised_reanimates_three() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let c = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::dewdrop_cure());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastGift {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b), Target::Permanent(c)],
+        mode: None, x_value: None,
+    }).expect("cast Dewdrop Cure (gift)");
+    drain_stack(&mut g);
+    let back = [a, b, c].iter().filter(|id| g.battlefield_find(**id).is_some()).count();
+    assert_eq!(back, 3, "gift returned all three to the battlefield");
+}
+
+/// Consumed by Greed forces a greatest-power sacrifice; its gift also returns a
+/// creature from your graveyard.
+#[test]
+fn gift_consumed_by_greed_promised_edict_and_return() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let small = g.add_card_to_battlefield(1, catalog::birds_of_paradise()); // 0/1, lower power
+    let gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::consumed_by_greed());
+    g.add_card_to_library(1, catalog::island()); // gift makes them draw; don't deck them
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastGift {
+        card_id: spell,
+        target: Some(Target::Permanent(gy)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Consumed by Greed (gift)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "greatest-power creature sacrificed");
+    assert!(g.battlefield_find(small).is_some(), "the lower-power creature survives");
+    assert!(g.players[0].hand.iter().any(|c| c.id == gy), "gift returned a creature from graveyard");
+}
+
 // ── Survival (CR 702.180) ────────────────────────────────────────────────────
 
 /// Survival fires at your second main phase only when the creature is tapped.

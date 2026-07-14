@@ -11,11 +11,12 @@ target. Shipped: Dune Drifter.
 
 **Next-up cards noticed this run (recent185–190), each blocked on one
 primitive:**
-- **BLB Gift instants/sorceries** (Sazacap's Brew, Dewdrop Cure, Consumed by
-  Greed, Cruelclaw's Heist, …) — mechanic ships (`CardDefinition.gift`), but
-  each needs a clean effect: additional-cost-discard + player-target draw,
-  per-card-MV-capped multi-reanimate, opponent-greatest-power sacrifice,
-  reveal-hand-choose-exile-then-may-play.
+- **BLB Gift instants/sorceries** — Sazacap's Brew, Dewdrop Cure, and Consumed
+  by Greed now ship (`decks::gift`, tests in `tests/modern.rs`). Remaining:
+  **Cruelclaw's Heist** — reveal opponent's hand, exile a chosen nonland card,
+  and (if gifted) may cast it from exile paying any type of mana. Needs a
+  hand-reveal-choose-exile + grant-may-play-from-exile-any-color primitive
+  (sibling of `ExileTopAndGrantMayPlay`, but sourced from an opponent's hand).
 - **Say Its Name** (DSK) — front half (mill 3 + gy recur) is clean; the
   activated tutor exiles three same-named gy copies to fetch Altanak — a
   named-card gy-exile cost.
@@ -1584,6 +1585,23 @@ replacement coverage, real coin-flip RNG, non-combat wither/infect/deathtouch,
 per-source combat-damage aggregation, layer timestamps, and the hybrid-mana
 solver. The two recurring root causes (effect arms bypassing the rich funnels;
 parallel hand-maintained walkers drifting) are tracked in P3 below.
+
+### P2 — open
+
+- 🟡 **Deck-out loss is applied too eagerly (CR 104.3c / 704.5c).**
+  `lose_to_empty_draw` sets `eliminated = true` *inside* the failed draw, so a
+  player who is decked mid-resolution is immediately excluded from
+  `resolve_players(EachOpponent/EachPlayer)` (which filters on `is_alive()`).
+  A spell that decks an opponent and then references "each opponent" in the
+  same resolution wrongly skips them (surfaced building Consumed by Greed;
+  worked around in the test by giving the opponent a library). The deck-out is
+  a state-based action and should be deferred to the next SBA sweep. A clean
+  fix (flag `pending_deck_loss`, promote in `check_state_based_actions`) was
+  prototyped but reverted: it also makes the decked player's permanents
+  correctly leave via CR 800.4a, which breaks ~24 unrelated feature tests that
+  cast a draw/looter spell into an empty `two_player_game()` library and rely
+  on the caster's board persisting. Landing it needs those tests to seed a
+  library first (or a shared harness with non-empty libraries).
 
 ### P2 — performance
 

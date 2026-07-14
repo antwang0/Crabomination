@@ -4,12 +4,12 @@
 //! instead of the printed base `effect`. Tracked in `DECK_FEATURES.md`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Gift, Keyword, SelectionRequirement, Selector,
-    Subtypes, TokenDefinition, Value,
+    AdditionalCastCost, CardDefinition, CardType, CreatureType, Effect, Gift, Keyword,
+    SelectionRequirement, Selector, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::{each_your_creature, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, g, r, u, w, Color};
+use crate::mana::{cost, b, generic, g, r, u, w, Color};
 
 /// Opponent draws one card — the "Gift a card" payload.
 fn opponent_draws_one() -> Effect {
@@ -314,6 +314,105 @@ pub fn peerless_recycling() -> CardDefinition {
         gift: Some(Box::new(Gift {
             label: "a card",
             gifted_effect: Effect::Seq(vec![opponent_draws_one(), ret(0), ret(1)]),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Sazacap's Brew — {1}{R} Instant. Additional cost: discard a card. Gift a
+/// tapped Fish. Target player draws two cards; if the gift was promised, target
+/// creature you control gets +2/+0 until end of turn.
+pub fn sazacaps_brew() -> CardDefinition {
+    let draw2 = || Effect::Draw {
+        who: target_filtered(SelectionRequirement::Player),
+        amount: Value::Const(2),
+    };
+    CardDefinition {
+        name: "Sazacap's Brew",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1, filter: None }],
+        effect: draw2(),
+        gift: Some(Box::new(Gift {
+            label: "a tapped Fish",
+            gifted_effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::EachOpponent,
+                    count: Value::Const(1),
+                    definition: tapped_fish_token(),
+                },
+                draw2(),
+                Effect::PumpPT {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    },
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Dewdrop Cure — {2}{W} Sorcery. Gift a card. Return up to two target creature
+/// cards each with mana value 2 or less from your graveyard to the battlefield;
+/// if the gift was promised, return up to three instead.
+pub fn dewdrop_cure() -> CardDefinition {
+    let reanimate = |max| Effect::ApplyToTargets {
+        max_targets: max,
+        filter: SelectionRequirement::Creature
+            .and(SelectionRequirement::InYourGraveyard)
+            .and(SelectionRequirement::ManaValueAtMost(2)),
+        effect: Box::new(Effect::Move {
+            what: Selector::Target(0),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        }),
+    };
+    CardDefinition {
+        name: "Dewdrop Cure",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: reanimate(2),
+        gift: Some(Box::new(Gift {
+            label: "a card",
+            gifted_effect: Effect::Seq(vec![opponent_draws_one(), reanimate(3)]),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Consumed by Greed — {1}{B}{B} Instant. Gift a card. Target opponent
+/// sacrifices a creature with the greatest power among creatures they control;
+/// if the gift was promised, also return target creature card from your
+/// graveyard to your hand.
+pub fn consumed_by_greed() -> CardDefinition {
+    let edict = || Effect::SacrificeGreatestMV {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        count: Value::Const(1),
+        filter: SelectionRequirement::Creature,
+        by_power: true,
+    };
+    CardDefinition {
+        name: "Consumed by Greed",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: edict(),
+        gift: Some(Box::new(Gift {
+            label: "a card",
+            gifted_effect: Effect::Seq(vec![
+                opponent_draws_one(),
+                edict(),
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ]),
         })),
         ..Default::default()
     }
