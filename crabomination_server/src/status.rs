@@ -182,10 +182,14 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("win_life_delta_iqr", "gauge", "Interquartile range (p75-p25) of the win-by-life margin.", st.win_life_delta_iqr().to_string());
     out.push_str("# HELP crab_wins_total Decided matches by win kind (CR 104.3).\n");
     out.push_str("# TYPE crab_wins_total counter\n");
+    // `damage` + `alternate` reconciles to total decided wins; `poison`,
+    // `decked`, `commander_damage`, and `other` are sub-splits of `alternate`
+    // (a single win can flag more than one), so they are not additive with it.
     for (kind, value) in [
         ("damage", st.damage_wins),
+        ("alternate", st.deckout_wins),
         ("poison", st.poison_wins),
-        ("deckout", st.deck_wins),
+        ("decked", st.deck_wins),
         ("commander_damage", st.commander_damage_wins),
         ("other", st.other_wins),
     ] {
@@ -422,7 +426,10 @@ mod tests {
         assert!(body.contains("# TYPE crab_matches_total counter"));
         assert!(body.contains("crab_connections_current 0"));
         assert!(body.contains("# HELP crab_uptime_seconds"));
-        // Win-kind breakdown is a labelled series.
+        // Win-kind breakdown is a labelled series; `damage` + `alternate`
+        // reconcile to total decided wins.
+        assert!(body.contains("crab_wins_total{kind=\"damage\"} 0"));
+        assert!(body.contains("crab_wins_total{kind=\"alternate\"} 0"));
         assert!(body.contains("crab_wins_total{kind=\"poison\"} 0"));
         assert!(body.contains("crab_wins_total{kind=\"commander_damage\"} 0"));
         assert!(body.contains("# TYPE crab_draws_total counter"));

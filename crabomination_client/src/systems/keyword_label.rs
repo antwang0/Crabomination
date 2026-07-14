@@ -211,6 +211,17 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // speed mechanic and carries "Max speed —" abilities that come online
         // once its controller reaches speed 4.
         StartYourEngines => "Eng",
+        // Devoid (CR 702.114) — the permanent is colorless regardless of its
+        // mana cost; a board read for color-matters interactions (protection,
+        // devotion, "another colorless creature").
+        Devoid => "Dvd",
+        // Day/Night transform state (CR 702.145) — which face a
+        // daybound/nightbound permanent currently shows.
+        Daybound => "Day",
+        Nightbound => "Night",
+        // Disguise (CR 702.168) — a face-down 2/2 with ward {2} that can be
+        // turned face up; the chip flags the hidden card.
+        Disguise(_) => "Dsg",
         _ => return None,
     })
 }
@@ -554,5 +565,14 @@ mod tests {
             ))]),
             "Atk?"
         );
+    }
+
+    #[test]
+    fn strip_surfaces_board_state_keywords() {
+        use crabomination::mana::cost;
+        assert_eq!(keyword_strip(&[Keyword::Devoid]), "Dvd");
+        assert_eq!(keyword_strip(&[Keyword::Daybound]), "Day");
+        assert_eq!(keyword_strip(&[Keyword::Nightbound]), "Night");
+        assert_eq!(keyword_strip(&[Keyword::Disguise(cost(&[]))]), "Dsg");
     }
 }
