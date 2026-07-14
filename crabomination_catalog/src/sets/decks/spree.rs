@@ -322,3 +322,78 @@ pub fn dance_of_the_tumbleweeds() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Final Showdown — {W} Instant. Spree: +{1} all creatures lose all abilities
+/// until end of turn; +{1} a creature you control gains indestructible until
+/// end of turn; +{3}{W}{W} destroy all creatures.
+pub fn final_showdown() -> CardDefinition {
+    CardDefinition {
+        name: "Final Showdown",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: spree(vec![
+            mode(
+                cost(&[generic(1)]),
+                Effect::LoseAllAbilities {
+                    what: Selector::EachPermanent(R::Creature),
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+            mode(
+                cost(&[generic(1)]),
+                Effect::GrantKeyword {
+                    what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+            mode(
+                cost(&[generic(3), w(), w()]),
+                Effect::ForEach {
+                    selector: Selector::EachPermanent(R::Creature),
+                    body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                },
+            ),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Jailbreak Scheme — {U} Sorcery. Spree: +{3} put a +1/+1 counter on target
+/// creature and it can't be blocked this turn; +{2} target artifact or
+/// creature's owner puts it on the top or bottom of their library.
+pub fn jailbreak_scheme() -> CardDefinition {
+    CardDefinition {
+        name: "Jailbreak Scheme",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: spree(vec![
+            mode(
+                cost(&[generic(3)]),
+                Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(R::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::GrantKeyword {
+                        what: target_filtered(R::Creature),
+                        keyword: Keyword::Unblockable,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            ),
+            mode(
+                cost(&[generic(2)]),
+                Effect::Move {
+                    what: target_filtered(R::Artifact.or(R::Creature)),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOfMoved,
+                        pos: LibraryPosition::OwnerChoice,
+                    },
+                },
+            ),
+        ]),
+        ..Default::default()
+    }
+}

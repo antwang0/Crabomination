@@ -5258,6 +5258,8 @@ static DECKS: &[Factory] = &[
     super::decks::phantom_interference,
     super::decks::three_steps_ahead,
     super::decks::dance_of_the_tumbleweeds,
+    super::decks::final_showdown,
+    super::decks::jailbreak_scheme,
     super::decks::acrobatic_cheerleader,
     super::decks::cautious_survivor,
     super::decks::defiant_survivor,

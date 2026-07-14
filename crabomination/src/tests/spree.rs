@@ -251,3 +251,42 @@ fn dance_of_the_tumbleweeds_token_scales_with_lands() {
     let cp = cp.iter().find(|c| c.id == elem.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "X = lands you control");
 }
+
+#[test]
+fn final_showdown_wrath_mode_destroys_all_creatures() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::final_showdown());
+    g.players[0].mana_pool.add(Color::White, 3); // {W} base + {W}{W} in the mode
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(spree(id, vec![2], None, vec![])).expect("wrath mode");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "all creatures destroyed");
+}
+
+#[test]
+fn jailbreak_scheme_counter_and_unblockable() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::jailbreak_scheme());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(spree(id, vec![0], Some(Target::Permanent(bear)), vec![]))
+        .expect("counter/unblockable mode");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "+1/+1 counter placed",
+    );
+    assert!(
+        g.compute_battlefield().iter().find(|c| c.id == bear).unwrap()
+            .keywords.contains(&crate::card::Keyword::Unblockable),
+        "granted unblockable",
+    );
+}

@@ -113,8 +113,11 @@ Equipment, mana dorks, saddled Mount, Delirium self-reanimate, finality reanimat
 skipped this run, each needing one primitive:
 - **Gnawing Crescendo / Mardu-style "this turn when a creature dies"** — a
   duration-scoped delayed *triggered* ability granted to the player.
-- **Spree** modal-additional-costs (Jailbreak Scheme, Getaway Glamer, Betrayer's
-  Bargain's sac-or-pay choice).
+- **Spree** ships (`Effect::Spree` + `CastSpellSpree`; Jailbreak Scheme, Final
+  Showdown, and the `decks::spree` cycle done). Remaining Spree cards each want a
+  bespoke mode effect: Getaway Glamer (destroy-if-no-greater-power), Betrayer's
+  Bargain (sac-or-pay choice), Lively Dirge (return-up-to-two-total-MV≤4),
+  Great Train Heist (extra-combat + delayed treasure-on-damage).
 - **DSK Rooms / doors** (Rampaging Soulrager, Keys to the House's door mode,
   the `Enchantment — Room` split cards).
 - **BLB Gift / Valiant / Offspring / Expend** ability words (Jolly Gerbils,
