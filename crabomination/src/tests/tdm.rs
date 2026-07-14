@@ -2008,3 +2008,35 @@ fn songcrafter_mage_grants_harmonize_to_graveyard_card() {
     assert_eq!(g.players[0].hand.len(), hand_before + 2, "Divination drew two");
     assert!(g.exile.iter().any(|c| c.id == div), "harmonize exiles on resolve");
 }
+
+/// Cathartic Parting bounces an opponent's artifact into their library and
+/// shuffles up to four cards from your graveyard back into your library.
+#[test]
+fn cathartic_parting_tucks_and_recurs() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(1, catalog::howling_mine());
+    // Five cards in your graveyard — up to four are reshuffled.
+    for _ in 0..5 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::cathartic_parting());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let opp_lib_before = g.players[1].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Cathartic Parting");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "artifact left the battlefield");
+    assert_eq!(g.players[1].library.len(), opp_lib_before + 1, "artifact shuffled into owner's library");
+    let bears_left = g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears_left, 1, "four of five graveyard cards reshuffled");
+}

@@ -719,6 +719,9 @@ mod tests_recent183;
 #[path = "../tests/recent184.rs"]
 mod tests_recent184;
 #[cfg(test)]
+#[path = "../tests/recent185.rs"]
+mod tests_recent185;
+#[cfg(test)]
 #[path = "../tests/tdm.rs"]
 mod tests_tdm;
 #[cfg(test)]
@@ -4061,6 +4064,23 @@ impl GameState {
                 .flat_map(|c| &c.definition.static_abilities)
                 .filter(|sa| matches!(sa.effect, StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn))
                 .count() as u32;
+        }
+        // Valley Flamecaller — a creature you control of a listed type deals +1
+        // damage to any target (combat or noncombat alike).
+        if let Some(src) = source
+            && let Some(cp) = self.computed_permanent(src)
+        {
+            for c in &self.battlefield {
+                for sa in &c.definition.static_abilities {
+                    if let StaticEffect::ControlledCreatureTypesDealExtraDamage { types, amount: bonus } =
+                        &sa.effect
+                        && c.controller == cp.controller
+                        && types.iter().any(|t| cp.subtypes.creature_types.contains(t))
+                    {
+                        amount = amount.saturating_add(*bonus);
+                    }
+                }
+            }
         }
         amount.saturating_mul(1 << d.min(16)) >> h.min(16)
     }
@@ -13543,6 +13563,7 @@ fn static_effect_to_effects(
             | StaticEffect::AddDamageToOpponents { .. }
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }
+            | StaticEffect::ControlledCreatureTypesDealExtraDamage { .. }
             | StaticEffect::OpponentMillDoubled
             // GrantAffinityToISSpells — read at cast time by
             // `cost_reduction_for_spell` directly; no layer effect.

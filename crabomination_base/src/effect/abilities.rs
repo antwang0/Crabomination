@@ -801,6 +801,15 @@ pub enum StaticEffect {
     /// color and *every* player (Tok-Tok, Volcano Born). Applied in
     /// `scale_damage_to` before the doublers/halvers.
     AddDamageFromColorToPlayers { color: crate::mana::Color, amount: u32 },
+    /// CR 614.5 — "If a creature you control of one of these types would deal
+    /// damage to a permanent or player, it deals that much damage plus `amount`
+    /// instead." (Valley Flamecaller — Lizard/Mouse/Otter/Raccoon.) Keyed on the
+    /// damage *source*'s computed creature types + controller; applied in
+    /// `scale_damage_to` before the doublers/halvers.
+    ControlledCreatureTypesDealExtraDamage {
+        types: Vec<crate::card::CreatureType>,
+        amount: u32,
+    },
     /// CR 614.x — "Permanents entering the battlefield don't cause
     /// abilities of permanents your opponents control to trigger. If a
     /// permanent entering the battlefield causes a triggered ability of

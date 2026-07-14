@@ -2286,3 +2286,31 @@ pub fn songcrafter_mage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cathartic Parting — {1}{G} Sorcery. The owner of target artifact or
+/// enchantment an opponent controls shuffles it into their library. You may
+/// shuffle up to four target cards from your graveyard into your library.
+pub fn cathartic_parting() -> CardDefinition {
+    CardDefinition {
+        name: "Cathartic Parting",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent),
+                ),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: LibraryPosition::Shuffled,
+                },
+            },
+            Effect::ShuffleGraveyardCardsIntoLibrary {
+                who: PlayerRef::You,
+                filter: R::Any,
+                max: Value::Const(4),
+            },
+        ]),
+        ..Default::default()
+    }
+}

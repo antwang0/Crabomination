@@ -6014,6 +6014,56 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ShuffleGraveyardCardsIntoLibrary { who, filter, max } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::{LibraryPosition, ZoneDest};
+                let n = self.evaluate_value(max, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                for p in self.resolve_players(who, ctx) {
+                    let candidates: Vec<(CardId, String)> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if candidates.is_empty() { continue; }
+                    // Reshuffling your own cards is card-neutral upside (anti-
+                    // mill / recursion), so a non-UI seat grabs the `n`
+                    // highest-mana-value matches rather than whiffing at 0.
+                    let chosen: Vec<CardId> = if self.players[p].wants_ui {
+                        let answer = self.decider.decide(&Decision::ChooseCards {
+                            source: ctx.source.unwrap_or(CardId(0)),
+                            prompt: format!("Shuffle up to {n} cards into your library"),
+                            candidates: candidates.clone(),
+                            min: 0,
+                            max: n,
+                        });
+                        match answer {
+                            DecisionAnswer::Cards(ids) => ids
+                                .into_iter()
+                                .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                                .take(n as usize)
+                                .collect(),
+                            _ => Vec::new(),
+                        }
+                    } else {
+                        let mut matches: Vec<&crate::card::CardInstance> = self.players[p]
+                            .graveyard
+                            .iter()
+                            .filter(|c| candidates.iter().any(|(id, _)| *id == c.id))
+                            .collect();
+                        matches.sort_by_key(|c| std::cmp::Reverse(c.definition.cost.cmc()));
+                        matches.into_iter().take(n as usize).map(|c| c.id).collect()
+                    };
+                    if chosen.is_empty() { continue; }
+                    let dest = ZoneDest::Library { who: PlayerRef::Seat(p), pos: LibraryPosition::Shuffled };
+                    for cid in chosen {
+                        self.move_card_to(cid, &dest, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::LookTopNDeployPermanentsRestToHand { count } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::effect::ZoneDest;

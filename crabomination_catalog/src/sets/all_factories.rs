@@ -6249,6 +6249,7 @@ static DECKS: &[Factory] = &[
     super::decks::rot_curse_rakshasa,
     super::decks::flamehold_grappler,
     super::decks::songcrafter_mage,
+    super::decks::cathartic_parting,
     super::decks::windcrag_siege,
     super::decks::united_battlefront,
     super::decks::maelstrom_of_the_spirit_dragon,
@@ -6298,6 +6299,11 @@ static DECKS: &[Factory] = &[
     super::decks::at_knifepoint,
     super::decks::bushwhack,
     super::decks::cheeky_house_mouse,
+    super::decks::thought_shucker,
+    super::decks::shoreline_looter,
+    super::decks::ruthless_negotiation,
+    super::decks::seasoned_warrenguard,
+    super::decks::valley_flamecaller,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

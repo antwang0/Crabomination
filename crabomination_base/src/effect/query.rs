@@ -226,6 +226,8 @@ impl Effect {
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames => false,
             Effect::ReturnGraveyardCardsToHand { .. } => false,
+            // Resolution-time ChooseCards by the affected player; untargeted.
+            Effect::ShuffleGraveyardCardsIntoLibrary { .. } => false,
             Effect::LookTopNDeployPermanentsRestToHand { .. } => false,
             Effect::LookTopMayDeployAttacking { .. } => false,
             Effect::ExileTopUntilPermanentToBattlefieldOrHand => false,
