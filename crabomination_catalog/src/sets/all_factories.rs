@@ -6360,6 +6360,7 @@ static DECKS: &[Factory] = &[
     super::decks::growing_dread,
     super::decks::entity_tracker,
     super::decks::dragonfire_blade,
+    super::decks::duskmourns_domination,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
