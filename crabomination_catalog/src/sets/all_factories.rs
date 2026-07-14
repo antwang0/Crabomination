@@ -6304,6 +6304,11 @@ static DECKS: &[Factory] = &[
     super::decks::ruthless_negotiation,
     super::decks::seasoned_warrenguard,
     super::decks::valley_flamecaller,
+    super::decks::vanish_from_sight,
+    super::decks::hearthborn_battler,
+    super::decks::inquisitive_glimmer,
+    super::decks::tidecaller_mentor,
+    super::decks::thought_stalker_warlock,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
