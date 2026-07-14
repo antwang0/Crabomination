@@ -6460,6 +6460,12 @@ static DECKS: &[Factory] = &[
     super::decks::mindsparker,
     super::decks::ingenious_leonin,
     super::decks::crossway_troublemakers,
+    super::decks::heroes_bane,
+    super::decks::wildwood_scourge,
+    super::decks::sanguine_indulgence,
+    super::decks::demolition_field,
+    super::decks::goblin_firebomb,
+    super::decks::ajani_caller_of_the_pride,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
