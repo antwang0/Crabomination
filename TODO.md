@@ -187,12 +187,14 @@ factory doc comment:
 - 🟡 **Aristocrats self-death scope audit** — fixed Zulaport Cutthroat, Cruel
   Celebrant, Vengeful Bloodwitch (`AnotherOfYours`→`YourControl`; their oracle is
   "this *or* another creature you control dies", so their own death now drains).
-  Remaining: the self-death SBA `die_triggers` funnel does **not** evaluate a
-  trigger's `.with_filter`, so a *filtered* `YourControl`/`AnyPlayer` death
-  trigger (the Innistrad Wolf/Werewolf pack-drain) fires on self-death without
-  the filter check — left as `AnotherOfYours` for safety. Wire filter evaluation
-  into that funnel, then switch the filtered ones too. Also finish sweeping the
-  remaining `AnotherOfYours` CreatureDied cards whose oracle includes "this".
+  Both self-death funnels (the SBA lethal-damage `die_triggers` push **and** the
+  destroy/sacrifice `remove_to_graveyard_with_triggers` path) now evaluate the
+  trigger's `.with_filter` against the dying creature (bound as `TriggerSource`
+  via the death snapshot), so a *filtered* `YourControl`/`AnyPlayer` "this or
+  another [type] you control dies" trigger fires on self-death only when the
+  source matches. Remaining (card work): sweep the ~49 `AnotherOfYours`
+  CreatureDied cards and switch any whose oracle includes "this" to
+  `YourControl` after verifying each against Scryfall.
 - ✅ **`recent193`–`recent198` (OTJ/DSK/BLB/FDN, ~27 cards)** — recent193:
   Jackdaw Savior, Clement, Soul-Shackled Zombie (`PermanentEntered`→MV in
   `event_amount_for`; `ExileUpToNFromGraveyards` stamps `last_moved_cards`).

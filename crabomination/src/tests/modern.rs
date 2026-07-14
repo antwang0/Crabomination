@@ -34046,6 +34046,25 @@ fn cruel_celebrant_drains_on_its_own_death() {
     assert_eq!(g.players[0].life, l0 + 1, "you gained 1");
 }
 
+/// CR 603.10a — the destroy/sacrifice funnel fires the aristocrat's own
+/// self-death too (parity with the SBA lethal-damage path).
+#[test]
+fn cruel_celebrant_drains_on_its_own_sacrifice() {
+    use crate::game::GameEvent;
+    let mut g = two_player_game();
+    let cc = g.add_card_to_battlefield(0, catalog::cruel_celebrant());
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    if let Some(c) = g.dying_snapshot(cc) {
+        g.died_card_snapshots.insert(cc, c);
+    }
+    let mut evs = vec![GameEvent::CreatureDied { card_id: cc }];
+    evs.append(&mut g.remove_to_graveyard_with_triggers(cc));
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 1, "opponent lost 1 to its own sacrifice");
+    assert_eq!(g.players[0].life, l0 + 1, "you gained 1");
+}
+
 #[test]
 fn mayhem_devil_pings_on_sacrifice() {
     let mut g = two_player_game();

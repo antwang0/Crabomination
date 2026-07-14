@@ -2795,7 +2795,7 @@ impl GameState {
                         .get(&c.id)
                         .map(Vec::as_slice)
                         .unwrap_or(&[]);
-                    let triggers: Vec<(CardId, Effect, usize)> = c
+                    let triggers: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = c
                         .definition
                         .triggered_abilities
                         .iter()
@@ -2816,7 +2816,13 @@ impl GameState {
                                 | crate::effect::EventScope::AnyPlayer
                                 | crate::effect::EventScope::ActivePlayer,
                         ))
-                        .map(|t| (c.id, t.effect.clone(), c.controller))
+                        // Keep the intervening/subject filter so the self-death
+                        // funnel below can re-check it against the dying creature
+                        // (CR 603.4/603.10a). SelfSource triggers usually carry
+                        // no filter; a filtered "this or another [type] you
+                        // control dies" (YourControl) must not fire when the
+                        // dying source itself fails the filter.
+                        .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
                         .collect();
                     let has_persist = c.definition.keywords.contains(&Keyword::Persist);
                     let has_undying = c.definition.keywords.contains(&Keyword::Undying);
@@ -2845,7 +2851,7 @@ impl GameState {
                 let Some(bonus) = &eq.definition.equipped_bonus else { continue };
                 for ta in &bonus.triggered_abilities {
                     if ta.event.kind == EventKind::CreatureDied && !dies_suppressed {
-                        die_triggers.push((id, ta.effect.clone(), controller_idx));
+                        die_triggers.push((id, ta.effect.clone(), controller_idx, ta.event.filter.clone()));
                     }
                 }
             }
@@ -2899,7 +2905,24 @@ impl GameState {
             let died_ev_amount =
                 self.event_amount_for(&GameEvent::CreatureDied { card_id: id });
             self.trigger_event_amount_scratch = died_ev_amount;
-            for (source, effect, controller) in die_triggers {
+            for (source, effect, controller, filter) in die_triggers {
+                // CR 603.4/603.10a — a filtered self-death trigger ("this or
+                // another [type] you control dies") checks its intervening
+                // filter against the dying creature, bound as TriggerSource via
+                // the cached death snapshot, before firing.
+                if let Some(pred) = &filter {
+                    let mut ctx = crate::game::effects::EffectContext::for_trigger(
+                        source, controller, None, 0,
+                    );
+                    ctx.trigger_source = crate::game::effects::event_subject(
+                        &GameEvent::CreatureDied { card_id: id },
+                        &EventKind::CreatureDied,
+                    );
+                    ctx.event_amount = died_ev_amount;
+                    if !self.evaluate_predicate(pred, &ctx) {
+                        continue;
+                    }
+                }
                 let auto_target =
                     self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
                 self.stack.push(
@@ -3529,7 +3552,7 @@ impl GameState {
             .find(|c| c.id == id)
             .is_some_and(|c| self.graveyard_exiled_for(c) || c.disturb_back_exiles());
         let dies_suppressed = dies_suppressed || exiled_instead;
-        let (leave_triggers, dying_creature_controller): (Vec<(CardId, Effect, usize)>, Option<usize>) = self
+        let (leave_triggers, dying_creature_controller): (Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)>, Option<usize>) = self
             .battlefield
             .iter()
             .find(|c| c.id == id)
@@ -3548,7 +3571,18 @@ impl GameState {
                     .triggered_abilities
                     .iter()
                     .chain(granted)
-                    .filter(|t| matches!(t.event.scope, EventScope::SelfSource))
+                    // CR 603.10a — the dying creature's own self-fire death
+                    // triggers. SelfSource always, plus the self-inclusive
+                    // scopes ("this or another … you control dies" —
+                    // YourControl) so a destroyed/sacrificed aristocrat drains
+                    // for its own death, matching the SBA lethal-damage path.
+                    .filter(|t| matches!(
+                        t.event.scope,
+                        EventScope::SelfSource
+                            | EventScope::YourControl
+                            | EventScope::AnyPlayer
+                            | EventScope::ActivePlayer,
+                    ))
                     .filter(|t| match t.event.kind {
                         EventKind::PermanentLeavesBattlefield => true,
                         EventKind::CreatureDied => is_creature && !dies_suppressed,
@@ -3559,7 +3593,7 @@ impl GameState {
                         EventKind::PermanentDied => !dies_suppressed,
                         _ => false,
                     })
-                    .map(|t| (c.id, t.effect.clone(), c.controller))
+                    .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
                     .collect();
                 let creature_controller = if is_creature { Some(c.controller) } else { None };
                 (triggers, creature_controller)
@@ -3580,7 +3614,7 @@ impl GameState {
                 let Some(bonus) = &eq.definition.equipped_bonus else { continue };
                 for ta in &bonus.triggered_abilities {
                     if ta.event.kind == EventKind::CreatureDied {
-                        leave_triggers.push((id, ta.effect.clone(), controller));
+                        leave_triggers.push((id, ta.effect.clone(), controller, ta.event.filter.clone()));
                     }
                 }
             }
@@ -3672,7 +3706,23 @@ impl GameState {
         {
             out.push(GameEvent::CardPutIntoGraveyard { player: owner, card_id: id, is_land });
         }
-        for (source, effect, controller) in leave_triggers {
+        for (source, effect, controller, filter) in leave_triggers {
+            // CR 603.4/603.10a — a filtered self-death trigger checks its
+            // intervening filter against the dying creature (bound as
+            // TriggerSource via the cached death snapshot) before firing.
+            if let Some(pred) = &filter {
+                let mut ctx = crate::game::effects::EffectContext::for_trigger(
+                    source, controller, None, 0,
+                );
+                ctx.trigger_source = crate::game::effects::event_subject(
+                    &GameEvent::CreatureDied { card_id: id },
+                    &EventKind::CreatureDied,
+                );
+                ctx.event_amount = self.event_amount_for(&GameEvent::CreatureDied { card_id: id });
+                if !self.evaluate_predicate(pred, &ctx) {
+                    continue;
+                }
+            }
             // Drivnod, Carnage Dominus — a creature dying causes this trigger,
             // so it fires an additional time per Drivnod its controller runs.
             let fires = 1 + if dying_creature_controller.is_some() {
