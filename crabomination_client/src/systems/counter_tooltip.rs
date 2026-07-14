@@ -1068,6 +1068,13 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::JumpStart => "Jump-start".into(),
         K::Companion => "Companion".into(),
         K::SuspendAccelerant => "Suspend".into(),
+        // Payload/static keywords that used to render their raw `{:?}` debug shape.
+        K::TrampleOverPlaneswalkers => "Trample over planeswalkers".into(),
+        K::Compleated => "Compleated".into(),
+        K::ProtectionFromCardType(t) => format!("Protection from {t:?}s"),
+        K::HexproofFromMonocolored => "Hexproof from monocolored".into(),
+        K::EchoDiscard => "Echo—Discard".into(),
+        K::DoesntUntapWhileCounter(k) => format!("Doesn't untap with a {k:?} counter"),
         _ => format!("{kw:?}"),
     }
 }
@@ -1341,6 +1348,28 @@ mod tests {
         ] {
             assert!(keyword_reminder(&kw).is_some(), "missing reminder for {kw:?}");
         }
+    }
+
+    /// These keywords carry reminder text but used to fall through to the raw
+    /// `{:?}` debug shape for their short label; assert they now read cleanly.
+    #[test]
+    fn newly_covered_keywords_have_readable_labels() {
+        use crabomination::card::{CardType, CounterType, Keyword as K};
+        assert_eq!(
+            keyword_label(&K::TrampleOverPlaneswalkers),
+            "Trample over planeswalkers",
+        );
+        assert_eq!(keyword_label(&K::Compleated), "Compleated");
+        assert_eq!(keyword_label(&K::HexproofFromMonocolored), "Hexproof from monocolored");
+        assert_eq!(keyword_label(&K::EchoDiscard), "Echo—Discard");
+        assert_eq!(
+            keyword_label(&K::ProtectionFromCardType(CardType::Artifact)),
+            "Protection from Artifacts",
+        );
+        assert_eq!(
+            keyword_label(&K::DoesntUntapWhileCounter(CounterType::Stun)),
+            "Doesn't untap with a Stun counter",
+        );
     }
 
     #[test]
