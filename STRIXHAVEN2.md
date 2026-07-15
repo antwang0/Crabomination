@@ -121,7 +121,12 @@ player targets (Practiced Offense, Mathemagics, Mind Roots, Borrowed
 Knowledge, Echocasting Symposium's two-slot token gift, Professor
 Dellian Fel's emblem, Emeritus of Truce, Joined Researchers // Secret
 Rendezvous), with `CreateToken`/`CreateTokenCopyOf` player-receiver
-slots surfaced for cast-time validation.
+slots surfaced for cast-time validation. Nita, Forum Conciliator is
+fully faithful (real IS-card target, pay-own-cost-any-color cast, and
+`sac_other_filter` — the old `sac_cost` wrongly sacrificed Nita
+herself); Visionary's Dance's `{2}, Discard this card:` line is a real
+from-hand activation (`from_hand` + `discard_self_cost` + the
+look-2-split).
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost

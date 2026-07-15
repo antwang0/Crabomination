@@ -13051,15 +13051,23 @@ fn nita_forum_conciliator_activation_exiles_and_grants_may_play() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: nita, ability_index: 0,
-        target: Some(crabomination::game::types::Target::Permanent(sac)), additional_targets: Vec::new(), x_value: None }).expect("Nita activation");
+        // The printed "exile TARGET instant or sorcery card" — the ability
+        // targets the graveyard card; the sacrifice is a cost picked by
+        // the engine's sac_cost machinery.
+        target: Some(crabomination::game::types::Target::Permanent(bolt_id)),
+        additional_targets: Vec::new(), x_value: None }).expect("Nita activation");
     drain_stack(&mut g);
 
-    // Bolt should now be in exile with may_play stamped + exile_after.
+    // Bolt should now be in exile with may_play + pay-own-cost-any-color
+    // stamped (printed: "mana of any type can be spent to cast that
+    // spell" — NOT a free cast), and no exile-after rider.
     let exiled = g.exile.iter().find(|c| c.id == bolt_id)
         .expect("bolt moved to exile by Nita");
     let perm = exiled.may_play_until.expect("may_play stamped");
-    assert!(perm.exile_after, "Nita's permission has exile_after=true");
+    assert!(!perm.exile_after, "printed text has no exile-on-resolution rider");
     assert_eq!(perm.player, 0, "permission goes to Nita's controller");
+    let alt = exiled.granted_alt_cast_cost_eot.clone().expect("pays its own cost");
+    assert_eq!(alt.cmc(), 1, "Bolt's mana value, payable with any type of mana");
 }
 
 #[test]
@@ -16120,4 +16128,71 @@ fn paradox_surveyor_ui_player_may_decline_the_pick() {
         lib_before,
         "all five looked-at cards returned to the library (bottom)"
     );
+}
+
+/// Nita's activation sacrifices ANOTHER creature (never herself), and the
+/// exiled card is cast by paying its own mana value with any type of mana
+/// — not for free.
+#[test]
+fn nita_sacrifices_another_and_cast_pays_own_cost() {
+    let mut g = two_player_game();
+    let mut bolt =
+        crabomination::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 1);
+    bolt.controller = 1;
+    let bolt_id = bolt.id;
+    g.players[1].graveyard.push(bolt);
+    let nita = g.add_card_to_battlefield(0, catalog::nita_forum_conciliator());
+    let sac = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [nita, sac] {
+        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == id) {
+            c.summoning_sick = false;
+        }
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nita, ability_index: 0,
+        target: Some(crabomination::game::types::Target::Permanent(bolt_id)),
+        additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("Nita activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == nita), "Nita survives — 'sacrifice ANOTHER creature'");
+    assert!(!g.battlefield.iter().any(|c| c.id == sac), "the bear paid the cost");
+    // Casting the exiled bolt requires its mana value ({1}, any type).
+    let err = g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt_id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "no mana floated — the cast is NOT free");
+    g.players[0].mana_pool.add(Color::Green, 1); // any type pays
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt_id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("paying {1} with green mana casts the exiled bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "bolt resolved");
+}
+
+/// Visionary's Dance's "{2}, Discard this card: look at the top two, one to
+/// hand and the other to the graveyard" — a real from-hand activation.
+#[test]
+fn visionarys_dance_discard_ability_activates_from_hand() {
+    let mut g = two_player_game();
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    let below = g.add_card_to_library(0, catalog::forest());
+    // top of library order: bolt (index 0), forest (index 1)
+    let vd = g.add_card_to_hand(0, catalog::visionarys_dance());
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    // Pick the bolt to hand (SearchLibrary decision).
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(top))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vd, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("from-hand activation");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == vd), "Visionary's Dance discarded as the cost");
+    assert!(g.players[0].hand.iter().any(|c| c.id == top), "picked card to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == below), "the other card to the graveyard");
 }

@@ -5129,36 +5129,28 @@ pub fn silverquill_the_disputant() -> CardDefinition {
 ///
 /// Push (modern_decks): the `{2}, Sacrifice another creature` activation
 /// is **now wired** via the new cast-from-exile primitives. The activation
-/// exiles an IS card from an opponent's graveyard and grants
-/// `may_play_until: EndOfThisTurn`. Sorcery-speed gate via
-/// `sorcery_speed: true`; sacrifice-another-creature cost via
-/// `sac_cost: true`. Two approximations: (1) the printed "exile
-/// *target* instant or sorcery card" is not a real target — the card
-/// is auto-picked via a non-targeted `Selector::take(CardsInZone(opp
-/// graveyards, IS filter), 1)`; (2) the grant carries `exile_after:
-/// true`, so the cast card routes to exile on resolution rather than
-/// its owner's graveyard — a rider the printed text doesn't include.
+/// exiles a TARGET IS card from an opponent's graveyard (a real target
+/// slot via `ApplyToTargets` + `InOpponentGraveyard`) and grants
+/// `may_play_until: EndOfThisTurn` with `pay_own_cost: true,
+/// any_color: true` — the printed "you may cast it ... and mana of any
+/// type can be spent" charges the spell's own mana value payable in any
+/// colors, not a free cast. Sorcery-speed gate via `sorcery_speed:
+/// true`; sacrifice-another-creature cost via `sac_cost: true`. The
+/// cast card follows normal resolution routing (owner's graveyard).
+/// The sacrifice cost uses `sac_other_filter` — "sacrifice ANOTHER
+/// creature" — not `sac_cost` (which sacrifices the source).
 ///
 /// Push (modern_decks, batch 72): the "Whenever you cast a spell you
 /// don't own" trigger is **now wired** via the new
 /// `Predicate::CastSpellNotOwnedByYou` predicate. Trigger body fans
 /// out +1/+1 counters across each friendly creature via
-/// `ForEach(Creature & ControlledByYou) → AddCounter(+1/+1)`. The
-/// "mana of any type" rider on the activation is auto-satisfied since
-/// the free-cast path skips mana payment.
+/// `ForEach(Creature & ControlledByYou) → AddCounter(+1/+1)`.
 pub fn nita_forum_conciliator() -> CardDefinition {
     use crate::card::{CounterType, Predicate, Supertype};
     use crate::effect::{EventKind, EventScope, EventSpec, TriggeredAbility, ZoneDest};
     let is_in_opp_gy = SelectionRequirement::HasCardType(CardType::Instant)
-        .or(SelectionRequirement::HasCardType(CardType::Sorcery));
-    let target_card = Selector::take(
-        Selector::CardsInZone {
-            who: PlayerRef::EachOpponent,
-            zone: crate::card::Zone::Graveyard,
-            filter: is_in_opp_gy,
-        },
-        Value::Const(1),
-    );
+        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+        .and(SelectionRequirement::InOpponentGraveyard);
     CardDefinition {
         name: "Nita, Forum Conciliator",
         cost: cost(&[generic(1), w(), b()]),
@@ -5175,28 +5167,41 @@ pub fn nita_forum_conciliator() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2)]),
-            effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: target_card,
-                    to: ZoneDest::Exile,
-                },
-                Effect::GrantMayPlay {
-                    what: Selector::LastMoved,
-                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                    to_owner: false,
-                    exile_after: true,
-                    pay_own_cost: false, any_color: false,
-                },
-            ]),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 1,
+                filter: is_in_opp_gy,
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Exile,
+                    },
+                    // "You may cast it this turn, and mana of any type can
+                    // be spent" — pay the spell's own cost, colors relaxed
+                    // to generic (CR 609.4b via `any_color`).
+                    Effect::GrantMayPlay {
+                        what: Selector::LastMoved,
+                        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: true,
+                    },
+                ])),
+            },
             once_per_turn: false,
             sorcery_speed: true,
-            sac_cost: true,
+            // "Sacrifice ANOTHER creature" — `sac_other_filter` excludes the
+            // source and gives a UI activator the pick (`sac_cost: true`
+            // would wrongly sacrifice Nita herself).
+            sac_cost: false,
             condition: None,
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],

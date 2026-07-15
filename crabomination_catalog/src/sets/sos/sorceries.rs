@@ -955,15 +955,14 @@ pub fn rapturous_moment() -> CardDefinition {
 /// {2}, Discard this card: Look at the top two cards of your library.
 /// Put one of them into your hand and the other into your graveyard."
 ///
-/// Approximation: the spell-side resolution (two 3/3 flying Elemental
-/// tokens) is wired faithfully via the new `elemental_token()` helper.
-/// The `{2}, Discard this card:` activated ability lives on the card
-/// while in **hand**, which the engine's `do_activate_ability` walker
-/// doesn't yet visit (it iterates the battlefield only). Tracked under
-/// TODO.md ("Mana Ability from Non-Battlefield Zone" / "activated
-/// abilities from hand"). Until that primitive lands, the discard
-/// half is silently dropped.
+/// Both halves wired: the spell side mints two 3/3 flying Elementals
+/// (`elemental_token()`); the `{2}, Discard this card:` line is a real
+/// FROM-HAND activated ability (`from_hand: true` +
+/// `discard_self_cost: true`), whose body is the Strategic-Planning
+/// look-2 split (`LookPickToHand { count: 2, rest_to_graveyard }` — one
+/// to hand, the other to the graveyard).
 pub fn visionarys_dance() -> CardDefinition {
+    use crate::effect::ActivatedAbility;
     use crate::mana::{r, u};
     CardDefinition {
         name: "Visionary's Dance",
@@ -974,6 +973,23 @@ pub fn visionarys_dance() -> CardDefinition {
             count: Value::Const(2),
             definition: elemental_token(),
         },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            from_hand: true,
+            discard_self_cost: true,
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: None,
+                to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
+                optional: false,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
