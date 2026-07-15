@@ -66709,3 +66709,58 @@ fn return_to_dust_second_target_gated_on_main_phase() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == a3), "single target exiled");
 }
+
+/// CR 702.94 — the miracle window is the reveal offer, not the whole turn:
+/// once the step advances, the permission (and its alt-cost) are gone.
+#[test]
+fn miracle_window_dies_at_step_transition() {
+    let mut g = two_player_game();
+    let bonfire = g.add_card_to_library(0, catalog::bonfire_of_the_damned());
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut events = vec![];
+    assert!(g.draw_one(0, &mut events), "drew the top card");
+    assert!(
+        g.players[0].hand.iter().find(|c| c.id == bonfire).unwrap().may_play_until.is_some(),
+        "window live in the draw step"
+    );
+    // Step advances — the offer is gone.
+    g.advance_step(vec![]).expect("step advances");
+    let card = g.players[0].hand.iter().find(|c| c.id == bonfire).unwrap();
+    assert!(card.may_play_until.is_none(), "window died at the step transition");
+    assert!(card.granted_alt_cast_cost_eot.is_none(), "alt-cost shares the window's lifetime");
+    // The normal cast for full cost is unaffected (back in a main phase).
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bonfire, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: Some(1),
+    })
+    .expect("full-cost cast still available");
+}
+
+/// CR 702.94e — a miracled SORCERY is castable inside the window even when
+/// sorcery timing wouldn't normally allow it (e.g. during the opponent's
+/// turn, off an instant-speed draw).
+#[test]
+fn miracle_sorcery_castable_outside_sorcery_timing() {
+    let mut g = two_player_game();
+    let bonfire = g.add_card_to_library(0, catalog::bonfire_of_the_damned());
+    // Opponent's turn: normally no sorcery casts for P0.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut events = vec![];
+    assert!(g.draw_one(0, &mut events), "P0 draws on the opponent's turn");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bonfire, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: Some(1),
+    })
+    .expect("miracle cast ignores the sorcery-speed gate (CR 702.94e)");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 1, "X=1 miracle Bonfire resolved");
+}

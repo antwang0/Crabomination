@@ -187,6 +187,10 @@ impl GameState {
         &mut self,
         mut events: Vec<GameEvent>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // CR 702.94 — a step-bounded Miracle window ("cast it now or lose
+        // the chance") dies at the step transition; the alt-cost shares the
+        // permission's lifetime.
+        self.clear_step_bounded_may_play();
         // Skip FirstStrikeDamage if no first/double-strike creatures are in combat.
         let mut next = self.step.next();
         if next == TurnStep::FirstStrikeDamage && !self.has_first_strikers() {
@@ -2393,6 +2397,8 @@ impl GameState {
                         elapsed >= player_count.max(1)
                     }
                     crate::card::MayPlayDuration::WhileExiled => false,
+                    // Step-bounded miracle windows are also dead by turn end.
+                    crate::card::MayPlayDuration::EndOfThisStep => true,
                 };
                 if expired {
                     c.may_play_until = None;

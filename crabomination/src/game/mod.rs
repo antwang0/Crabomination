@@ -3875,6 +3875,7 @@ impl GameState {
                 granted_turn: turn,
                 duration: MayPlayDuration::EndOfControllersNextTurn,
                 exile_after: false,
+                miracle: false,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
         }
@@ -9152,6 +9153,28 @@ impl GameState {
     /// `GameAction::CastFromZoneWithoutPaying`). The reveal is treated as
     /// automatic — the grant only adds a cheaper *option*, so revealing is
     /// never a downside for the engine; a human simply declines to cast.
+    /// Clear every step-bounded (`MayPlayDuration::EndOfThisStep`) miracle
+    /// window across all zones. Called at each step transition — the reveal
+    /// offer can't be banked for a later step. The granted alt-cost shares
+    /// the permission's lifetime.
+    pub(crate) fn clear_step_bounded_may_play(&mut self) {
+        let clear = |c: &mut crate::card::CardInstance| {
+            if matches!(
+                c.may_play_until,
+                Some(p) if p.duration == crate::card::MayPlayDuration::EndOfThisStep
+            ) {
+                c.may_play_until = None;
+                c.granted_alt_cast_cost_eot = None;
+            }
+        };
+        for pl in &mut self.players {
+            pl.hand.iter_mut().for_each(clear);
+            pl.graveyard.iter_mut().for_each(clear);
+            pl.library.iter_mut().for_each(clear);
+        }
+        self.exile.iter_mut().for_each(clear);
+    }
+
     pub(crate) fn maybe_grant_miracle(&mut self, p: usize, card_id: CardId) {
         if self.players[p].cards_drawn_this_turn != 1 {
             return;
@@ -9162,8 +9185,11 @@ impl GameState {
             card.may_play_until = Some(crate::card::MayPlayPermission {
                 player: p,
                 granted_turn: self.turn_number,
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                // CR 702.94 — the window is the reveal offer, not the whole
+                // turn: cleared at the next step transition.
+                duration: crate::card::MayPlayDuration::EndOfThisStep,
                 exile_after: false,
+                miracle: true,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
         }
@@ -12483,6 +12509,7 @@ impl GameState {
                             granted_turn: turn,
                             duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
                             exile_after: false,
+                            miracle: false,
                         });
                         card.granted_alt_cast_cost_eot = Some(taxed);
                         self.exile.push(card);

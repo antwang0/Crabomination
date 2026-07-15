@@ -104,12 +104,12 @@ Scientist ("may search" honored), Moseo / Ascendant Dustspeaker / Startled
 Relic Sloth ("up to one target" declinable via `ApplyToTargets min 0`),
 Paradox Surveyor (`LookPickToHand` — sees all five, rest bottomed).
 
-**Still open** (tracked, not fixed): Lorehold the Historian's miracle grant
-is an until-EOT {2} alt-cost, not a real miracle window; `LookPickToHand`
-declines auto-fill under the AutoDecider; `BottomRandom` bottoms
-deterministically; Aziza's tap-three cost auto-picks which creatures tap;
-plus the ~55 in-source documented approximations (grep
-`Approximation|omitted|dropped`).
+**Still open** (tracked, not fixed): `LookPickToHand` declines auto-fill
+under the AutoDecider; `BottomRandom` bottoms deterministically; Aziza's
+tap-three cost auto-picks which creatures tap; the miracle window is
+step-bounded rather than trigger-resolution-exact (the caster may act
+within the granting step before deciding); plus the ~55 in-source
+documented approximations (grep `Approximation|omitted|dropped`).
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost
@@ -120,7 +120,10 @@ now use `Effect::CopySpellMayChooseTargets`; and true cast-time
 multi-mode selection ships via `Effect::ChooseModesCast` (shares
 `CastSpellSpree` plumbing, per-instance target slots) — Moment of
 Reckoning ("up to four, repeats allowed") and Choreographed Sparks
-("one or both") are fully faithful.
+("one or both") are fully faithful. Miracle (intrinsic + Lorehold's
+grant) is now a real step-bounded, timing-exempt window
+(`MayPlayDuration::EndOfThisStep` + `MayPlayPermission.miracle`) instead
+of an until-EOT discount.
 
 ## Removed status tables (2026-07-12)
 

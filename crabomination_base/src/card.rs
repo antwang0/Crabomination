@@ -527,6 +527,11 @@ pub enum MayPlayDuration {
     /// "...for as long as it remains exiled" — never sweeps; the
     /// permission dies with the card's zone change (Hostage Taker, Gonti).
     WhileExiled,
+    /// CR 702.94 — the Miracle window: cast it now or lose the chance.
+    /// Cleared at the next step/phase transition (`advance_step`), so the
+    /// reveal-on-draw offer can't be banked for a later phase with more
+    /// information. Also swept at turn end like `EndOfThisTurn`.
+    EndOfThisStep,
 }
 
 /// Per-instance permission for "you may cast that card without paying its
@@ -552,6 +557,13 @@ pub struct MayPlayPermission {
     /// at finalize-cast time.
     #[serde(default)]
     pub exile_after: bool,
+    /// CR 702.94e — a Miracle cast ignores the sorcery-speed gate: the
+    /// printed window is "when the miracle trigger resolves", which the
+    /// engine approximates as "during the current step" (see
+    /// `MayPlayDuration::EndOfThisStep`), and the rules let the sorcery
+    /// be cast there. Defaults to `false` for snapshot back-compat.
+    #[serde(default)]
+    pub miracle: bool,
 }
 
 /// Keyword abilities supported by the engine.
@@ -2343,7 +2355,10 @@ pub struct CardDefinition {
     /// CR 702.94 — Miracle. `Some(cost)` lets the owner reveal this card as
     /// the first card they draw in a turn and cast it for the miracle `cost`
     /// (cheaper than its mana cost). Wired via a draw-time grant of the
-    /// miracle alt-cost (`granted_alt_cast_cost_eot` + `may_play_until`).
+    /// miracle alt-cost (`granted_alt_cast_cost_eot` + `may_play_until`);
+    /// the window is STEP-BOUNDED (`MayPlayDuration::EndOfThisStep`) and
+    /// bypasses the sorcery-speed gate (`MayPlayPermission.miracle`),
+    /// matching the printed cast-it-when-revealed shape.
     /// Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub miracle: Option<crate::mana::ManaCost>,

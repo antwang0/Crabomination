@@ -1143,6 +1143,7 @@ impl GameState {
                         granted_turn: turn,
                         duration: MayPlayDuration::EndOfThisTurn,
                         exile_after: false,
+                        miracle: false,
                     });
                     // Pay-own-cost cast, not free.
                     card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
@@ -5158,8 +5159,11 @@ impl GameState {
                         card.may_play_until = Some(crate::card::MayPlayPermission {
                             player: granter,
                             granted_turn,
-                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                            // CR 702.94 — a granted miracle window is also
+                            // step-bounded: cast it now or lose the chance.
+                            duration: crate::card::MayPlayDuration::EndOfThisStep,
                             exile_after: false,
+                            miracle: true,
                         });
                         card.granted_alt_cast_cost_eot = Some(cost.clone());
                     }
@@ -7354,6 +7358,7 @@ impl GameState {
                             granted_turn: turn,
                             duration: crate::card::MayPlayDuration::WhileExiled,
                             exile_after: false,
+                            miracle: false,
                         });
                         card.granted_alt_cast_cost_eot =
                             Some(crate::mana::ManaCost::new(vec![crate::mana::ManaSymbol::Generic(2)]));
@@ -10542,6 +10547,7 @@ impl GameState {
                     granted_turn: self.turn_number,
                     duration: crate::card::MayPlayDuration::WhileExiled,
                     exile_after: false,
+                    miracle: false,
                 });
                 // Gonti's "spend mana as though it were mana of any type"
                 // (CR 609.4b) — the pay-to-cast cost is the MV as generic.
@@ -11319,6 +11325,7 @@ impl GameState {
                             granted_turn,
                             duration: crate::card::MayPlayDuration::EndOfThisTurn,
                             exile_after: false,
+                            miracle: false,
                         });
                     }
                 }
@@ -12526,6 +12533,7 @@ impl GameState {
                         granted_turn: self.turn_number,
                         duration: crate::card::MayPlayDuration::WhileExiled,
                         exile_after: false,
+                        miracle: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
                     self.exile.push(card);
@@ -13946,6 +13954,7 @@ impl GameState {
                                 granted_turn,
                                 duration: *duration,
                                 exile_after: false,
+                                miracle: false,
                             });
                             // Pay-to-cast rider (CR 609.4b any-type spend):
                             // the cast costs the card's MV as generic.
@@ -14195,6 +14204,7 @@ impl GameState {
                             granted_turn,
                             duration: crate::card::MayPlayDuration::EndOfThisTurn,
                             exile_after: false,
+                            miracle: false,
                         });
                     }
                 }
@@ -14426,6 +14436,7 @@ impl GameState {
                             granted_turn,
                             duration: *duration,
                             exile_after: *exile_after,
+                            miracle: false,
                         });
                         if *pay_own_cost {
                             // "Spend mana as though it were mana of any type"
@@ -14694,6 +14705,7 @@ impl GameState {
                             granted_turn,
                             duration: *duration,
                             exile_after: false,
+                            miracle: false,
                         });
                         if !*free {
                             card.granted_alt_cast_cost_eot = Some(real_cost);

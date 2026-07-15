@@ -3699,13 +3699,13 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
 /// 1))` so the controller opts into the loot.
 ///
 /// The "instant and sorcery cards in your hand have miracle {2}" grant is
-/// now wired faithfully: a CardDrawn/YourControl trigger gated on (a) the
-/// drawn card is an instant/sorcery and (b) it's the first card drawn this
-/// turn fires `Effect::GrantMiracle { cost: {2} }`. That stamps an
-/// until-end-of-turn `may_play_until` permission plus a
-/// `granted_alt_cast_cost_eot` of {2}, so the controller may cast the drawn
-/// card this turn by paying {2} (its miracle cost) rather than its full
-/// mana cost.
+/// wired via a CardDrawn/YourControl trigger gated on (a) the drawn card
+/// is an instant/sorcery and (b) it's the first card drawn this turn,
+/// firing `Effect::GrantMiracle { cost: {2} }`. The granted window is the
+/// real CR 702.94 shape: STEP-BOUNDED (`MayPlayDuration::EndOfThisStep` —
+/// cast it now or lose the offer; it can't be banked for a later phase)
+/// and timing-exempt (`MayPlayPermission.miracle` skips the sorcery-speed
+/// gate, so a miracled sorcery is castable off an instant-speed draw).
 pub fn lorehold_the_historian() -> CardDefinition {
     use crate::card::{Predicate, Supertype};
     use crate::game::types::TurnStep;

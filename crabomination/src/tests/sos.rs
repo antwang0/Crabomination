@@ -12380,6 +12380,7 @@ fn practiced_scrollsmith_may_play_expires_after_controllers_next_turn() {
         granted_turn: g.turn_number,
         duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
         exile_after: false,
+        miracle: false,
     });
     g.exile.push(pox);
 
@@ -13072,6 +13073,7 @@ fn nita_trigger_fans_counters_when_casting_unowned_spell() {
         granted_turn: g.turn_number,
         duration: MayPlayDuration::EndOfThisTurn,
         exile_after: false,
+        miracle: false,
     });
     let bolt_id = bolt.id;
     g.exile.push(bolt);

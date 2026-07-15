@@ -3224,6 +3224,7 @@ mod tests {
             granted_turn: 1,
             duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
             exile_after: false,
+            miracle: false,
         });
         state.exile.push(bolt);
 

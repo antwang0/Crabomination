@@ -7143,11 +7143,13 @@ impl GameState {
         // Aluren grants flash to the free creature cast; track it so the
         // sorcery-speed gate below is relaxed for that path only.
         let mut aluren_flash = false;
+        let mut miracle_window = false;
         let exile_after = match card_ref.may_play_until {
             Some(permission) => {
                 if permission.player != p {
                     return Err(GameError::CardNotInHand(card_id));
                 }
+                miracle_window = permission.miracle;
                 permission.exile_after
             }
             None => {
@@ -7166,8 +7168,11 @@ impl GameState {
         // Expiry check: EndOfThisTurn => only valid this turn;
         // EndOfControllersNextTurn => one full controller-turn later.
         // Defensive — the cleanup hook also clears expired permissions.
-        let must_be_sorcery_speed =
-            !aluren_flash && (!is_instant || self.player_locked_to_sorcery_timing(p));
+        // CR 702.94e — a Miracle cast happens inside the reveal trigger's
+        // window, where the rules permit casting a sorcery; skip the gate.
+        let must_be_sorcery_speed = !aluren_flash
+            && !miracle_window
+            && (!is_instant || self.player_locked_to_sorcery_timing(p));
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
