@@ -132,7 +132,9 @@ creatures to hand, any mix of up to two) and a genuinely random bottom
 (`rest_bottom_random`); Archaic's Agony's excess-damage exile rider is
 wired (`ExcessDamageDealtThisResolution` → exile top-N → play until the
 end of your next turn at full cost; land plays through may-play remain
-an engine gap).
+an engine gap); Mana Sculpt banks {C} equal to the countered spell's
+actually-PAID mana at the caster's next main phase
+(`CounteredSpellManaSpent` + `AddManaAtNextMainPhase`).
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost

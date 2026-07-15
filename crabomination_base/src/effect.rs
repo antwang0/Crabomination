@@ -470,6 +470,11 @@ pub enum Value {
     /// Last Agni Kai, Razor Rings). Backed by
     /// `GameState.excess_damage_this_resolution`.
     ExcessDamageDealtThisResolution,
+    /// Total mana spent to cast the spell most recently countered during
+    /// the CURRENT resolution (`GameState.countered_spell_mana_spent`,
+    /// stamped by `Effect::CounterSpell`). Mana Sculpt's "add an amount of
+    /// {C} equal to the amount of mana spent to cast that spell".
+    CounteredSpellManaSpent,
     Sum(Vec<Value>),
     Diff(Box<Value>, Box<Value>),
     Times(Box<Value>, Box<Value>),
@@ -4846,6 +4851,12 @@ pub enum Effect {
         kind: DelayedTriggerKind,
         body: Box<Effect>,
     },
+    /// "Add an amount of {C} equal to [amount] at the beginning of your
+    /// next main phase" — `amount` is evaluated NOW (so resolution-scoped
+    /// scratch values like `CounteredSpellManaSpent` are read while still
+    /// live) and baked as a constant into the registered
+    /// `YourNextMainPhase` delayed trigger. Mana Sculpt.
+    AddManaAtNextMainPhase { amount: Value },
 
     /// "When [target creature] dies this turn, [body]." Registers an
     /// event-keyed delayed trigger watching `ctx.targets[slot]`'s death. The

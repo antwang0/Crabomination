@@ -424,6 +424,7 @@ impl GameState {
                 })
                 .sum(),
             Value::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution as i32,
+            Value::CounteredSpellManaSpent => self.countered_spell_mana_spent as i32,
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
             Value::Times(a, b) => self.evaluate_value(a, ctx) * self.evaluate_value(b, ctx),

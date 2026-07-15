@@ -162,7 +162,9 @@ impl Effect {
             | Effect::SecondSunrise
             | Effect::PlayerTapsUntapped { .. }
             | Effect::TapAnyNumberThenPumpPerTapped { .. }
-            | Effect::GrantExtraPlusOneCountersThisTurn { .. } => false,
+            | Effect::GrantExtraPlusOneCountersThisTurn { .. }
+            // Amount is a scratch read (CounteredSpellManaSpent), no slots.
+            | Effect::AddManaAtNextMainPhase { .. } => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,

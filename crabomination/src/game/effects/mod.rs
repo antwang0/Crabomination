@@ -863,6 +863,7 @@ impl GameState {
         self.exiled_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;
         self.excess_damage_this_resolution = 0;
+        self.countered_spell_mana_spent = 0;
         self.players_sacrificed_this_resolution.clear();
         self.named_card_this_resolution = None;
         let mut events = vec![];
@@ -8480,7 +8481,10 @@ impl GameState {
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
                 for pos in to_remove {
-                    if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                    if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
+                        // Mana Sculpt — record the countered spell's paid
+                        // mana for `Value::CounteredSpellManaSpent`.
+                        self.countered_spell_mana_spent = mana_spent;
                         self.countered_spell_off_stack(*card, events);
                     }
                 }
@@ -12401,6 +12405,34 @@ impl GameState {
                     // Bind a token minted earlier in this resolution so the
                     // delayed body's `LastCreatedToken` still finds it.
                     bound_token: self.last_created_token,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
+            Effect::AddManaAtNextMainPhase { amount } => {
+                // Mana Sculpt — evaluate `amount` NOW (resolution-scoped
+                // scratch values like `CounteredSpellManaSpent` are still
+                // live) and bake the constant into the delayed body, so the
+                // {C} lands in the pool at the start of the controller's
+                // next main phase with main-phase windows open.
+                let n = self.evaluate_value(amount, ctx).max(0);
+                if n == 0 {
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::YourNextMainPhase,
+                    effect: Effect::AddMana {
+                        who: crate::effect::PlayerRef::You,
+                        pool: crate::effect::ManaPayload::Colorless(
+                            crate::effect::Value::Const(n),
+                        ),
+                    },
+                    target: None,
+                    bound_token: None,
                     fires_once: true,
                 });
                 Ok(())

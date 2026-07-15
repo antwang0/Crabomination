@@ -5491,11 +5491,11 @@ fn mana_sculpt_counters_spell() {
 
 #[test]
 fn mana_sculpt_refunds_mana_value_of_countered_spell_with_wizard() {
-    // Push (modern_decks): the "if you control a Wizard, add an amount
-    // of {C} equal to the amount of mana spent on that spell" rider
-    // **now reads the countered spell's mana value** via
-    // `Value::ManaValueOf(Target(0))`. After CounterSpell resolves the
-    // target is in graveyard; `ManaValueOf` walks gy to find it.
+    // The "if you control a Wizard, add an amount of {C} equal to the
+    // amount of mana SPENT on that spell" rider reads the paid total
+    // (`CounteredSpellManaSpent`) and banks it on a YourNextMainPhase
+    // delayed trigger — checked end-to-end in
+    // `mana_sculpt_banks_paid_mana_at_next_main_phase`.
     use crabomination::card::CreatureType;
     let mut g = two_player_game();
     // P0 controls a Wizard so the gate passes.
@@ -5535,14 +5535,11 @@ fn mana_sculpt_refunds_mana_value_of_countered_spell_with_wizard() {
     .expect("Mana Sculpt castable for {1}{U}{U}");
     drain_stack(&mut g);
 
-    // Bolt is countered (CMC = 1). Mana Sculpt's If-Wizard branch
-    // should have added 1 colorless mana (Bolt's MV) to the pool.
-    // The cast consumed all of the seeded mana, so the post-resolution
-    // pool size equals exactly the refunded amount.
-    let colorless_after = g.players[0].mana_pool.colorless_amount();
-    assert_eq!(colorless_after, 1,
-        "P0 should have gotten exactly Bolt's MV (1) colorless back; got {}",
-        colorless_after);
+    // Bolt is countered (1 mana was spent on it). The printed rider
+    // BANKS the {C} for P0's next main phase (nothing lands
+    // immediately) via a YourNextMainPhase delayed trigger.
+    assert_eq!(g.players[0].mana_pool.total(), 0, "no immediate refund");
+    assert_eq!(g.delayed_triggers.len(), 1, "the {{C}} is banked for next main");
 }
 
 
@@ -16267,4 +16264,51 @@ fn archaics_agony_exiles_cards_equal_to_excess_damage() {
         );
         assert!(c.granted_alt_cast_cost_eot.is_some(), "a normal play — full cost");
     }
+}
+
+/// Mana Sculpt banks {C} equal to the countered spell's PAID mana (X
+/// included) at the beginning of the caster's next main phase — not
+/// immediately, and not the printed CMC.
+#[test]
+fn mana_sculpt_banks_paid_mana_at_next_main_phase() {
+    let mut g = two_player_game();
+    // A Wizard so the rider fires.
+    g.add_card_to_battlefield(0, catalog::exhibition_tidecaller());
+    // Opponent casts a 3-mana spell (Divination: {2}{U}).
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let div = g.add_card_to_hand(1, catalog::divination());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: div, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Divination castable");
+    // P0 counters with Mana Sculpt.
+    g.priority.player_with_priority = 0;
+    let ms = g.add_card_to_hand(0, catalog::mana_sculpt());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ms, target: Some(Target::Permanent(div)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Mana Sculpt castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == div), "Divination countered");
+    // No mana yet — the {C} is banked for P0's next main phase.
+    assert_eq!(g.players[0].mana_pool.total(), 0, "nothing added immediately");
+    assert_eq!(g.delayed_triggers.len(), 1, "delayed trigger armed");
+    // Advance to P0's next turn's precombat main.
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    let evs = g.advance_step(vec![]).expect("upkeep → draw");
+    let _ = evs;
+    let _ = g.advance_step(vec![]).expect("draw → main");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].mana_pool.total(),
+        3,
+        "3 colorless banked — the amount PAID for Divination"
+    );
 }

@@ -613,6 +613,12 @@ pub struct GameState {
     /// was dealt this way" riders (Orbital Plunge). Reset between resolutions.
     #[serde(skip)]
     pub excess_damage_this_resolution: u32,
+    /// Total mana spent to cast the spell most recently countered during
+    /// the current resolution (Mana Sculpt's "amount of mana spent to cast
+    /// that spell"). Reset at each resolution start; stamped by
+    /// `Effect::CounterSpell`-family handlers.
+    #[serde(default)]
+    pub countered_spell_mana_spent: u32,
     /// Transient: seats that sacrificed at least one permanent during the
     /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
@@ -1230,6 +1236,7 @@ impl Clone for GameState {
             exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             excess_damage_this_resolution: self.excess_damage_this_resolution,
+            countered_spell_mana_spent: self.countered_spell_mana_spent,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
@@ -1403,6 +1410,7 @@ impl GameState {
             exiled_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             excess_damage_this_resolution: 0,
+            countered_spell_mana_spent: 0,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             named_card_this_resolution: None,
             pending_cast_face: CastFace::Front,

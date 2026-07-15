@@ -202,33 +202,19 @@ pub fn brush_off() -> CardDefinition {
 /// {C} equal to the amount of mana spent to cast that spell at the
 /// beginning of your next main phase."
 ///
-/// Approximation: the engine has no "amount of mana spent on the
-/// countered spell" introspection (the same gap that drops the Opus
-/// rider on Strixhaven creatures), and no "delay-until-your-next-main
-/// add C" primitive. We collapse the rider to "if you control a
-/// Wizard, add {C}{C} immediately" — a conservative two-colorless
-/// snap-back that approximates the typical countered-spell mana
-/// value (2-3) without overshooting on cheap counters.
+/// Fully wired: `Effect::CounterSpell` stamps the countered spell's
+/// actually-PAID mana (`GameState.countered_spell_mana_spent` — real X
+/// payments included, unlike a printed-CMC read), and
+/// `Effect::AddManaAtNextMainPhase` evaluates that amount now and banks
+/// the {C} on a `YourNextMainPhase` delayed trigger, so the mana lands
+/// with main-phase windows open exactly as printed.
 pub fn mana_sculpt() -> CardDefinition {
     use crate::card::Predicate;
-    use crate::effect::ManaPayload;
     use crate::mana::u;
     CardDefinition {
         name: "Mana Sculpt",
         cost: cost(&[generic(1), u(), u()]),
         card_types: vec![CardType::Instant],
-        // Push (modern_decks): the "if you control a Wizard, add an
-        // amount of {C} equal to the amount of mana spent to cast that
-        // spell" rider now reads `Value::ManaValueOf(Target(0))` —
-        // after CounterSpell resolves, the countered spell sits in
-        // its owner's graveyard and `ManaValueOf` walks every zone to
-        // find it. The "delay until next main" timing rider is still
-        // collapsed to immediate AddMana (no delayed-AddMana primitive
-        // yet); the colorless mana goes into the pool right away. For
-        // X-cost spells, this reads only the printed CMC (which equals
-        // X = 0); the "amount of mana spent" rider is approximated by
-        // the printed CMC — same gap as Opus's mana-introspection
-        // approximation. Most counter targets are X = 0.
         effect: Effect::Seq(vec![
             Effect::CounterSpell {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
@@ -238,11 +224,8 @@ pub fn mana_sculpt() -> CardDefinition {
                     SelectionRequirement::HasCreatureType(crate::card::CreatureType::Wizard)
                         .and(SelectionRequirement::ControlledByYou),
                 )),
-                then: Box::new(Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::Colorless(Value::ManaValueOf(Box::new(
-                        Selector::Target(0),
-                    ))),
+                then: Box::new(Effect::AddManaAtNextMainPhase {
+                    amount: Value::CounteredSpellManaSpent,
                 }),
                 else_: Box::new(Effect::Noop),
             },
