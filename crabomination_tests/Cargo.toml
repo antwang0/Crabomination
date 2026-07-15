@@ -1,0 +1,17 @@
+[package]
+name = "crabomination_tests"
+version = "0.1.0"
+edition = "2024"
+# Dev-only crate: the engine's functional test suite lives here (as grouped
+# integration-test binaries) instead of inside `crabomination` itself, so
+# that editing a test doesn't recompile the 87k-line engine crate and the
+# test binaries compile in parallel after an engine change. Nothing depends
+# on this crate; `cargo build --workspace` only builds the empty stub lib.
+
+[dependencies]
+
+[dev-dependencies]
+crabomination = { path = "../crabomination" }
+crabomination_base = { path = "../crabomination_base" }
+crabomination_catalog = { path = "../crabomination_catalog" }
+serde_json = "1.0.150"

@@ -7,7 +7,7 @@ use crate::mana::{Color, ManaError};
 
 /// serde default for `ImpulsePending.take` (back-compat: a snapshot without
 /// the field takes one card).
-pub(crate) fn one() -> usize {
+pub fn one() -> usize {
     1
 }
 

@@ -41,7 +41,7 @@ impl GameState {
     /// step is bypassed while `damage_cant_be_prevented_this_turn` is set.
     /// Emits `GameEvent::DamagePrevented` for the prevented portion
     /// (CR 615.13) and returns the unprevented remainder.
-    pub(crate) fn apply_prevention_shields(
+    pub fn apply_prevention_shields(
         &mut self,
         ent: EntityRef,
         amount: u32,
@@ -285,7 +285,7 @@ impl GameState {
     /// the `CardId` of the damaging permanent (typically `ctx.source`).
     /// Combat damage uses a separate path in `combat.rs` that already
     /// honors infect for combat damage.
-    pub(crate) fn deal_damage_to_from(
+    pub fn deal_damage_to_from(
         &mut self,
         ent: EntityRef,
         amount: u32,
@@ -637,7 +637,7 @@ impl GameState {
     /// CR 701.34 — manifest the card `cid` (in player `p`'s library): flip it
     /// face down in place so it enters as a vanilla 2/2 (no real-card ETB
     /// triggers), then put it onto the battlefield under `p`'s control.
-    pub(crate) fn manifest_card(
+    pub fn manifest_card(
         &mut self,
         cid: CardId,
         p: usize,
@@ -660,7 +660,7 @@ impl GameState {
         self.move_card_to(cid, &dest, ctx, events);
     }
 
-    pub(crate) fn move_card_to(
+    pub fn move_card_to(
         &mut self,
         cid: CardId,
         dest: &ZoneDest,

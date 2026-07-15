@@ -10,7 +10,7 @@ type DeathTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>);
 
 /// How a CR 514 cleanup round ended, telling the caller how to continue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum CleanupOutcome {
+pub enum CleanupOutcome {
     /// Suspended on a `wants_ui` discard-down decision (CR 514.1);
     /// `submit_decision` resumes via `finish_cleanup`.
     Suspended,
@@ -110,7 +110,7 @@ impl GameState {
 impl GameState {
     // ── Pass priority ─────────────────────────────────────────────────────────
 
-    pub(crate) fn pass_priority(&mut self) -> Result<Vec<GameEvent>, GameError> {
+    pub fn pass_priority(&mut self) -> Result<Vec<GameEvent>, GameError> {
         let alive = self.alive_count();
         self.priority.consecutive_passes += 1;
 
@@ -183,7 +183,7 @@ impl GameState {
     /// turn-based entry actions (untap, draw, combat resolution, step
     /// triggers, …). Split out of `pass_priority` so the cleanup discard
     /// resume path can re-run it after a suspended discard is answered.
-    pub(crate) fn advance_step(
+    pub fn advance_step(
         &mut self,
         mut events: Vec<GameEvent>,
     ) -> Result<Vec<GameEvent>, GameError> {
@@ -467,7 +467,7 @@ impl GameState {
     /// "at the beginning of your upkeep"; `AnyPlayer` fires for everyone.
     /// Also processes any `delayed_triggers` whose kind matches this step
     /// (e.g. Pact upkeep cost, Goryo's exile-at-end-step).
-    pub(crate) fn fire_step_triggers(&mut self, step: TurnStep) {
+    pub fn fire_step_triggers(&mut self, step: TurnStep) {
         let active = self.active_player_idx;
         let kind = EventKind::StepBegins(step);
         // Collect candidate (source, effect, controller, filter) tuples for
@@ -736,7 +736,7 @@ impl GameState {
         self.drain_trigger_queue(queue);
     }
 
-    pub(crate) fn saga_advance(&mut self, card_id: CardId) {
+    pub fn saga_advance(&mut self, card_id: CardId) {
         let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) else {
             return;
         };
@@ -771,7 +771,7 @@ impl GameState {
 
     // ── Stack resolution ──────────────────────────────────────────────────────
 
-    pub(crate) fn resolve_top_of_stack(&mut self) -> Result<Vec<GameEvent>, GameError> {
+    pub fn resolve_top_of_stack(&mut self) -> Result<Vec<GameEvent>, GameError> {
         let Some(item) = self.stack.pop() else {
             return Ok(vec![]);
         };
@@ -1583,7 +1583,7 @@ impl GameState {
     /// onto the stack at the beginning of their upkeep. The copy keeps the
     /// original targets while they're legal, else auto-picks fresh ones
     /// ("you may choose new targets"; AutoDecider keeps/repairs).
-    pub(crate) fn process_epic(&mut self) -> Vec<GameEvent> {
+    pub fn process_epic(&mut self) -> Vec<GameEvent> {
         let p = self.active_player_idx;
         let mut events = Vec::new();
         if self.players[p].epic_spells.is_empty() {
@@ -1668,7 +1668,7 @@ impl GameState {
     /// not a zone change: no ETB/LTB triggers fire and all state is retained,
     /// modelled by moving the `CardInstance` between `battlefield` and
     /// `phased_out` rather than re-creating it.
-    pub(crate) fn do_phasing(&mut self) {
+    pub fn do_phasing(&mut self) {
         let p = self.active_player_idx;
         // Direct phasers currently in play (computed *before* phase-in so a
         // permanent that phases in this step doesn't immediately phase back
@@ -1729,7 +1729,7 @@ impl GameState {
         }
     }
 
-    pub(crate) fn do_untap(&mut self) {
+    pub fn do_untap(&mut self) {
         // CR 502.1 — phasing happens first, as a turn-based action.
         self.do_phasing();
         let p = self.active_player_idx;
@@ -2149,7 +2149,7 @@ impl GameState {
     /// CR 514 cleanup step turn-based actions (514.1 discard-down, 514.2
     /// wear-off, 514.3 priority check). See `CleanupOutcome` for how callers
     /// continue.
-    pub(crate) fn do_cleanup(&mut self, events: &mut Vec<GameEvent>) -> CleanupOutcome {
+    pub fn do_cleanup(&mut self, events: &mut Vec<GameEvent>) -> CleanupOutcome {
         // CR 514.1 — First, if the active player's hand contains more cards
         // than their maximum hand size (normally seven), they discard
         // enough cards to reduce their hand size to that number. This
@@ -2477,7 +2477,7 @@ impl GameState {
         }
     }
 
-    pub(crate) fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
+    pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
 
         // CR 603.8 — state-triggered flip (Student of Elements: "When this
@@ -3315,7 +3315,7 @@ impl GameState {
     /// callers must handle those themselves (the SBA paths do). New effect
     /// arms should use `remove_to_graveyard_with_triggers` or
     /// `sacrifice_one` instead (audit P3: death-funnel bypass family).
-    pub(crate) fn remove_from_battlefield_to_graveyard_raw(&mut self, id: CardId) {
+    pub fn remove_from_battlefield_to_graveyard_raw(&mut self, id: CardId) {
         if let Some(mut card) = Self::take_card(&mut self.battlefield, id) {
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
@@ -3433,7 +3433,7 @@ impl GameState {
         }
     }
 
-    pub(crate) fn remove_from_battlefield_to_exile(&mut self, id: CardId) {
+    pub fn remove_from_battlefield_to_exile(&mut self, id: CardId) {
         if let Some(card) = Self::take_card(&mut self.battlefield, id) {
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
@@ -3569,7 +3569,7 @@ impl GameState {
     /// Remove a permanent from the battlefield to its graveyard and collect any
     /// `Dies` triggered abilities, returning them as events after the fact.
     /// (This is the version used by destroy/damage effects that want to fire triggers.)
-    pub(crate) fn remove_to_graveyard_with_triggers(&mut self, id: CardId) -> Vec<GameEvent> {
+    pub fn remove_to_graveyard_with_triggers(&mut self, id: CardId) -> Vec<GameEvent> {
         // Collect both `CreatureDied` and `PermanentLeavesBattlefield`
         // self-source triggers off the leaving permanent. CreatureDied
         // only matters for creatures (Solitude evoke-sac etc.);

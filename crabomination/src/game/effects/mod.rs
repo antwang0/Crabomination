@@ -829,7 +829,7 @@ impl GameState {
         }
     }
 
-    pub(crate) fn resolve_effect(
+    pub fn resolve_effect(
         &mut self,
         effect: &Effect,
         ctx: &EffectContext,
@@ -939,7 +939,7 @@ impl GameState {
     /// `PermanentSacrificed`) and route it to the graveyard, firing dies/LTB
     /// triggers. Shared by the auto-pick path and the interactive
     /// `SacrificePending` resume so both behave identically.
-    pub(crate) fn sacrifice_one(&mut self, id: CardId, who: usize, events: &mut Vec<GameEvent>) {
+    pub fn sacrifice_one(&mut self, id: CardId, who: usize, events: &mut Vec<GameEvent>) {
         // Stamp the resolution scratch so `Value::Sacrificed*` and the
         // `ManaValue*Sacrificed*` filters read this sacrifice (Kethek's
         // "lesser mana value" dig).
@@ -15973,7 +15973,7 @@ impl GameState {
     /// matching alive seats so effects like Wheel of Fortune actually hit
     /// every player. Non-collective `PlayerRef` variants resolve to a single
     /// seat (or empty if the reference can't be resolved).
-    pub(crate) fn resolve_players(&self, pref: &PlayerRef, ctx: &EffectContext) -> Vec<usize> {
+    pub fn resolve_players(&self, pref: &PlayerRef, ctx: &EffectContext) -> Vec<usize> {
         match pref {
             // CR 101.4 / 121.2c — "each player"/"each opponent" fan-outs
             // resolve in APNAP order (active player first, then turn order),

@@ -39,7 +39,7 @@ impl GameState {
 
     // ── Declare attackers ─────────────────────────────────────────────────────
 
-    pub(crate) fn declare_attackers(
+    pub fn declare_attackers(
         &mut self,
         attacks: Vec<Attack>,
     ) -> Result<Vec<GameEvent>, GameError> {
@@ -688,7 +688,7 @@ impl GameState {
 
     // ── Declare blockers ──────────────────────────────────────────────────────
 
-    pub(crate) fn declare_blockers(
+    pub fn declare_blockers(
         &mut self,
         assignments: Vec<(CardId, CardId)>,
     ) -> Result<Vec<GameEvent>, GameError> {
@@ -1284,7 +1284,7 @@ impl GameState {
         })
     }
 
-    pub(crate) fn resolve_first_strike_damage(&mut self) -> Result<Vec<GameEvent>, GameError> {
+    pub fn resolve_first_strike_damage(&mut self) -> Result<Vec<GameEvent>, GameError> {
         let computed = self.compute_battlefield();
         // CR 510.4: in the first-strike combat damage step, only creatures
         // with first strike or double strike deal combat damage. The same
@@ -1305,7 +1305,7 @@ impl GameState {
         Ok(events)
     }
 
-    pub(crate) fn resolve_combat(&mut self) -> Result<Vec<GameEvent>, GameError> {
+    pub fn resolve_combat(&mut self) -> Result<Vec<GameEvent>, GameError> {
         let computed = self.compute_battlefield();
         // CR 510.5: in the regular combat damage step, every attacking and
         // blocking creature that didn't deal damage in the first-strike step
@@ -2428,7 +2428,7 @@ impl GameState {
     /// Confidence and friends. The trigger source is bound to the
     /// graveyard card itself so a `Move(SelfSource → Hand)` body
     /// returns the right card.
-    pub(crate) fn fire_combat_damage_to_player_triggers(
+    pub fn fire_combat_damage_to_player_triggers(
         &mut self,
         source: CardId,
         damaged_player: usize,

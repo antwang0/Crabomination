@@ -27,7 +27,7 @@ impl GameState {
     /// symbols matching any listed color among the mana costs of
     /// permanents they control. A hybrid / Phyrexian / mono-hybrid pip
     /// counts once if it contains any of the colors.
-    pub(crate) fn devotion_to(&self, player: usize, colors: &[crate::mana::Color]) -> i32 {
+    pub fn devotion_to(&self, player: usize, colors: &[crate::mana::Color]) -> i32 {
         let matches = |c: &crate::mana::Color| colors.contains(c);
         let pips = self
             .battlefield
@@ -884,7 +884,7 @@ impl GameState {
             .count()
     }
 
-    pub(crate) fn evaluate_predicate(&self, p: &Predicate, ctx: &EffectContext) -> bool {
+    pub fn evaluate_predicate(&self, p: &Predicate, ctx: &EffectContext) -> bool {
         match p {
             Predicate::True => true,
             Predicate::False => false,
@@ -1885,7 +1885,7 @@ impl GameState {
         })
     }
 
-    pub(crate) fn evaluate_requirement_static(
+    pub fn evaluate_requirement_static(
         &self,
         req: &SelectionRequirement,
         target: &Target,
@@ -2384,7 +2384,7 @@ impl GameState {
     /// Evaluate a `SelectionRequirement` directly against a `CardInstance`
     /// without requiring it to be on the battlefield. Used for library searches.
     /// Battlefield-only predicates (Tapped, IsAttacking, etc.) return false.
-    pub(crate) fn evaluate_requirement_on_card(
+    pub fn evaluate_requirement_on_card(
         &self,
         req: &SelectionRequirement,
         card: &CardInstance,

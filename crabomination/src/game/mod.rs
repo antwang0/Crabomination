@@ -18,12 +18,20 @@
 //!   non-active player can cast instants / activate abilities in response);
 //!   `declare_blockers` is called by whoever controls the defending creatures.
 
-pub(crate) mod actions;
-pub(crate) mod affordances;
-pub(crate) mod combat;
-pub(crate) mod effects;
+// Internal engine modules. `pub` (but hidden from docs) rather than
+// `pub(crate)` so the out-of-crate test suite (`crabomination_tests`) can
+// reach items like `effects::EffectContext`; not part of the supported API.
+#[doc(hidden)]
+pub mod actions;
+#[doc(hidden)]
+pub mod affordances;
+#[doc(hidden)]
+pub mod combat;
+#[doc(hidden)]
+pub mod effects;
 pub mod layers;
-pub(crate) mod stack;
+#[doc(hidden)]
+pub mod stack;
 #[cfg(test)]
 #[path = "../tests/game.rs"]
 mod tests;
@@ -487,9 +495,6 @@ mod tests_counters;
 #[path = "../tests/energy.rs"]
 mod tests_energy;
 #[cfg(test)]
-#[path = "../tests/ktk.rs"]
-mod tests_ktk;
-#[cfg(test)]
 #[path = "../tests/akh.rs"]
 mod tests_akh;
 #[cfg(test)]
@@ -913,8 +918,8 @@ mod tests_bro;
 mod tests_gpt;
 pub mod types;
 
-#[cfg(test)]
-pub(crate) fn two_player_game() -> GameState {
+#[doc(hidden)]
+pub fn two_player_game() -> GameState {
     multi_player_game(2)
 }
 
@@ -922,8 +927,8 @@ pub(crate) fn two_player_game() -> GameState {
 /// main phase. Players are named "P0", "P1", …. Use for free-for-all
 /// multiplayer tests; for format-specific life totals call
 /// `game_with_format(format, n)`.
-#[cfg(test)]
-pub(crate) fn multi_player_game(n: usize) -> GameState {
+#[doc(hidden)]
+pub fn multi_player_game(n: usize) -> GameState {
     let players: Vec<_> = (0..n)
         .map(|i| crate::player::Player::new(i, format!("P{i}")))
         .collect();
@@ -935,8 +940,8 @@ pub(crate) fn multi_player_game(n: usize) -> GameState {
 /// `n`-player game with format-specific setup applied (starting life, draw-on-
 /// turn-1 rule). Pre-advanced to the pre-combat main phase like
 /// `two_player_game`.
-#[cfg(test)]
-pub(crate) fn game_with_format(format: crate::format::Format, n: usize) -> GameState {
+#[doc(hidden)]
+pub fn game_with_format(format: crate::format::Format, n: usize) -> GameState {
     let mut g = multi_player_game(n);
     g.apply_format(format);
     g
@@ -945,8 +950,8 @@ pub(crate) fn game_with_format(format: crate::format::Format, n: usize) -> GameS
 /// Pass priority for both players until the stack is empty, returning all
 /// events produced during resolution. Callers that don't care about events
 /// can simply discard the return value.
-#[cfg(test)]
-pub(crate) fn drain_stack(g: &mut GameState) -> Vec<GameEvent> {
+#[doc(hidden)]
+pub fn drain_stack(g: &mut GameState) -> Vec<GameEvent> {
     let mut all_events = Vec::new();
     while !g.stack.is_empty() {
         all_events.extend(g.perform_action(GameAction::PassPriority).unwrap());
@@ -959,8 +964,8 @@ pub(crate) fn drain_stack(g: &mut GameState) -> Vec<GameEvent> {
 /// Tests with non-default `mode`/`x_value`, the error path, or that need to
 /// inspect cast-time events separately should use `GameAction::CastSpell`
 /// directly.
-#[cfg(test)]
-pub(crate) fn cast(g: &mut GameState, id: CardId) -> Vec<GameEvent> {
+#[doc(hidden)]
+pub fn cast(g: &mut GameState, id: CardId) -> Vec<GameEvent> {
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast spell");
@@ -968,8 +973,8 @@ pub(crate) fn cast(g: &mut GameState, id: CardId) -> Vec<GameEvent> {
 }
 
 /// Cast a spell at a specific target and drain the stack.
-#[cfg(test)]
-pub(crate) fn cast_at(g: &mut GameState, id: CardId, target: Target) -> Vec<GameEvent> {
+#[doc(hidden)]
+pub fn cast_at(g: &mut GameState, id: CardId, target: Target) -> Vec<GameEvent> {
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(target), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast spell at target");
@@ -2181,7 +2186,7 @@ impl GameState {
     /// Spend `amount` {E} from player `p`, clamped to what they have, and add
     /// it to `energy_spent_this_turn` (the tally behind "paid or lost N+ {E}
     /// this turn" gates). All energy-cost chokepoints route through here.
-    pub(crate) fn spend_energy(&mut self, p: usize, amount: u32) {
+    pub fn spend_energy(&mut self, p: usize, amount: u32) {
         let amount = amount.min(self.players[p].energy);
         self.players[p].energy -= amount;
         self.players[p].energy_spent_this_turn =
@@ -2351,7 +2356,7 @@ impl GameState {
 
     /// CR 724 — make `player` the monarch. No-op if they already are; emits
     /// `MonarchChanged` on a real change.
-    pub(crate) fn set_monarch(&mut self, player: usize, events: &mut Vec<GameEvent>) {
+    pub fn set_monarch(&mut self, player: usize, events: &mut Vec<GameEvent>) {
         if self.monarch == Some(player) {
             return;
         }
@@ -2365,7 +2370,7 @@ impl GameState {
     /// Ring-bearer. Choice is auto-resolved to their best creature (highest
     /// power, then toughness) — per-player UI selection is a follow-up
     /// (TODO.md). If they control no creature the bearer is unchanged.
-    pub(crate) fn ring_tempts(&mut self, player: usize, events: &mut Vec<GameEvent>) {
+    pub fn ring_tempts(&mut self, player: usize, events: &mut Vec<GameEvent>) {
         self.players[player].ring_temptations =
             (self.players[player].ring_temptations + 1).min(4);
         let computed = self.compute_battlefield();
@@ -2406,7 +2411,7 @@ impl GameState {
     /// `DayNightChanged` on a real change.
     /// CR 712 — flip one DFC permanent to its other face in place. The object
     /// is unchanged (counters/tapped/attachments persist); fires `Transformed`.
-    pub(crate) fn transform_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
+    pub fn transform_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         let Some(c) = self.battlefield_find_mut(id) else { return };
         if !c.transformed {
             let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone()) else { return };
@@ -2457,14 +2462,14 @@ impl GameState {
     /// CR 711.2 — flip one flip-card permanent to its flipped face in place.
     /// The object is unchanged (counters/tapped/attachments persist); fires
     /// `Flipped`. No-op if already flipped or it has no flip face.
-    pub(crate) fn flip_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
+    pub fn flip_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         let Some(c) = self.battlefield_find_mut(id) else { return };
         if c.flip().is_some() {
             events.push(GameEvent::Flipped { card_id: id });
         }
     }
 
-    pub(crate) fn set_day_night(&mut self, dn: crate::game::types::DayNight, events: &mut Vec<GameEvent>) {
+    pub fn set_day_night(&mut self, dn: crate::game::types::DayNight, events: &mut Vec<GameEvent>) {
         use crate::game::types::DayNight;
         if self.day_night == Some(dn) {
             return;
@@ -2493,7 +2498,7 @@ impl GameState {
     /// If it's day and the previous turn's active player cast no spells, it
     /// becomes night; if it's night and they cast two or more, it becomes
     /// day. No effect while the game is neither day nor night.
-    pub(crate) fn check_day_night_transition(&mut self, events: &mut Vec<GameEvent>) {
+    pub fn check_day_night_transition(&mut self, events: &mut Vec<GameEvent>) {
         use crate::game::types::DayNight;
         let Some(current) = self.day_night else { return };
         let Some(prev) = self.previous_turn_active else { return };
@@ -2524,7 +2529,7 @@ impl GameState {
     /// `StaticEffect::GrantTriggeredAbility` statics ("All artifacts have
     /// '…'" — Kataki, War's Wage). Each fires as though printed on the
     /// matching permanent (CR 702.6e-style source binding).
-    pub(crate) fn statics_granted_triggers_for(
+    pub fn statics_granted_triggers_for(
         &self,
         card: &CardInstance,
     ) -> Vec<crate::card::TriggeredAbility> {
@@ -3282,7 +3287,7 @@ impl GameState {
     /// Every poison site routes here — `Effect::AddPoison`,
     /// `AddCounter(Player)`, proliferate, and infect/toxic combat damage.
     /// Returns the number of counters actually applied.
-    pub(crate) fn add_poison(
+    pub fn add_poison(
         &mut self,
         seat: usize,
         base: u32,
@@ -3406,7 +3411,7 @@ impl GameState {
     /// one counter spec per matching source: a *different* permanent the same
     /// player controls whose chosen creature type is among the entering
     /// creature's types. The entering card must already be on the battlefield.
-    pub(crate) fn chosen_type_etb_counter_specs(
+    pub fn chosen_type_etb_counter_specs(
         &self,
         entering: CardId,
         controller: usize,
@@ -3537,7 +3542,7 @@ impl GameState {
     /// Vanishing there's no sacrifice: when the last counter comes off the
     /// permanent simply stops being a non-creature (the layer effect reads
     /// the live counter count) and turns into a creature.
-    pub(crate) fn process_impending(&mut self) -> Vec<crate::game::GameEvent> {
+    pub fn process_impending(&mut self) -> Vec<crate::game::GameEvent> {
         use crate::card::{CounterType, Keyword};
         let active = self.active_player_idx;
         let mut events = Vec::new();
@@ -3571,7 +3576,7 @@ impl GameState {
     /// each Fading / Vanishing permanent they control removes a counter (and
     /// is sacrificed when it runs out). Processed as a turn-based action at
     /// upkeep before priority.
-    pub(crate) fn process_fading_vanishing(&mut self) -> Vec<crate::game::GameEvent> {
+    pub fn process_fading_vanishing(&mut self) -> Vec<crate::game::GameEvent> {
         use crate::card::{CounterType, Keyword};
         let active = self.active_player_idx;
         let mut events = Vec::new();
@@ -3636,7 +3641,7 @@ impl GameState {
     /// or sacrificing matching permanents), or sacrifices the permanent.
     /// (Following `PayManaOrElse`, mana is auto-paid from the pool when
     /// affordable — an interactive pay prompt is a follow-up.)
-    pub(crate) fn process_cumulative_upkeep(&mut self) -> Vec<crate::game::GameEvent> {
+    pub fn process_cumulative_upkeep(&mut self) -> Vec<crate::game::GameEvent> {
         use crate::card::{CounterType, CumulativeUpkeepCost, Keyword};
         let active = self.active_player_idx;
         let mut events = Vec::new();
@@ -3743,7 +3748,7 @@ impl GameState {
     /// the card without paying its mana cost (a creature so cast clears its
     /// summoning sickness — Suspend grants haste). Targets are auto-chosen,
     /// matching AutoDecider behavior for other free casts.
-    pub(crate) fn process_suspend(&mut self) -> Vec<crate::game::GameEvent> {
+    pub fn process_suspend(&mut self) -> Vec<crate::game::GameEvent> {
         use crate::card::{CounterType, Keyword};
         let active = self.active_player_idx;
         let mut events = Vec::new();
@@ -3789,7 +3794,7 @@ impl GameState {
     /// card picked by the controller's decider. A `wants_ui` controller
     /// instead gets a real echo trigger on the stack whose resolution asks
     /// pay-or-sacrifice (`Effect::EchoPayOrSacrifice`).
-    pub(crate) fn process_echo(&mut self) -> Vec<crate::game::GameEvent> {
+    pub fn process_echo(&mut self) -> Vec<crate::game::GameEvent> {
         use crate::card::Keyword;
         let active = self.active_player_idx;
         let mut events = Vec::new();
@@ -3860,7 +3865,7 @@ impl GameState {
     /// hone counter from each instant/sorcery they own in exile with hone
     /// counters. When the last comes off, grant them permission to cast it
     /// from exile for {4} less (the printed "you may cast it" window).
-    pub(crate) fn process_hone(&mut self) -> Vec<crate::game::GameEvent> {
+    pub fn process_hone(&mut self) -> Vec<crate::game::GameEvent> {
         use crate::card::{CounterType, MayPlayDuration, MayPlayPermission};
         let active = self.active_player_idx;
         let turn = self.turn_number;
@@ -3953,7 +3958,7 @@ impl GameState {
     /// CR 702.62 accelerants — when `caster` casts a spell, tick a time
     /// counter off every opponent-owned suspended card that has
     /// `Keyword::SuspendAccelerant` (Deep-Sea Kraken).
-    pub(crate) fn process_suspend_accelerants(
+    pub fn process_suspend_accelerants(
         &mut self,
         caster: usize,
     ) -> Vec<crate::game::GameEvent> {
@@ -4528,7 +4533,7 @@ impl GameState {
     /// True when `card` can be retraced from `p`'s graveyard: printed
     /// Retrace, else Six's "during your turn, nonland permanent cards in
     /// your graveyard have retrace" grant.
-    pub(crate) fn effective_retrace(&self, card: &crate::card::CardInstance, p: usize) -> bool {
+    pub fn effective_retrace(&self, card: &crate::card::CardInstance, p: usize) -> bool {
         use crate::effect::StaticEffect;
         if card.definition.has_retrace() {
             return true;
@@ -4576,7 +4581,7 @@ impl GameState {
     /// True when a static forbids casting `def` from `zone` (Cage: any
     /// spell from graveyards/libraries; Jailer: noncreature spells from
     /// graveyards or exile).
-    pub(crate) fn cast_from_zone_blocked(
+    pub fn cast_from_zone_blocked(
         &self,
         caster: usize,
         def: &crate::card::CardDefinition,
@@ -4769,7 +4774,7 @@ impl GameState {
     /// for that owner. Pushes a `PermanentExiled` event and returns `true`
     /// when the card was redirected to exile, so callers can suppress their
     /// own graveyard-specific event (CardMilled, etc.).
-    pub(crate) fn route_to_graveyard(
+    pub fn route_to_graveyard(
         &mut self,
         mut card: crate::card::CardInstance,
         events: &mut Vec<crate::game::GameEvent>,
@@ -5203,7 +5208,7 @@ impl GameState {
     }
 
     /// Give priority to the active player and reset consecutive passes.
-    pub(crate) fn give_priority_to_active(&mut self) {
+    pub fn give_priority_to_active(&mut self) {
         self.priority.player_with_priority = self.active_player_idx;
         self.priority.consecutive_passes = 0;
     }
@@ -7416,7 +7421,7 @@ impl GameState {
         }
     }
 
-    pub(crate) fn dying_snapshot(&self, id: CardId) -> Option<CardInstance> {
+    pub fn dying_snapshot(&self, id: CardId) -> Option<CardInstance> {
         let mut snap = self.battlefield.iter().find(|c| c.id == id)?.clone();
         if let Some(cp) = self.computed_permanent(id) {
             let printed = &snap.definition.subtypes.creature_types;
@@ -7443,7 +7448,7 @@ impl GameState {
     /// CR 106.4 override — empty every player's mana pool, except that a
     /// player with an `UnspentManaBecomesColorless` static (Kruphix) keeps
     /// the total as colorless mana.
-    pub(crate) fn empty_mana_pools(&mut self) {
+    pub fn empty_mana_pools(&mut self) {
         use crate::effect::StaticEffect;
         let keepers: Vec<usize> = self
             .battlefield
@@ -7571,7 +7576,7 @@ impl GameState {
         })
     }
 
-    pub(crate) fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
+    pub fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
         // Both sides read through the layer system — share one gather.
         self.with_frozen_layers(|g| g.damage_prevented_by_protection_inner(source, target))
     }
@@ -7676,7 +7681,7 @@ impl GameState {
         }
     }
 
-    pub(crate) fn next_timestamp(&mut self) -> u64 {
+    pub fn next_timestamp(&mut self) -> u64 {
         let ts = self.next_effect_timestamp;
         self.next_effect_timestamp += 1;
         ts
@@ -7691,7 +7696,7 @@ impl GameState {
     /// Also sweeps `UntilEndOfCombat` for cards that registered combat-
     /// scoped effects during a turn that ended without an actual combat
     /// phase (defensive cleanup so they don't leak indefinitely).
-    pub(crate) fn expire_end_of_turn_effects(&mut self) {
+    pub fn expire_end_of_turn_effects(&mut self) {
         self.continuous_effects.retain(|e| {
             e.duration != EffectDuration::UntilEndOfTurn
                 && e.duration != EffectDuration::UntilEndOfCombat
@@ -7762,14 +7767,14 @@ impl GameState {
     /// "Effects that last 'until end of combat' expire at the end of the
     /// combat phase"). Invoked from `do_combat_end` once the end-of-
     /// combat step finishes.
-    pub(crate) fn expire_end_of_combat_effects(&mut self) {
+    pub fn expire_end_of_combat_effects(&mut self) {
         self.continuous_effects
             .retain(|e| e.duration != EffectDuration::UntilEndOfCombat);
     }
 
     /// Sacrifice/exile Mobilize/Myriad tokens registered by
     /// `Effect::CreateTokenAttacking` as the combat phase ends (CR 511.3).
-    pub(crate) fn process_attacking_token_cleanup(&mut self) -> Vec<GameEvent> {
+    pub fn process_attacking_token_cleanup(&mut self) -> Vec<GameEvent> {
         use crate::effect::AttackingTokenCleanup;
         let mut events = Vec::new();
         for (id, kind) in std::mem::take(&mut self.attacking_token_cleanup) {
@@ -7800,7 +7805,7 @@ impl GameState {
             && self.priority.player_with_priority == player
     }
 
-    pub(crate) fn next_id(&mut self) -> CardId {
+    pub fn next_id(&mut self) -> CardId {
         let id = CardId(self.next_id);
         self.next_id += 1;
         id
@@ -8705,7 +8710,7 @@ impl GameState {
     /// `offer_madness_cast`); declining or being unable to pay sends it on
     /// to the graveyard (CR 702.35b). Returns `true` if the card was found
     /// and discarded.
-    pub(crate) fn discard_card(
+    pub fn discard_card(
         &mut self,
         p: usize,
         card_id: crate::card::CardId,
@@ -9079,7 +9084,7 @@ impl GameState {
     /// instead" static (Laboratory Maniac, Jace, Wielder of Mysteries):
     /// then every other player is eliminated and the SBA pass promotes the
     /// win.
-    pub(crate) fn lose_to_empty_draw(&mut self, p: usize) {
+    pub fn lose_to_empty_draw(&mut self, p: usize) {
         let wins = self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| {
@@ -9115,7 +9120,7 @@ impl GameState {
     /// caller is responsible for the resulting loss SBA. Pushes
     /// `CardDrawn` for a normal draw, or `CardMilled` ×N +
     /// `CardLeftGraveyard` for a dredge.
-    pub(crate) fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
+    pub fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
         }
@@ -9458,7 +9463,7 @@ impl GameState {
     /// CR 702.122e / 702.171 — sum of "crews/saddles as though its power were
     /// N greater" bonuses applying to `cid` (Cloudspire Captain, Deathless
     /// Pilot). Folded into the crew / saddle power total, not real P/T.
-    pub(crate) fn crew_saddle_power_bonus(&self, cid: crate::card::CardId) -> i32 {
+    pub fn crew_saddle_power_bonus(&self, cid: crate::card::CardId) -> i32 {
         use crate::effect::StaticEffect;
         let Some(target) = self.battlefield.iter().find(|c| c.id == cid) else { return 0 };
         let mut bonus = 0;
@@ -9724,7 +9729,7 @@ impl GameState {
     /// the lowest CardId is chosen for determinism. A Soulbond creature can
     /// initiate the pair; a non-Soulbond creature only pairs if its controller
     /// already has an unpaired Soulbond creature waiting.
-    pub(crate) fn apply_soulbond_pairing(&mut self, entered: CardId) {
+    pub fn apply_soulbond_pairing(&mut self, entered: CardId) {
         use crate::card::Keyword;
         let Some(card) = self.battlefield_find(entered) else { return };
         if !card.definition.is_creature() || card.soulbond_partner.is_some() {
@@ -9754,7 +9759,7 @@ impl GameState {
         }
     }
 
-    pub(crate) fn dispatch_triggers_for_events(&mut self, events: &[GameEvent]) {
+    pub fn dispatch_triggers_for_events(&mut self, events: &[GameEvent]) {
         // Cost-payment events (paid life) queued since the last dispatch —
         // fold them in so resumed-decision paths that bypass
         // `perform_action`'s drain still fire their triggers.
@@ -10830,7 +10835,7 @@ impl GameState {
     /// `ResumeContext::TriggerTargetPick`. The resume path
     /// (`submit_decision`) re-enters this function with the remaining
     /// queue once the user picks.
-    pub(crate) fn drain_trigger_queue(&mut self, queue: Vec<PendingTriggerPush>) {
+    pub fn drain_trigger_queue(&mut self, queue: Vec<PendingTriggerPush>) {
         // Don't stack up multiple pending decisions — if the engine
         // already suspended on something else we can't surface a target
         // picker, so the whole batch falls back to auto-targeting (the
@@ -10967,7 +10972,7 @@ impl GameState {
     /// Push a `PendingTriggerPush` onto the stack with the given
     /// (already-chosen) target. Mirrors the original inline push at
     /// the trigger-dispatch site.
-    pub(crate) fn push_pending_trigger(
+    pub fn push_pending_trigger(
         &mut self,
         pending: PendingTriggerPush,
         target: Option<Target>,
@@ -13157,7 +13162,7 @@ impl GameState {
     /// `Value::TriggerEventAmount` — used by Light of Promise's
     /// "Whenever you gain life, put that many +1/+1 counters …".
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn continue_trigger_resolution_with_source(
+    pub fn continue_trigger_resolution_with_source(
         &mut self,
         source: CardId,
         controller: usize,
@@ -13271,7 +13276,7 @@ impl GameState {
         self.evaluate_requirement_static(req, target, controller, None)
     }
 
-    pub(crate) fn battlefield_find(&self, id: CardId) -> Option<&CardInstance> {
+    pub fn battlefield_find(&self, id: CardId) -> Option<&CardInstance> {
         self.battlefield.iter().find(|c| c.id == id)
     }
 
@@ -13325,7 +13330,7 @@ impl GameState {
         }
     }
 
-    pub(crate) fn battlefield_find_mut(&mut self, id: CardId) -> Option<&mut CardInstance> {
+    pub fn battlefield_find_mut(&mut self, id: CardId) -> Option<&mut CardInstance> {
         self.battlefield.iter_mut().find(|c| c.id == id)
     }
 
@@ -13360,7 +13365,7 @@ impl GameState {
     /// library → exile → stack. General-purpose helper for predicates
     /// or effects that need to introspect a card regardless of where
     /// it currently lives.
-    pub(crate) fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
+    pub fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);
         }
@@ -13392,7 +13397,7 @@ impl GameState {
     /// each player's hand/library/graveyard, and exile (in that order).
     /// Used by `Effect::GrantMayPlay` to stamp `may_play_until` on a
     /// card regardless of where the granting effect happens to find it.
-    pub(crate) fn find_card_anywhere_mut(
+    pub fn find_card_anywhere_mut(
         &mut self,
         id: CardId,
     ) -> Option<&mut CardInstance> {
@@ -13506,7 +13511,7 @@ impl GameState {
 
     /// Returns true if the permanent `id` has `kw` after all layer effects are applied.
     /// Falls back to `false` if the permanent is not on the battlefield.
-    pub(crate) fn permanent_has_keyword(&self, id: CardId, kw: &Keyword) -> bool {
+    pub fn permanent_has_keyword(&self, id: CardId, kw: &Keyword) -> bool {
         self.computed_permanent(id)
             .is_some_and(|c| c.keywords.contains(kw))
     }
@@ -14661,7 +14666,7 @@ fn affected_from_requirement(
 /// Returns true if `blocker` is legally allowed to block `attacker`.
 /// Uses `blocker_kws` / `attacker_kws` as the effective keyword sets
 /// (from `ComputedPermanent`) instead of the raw definition keywords.
-pub(crate) fn can_block_attacker_computed(
+pub fn can_block_attacker_computed(
     blocker: &CardInstance,
     blocker_computed: &ComputedPermanent,
     attacker_kws: &[Keyword],

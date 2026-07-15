@@ -2389,6 +2389,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "crabomination_tests"
+version = "0.1.0"
+dependencies = [
+ "crabomination",
+ "crabomination_base",
+ "crabomination_catalog",
+ "serde_json",
+]
+
+[[package]]
 name = "crc32fast"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

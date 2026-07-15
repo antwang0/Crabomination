@@ -215,7 +215,7 @@ pub(crate) fn flashback_additional_cost_for_name(
     }
 }
 
-pub(crate) fn extra_cost_for_spell(
+pub fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
     card: &crate::card::CardInstance,
@@ -355,7 +355,7 @@ fn requirement_mentions_controller(req: &crate::card::SelectionRequirement) -> b
     }
 }
 
-pub(crate) fn cost_reduction_for_spell(
+pub fn cost_reduction_for_spell(
     state: &crate::game::GameState,
     caster: usize,
     card: &crate::card::CardInstance,
@@ -367,7 +367,7 @@ pub(crate) fn cost_reduction_for_spell(
 /// Like `cost_reduction_for_spell`, but `from_graveyard` toggles the
 /// graveyard-cast-only statics (Gravebreaker Lamia). The graveyard-cast paths
 /// (flashback / retrace / escape / disturb / aftermath) pass `true`.
-pub(crate) fn cost_reduction_for_spell_zoned(
+pub fn cost_reduction_for_spell_zoned(
     state: &crate::game::GameState,
     caster: usize,
     card: &crate::card::CardInstance,
@@ -989,7 +989,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
 ///
 /// `etb_controller` is the controller of the ability's source — for self-ETB
 /// triggers, that's the entering permanent itself.
-pub(crate) fn etb_trigger_multiplier(
+pub fn etb_trigger_multiplier(
     state: &crate::game::GameState,
     etb_controller: usize,
     entering: Option<CardId>,
@@ -1198,7 +1198,7 @@ impl crate::game::GameState {
     /// `caster_grants_uncounterable_with_x` to thread the cast's X
     /// value. Internally delegates with X = 0.
     #[allow(dead_code)]
-    pub(crate) fn caster_grants_uncounterable(
+    pub fn caster_grants_uncounterable(
         &self,
         caster: usize,
         card: &crate::card::CardInstance,
@@ -1267,7 +1267,7 @@ impl crate::game::GameState {
     /// mana cost)", returns the flashback cost for an I/S `card` that lacks a
     /// printed/granted flashback of its own. Consulted by the flashback-cast
     /// path and the graveyard view.
-    pub(crate) fn graveyard_flashback_grant(
+    pub fn graveyard_flashback_grant(
         &self,
         seat: usize,
         card: &crate::card::CardInstance,
@@ -1904,7 +1904,7 @@ impl GameState {
         false
     }
 
-    pub(crate) fn fire_self_etb_triggers(&mut self, card_id: CardId, controller: usize) {
+    pub fn fire_self_etb_triggers(&mut self, card_id: CardId, controller: usize) {
         // CR 614.13 — apply enters-tapped replacements before ETB triggers fire.
         self.apply_enters_tapped_replacement(card_id);
         // CR 702.179 — a "Start your engines!" permanent entering gives its
@@ -2313,7 +2313,7 @@ impl GameState {
         result
     }
 
-    pub(crate) fn cast_spell(
+    pub fn cast_spell(
         &mut self,
         card_id: CardId,
         target: Option<Target>,
@@ -2682,7 +2682,7 @@ impl GameState {
 
     /// CR 401.6 — true when `card_id` is the top card of `p`'s library and a
     /// `PlayFromLibraryTop` static `p` controls covers it.
-    pub(crate) fn library_top_playable(&self, p: usize, card_id: CardId) -> bool {
+    pub fn library_top_playable(&self, p: usize, card_id: CardId) -> bool {
         use crate::effect::StaticEffect;
         let Some(card) = self.players[p].library.first() else { return false };
         if card.id != card_id {
@@ -3413,7 +3413,7 @@ impl GameState {
 
     /// CR 709.5e / 116.2m — special action: pay a locked door's cost at
     /// sorcery speed (main phase, empty stack) to unlock it.
-    pub(crate) fn unlock_room_door(
+    pub fn unlock_room_door(
         &mut self,
         card_id: CardId,
         right: bool,
@@ -3756,7 +3756,7 @@ impl GameState {
     /// Pay the adventure cost; on resolution the card is exiled (with
     /// `on_adventure` set) instead of going to the graveyard, so the creature
     /// half can be cast from exile later via `cast_adventure_creature`.
-    pub(crate) fn cast_adventure(
+    pub fn cast_adventure(
         &mut self,
         card_id: CardId,
         target: Option<Target>,
@@ -7901,7 +7901,7 @@ impl GameState {
     /// is an opponent, the caster must have `{n}` generic mana available.
     /// This check is read-only; use `pay_ward_cost` after a successful check
     /// to actually deduct the mana.
-    pub(crate) fn check_target_legality(&self, target: &Target, caster: usize) -> Result<(), GameError> {
+    pub fn check_target_legality(&self, target: &Target, caster: usize) -> Result<(), GameError> {
         self.check_target_legality_with_source(target, caster, None)
     }
 
@@ -7976,7 +7976,7 @@ impl GameState {
     /// Gaddock Teeg lock — true if `card` is a noncreature spell barred from
     /// being cast by some `NoncreatureSpellsCantBeCastIf` static anywhere on
     /// the battlefield (global, all players).
-    pub(crate) fn noncreature_spell_cast_locked(&self, card: &crate::card::CardDefinition) -> bool {
+    pub fn noncreature_spell_cast_locked(&self, card: &crate::card::CardDefinition) -> bool {
         use crate::effect::StaticEffect;
         if card.is_creature() {
             return false;
@@ -8002,7 +8002,7 @@ impl GameState {
     /// ability's source permanent. Mirrors the cast-time spell gate but reads
     /// the source's qualities (color / creature-ness / creature type) rather
     /// than a spell's colors.
-    pub(crate) fn ability_target_has_protection(&self, target: &Target, source: CardId) -> bool {
+    pub fn ability_target_has_protection(&self, target: &Target, source: CardId) -> bool {
         let Target::Permanent(tid) = target else {
             // Player target: only the turn-scoped hexproof-from-color grant
             // (Veil of Summer) applies — and only against opponents' abilities.
@@ -8123,7 +8123,7 @@ impl GameState {
 
     /// True if `player` controls any permanent granting "you have hexproof"
     /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
-    pub(crate) fn player_has_static_hexproof(&self, player: usize) -> bool {
+    pub fn player_has_static_hexproof(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
         self.players.get(player).is_some_and(|p| p.hexproof_until_next_turn)
             || self.battlefield.iter().any(|c| {
@@ -8959,7 +8959,7 @@ impl GameState {
             .count() as u32
     }
 
-    pub(crate) fn auto_tap_for_cost(&mut self, player: usize, cost: &crate::mana::ManaCost) -> Vec<GameEvent> {
+    pub fn auto_tap_for_cost(&mut self, player: usize, cost: &crate::mana::ManaCost) -> Vec<GameEvent> {
         let prev_priority = self.priority.player_with_priority;
         self.priority.player_with_priority = player;
         let events = self.auto_tap_for_cost_inner(player, cost);
@@ -9206,7 +9206,7 @@ impl GameState {
     /// single source of truth for the auto-tap source finders so a land
     /// whose type changed (Spreading Seas / Blood Moon / Urborg) taps for
     /// its computed colours.
-    pub(crate) fn effective_mana_abilities(
+    pub fn effective_mana_abilities(
         &self,
         card_id: CardId,
     ) -> Vec<(usize, crate::effect::ActivatedAbility)> {
@@ -9289,7 +9289,7 @@ impl GameState {
         }
     }
 
-    pub(crate) fn granted_abilities_for(
+    pub fn granted_abilities_for(
         &self,
         card_id: CardId,
     ) -> Vec<crate::effect::ActivatedAbility> {

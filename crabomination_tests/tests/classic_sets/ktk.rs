@@ -2,13 +2,13 @@
 //! (`catalog::sets::ktk`). Each test exercises the Dash alternative cost
 //! (CR 702.110): haste on entry + return to hand at the next end step.
 
-use crate::card::Keyword;
-use crate::catalog;
-use crate::game::*;
-use crate::mana::Color;
-use crate::TurnStep;
+use crabomination::card::Keyword;
+use crabomination::catalog;
+use crabomination::game::*;
+use crabomination::mana::Color;
+use crabomination::TurnStep;
 
-fn dash(g: &mut GameState, id: crate::card::CardId) {
+fn dash(g: &mut GameState, id: crabomination::card::CardId) {
     g.perform_action(GameAction::CastSpellAlternative {
         card_id: id,
         pitch_card: None,
@@ -166,10 +166,10 @@ fn bloodsoaked_champion_returns_from_graveyard_after_an_attack() {
     // Champion starts in the graveyard.
     let champ_def = catalog::bloodsoaked_champion();
     let champ = g.next_id();
-    let mut inst = crate::card::CardInstance::new(champ, champ_def, 0);
+    let mut inst = crabomination::card::CardInstance::new(champ, champ_def, 0);
     inst.controller = 0;
     g.players[0].graveyard.push(inst);
-    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     // No attack yet → activation rejected.
     assert!(g.perform_action(GameAction::ActivateAbility {
@@ -184,7 +184,7 @@ fn bloodsoaked_champion_returns_from_graveyard_after_an_attack() {
     }])).expect("attack");
     drain_stack(&mut g);
     // Mana cleared on the step change — re-add for the activation.
-    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: champ, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
