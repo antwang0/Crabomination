@@ -376,6 +376,12 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Fuse => "Fuse",
         CounterType::Nest => "Nest",
         CounterType::Possession => "Possession",
+        CounterType::Incubation => "Incubation",
+        CounterType::Revival => "Revival",
+        CounterType::Stash => "Stash",
+        CounterType::Divinity => "Divinity",
+        CounterType::Fellowship => "Fellowship",
+        CounterType::Bait => "Bait",
         // Silver / Prepared and any future internal counters fall through.
         _ => "Counter",
     }

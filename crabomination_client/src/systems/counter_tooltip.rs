@@ -1167,6 +1167,12 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Conqueror => "Conqueror",
         CounterType::Muster => "Muster",
         CounterType::Acorn => "Acorn",
+        CounterType::Incubation => "Incubation",
+        CounterType::Revival => "Revival",
+        CounterType::Stash => "Stash",
+        CounterType::Divinity => "Divinity",
+        CounterType::Fellowship => "Fellowship",
+        CounterType::Bait => "Bait",
     }
 }
 
@@ -1199,6 +1205,12 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Age => "Cumulative upkeep tally — one added each upkeep; pay the cost per age counter.",
         CounterType::Defense => "The battle's defense — combat and effects remove them; it's defeated at zero.",
         CounterType::Oil => "Oil tally — fuels this card's 'per oil counter' payoffs, or is removed to pay its abilities.",
+        CounterType::Incubation => "Drake Hatcher tally — remove three to mint a 2/2 flying Drake.",
+        CounterType::Revival => "Nine-Lives Familiar returns with one fewer each time it dies, until none remain.",
+        CounterType::Stash => "Tinybones tally — you may play these exiled cards you don't own.",
+        CounterType::Divinity => "Grants indestructibility; remove it to fire this Myojin's one-shot ability.",
+        CounterType::Fellowship => "Banner of Kinship tally — the chosen type gets +1/+1 per counter.",
+        CounterType::Bait => "Fishing Pole tally — removed on untap to make a 1/1 Fish.",
         _ => return None,
     })
 }

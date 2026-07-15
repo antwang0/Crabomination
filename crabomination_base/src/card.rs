@@ -439,6 +439,24 @@ pub enum CounterType {
     /// Acorn counter — Chitterspitter accrues one per sacrificed token and
     /// scales its Squirrel anthem by the count.
     Acorn,
+    /// Incubation counter — Drake Hatcher tallies combat damage dealt; remove
+    /// three to mint a 2/2 flying Drake.
+    Incubation,
+    /// Revival counter — Nine-Lives Familiar enters with eight; on death it
+    /// returns with one fewer at the next end step while any remain.
+    Revival,
+    /// Stash counter — Tinybones, Bauble Burglar stamps exiled discarded cards;
+    /// their owner isn't you, but you may play them from exile.
+    Stash,
+    /// Divinity counter — the Myojin cycle enters with one if cast from hand;
+    /// it grants indestructibility and fuels a one-shot activated ability.
+    Divinity,
+    /// Fellowship counter — Banner of Kinship enters with one per chosen-type
+    /// creature; the chosen type gets +1/+1 per counter.
+    Fellowship,
+    /// Bait counter — Fishing Pole accrues one per activation; removing one on
+    /// the equipped creature's untap mints a 1/1 Fish.
+    Bait,
 }
 
 /// Every zone a card can occupy.
