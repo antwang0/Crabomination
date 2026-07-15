@@ -11299,7 +11299,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, rest_to_exile } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -11332,13 +11332,14 @@ impl GameState {
                     }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
-                // Printed "you MAY put ..." — an explicit empty pick from a
-                // UI player is a decline: skip the auto-fill and let every
-                // revealed card follow the rest-routing. Mandatory picks
-                // (and the AutoDecider harness, whose empty answer means
-                // "no preference") keep the top-down fill.
-                let declined = optional && picks.is_empty() && self.players[player].wants_ui;
-                if !declined {
+                // Printed "you MAY put ..." — a UI player's explicit answer
+                // on an optional pick is FINAL: an empty pick declines and a
+                // partial pick (fewer than `take`) is respected rather than
+                // topped up. Mandatory picks (and the AutoDecider harness,
+                // whose empty answer means "no preference") keep the
+                // top-down fill.
+                let answer_is_final = optional && self.players[player].wants_ui;
+                if !answer_is_final {
                     for id in revealed.iter().copied() {
                         if picks.len() >= take {
                             break;
@@ -11372,7 +11373,12 @@ impl GameState {
                         continue;
                     }
                     if let Some(card) = Self::take_card(&mut self.players[player].library, pick) {
-                        if to_battlefield {
+                        // Typed routing (Zimone's Experiment): picked LAND
+                        // cards enter the battlefield tapped; other picks go
+                        // to hand.
+                        let land_to_bf = picked_lands_to_battlefield
+                            && card.definition.is_land();
+                        if to_battlefield || land_to_bf {
                             // Collected Company — picks enter the battlefield
                             // (ETBs fire through the shared placement funnel).
                             self.place_card_in_dest(
@@ -11380,7 +11386,7 @@ impl GameState {
                                 player,
                                 &crate::effect::ZoneDest::Battlefield {
                                     controller: crate::effect::PlayerRef::Seat(player),
-                                    tapped,
+                                    tapped: tapped || land_to_bf,
                                 },
                                 &mut events,
                             );
@@ -11394,8 +11400,12 @@ impl GameState {
                 }
                 // Move the rest of the revealed set to the bottom of the
                 // library (or graveyard). They're still at the top of the
-                // library after the picks were removed.
+                // library after the picks were removed. With
+                // `rest_bottom_random` the bottomed batch is shuffled first
+                // (printed "in a random order" — the player saw the reveal,
+                // so a deterministic bottom would be known information).
                 let mut greatest_milled_power: Option<i32> = None;
+                let mut bottom_batch: Vec<crate::card::CardInstance> = Vec::new();
                 for rid in &revealed {
                     if picks.contains(rid) {
                         continue;
@@ -11414,10 +11424,17 @@ impl GameState {
                             }
                             // CR 614.6 — honor graveyard-hate redirects.
                             self.route_to_graveyard(card, &mut events);
+                        } else if rest_bottom_random {
+                            bottom_batch.push(card);
                         } else {
                             self.players[player].library.push(card);
                         }
                     }
+                }
+                if !bottom_batch.is_empty() {
+                    use rand::seq::SliceRandom;
+                    bottom_batch.shuffle(&mut rand::rng());
+                    self.players[player].library.extend(bottom_batch);
                 }
                 let rider_gain = pick_rider_life.map(|n| n as i32).unwrap_or(0)
                     + greatest_milled_power.unwrap_or(0).max(0);

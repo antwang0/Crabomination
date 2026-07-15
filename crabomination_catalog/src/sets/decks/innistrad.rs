@@ -1009,6 +1009,8 @@ pub fn organ_hoarder() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         })],
         ..Default::default()
     }
@@ -1047,6 +1049,8 @@ pub fn scattered_thoughts() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -1967,6 +1971,8 @@ pub fn mulch() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -1991,6 +1997,8 @@ pub fn tapping_at_the_window() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: true,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -2695,6 +2703,8 @@ pub fn gavony_dawnguard() -> CardDefinition {
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
                     optional: true,
+                    picked_lands_to_battlefield: false,
+                    rest_bottom_random: false,
                 },
             },
         ],

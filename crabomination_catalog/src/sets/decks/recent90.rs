@@ -962,6 +962,8 @@ pub fn vessel_of_nascency() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
             ..Default::default()
         }],

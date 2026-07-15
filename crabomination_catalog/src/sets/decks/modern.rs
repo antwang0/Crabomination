@@ -2702,6 +2702,8 @@ pub fn satyr_wayfinder() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: true,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
         }],
         ..Default::default()
@@ -5485,6 +5487,8 @@ pub fn anticipate() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -7929,6 +7933,8 @@ pub fn vivien_reid() -> CardDefinition {
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
                     optional: true,
+                    picked_lands_to_battlefield: false,
+                    rest_bottom_random: false,
                 },
             },
             LoyaltyAbility {
@@ -8615,6 +8621,8 @@ pub fn forbidden_alchemy() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -9455,6 +9463,8 @@ pub fn glint_nest_crane() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         })],
         ..Default::default()
     }
@@ -10866,6 +10876,8 @@ pub fn strategic_planning() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -12950,6 +12962,8 @@ pub fn faerie_snoop() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
         }],
         ..Default::default()
@@ -23929,6 +23943,8 @@ pub fn impulse() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -25243,6 +25259,8 @@ pub fn consult_the_star_charts() -> CardDefinition {
         gain_life_if_pick: None,
         gain_life_greatest_power_rest: false,
         optional: false,
+        picked_lands_to_battlefield: false,
+        rest_bottom_random: false,
     };
     CardDefinition {
         name: "Consult the Star Charts",
@@ -26818,6 +26836,8 @@ pub fn narset_parter_of_veils() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: true,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
         }],
         ..Default::default()
@@ -27039,6 +27059,8 @@ pub fn ancient_stirrings() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: true,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -29828,6 +29850,8 @@ pub fn turntimber_symbiosis() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         back_face: Some(Box::new(znr_painland_back(
             "Turntimber, Serpentine Wood",
@@ -30201,6 +30225,8 @@ pub fn adventure_awaits() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -30863,6 +30889,8 @@ pub fn search_for_azcanta() -> CardDefinition {
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
                     optional: false,
+                    picked_lands_to_battlefield: false,
+                    rest_bottom_random: false,
                 },
                 ..Default::default()
             },
@@ -30942,6 +30970,8 @@ pub fn growing_rites_of_itlimoc() -> CardDefinition {
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
                     optional: false,
+                    picked_lands_to_battlefield: false,
+                    rest_bottom_random: false,
                 },
             },
             TriggeredAbility {
@@ -39767,6 +39797,8 @@ pub fn prophetic_bolt() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
         ]),
         ..Default::default()
@@ -41629,6 +41661,8 @@ pub fn rediscover_the_way() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         }
     }
     CardDefinition {
@@ -44991,6 +45025,8 @@ pub fn memory_deluge() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -45674,6 +45710,8 @@ pub fn collected_company() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -48188,6 +48226,8 @@ pub fn peer_through_depths() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -48218,6 +48258,8 @@ pub fn malevolent_rumble() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -50268,6 +50310,8 @@ pub fn six() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: true,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         })],
         static_abilities: vec![StaticAbility {
             description: "During your turn, nonland permanent cards in your graveyard have retrace.",
@@ -53993,6 +54037,8 @@ pub fn thieves_fortune() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -55329,6 +55375,8 @@ pub fn militia_bugler() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         })],
         ..Default::default()
     }
@@ -58467,6 +58515,8 @@ pub fn glimpse_the_cosmos() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -58843,6 +58893,8 @@ pub fn dark_bargain() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::You),

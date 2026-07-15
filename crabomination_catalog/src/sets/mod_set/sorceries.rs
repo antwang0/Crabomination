@@ -277,6 +277,8 @@ pub fn rakshasas_bargain() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -939,6 +941,8 @@ pub fn commune_with_nature() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: true,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }

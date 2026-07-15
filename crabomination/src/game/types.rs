@@ -1268,9 +1268,17 @@ pub enum PendingEffectState {
         #[serde(default)]
         gain_life_greatest_power_rest: bool,
         /// Printed "you MAY put ..." — an explicit empty pick from a UI
-        /// player is honored as a decline (no auto-fill).
+        /// player is honored as a decline (no auto-fill), and a partial
+        /// pick is respected rather than topped up.
         #[serde(default)]
         optional: bool,
+        /// Picked LAND cards route to the battlefield tapped; other picks
+        /// go to hand (Zimone's Experiment).
+        #[serde(default)]
+        picked_lands_to_battlefield: bool,
+        /// Bottom the rest in a RANDOM order instead of revealed order.
+        #[serde(default)]
+        rest_bottom_random: bool,
         /// Non-picked cards are exiled instead of bottomed/milled (Devourer
         /// of Destiny's opening-hand reveal). Overrides `rest_to_graveyard`.
         #[serde(default)]

@@ -987,6 +987,8 @@ pub fn visionarys_dance() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
             ..Default::default()
         }],
@@ -1811,55 +1813,35 @@ pub fn restoration_seminar() -> CardDefinition {
 /// this way onto the battlefield tapped and put all creature cards
 /// revealed this way into your hand."
 ///
-/// Approximation: wired as two sequential `Effect::RevealUntilFind`
-/// walks over the top of the library, each capped at 5 cards — first a
-/// creature to hand, then a land onto the battlefield tapped, with
-/// misses going to the bottom of the library in random order. This
-/// captures the dual-destination harvest (up to one creature to hand
-/// AND one land into play), but doesn't perfectly model the printed
-/// "look at five cards once" semantic: the second walk sees the library
-/// state left behind by the first.
+/// The printed single look: `LookPickToHand { count: 5, take: 2,
+/// optional }` over a creature-or-land pick filter with TYPED routing
+/// (`picked_lands_to_battlefield` — revealed lands enter tapped,
+/// revealed creatures go to hand; two creatures or two lands are legal
+/// mixes) and the rest bottomed in a genuinely random order
+/// (`rest_bottom_random`). A UI caster may reveal fewer than two or
+/// none ("up to").
 pub fn zimones_experiment() -> CardDefinition {
-    use crate::effect::ZoneDest;
     use crate::mana::g;
     CardDefinition {
         name: "Zimone's Experiment",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            // Push (modern_decks, batch 94): the printed "look at top 5,
-            // partition revealed creature/land cards into hand/bf and
-            // put the rest on the bottom of library at random" is
-            // approximated as two sequential `RevealUntilFind` walks
-            // over the top of library: first a Creature (→ Hand, misses
-            // → bottom random), then a Land (→ Battlefield tapped,
-            // misses → bottom random). Each walk caps at 5 cards. This
-            // doesn't perfectly model the printed "look at 5 cards
-            // once" semantic — the second walk sees a (possibly
-            // shorter) library after the first walk completes — but
-            // captures the dual-destination harvest: a creature lands
-            // in hand AND a land lands on the bf. Substantially closer
-            // to printed than the prior "tutor a basic land" path.
-            Effect::RevealUntilFind {
-                who: PlayerRef::You,
-                find: SelectionRequirement::Creature,
-                to: ZoneDest::Hand(PlayerRef::You),
-                cap: Value::Const(5),
-                life_per_revealed: 0,
-                miss_dest: crate::effect::RevealMissDest::BottomRandom,
-            },
-            Effect::RevealUntilFind {
-                who: PlayerRef::You,
-                find: SelectionRequirement::HasCardType(CardType::Land),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: true,
-                },
-                cap: Value::Const(5),
-                life_per_revealed: 0,
-                miss_dest: crate::effect::RevealMissDest::BottomRandom,
-            },
-        ]),
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::HasCardType(CardType::Land)),
+            ),
+            take: Some(Value::Const(2)),
+            to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
+            optional: true,
+            picked_lands_to_battlefield: true,
+            rest_bottom_random: true,
+        },
         ..Default::default()
     }
 }
@@ -1916,6 +1898,8 @@ pub fn flow_state() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             }),
         },
         ..Default::default()

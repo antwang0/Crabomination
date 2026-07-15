@@ -16196,3 +16196,34 @@ fn visionarys_dance_discard_ability_activates_from_hand() {
     assert!(g.players[0].hand.iter().any(|c| c.id == top), "picked card to hand");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == below), "the other card to the graveyard");
 }
+
+/// Zimone's Experiment is ONE look at five with typed routing: a picked
+/// land enters the battlefield tapped while a picked creature goes to
+/// hand, in the same pick.
+#[test]
+fn zimones_experiment_routes_land_to_battlefield_and_creature_to_hand() {
+    let mut g = two_player_game();
+    // Top five: forest, bear, three bolts.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::zimones_experiment());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    // Multi-pick ChooseCards: take the forest AND the bear.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Cards(vec![
+        forest, bear,
+    ])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Zimone's Experiment castable");
+    drain_stack(&mut g);
+    let land = g.battlefield.iter().find(|c| c.id == forest).expect("land onto battlefield");
+    assert!(land.tapped, "revealed land enters tapped");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "revealed creature to hand");
+    // The three bolts were bottomed (library holds exactly them).
+    assert_eq!(g.players[0].library.len(), 3, "rest bottomed");
+}

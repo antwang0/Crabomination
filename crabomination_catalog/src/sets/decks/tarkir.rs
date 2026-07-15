@@ -79,6 +79,8 @@ pub fn sibsig_appraiser() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         })],
         ..Default::default()
     }
@@ -2243,6 +2245,8 @@ pub fn dragonologist() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: true,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         })],
         static_abilities: vec![StaticAbility {
             description: "Untapped Dragons you control have hexproof.",

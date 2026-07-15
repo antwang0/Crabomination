@@ -103,6 +103,8 @@ pub fn chrome_courier() -> CardDefinition {
             gain_life_if_pick: Some((R::Artifact, 3)),
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         })],
         ..Default::default()
     }
@@ -125,6 +127,8 @@ pub fn discerning_taste() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: true,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }

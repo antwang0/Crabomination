@@ -53,6 +53,8 @@ pub fn sigarda_champion_of_light() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
         }],
         ..Default::default()
@@ -2673,6 +2675,8 @@ pub fn star_charter() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: true,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
         }],
         ..Default::default()
@@ -3938,6 +3942,8 @@ pub fn stock_up() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         },
         ..Default::default()
     }
@@ -5898,6 +5904,8 @@ pub fn gurmag_drowner() -> CardDefinition {
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
             optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         })],
         ..Default::default()
     }
@@ -9110,6 +9118,8 @@ pub fn corpse_appraiser() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
         ]))],
         ..Default::default()
@@ -11706,6 +11716,8 @@ pub fn recruitment_officer() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: true,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
             ..Default::default()
         }],

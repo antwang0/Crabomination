@@ -10140,7 +10140,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield, gain_life_if_pick, gain_life_greatest_power_rest, optional } => {
+            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -10185,9 +10185,11 @@ impl GameState {
                 let decision = if take > 1 {
                     Decision::ChooseCards {
                         source: ctx.source.unwrap_or(crate::card::CardId(0)),
-                        prompt: format!("Put {take} cards into your hand"),
+                        prompt: format!("Put up to {take} cards into your hand"),
                         candidates,
-                        min: take.min(eligible_count) as u32,
+                        // "You may reveal UP TO N" — an optional multi-pick
+                        // accepts anywhere from zero to N.
+                        min: if *optional { 0 } else { take.min(eligible_count) as u32 },
                         max: take.min(eligible_count) as u32,
                     }
                 } else {
@@ -10209,6 +10211,8 @@ impl GameState {
                     gain_life_if_pick: gain_life_if_pick.clone(),
                     gain_life_greatest_power_rest: *gain_life_greatest_power_rest,
                     optional: *optional,
+                    picked_lands_to_battlefield: *picked_lands_to_battlefield,
+                    rest_bottom_random: *rest_bottom_random,
                     rest_to_exile: false,
                 };
                 if self.players[p].wants_ui {
@@ -10272,6 +10276,8 @@ impl GameState {
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
                     optional: false,
+                    picked_lands_to_battlefield: false,
+                    rest_bottom_random: false,
                     rest_to_exile: false,
                 };
                 if self.players[p].wants_ui {
@@ -10313,6 +10319,8 @@ impl GameState {
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
                     optional: false,
+                    picked_lands_to_battlefield: false,
+                    rest_bottom_random: false,
                     rest_to_exile: *exile_rest,
                 };
                 if self.players[p].wants_ui {

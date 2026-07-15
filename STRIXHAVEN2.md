@@ -126,7 +126,10 @@ fully faithful (real IS-card target, pay-own-cost-any-color cast, and
 `sac_other_filter` — the old `sac_cost` wrongly sacrificed Nita
 herself); Visionary's Dance's `{2}, Discard this card:` line is a real
 from-hand activation (`from_hand` + `discard_self_cost` + the
-look-2-split).
+look-2-split); Zimone's Experiment is the printed SINGLE look at five
+with typed routing (`picked_lands_to_battlefield` — lands enter tapped,
+creatures to hand, any mix of up to two) and a genuinely random bottom
+(`rest_bottom_random`).
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost

@@ -497,6 +497,8 @@ pub fn water_tribe_rallier() -> CardDefinition {
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: true,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
             ..Default::default()
         }],

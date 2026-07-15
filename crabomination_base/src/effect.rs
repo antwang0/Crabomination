@@ -2898,11 +2898,20 @@ pub enum Effect {
         gain_life_greatest_power_rest: bool,
         /// Printed "you MAY put ... into your hand": an explicit empty pick
         /// from a UI player is honored as a decline (the whole revealed set
-        /// follows the rest-routing). Mandatory picks (`false`) auto-fill
-        /// top-down as before, and the AutoDecider harness keeps the fill
-        /// either way so bot play is unchanged.
+        /// follows the rest-routing), and a partial pick (fewer than `take`)
+        /// is respected rather than topped up. Mandatory picks (`false`)
+        /// auto-fill top-down as before, and the AutoDecider harness keeps
+        /// the fill either way so bot play is unchanged.
         #[serde(default)]
         optional: bool,
+        /// Typed routing (Zimone's Experiment): picked LAND cards go onto
+        /// the battlefield tapped while other picks go to hand.
+        #[serde(default)]
+        picked_lands_to_battlefield: bool,
+        /// The non-picked rest is bottomed in a genuinely RANDOM order
+        /// (printed "in a random order") instead of revealed order.
+        #[serde(default)]
+        rest_bottom_random: bool,
     },
     /// "Look at the top `count` cards; put one back on top and the rest into
     /// your graveyard" (Sage of Days). The controller (via the `SearchLibrary`
