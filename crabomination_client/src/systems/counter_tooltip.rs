@@ -1075,8 +1075,32 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::HexproofFromMonocolored => "Hexproof from monocolored".into(),
         K::EchoDiscard => "Echo—Discard".into(),
         K::DoesntUntapWhileCounter(k) => format!("Doesn't untap with a {k:?} counter"),
-        _ => format!("{kw:?}"),
+        // Any keyword without a hand-written label reads as a humanized variant
+        // name ("Split second") rather than a raw Rust debug shape
+        // ("SplitSecond(2)") — a readable floor for future keywords.
+        other => humanize_keyword_debug(other),
     }
+}
+
+/// Turn a keyword's `{:?}` debug shape into a readable label: keep the variant
+/// name (up to its first payload delimiter), split CamelCase into words, and
+/// lowercase all but the first ("CantBeBlocked(...)" → "Cant be blocked").
+fn humanize_keyword_debug(kw: &crabomination::card::Keyword) -> String {
+    let dbg = format!("{kw:?}");
+    let name = dbg
+        .split(|c| c == '(' || c == '{' || c == ' ')
+        .next()
+        .unwrap_or(&dbg);
+    let mut out = String::new();
+    for (i, ch) in name.char_indices() {
+        if ch.is_uppercase() && i != 0 {
+            out.push(' ');
+            out.extend(ch.to_lowercase());
+        } else {
+            out.push(ch);
+        }
+    }
+    out
 }
 
 fn sort_key(kind: CounterType) -> u8 {
@@ -1181,9 +1205,23 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_tooltip_body, companion_restriction_text, keyword_label, keyword_reminder};
-    use crabomination::card::{CardId, CardType, CounterType};
+    use super::{build_tooltip_body, companion_restriction_text, humanize_keyword_debug, keyword_label, keyword_reminder};
+    use crabomination::card::{CardId, CardType, CounterType, Keyword};
     use crabomination::net::PermanentView;
+
+    /// The humanized fallback splits CamelCase and drops payloads, so an
+    /// unlabelled keyword never leaks a raw Rust debug shape into a tooltip.
+    #[test]
+    fn humanize_keyword_debug_splits_camelcase_and_drops_payload() {
+        assert_eq!(humanize_keyword_debug(&Keyword::FirstStrike), "First strike");
+        assert_eq!(humanize_keyword_debug(&Keyword::Flying), "Flying");
+        assert_eq!(humanize_keyword_debug(&Keyword::Crew(3)), "Crew");
+        // Every keyword's rendered label is free of Rust debug punctuation.
+        for kw in [Keyword::Trample, Keyword::Menace, Keyword::Crew(2), Keyword::Annihilator(1)] {
+            let label = keyword_label(&kw);
+            assert!(!label.contains('(') && !label.contains('{'), "debug leaked: {label}");
+        }
+    }
 
     fn make_permanent_view(damage: u32, toughness: i32) -> PermanentView {
         PermanentView {

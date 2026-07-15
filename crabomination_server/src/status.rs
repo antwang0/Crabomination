@@ -210,6 +210,22 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     ] {
         out.push_str(&format!("crab_match_duration_bucket{{band=\"{band}\"}} {count}\n"));
     }
+    // Turn-count histogram (see `MatchStats.turn_buckets`) as a labelled series,
+    // mirroring the duration histogram so scrapers get the distribution shape —
+    // a fat low-turn band flags a concession regression the average can hide.
+    out.push_str("# HELP crab_match_turn_bucket Completed matches by final-turn band.\n");
+    out.push_str("# TYPE crab_match_turn_bucket gauge\n");
+    for (i, count) in st.turn_buckets.iter().enumerate() {
+        let band = crate::stats::MatchStats::turn_bucket_label(i);
+        out.push_str(&format!("crab_match_turn_bucket{{band=\"{band}\"}} {count}\n"));
+    }
+    // Per-seat wins — turn-order bias in bot ladders (a persistent seat-0 skew
+    // is the classic first-player-advantage signal).
+    out.push_str("# HELP crab_seat_wins_total Decided wins by seat index.\n");
+    out.push_str("# TYPE crab_seat_wins_total counter\n");
+    for (seat, wins) in st.seat_wins.iter().enumerate() {
+        out.push_str(&format!("crab_seat_wins_total{{seat=\"{seat}\"}} {wins}\n"));
+    }
     // Refusal breakdown so operators can tell a capacity-limit refusal (server
     // full) from an abuse refusal (one IP over its per-IP cap).
     out.push_str("# HELP crab_connections_refused_by_reason_total Refused connections by reason.\n");
@@ -454,6 +470,9 @@ mod tests {
         assert!(body.contains("crab_median_turns 0"));
         assert!(body.contains("crab_turn_p90 0"));
         assert!(body.contains("crab_turn_iqr 0"));
+        // Turn-count histogram + per-seat wins as labelled series.
+        assert!(body.contains("crab_match_turn_bucket{band=\"1-2\"} 0"));
+        assert!(body.contains("crab_seat_wins_total{seat=\"0\"} 0"));
         // Play/draw balance + win-margin gauges.
         assert!(body.contains("crab_first_seat_win_pct 50"));
         assert!(body.contains("# TYPE crab_avg_win_life_delta gauge"));
