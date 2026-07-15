@@ -39,8 +39,21 @@ target. Shipped: Dune Drifter.
   exile it; when this dies, return the exiled card to hand") needs the search's
   `ZoneDest::Exile` to stamp `exiled_with = source` so a death trigger can read
   `Selector::CardExiledWithSource`.
-- **Supply / Incubation counter types** — Stocking the Pantry (supply) and Drake
-  Hatcher (incubation) need new `CounterType` variants + client display entries.
+- **Supply / Incubation + more counter types — shipped (recent219/220).**
+  `CounterType::{Incubation, Revival, Stash, Divinity, Fellowship, Bait, Supply}`
+  with client display + tooltip entries. Cards: Drake Hatcher (incubation),
+  Stocking the Pantry (supply), Myojin of Night's Reach (divinity). Still on
+  those counters but not yet built: Nine-Lives Familiar (revival — needs the
+  delayed return below), Tinybones (stash — needs play-from-exile-you-don't-own),
+  Banner of Kinship (fellowship — needs choose-creature-type-on-enter + a
+  per-counter chosen-type anthem), Fishing Pole (bait — needs an equipped-creature
+  "becomes untapped" granted trigger).
+- **`CastSpellSharesChosenColorOfSource` shipped (recent221)** — a cast trigger
+  gated on the source's `chosen_color` (Diamond Mare). Reusable for other
+  chosen-color payoffs.
+- **Destroy vs. statically-granted indestructible — fixed.** `Effect::Destroy`
+  now reads the computed keyword set (layer-6 grants) instead of the raw
+  instance, matching the SBA lethal-damage path (Myojin, Shielded by Faith, …).
 
 **Next-up cards noticed this run (recent185–190), each blocked on one
 primitive:**
