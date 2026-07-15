@@ -27,7 +27,7 @@ fn render_status(started: Instant, slots: &SlotManager) -> String {
     let sl = slots.snapshot();
     format!(
         "crabomination_server\nuptime: {}\ncatalog: {} cards\n{}\nconnections: {} current, {} peak, \
-         {} accepted, {} refused ({}% refusal rate)\n",
+         {} accepted, {} refused ({} global / {} per-IP, {}% refusal rate)\n",
         format_duration(started.elapsed()),
         catalog_card_count(),
         format_match_stats(&stats_snapshot),
@@ -35,6 +35,8 @@ fn render_status(started: Instant, slots: &SlotManager) -> String {
         sl.peak,
         sl.accepted,
         sl.refused_global + sl.refused_per_ip,
+        sl.refused_global,
+        sl.refused_per_ip,
         sl.refusal_rate_pct(),
     )
 }
@@ -180,6 +182,13 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("win_life_delta_p90", "gauge", "90th-percentile life margin of victory (blowout tail).", st.win_life_delta_percentile(0.9).to_string());
     m("win_life_delta_stddev", "gauge", "Standard deviation of the win-by-life margin.", format!("{:.2}", st.win_life_delta_stddev()));
     m("win_life_delta_iqr", "gauge", "Interquartile range (p75-p25) of the win-by-life margin.", st.win_life_delta_iqr().to_string());
+    // Split the refusals by cause so operators can tell "server at capacity"
+    // (global cap) apart from "one IP hammering us" (per-IP cap) without diffing
+    // two scrapes — the two alert on different runbooks.
+    out.push_str("# HELP crab_connections_refused_by_reason_total Connections refused, split by which cap tripped.\n");
+    out.push_str("# TYPE crab_connections_refused_by_reason_total counter\n");
+    out.push_str(&format!("crab_connections_refused_by_reason_total{{reason=\"global\"}} {}\n", sl.refused_global));
+    out.push_str(&format!("crab_connections_refused_by_reason_total{{reason=\"per_ip\"}} {}\n", sl.refused_per_ip));
     out.push_str("# HELP crab_wins_total Decided matches by win kind (CR 104.3).\n");
     out.push_str("# TYPE crab_wins_total counter\n");
     // `damage` + `alternate` reconciles to total decided wins; `poison`,
@@ -467,6 +476,9 @@ mod tests {
         assert!(body.contains("crab_wins_total{kind=\"alternate\"} 0"));
         assert!(body.contains("crab_wins_total{kind=\"poison\"} 0"));
         assert!(body.contains("crab_wins_total{kind=\"commander_damage\"} 0"));
+        // Refusals split by which cap tripped (global vs per-IP).
+        assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"global\"} 0"));
+        assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"per_ip\"} 0"));
         assert!(body.contains("# TYPE crab_draws_total counter"));
         // Match-outcome health gauges (stuck-match / decisive / draw shares).
         assert!(body.contains("crab_inconclusive_total 0"));
