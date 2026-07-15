@@ -34,7 +34,20 @@ target. Shipped: Dune Drifter.
 - **Persistent mana — shipped (recent225).** `Effect::AddManaKeptThisTurn` +
   `Player.kept_mana_this_turn` re-seed the pool on every step/phase empty and
   clear at cleanup (CR 500.4/500.5 exception). Ships Savage Ventmaw; reusable for
-  other "you don't lose this mana as steps and phases end" riders.
+  other "you don't lose this mana as steps and phases end" riders. Surfaced to
+  the client as `PlayerView.kept_mana` (🔒 HUD chip).
+- **Also shipped this batch (recent225/226):** `Effect::ReturnSelfTapped`
+  (plain self-return-tapped rider — Fake Your Own Death),
+  `Value::CreatureCardsMilledThisEffect` (Dread Summons), and
+  `StaticEffect::SuppressCreatureEtbTriggers.also_artifacts` (artifact ETB
+  suppression — Doorkeeper Thrull). Bot: attack planner now ignores opponents
+  with a computed `CantBlock`.
+- **Still-open FDN "one primitive each":** Hoarding Dragon (search-to-exile
+  linked recursion, below), Desecration Demon (each-opponent-may-sacrifice at
+  each combat + reflexive tap/counter on self), Steel Hellkite (per-source
+  combat-damage tracking + X-value destroy), Primal Might (optional single fight
+  target, below), Nine-Lives Familiar (revival delayed return), Gate Colossus /
+  Drakuseth (above).
 - **Search-to-exile linked recursion** — Hoarding Dragon ("search an artifact,
   exile it; when this dies, return the exiled card to hand") needs the search's
   `ZoneDest::Exile` to stamp `exiled_with = source` so a death trigger can read
