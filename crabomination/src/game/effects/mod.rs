@@ -4969,9 +4969,15 @@ impl GameState {
                 let entities = self.resolve_selector(what, ctx);
                 for ent in entities {
                     if let Some(cid) = ent.as_permanent_id() {
-                        let indestructible = self.battlefield_find(cid)
-                            .map(|c| c.is_indestructible())
-                            .unwrap_or(true);
+                        // Read the *computed* keyword so a layer-6 grant (Aura /
+                        // Equipment / counter-conditional static — Myojin's
+                        // divinity counter) counts, not just the printed keyword
+                        // and Indestructible counter on the raw instance.
+                        let indestructible = self
+                            .computed_permanent(cid)
+                            .map(|cp| cp.keywords.contains(&crate::card::Keyword::Indestructible))
+                            .unwrap_or(false)
+                            || self.battlefield_find(cid).map(|c| c.is_indestructible()).unwrap_or(true);
                         if indestructible {
                             continue;
                         }

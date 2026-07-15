@@ -9376,3 +9376,88 @@ fn cr_602_5_activate_once_persists_across_turns() {
         card_id: lib, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).is_err(), "once-per-game ability stays spent across turns");
 }
+
+/// CR 702.12 — Indestructible granted by a counter (Myojin of Night's Reach's
+/// divinity counter via `SelfHasKeywordWhileCountersAtLeast`) stops a "destroy"
+/// effect; removing the last counter makes it destructible again.
+#[test]
+fn cr_702_12_counter_granted_indestructible_survives_destroy() {
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let myojin = g.add_card_to_battlefield(0, catalog::myojin_of_nights_reach());
+    g.battlefield_find_mut(myojin).unwrap().add_counters(CounterType::Divinity, 1);
+    let destroy = crate::effect::Effect::Destroy { what: crate::effect::Selector::Target(0) };
+    let ctx = EffectContext {
+        targets: vec![crate::game::types::Target::Permanent(myojin)],
+        ..EffectContext::for_trigger(myojin, 0, None, 0)
+    };
+    g.resolve_effect(&destroy, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(myojin).is_some(), "indestructible while it has a divinity counter");
+    g.battlefield_find_mut(myojin).unwrap().remove_counters(CounterType::Divinity, 1);
+    g.resolve_effect(&destroy, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(myojin).is_none(), "destructible once the counter is gone");
+}
+
+/// CR 510.1c / 122.1 — a "deals combat damage to a player" trigger reads the
+/// damage dealt (`Value::TriggerEventAmount`); Drake Hatcher (1/3) banks one
+/// incubation counter per point of combat damage.
+#[test]
+fn cr_510_1c_combat_damage_banks_incubation_counters() {
+    let mut g = two_player_game();
+    let hatcher = g.add_card_to_battlefield(0, catalog::drake_hatcher()); // 1/3
+    g.clear_sickness(hatcher);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hatcher,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(hatcher).unwrap().counter_count(CounterType::Incubation),
+        1,
+        "1 combat damage → 1 incubation counter"
+    );
+}
+
+/// CR 118.4 / 122.1 — a cost that removes N counters is unpayable if the source
+/// has fewer than N. Drake Hatcher's "remove three incubation counters" ability
+/// can't be activated with only two.
+#[test]
+fn cr_118_remove_counter_cost_requires_enough_counters() {
+    let mut g = two_player_game();
+    let hatcher = g.add_card_to_battlefield(0, catalog::drake_hatcher());
+    g.clear_sickness(hatcher);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.battlefield_find_mut(hatcher).unwrap().add_counters(CounterType::Incubation, 2);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: hatcher,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+        })
+        .is_err(),
+        "can't remove three counters with only two"
+    );
+    g.battlefield_find_mut(hatcher).unwrap().add_counters(CounterType::Incubation, 1);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: hatcher,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+        })
+        .is_ok(),
+        "activatable once a third counter lands"
+    );
+}
