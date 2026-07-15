@@ -2324,6 +2324,11 @@ impl GameState {
         self.prevention_shields.clear();
         self.damage_cant_be_prevented_this_turn = false;
         self.block_poison_this_turn = 0;
+        // CR 500.4 — "kept this turn" mana (Savage Ventmaw) expires now, so the
+        // final empty of the turn actually removes it.
+        for p in self.players.iter_mut() {
+            p.kept_mana_this_turn.empty();
+        }
         // Empty mana pools (Kruphix converts to colorless instead).
         self.empty_mana_pools();
     }

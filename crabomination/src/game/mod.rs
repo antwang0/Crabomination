@@ -840,6 +840,9 @@ mod tests_recent223;
 #[path = "../tests/recent224.rs"]
 mod tests_recent224;
 #[cfg(test)]
+#[path = "../tests/recent225.rs"]
+mod tests_recent225;
+#[cfg(test)]
 #[path = "../tests/tdm.rs"]
 mod tests_tdm;
 #[cfg(test)]
@@ -7458,6 +7461,13 @@ impl GameState {
                 } else {
                     player.mana_pool.add(crate::mana::Color::Red, player.firebending_kept_red);
                 }
+            }
+            // CR 500.4 exception — "you don't lose this mana as steps and phases
+            // end" (Savage Ventmaw). Re-seed after emptying; cleared at cleanup
+            // so it doesn't survive the turn. Skipped under Upwelling
+            // (`all_persist`), where the pool already carried it intact.
+            if !all_persist && player.kept_mana_this_turn.total() > 0 {
+                player.mana_pool.absorb(&player.kept_mana_this_turn);
             }
         }
     }

@@ -534,6 +534,12 @@ pub enum Value {
     /// rider — gates an `Effect::If { ValueAtLeast(this, 1), ... }`.
     /// Reset to 0 between independent resolutions.
     CreatureCardsDiscardedThisEffect,
+    /// Number of creature cards among the cards moved so far within the current
+    /// effect resolution (`last_moved_cards`) that are now in a graveyard —
+    /// i.e. creature cards milled this way (Dread Summons' "for each creature
+    /// card put into a graveyard this way, create a 2/2 Zombie"). Reset between
+    /// resolutions.
+    CreatureCardsMilledThisEffect,
     /// Number of *distinct* mana values among nonland cards the controller owns
     /// in exile that carry one or more `counter` counters. Kianne's Fractal
     /// (`CounterType::Study`).
@@ -3129,6 +3135,11 @@ pub enum Effect {
 
     // ── Mana ─────────────────────────────────────────────────────────────────
     AddMana { who: PlayerRef, pool: ManaPayload },
+    /// CR 500.4 exception — add these fixed color pips to the resolving
+    /// player's pool and mark them "you don't lose this mana as steps and
+    /// phases end" (Savage Ventmaw's attack trigger). The mana survives every
+    /// step/phase empty this turn and clears at cleanup.
+    AddManaKeptThisTurn { who: PlayerRef, colors: Vec<Color> },
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },
@@ -3195,6 +3206,11 @@ pub enum Effect {
     /// from its owner's graveyard (Unstoppable Slasher — two stun counters).
     /// No-op if the source isn't in a graveyard.
     ReturnSelfTappedWithCounters { kind: crate::card::CounterType, amount: u32 },
+    /// "Return it to the battlefield tapped under its owner's control." The
+    /// plain, counter-less sibling of `ReturnSelfTappedWithCounters` — used by
+    /// a granted "when this dies, return it tapped" rider (Fake Your Own Death).
+    /// No-op if the source isn't in a graveyard.
+    ReturnSelfTapped,
     /// Bronzehide Lion — "when this creature dies, return it to the
     /// battlefield [as its `back_face` Aura] attached to a creature you
     /// control" (auto-pick: greatest power). No-op if the source isn't in a

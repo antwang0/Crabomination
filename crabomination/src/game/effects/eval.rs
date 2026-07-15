@@ -454,6 +454,17 @@ impl GameState {
             Value::CreatureCardsDiscardedThisEffect => {
                 self.creature_cards_discarded_this_resolution as i32
             }
+            Value::CreatureCardsMilledThisEffect => self
+                .last_moved_cards
+                .iter()
+                .filter(|&&cid| {
+                    self.players.iter().any(|p| {
+                        p.graveyard
+                            .iter()
+                            .any(|c| c.id == cid && c.definition.is_creature())
+                    })
+                })
+                .count() as i32,
             Value::DistinctManaValuesInExileWithCounter { counter } => {
                 let p = ctx.controller;
                 let mut mvs: Vec<u32> = self.exile.iter()

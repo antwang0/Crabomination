@@ -31,10 +31,10 @@ target. Shipped: Dune Drifter.
   self-trigger and a delayed return-with-counter-decrement at the next end step.
 - **Base-toughness anthem shipped** — `StaticEffect::SetBaseToughnessForMatching`
   + `Modification::SetToughness` (layer 7b); Maha, Its Feathers Night ships.
-- **Persistent mana ("don't lose this mana as steps/phases end")** — Savage
-  Ventmaw needs a per-mana "doesn't empty" flag on the mana pool; the current
-  pool empties at every step/phase boundary. Blocks Savage Ventmaw, Kruphix-style
-  ramp riders beyond the existing colorless-conversion static.
+- **Persistent mana — shipped (recent225).** `Effect::AddManaKeptThisTurn` +
+  `Player.kept_mana_this_turn` re-seed the pool on every step/phase empty and
+  clear at cleanup (CR 500.4/500.5 exception). Ships Savage Ventmaw; reusable for
+  other "you don't lose this mana as steps and phases end" riders.
 - **Search-to-exile linked recursion** — Hoarding Dragon ("search an artifact,
   exile it; when this dies, return the exiled card to hand") needs the search's
   `ZoneDest::Exile` to stamp `exiled_with = source` so a death trigger can read

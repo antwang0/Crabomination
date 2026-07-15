@@ -287,6 +287,7 @@ impl Effect {
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
             Effect::ReturnSelfTappedWithCounters { .. } => false,
+            Effect::ReturnSelfTapped => false,
             Effect::ReturnTopCreatureFromGraveyard { .. } => false,
             Effect::Transform { what } => sel_has_target(what),
             Effect::BecomeRenowned { what } => sel_has_target(what),
@@ -495,6 +496,7 @@ impl Effect {
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),
+            Effect::AddManaKeptThisTurn { who, .. } => player_has_target(who),
             Effect::AddMana { who, pool } => {
                 player_has_target(who) || match pool {
                     ManaPayload::Colorless(v)

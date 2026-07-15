@@ -4960,6 +4960,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddManaKeptThisTurn { who, colors } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let mult = self.mana_production_multiplier.max(1);
+                for c in colors {
+                    for _ in 0..mult {
+                        self.players[p].mana_pool.add(*c, 1);
+                        self.players[p].kept_mana_this_turn.add(*c, 1);
+                    }
+                    events.push(GameEvent::ManaAdded { player: p, color: *c, source: ctx.source });
+                }
+                Ok(())
+            }
+
             Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
                 // CR 701.15g — `DestroyNoRegen` ("can't be regenerated")
                 // bypasses regeneration shields; everything else (the
@@ -6725,6 +6738,19 @@ impl GameState {
                 if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == src) {
                     *c.counters.entry(*kind).or_insert(0) += *amount;
                 }
+                Ok(())
+            }
+
+            Effect::ReturnSelfTapped => {
+                let Some(src) = ctx.source else { return Ok(()); };
+                let Some(owner) = self
+                    .players
+                    .iter()
+                    .position(|p| p.graveyard.iter().any(|c| c.id == src))
+                else { return Ok(()); };
+                let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: true };
+                let ret_ctx = EffectContext::for_ability(src, owner, None);
+                self.move_card_to(src, &dest, &ret_ctx, events);
                 Ok(())
             }
 

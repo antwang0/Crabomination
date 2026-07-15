@@ -563,6 +563,13 @@ pub struct Player {
     /// combat. `#[serde(default)]`.
     #[serde(default)]
     pub firebending_kept_red: u32,
+    /// CR 500.4 exception — mana added by an effect that says "you don't lose
+    /// this mana as steps and phases end" (Savage Ventmaw's attack trigger).
+    /// Re-seeded into the pool by `empty_mana_pools` on every step/phase empty
+    /// and cleared at cleanup, so the mana survives the turn but not past it.
+    /// `#[serde(default)]`.
+    #[serde(default)]
+    pub kept_mana_this_turn: ManaPool,
     /// CR 500.7 — extra turns this player will take. When `advance_turn`
     /// would pass the turn, an active player with `extra_turns > 0`
     /// decrements it and keeps the turn instead (Time Walk, Ral Zarek's
@@ -690,6 +697,7 @@ impl Player {
             life: 20,
             starting_life: 20,
             mana_pool: ManaPool::new(),
+            kept_mana_this_turn: ManaPool::new(),
             library: Vec::new(),
             hand: Vec::new(),
             graveyard: Vec::new(),
