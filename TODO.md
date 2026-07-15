@@ -3,6 +3,30 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+**Shipped (recent235–238, DSK/OTJ gap batch — 20 cards):** manifest-dread now
+exposes the manifested creature on `Selector::LastMoved` (Slimy Aquarium, Weight
+Room); `Effect::TapAnyNumberThenPumpPerTapped` (Orphans of the Wheat);
+`AdditionalCastCost::ExileFromGraveyard` gained a `count` (Abhorrent Oculus);
+`Player.spells_cast_from_hand_this_turn` + `Predicate::NoSpellCastFromHandThisTurn`
+(Prairie Dog — casts from exile/gy/command don't count); `Effect::
+GrantExtraPlusOneCountersThisTurn` (temporary Hardened Scales — Prairie Dog);
+`StaticEffect::PumpTeamIf` delirium anthem (The Swarmweaver). Rooms: Surgical
+Suite, Underwater Tunnel, Moldering Gym, Greenhouse, Walk-In Closet, Grand
+Entryway, Derelict Attic, Funeral Room, Painter's Studio, Ticket Booth,
+Restricted Office, Bottomless Pool-half work. Server surfaces
+`avg_decisive_turns`/`avg_draw_turns`; client match summary tracks life lost.
+
+**DSK/OTJ still open (each needs one primitive):** Prairie Dog's from-hand
+tracker + Emergent Haunting share `NoSpellCastFromHandThisTurn` — Emergent
+Haunting also needs an end-step "becomes a 3/3 creature" self-animate;
+Veteran Survivor (static gated on "≥3 cards exiled with this" — needs a
+`cards-exiled-with-source ≥ N` predicate); Getaway Glamer / Trial of Agony
+(needs a *global* greatest-power target filter, not the controller-only
+`GreatestPowerControlledMatching`); Miasma Demon (ApplyToTargets with a
+runtime `Value` max, not a `u8`); Come Back Wrong (destroy-then-reanimate-the-
+destroyed-card — needs a `Selector::LastDestroyed`); Freestrider Commando /
+Plot free-casts (a "no mana spent to cast" instance flag).
+
 **Resolved (recent176):** ETB *triggered abilities* now thread the cast's X.
 `CardInstance.cast_x_value` is stamped at resolution and the auto-target picker
 concretizes `{X}`-from-cost filters via `auto_target_for_effect_avoiding_set_x`,

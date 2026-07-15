@@ -16,6 +16,14 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **recent235–238 (DSK/OTJ, 20 cards):** manifest-dread → `Selector::LastMoved`
+  rider; `Effect::TapAnyNumberThenPumpPerTapped`;
+  `AdditionalCastCost::ExileFromGraveyard { count }`;
+  `Player.spells_cast_from_hand_this_turn` + `Predicate::NoSpellCastFromHandThisTurn`;
+  `Effect::GrantExtraPlusOneCountersThisTurn` (transient Hardened Scales);
+  `StaticEffect::PumpTeamIf` delirium anthems; DSK Rooms cycle (`RoomDoors` +
+  `DoorUnlocked`). CR combat tests: Flanking/Rampage/Bushido.
+
 - **recent215–218 (FDN/BLB/MKM/TDM gaps):** `StaticEffect::SetBaseToughnessForMatching`
   + `Modification::SetToughness` (layer-7b base-toughness anthem — Maha, Its
   Feathers Night); `Value::GreatestManaValueInGraveyard` (Wick's Patrol's
