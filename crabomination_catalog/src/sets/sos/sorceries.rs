@@ -2056,11 +2056,9 @@ pub fn fix_whats_broken() -> CardDefinition {
 ///   back-to-back, each over the top 4 (after the first miss-mill).
 ///
 /// Approximations:
-/// - Misses go to the bottom of the library via
-///   `RevealMissDest::BottomRandom` (printed: "the rest on the bottom
-///   in a random order"). Strict "random order" requires an RNG hook
-///   the engine doesn't expose yet; the order is preserved as
-///   revealed.
+/// - Misses go to the bottom via `RevealMissDest::BottomRandom`, which
+///   now genuinely shuffles the miss batch before bottoming (the players
+///   saw the reveal order, so the printed "random order" is real).
 /// - The "you may reveal" optionality is collapsed to always-do (the
 ///   `MayDo` wrapping would just mill 4 cards on a "no" answer, which
 ///   is strictly worse).

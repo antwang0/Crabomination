@@ -8535,6 +8535,7 @@ pub fn wave_elemental() -> CardDefinition {
                         Keyword::Flying,
                     )))),
                 skip_untap: false,
+            exact: false,
             },
             ..Default::default()
         }],

@@ -105,11 +105,15 @@ Relic Sloth ("up to one target" declinable via `ApplyToTargets min 0`),
 Paradox Surveyor (`LookPickToHand` — sees all five, rest bottomed).
 
 **Still open** (tracked, not fixed): `LookPickToHand` declines auto-fill
-under the AutoDecider; `BottomRandom` bottoms deterministically; Aziza's
-tap-three cost auto-picks which creatures tap; the miracle window is
-step-bounded rather than trigger-resolution-exact (the caster may act
-within the granting step before deciding); plus the ~55 in-source
-documented approximations (grep `Approximation|omitted|dropped`).
+under the AutoDecider; the miracle window is step-bounded rather than
+trigger-resolution-exact (the caster may act within the granting step
+before deciding); plus the in-source documented approximations (grep
+`Approximation|omitted|dropped`).
+
+2026-07-15 cont.: `RevealMissDest::BottomRandom` genuinely shuffles the
+miss batch before bottoming; Aziza's tap-three is a real all-or-nothing
+cost with a `ChooseCards` pick of which creatures tap
+(`TapUpToValue { exact: true }` behind a three-untapped `If` gate).
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost

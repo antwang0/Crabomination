@@ -6171,7 +6171,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::TapUpToValue { count, filter, skip_untap } => {
+            Effect::TapUpToValue { count, filter, skip_untap, exact } => {
                 // Archipelagore — tap up to N permanents the controller chooses
                 // at resolution, N evaluated now (e.g. mutate count). Optional
                 // "don't untap next turn" rider.
@@ -6185,14 +6185,22 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
+                // `exact` = all-or-nothing cost (Aziza's "tap three"):
+                // min = max, and an under-pick auto-fills top-down so
+                // scripted/auto answers still pay the full cost.
+                let min_pick = if *exact { n.min(candidates.len() as u32) } else { 0 };
                 let answer = self.decider.decide(&Decision::ChooseCards {
                     source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: format!("Tap up to {n} target creatures"),
+                    prompt: if *exact {
+                        format!("Tap {n} creatures")
+                    } else {
+                        format!("Tap up to {n} target creatures")
+                    },
                     candidates: candidates.clone(),
-                    min: 0,
+                    min: min_pick,
                     max: n,
                 });
-                let chosen: Vec<CardId> = match answer {
+                let mut chosen: Vec<CardId> = match answer {
                     crate::decision::DecisionAnswer::Cards(ids) => ids
                         .into_iter()
                         .filter(|id| candidates.iter().any(|(c, _)| c == id))
@@ -6200,6 +6208,16 @@ impl GameState {
                         .collect(),
                     _ => Vec::new(),
                 };
+                if *exact {
+                    for (cid, _) in &candidates {
+                        if chosen.len() >= min_pick as usize {
+                            break;
+                        }
+                        if !chosen.contains(cid) {
+                            chosen.push(*cid);
+                        }
+                    }
+                }
                 for cid in chosen {
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         if !c.tapped {
@@ -12843,6 +12861,11 @@ impl GameState {
                 }
                 // Move the misses (everything before `found_idx`, or
                 // everything if no match) into the configured miss zone.
+                // BottomRandom misses are batched and shuffled before they
+                // hit the bottom — the players SAW the reveal order, so a
+                // deterministic bottom would be known ordering, not the
+                // printed "in a random order".
+                let mut bottom_random: Vec<crate::card::CardInstance> = Vec::new();
                 let miss_count = found_idx.unwrap_or(revealed);
                 for _ in 0..miss_count {
                     if self.players[p].library.is_empty() {
@@ -12857,13 +12880,7 @@ impl GameState {
                             }
                         }
                         crate::effect::RevealMissDest::BottomRandom => {
-                            // No RNG hook in the engine yet — push to
-                            // the back of the library deterministically.
-                            // From a gameplay standpoint this is
-                            // indistinguishable from a "random bottom"
-                            // since no card knows the bottom ordering
-                            // before the next shuffle / reveal.
-                            self.players[p].library.push(card);
+                            bottom_random.push(card);
                         }
                         crate::effect::RevealMissDest::ShuffleIntoLibrary => {
                             // Re-shuffled below once the find is placed.
@@ -12882,6 +12899,12 @@ impl GameState {
                     let cid = card.id;
                     self.place_card_in_dest(card, p, &resolved_dest, events);
                     self.last_moved_cards.push(cid);
+                }
+                // Bottom the batched misses in a genuinely random order.
+                if !bottom_random.is_empty() {
+                    use rand::seq::SliceRandom;
+                    bottom_random.shuffle(&mut rand::rng());
+                    self.players[p].library.extend(bottom_random);
                 }
                 if matches!(miss_dest, crate::effect::RevealMissDest::ShuffleIntoLibrary) {
                     use rand::seq::SliceRandom;

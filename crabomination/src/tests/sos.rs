@@ -16013,3 +16013,59 @@ fn choreographed_sparks_copies_both_in_one_cast() {
         "original bear + token copy of the creature spell"
     );
 }
+
+/// Aziza's tap-three cost is ALL-OR-NOTHING: with only two untapped
+/// creatures (Aziza + one bear), the copy offer never fires — even an
+/// eager decider gets no partial tap-and-copy.
+#[test]
+fn aziza_no_copy_with_fewer_than_three_untapped() {
+    let mut g = two_player_game();
+    let aziza = g.add_card_to_battlefield(0, catalog::aziza_mage_tower_captain());
+    g.clear_sickness(aziza);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let bob_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, bob_life_before - 3,
+        "two untapped creatures can't pay 'tap three' — no copy");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "cost not partially paid");
+}
+
+/// The controller chooses WHICH three creatures tap for Aziza's cost.
+#[test]
+fn aziza_controller_picks_which_creatures_tap() {
+    let mut g = two_player_game();
+    let aziza = g.add_card_to_battlefield(0, catalog::aziza_mage_tower_captain());
+    g.clear_sickness(aziza);
+    let mut bears = vec![];
+    for _ in 0..3 {
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(b);
+        bears.push(b);
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Yes to the offer, then pick the three BEARS (sparing Aziza).
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(bears.clone()),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(aziza).unwrap().tapped, "Aziza spared by the pick");
+    for b in bears {
+        assert!(g.battlefield_find(b).unwrap().tapped, "chosen bear tapped");
+    }
+}

@@ -56142,6 +56142,7 @@ pub fn archipelagore() -> CardDefinition {
             count: Value::MutateCount,
             filter: SelectionRequirement::Creature,
             skip_untap: true,
+            exact: false,
         })],
         ..Default::default()
     }

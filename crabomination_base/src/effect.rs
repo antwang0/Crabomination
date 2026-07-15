@@ -3897,7 +3897,11 @@ pub enum Effect {
     /// (`Decision::ChooseCards`), so the dynamic count sidesteps the
     /// fixed-slot declared-target model. `skip_untap` adds the
     /// `skip_next_untap` flag to each tapped permanent.
-    TapUpToValue { count: Value, filter: SelectionRequirement, skip_untap: bool },
+    /// `exact: true` turns the pick into an all-or-nothing cost: the chooser
+    /// must tap exactly `count` (min = max in the `ChooseCards` decision;
+    /// AutoDecider fills top-down). Aziza's "tap three untapped creatures
+    /// you control" — the surrounding `If` guarantees enough candidates.
+    TapUpToValue { count: Value, filter: SelectionRequirement, skip_untap: bool, exact: bool },
     /// Enlist (CR 702.151): "As this attacks, you may tap a nonattacking
     /// creature you control without summoning sickness. When you do, add its
     /// power to this creature's power until end of turn." The "you may" /

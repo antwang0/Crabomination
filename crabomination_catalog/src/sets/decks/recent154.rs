@@ -125,6 +125,7 @@ pub fn eddymurk_crab() -> CardDefinition {
             count: Value::Const(2),
             filter: R::Creature,
             skip_untap: false,
+            exact: false,
         })],
         ..Default::default()
     }

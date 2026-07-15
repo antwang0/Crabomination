@@ -1372,9 +1372,12 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
 /// untapped creatures you control. If you do, copy that spell. You may
 /// choose new targets for the copy."
 ///
-/// The "may tap three" optional cost is approximated as `Effect::MayDo`:
-/// the cost-and-effect ordering ("if you do, copy" vs "you may copy if
-/// you do") is collapsed into one decision shape.
+/// The "may tap three" cost is all-or-nothing and player-chosen: the
+/// resolution-time `If` gates on THREE untapped friendly creatures
+/// existing (fewer → no offer, matching "if you do"), the `MayDo` is the
+/// printed "you may", and `TapUpToValue { exact: true }` gives the
+/// controller a real pick of WHICH three tap (`Decision::ChooseCards`,
+/// min = max = 3).
 pub fn aziza_mage_tower_captain() -> CardDefinition {
     use crate::card::Supertype;
     use crate::effect::shortcut::magecraft;
@@ -1390,29 +1393,41 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::MayDo {
+        // "You may tap three ... If you do, copy" — the cost is
+        // all-or-nothing: with fewer than three untapped creatures the
+        // offer never appears (the `If` gate), matching the printed cost.
+        triggered_abilities: vec![magecraft(Effect::If {
+            cond: crate::effect::Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::Untapped),
+                ),
+                n: Value::Const(3),
+            },
+            else_: Box::new(Effect::Noop),
+            then: Box::new(Effect::MayDo {
             description: "Tap three untapped creatures you control to copy that spell?"
                 .to_string(),
             body: Box::new(Effect::Seq(vec![
-                // Tap 3 untapped creatures you control (approximation: tap
-                // up to 3 — if fewer than 3 available, still copy since the
-                // engine has no "may pay" all-or-nothing primitive for
-                // creature-tap costs).
-                Effect::Tap {
-                    what: Selector::take(
-                        Selector::EachPermanent(
-                            SelectionRequirement::Creature
-                                .and(SelectionRequirement::ControlledByYou)
-                                .and(SelectionRequirement::Untapped),
-                        ),
-                        Value::Const(3),
-                    ),
+                // Tap exactly 3 untapped creatures of the controller's
+                // CHOICE — an all-or-nothing cost; the outer `If` already
+                // guaranteed three candidates exist, and nothing can
+                // intervene mid-resolution.
+                Effect::TapUpToValue {
+                    count: Value::Const(3),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::Untapped),
+                    skip_untap: false,
+                    exact: true,
                 },
                 Effect::CopySpellMayChooseTargets {
                     what: Selector::TriggerSource,
                     count: Value::Const(1),
                 },
             ])),
+            }),
         })],
         ..Default::default()
     }
