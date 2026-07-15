@@ -858,6 +858,9 @@ mod tests_recent229;
 #[path = "../tests/recent230.rs"]
 mod tests_recent230;
 #[cfg(test)]
+#[path = "../tests/recent231.rs"]
+mod tests_recent231;
+#[cfg(test)]
 #[path = "../tests/tdm.rs"]
 mod tests_tdm;
 #[cfg(test)]

@@ -6582,6 +6582,8 @@ static DECKS: &[Factory] = &[
     super::decks::resilient_roadrunner,
     super::decks::giant_beaver,
     super::decks::ornery_tumblewagg,
+    super::decks::volcanic_spite,
+    super::decks::lilysplash_mentor,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
