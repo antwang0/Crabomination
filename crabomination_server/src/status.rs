@@ -254,13 +254,6 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
             out.push_str(&format!("crab_format_avg_turns{{format=\"{label}\"}} {avg}\n"));
         }
     }
-    // Refusal breakdown so operators can tell a capacity-limit refusal (server
-    // full) from an abuse refusal (one IP over its per-IP cap).
-    out.push_str("# HELP crab_connections_refused_by_reason_total Refused connections by reason.\n");
-    out.push_str("# TYPE crab_connections_refused_by_reason_total counter\n");
-    for (reason, value) in [("global", sl.refused_global), ("per_ip", sl.refused_per_ip)] {
-        out.push_str(&format!("crab_connections_refused_by_reason_total{{reason=\"{reason}\"}} {value}\n"));
-    }
     out
 }
 
@@ -479,6 +472,13 @@ mod tests {
         // Refusals split by which cap tripped (global vs per-IP).
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"global\"} 0"));
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"per_ip\"} 0"));
+        // Each metric name must carry exactly one HELP/TYPE block — Prometheus
+        // rejects a whole scrape on a duplicated HELP line (regression guard).
+        assert_eq!(
+            body.matches("# TYPE crab_connections_refused_by_reason_total").count(),
+            1,
+            "refusal-by-reason metric must be declared exactly once",
+        );
         assert!(body.contains("# TYPE crab_draws_total counter"));
         // Match-outcome health gauges (stuck-match / decisive / draw shares).
         assert!(body.contains("crab_inconclusive_total 0"));

@@ -257,6 +257,11 @@ fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
     if let Ward(cost) = kw {
         return Some(ward_suffix(cost));
     }
+    // Protection from a creature type names the type ("ProCT·Coyote"): which
+    // type it dodges is the whole board read (who can block it / damage it).
+    if let ProtectionFromCreatureType(t) = kw {
+        return Some(format!("·{t:?}"));
+    }
     let n = match kw {
         Rampage(n) | Bushido(n) | Frenzy(n) | Annihilator(n) | Absorb(n) | Toxic(n)
         | Poisonous(n) | CantBeBlockedExceptByN(n) | Crew(n) | Saddle(n) => *n,
@@ -463,6 +468,13 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::Regenerate(0)]), "Rgn");
         assert_eq!(keyword_strip(&[Keyword::UmbraArmor]), "TArm");
         assert_eq!(keyword_strip(&[Keyword::ProtectionFromCreatures]), "ProCr");
+        assert_eq!(
+            keyword_strip(&[Keyword::ProtectionFromCreatureType(
+                crabomination::card::CreatureType::Coyote
+            )]),
+            "ProCT·Coyote",
+            "protection-from-type names the dodged type",
+        );
         assert_eq!(keyword_strip(&[Keyword::CantAttackAlone]), "Pack");
         assert_eq!(keyword_strip(&[Keyword::CantAttackOrBlockAlone]), "Pack");
         assert_eq!(
