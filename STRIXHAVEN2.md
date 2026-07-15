@@ -104,10 +104,12 @@ Scientist ("may search" honored), Moseo / Ascendant Dustspeaker / Startled
 Relic Sloth ("up to one target" declinable via `ApplyToTargets min 0`),
 Paradox Surveyor (`LookPickToHand` — sees all five, rest bottomed).
 
-**Still open** (tracked, not fixed): `LookPickToHand` declines auto-fill
-under the AutoDecider; the miracle window is step-bounded rather than
-trigger-resolution-exact (the caster may act within the granting step
-before deciding); plus the in-source documented approximations (grep
+**Still open** (tracked, not fixed): the miracle window is step-bounded
+rather than trigger-resolution-exact (the caster may act within the
+granting step before deciding); `LookPickToHand` declines are honored
+for UI players on `optional: true` cards (30 "you may put/reveal" cards
+flipped) but the AutoDecider harness still auto-fills (bot policy);
+plus the in-source documented approximations (grep
 `Approximation|omitted|dropped`).
 
 2026-07-15 cont.: `RevealMissDest::BottomRandom` genuinely shuffles the

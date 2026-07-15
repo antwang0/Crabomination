@@ -2127,6 +2127,7 @@ pub fn staunch_crewmate() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: true,
         })],
         ..Default::default()
     }
@@ -3815,6 +3816,7 @@ pub fn confounding_riddle() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
             Effect::CounterUnlessPaid {
                 what: crate::effect::shortcut::target(),
@@ -3918,6 +3920,7 @@ pub fn in_the_presence_of_ages() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -4452,6 +4455,7 @@ pub fn sinuous_benthisaur() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         })],
         ..Default::default()
     }
@@ -4631,6 +4635,7 @@ pub fn orazca_puzzle_door() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
             ..Default::default()
         }],
@@ -4975,6 +4980,7 @@ pub fn akal_pakal_first_among_equals() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
         }],
         ..Default::default()

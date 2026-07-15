@@ -12154,7 +12154,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, rest_to_exile } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, rest_to_exile } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -12187,12 +12187,20 @@ impl GameState {
                     }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
-                for id in revealed.iter().copied() {
-                    if picks.len() >= take {
-                        break;
-                    }
-                    if is_eligible(&id) && !picks.contains(&id) {
-                        picks.push(id);
+                // Printed "you MAY put ..." — an explicit empty pick from a
+                // UI player is a decline: skip the auto-fill and let every
+                // revealed card follow the rest-routing. Mandatory picks
+                // (and the AutoDecider harness, whose empty answer means
+                // "no preference") keep the top-down fill.
+                let declined = optional && picks.is_empty() && self.players[player].wants_ui;
+                if !declined {
+                    for id in revealed.iter().copied() {
+                        if picks.len() >= take {
+                            break;
+                        }
+                        if is_eligible(&id) && !picks.contains(&id) {
+                            picks.push(id);
+                        }
                     }
                 }
                 let mut events = vec![];

@@ -961,6 +961,7 @@ pub fn vessel_of_nascency() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
             ..Default::default()
         }],

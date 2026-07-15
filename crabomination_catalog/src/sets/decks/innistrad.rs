@@ -1008,6 +1008,7 @@ pub fn organ_hoarder() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         })],
         ..Default::default()
     }
@@ -1045,6 +1046,7 @@ pub fn scattered_thoughts() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -1964,6 +1966,7 @@ pub fn mulch() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -1987,6 +1990,7 @@ pub fn tapping_at_the_window() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: true,
         },
         ..Default::default()
     }
@@ -2690,6 +2694,7 @@ pub fn gavony_dawnguard() -> CardDefinition {
                     to_battlefield: false,
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
+                    optional: true,
                 },
             },
         ],

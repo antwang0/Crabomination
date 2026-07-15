@@ -81,6 +81,7 @@ pub fn pieces_of_the_puzzle() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -104,6 +105,7 @@ pub fn ransack_the_lab() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }

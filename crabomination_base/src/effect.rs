@@ -2890,6 +2890,13 @@ pub enum Effect {
         /// meaningful with `rest_to_graveyard`.
         #[serde(default)]
         gain_life_greatest_power_rest: bool,
+        /// Printed "you MAY put ... into your hand": an explicit empty pick
+        /// from a UI player is honored as a decline (the whole revealed set
+        /// follows the rest-routing). Mandatory picks (`false`) auto-fill
+        /// top-down as before, and the AutoDecider harness keeps the fill
+        /// either way so bot play is unchanged.
+        #[serde(default)]
+        optional: bool,
     },
     /// "Look at the top `count` cards; put one back on top and the rest into
     /// your graveyard" (Sage of Days). The controller (via the `SearchLibrary`

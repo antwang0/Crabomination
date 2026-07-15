@@ -36,6 +36,7 @@ pub fn basic_conjuration() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
             gain_life(3),
         ]),
@@ -524,6 +525,7 @@ pub fn bond_of_flourishing() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: true,
             },
             gain_life(3),
         ]),
@@ -1180,6 +1182,7 @@ pub fn the_biblioplex() -> CardDefinition {
                     to_battlefield: false,
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
+                    optional: true,
                 },
                 ..Default::default()
             },

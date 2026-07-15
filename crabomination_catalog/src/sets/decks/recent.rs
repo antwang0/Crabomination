@@ -52,6 +52,7 @@ pub fn sigarda_champion_of_light() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
         }],
         ..Default::default()
@@ -2671,6 +2672,7 @@ pub fn star_charter() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: true,
             },
         }],
         ..Default::default()
@@ -3935,6 +3937,7 @@ pub fn stock_up() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -5894,6 +5897,7 @@ pub fn gurmag_drowner() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         })],
         ..Default::default()
     }
@@ -9105,6 +9109,7 @@ pub fn corpse_appraiser() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
         ]))],
         ..Default::default()
@@ -11700,6 +11705,7 @@ pub fn recruitment_officer() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: true,
             },
             ..Default::default()
         }],

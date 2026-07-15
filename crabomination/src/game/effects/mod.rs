@@ -10073,7 +10073,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield, gain_life_if_pick, gain_life_greatest_power_rest } => {
+            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield, gain_life_if_pick, gain_life_greatest_power_rest, optional } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -10141,6 +10141,7 @@ impl GameState {
                     keep_on_top: false,
                     gain_life_if_pick: gain_life_if_pick.clone(),
                     gain_life_greatest_power_rest: *gain_life_greatest_power_rest,
+                    optional: *optional,
                     rest_to_exile: false,
                 };
                 if self.players[p].wants_ui {
@@ -10203,6 +10204,7 @@ impl GameState {
                     keep_on_top: false,
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
+                    optional: false,
                     rest_to_exile: false,
                 };
                 if self.players[p].wants_ui {
@@ -10243,6 +10245,7 @@ impl GameState {
                     keep_on_top: true,
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
+                    optional: false,
                     rest_to_exile: *exile_rest,
                 };
                 if self.players[p].wants_ui {

@@ -116,6 +116,7 @@ pub fn tajuru_paragon() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             }),
             else_: Box::new(Effect::Noop),
         })],

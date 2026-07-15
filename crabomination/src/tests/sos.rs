@@ -16069,3 +16069,48 @@ fn aziza_controller_picks_which_creatures_tap() {
         assert!(g.battlefield_find(b).unwrap().tapped, "chosen bear tapped");
     }
 }
+
+/// Paradox Surveyor's "you MAY reveal ... and put it into your hand" is
+/// genuinely declinable for a UI player: an explicit empty pick bottoms
+/// all five looked-at cards and takes nothing.
+#[test]
+fn paradox_surveyor_ui_player_may_decline_the_pick() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    // Five known cards on top — two eligible (lands).
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+    let hand_before = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::paradox_surveyor());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Paradox Surveyor castable");
+    // Resolve the creature, then the ETB look suspends on the pick.
+    for _ in 0..8 {
+        if g.pending_decision.is_some() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert!(g.pending_decision.is_some(), "look-at-top-five pick pending");
+    // Decline: explicit empty pick.
+    g.submit_decision(DecisionAnswer::Search(None)).expect("decline accepted");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "declined — nothing went to hand (the Surveyor itself left the hand for the battlefield)"
+    );
+    assert_eq!(
+        g.players[0].library.len(),
+        lib_before,
+        "all five looked-at cards returned to the library (bottom)"
+    );
+}

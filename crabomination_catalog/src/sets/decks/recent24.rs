@@ -1495,6 +1495,7 @@ pub fn commune_with_evil() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
             gain_life(3),
         ]),

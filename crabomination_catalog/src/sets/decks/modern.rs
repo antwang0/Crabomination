@@ -2701,6 +2701,7 @@ pub fn satyr_wayfinder() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: true,
             },
         }],
         ..Default::default()
@@ -5483,6 +5484,7 @@ pub fn anticipate() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -7926,6 +7928,7 @@ pub fn vivien_reid() -> CardDefinition {
                     to_battlefield: false,
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
+                    optional: true,
                 },
             },
             LoyaltyAbility {
@@ -8611,6 +8614,7 @@ pub fn forbidden_alchemy() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -9450,6 +9454,7 @@ pub fn glint_nest_crane() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         })],
         ..Default::default()
     }
@@ -10860,6 +10865,7 @@ pub fn strategic_planning() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -12943,6 +12949,7 @@ pub fn faerie_snoop() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
         }],
         ..Default::default()
@@ -23921,6 +23928,7 @@ pub fn impulse() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -25234,6 +25242,7 @@ pub fn consult_the_star_charts() -> CardDefinition {
         to_battlefield: false,
         gain_life_if_pick: None,
         gain_life_greatest_power_rest: false,
+        optional: false,
     };
     CardDefinition {
         name: "Consult the Star Charts",
@@ -26808,6 +26817,7 @@ pub fn narset_parter_of_veils() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: true,
             },
         }],
         ..Default::default()
@@ -27028,6 +27038,7 @@ pub fn ancient_stirrings() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: true,
         },
         ..Default::default()
     }
@@ -29816,6 +29827,7 @@ pub fn turntimber_symbiosis() -> CardDefinition {
             to_battlefield: true,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         back_face: Some(Box::new(znr_painland_back(
             "Turntimber, Serpentine Wood",
@@ -30188,6 +30200,7 @@ pub fn adventure_awaits() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -30849,6 +30862,7 @@ pub fn search_for_azcanta() -> CardDefinition {
                     to_battlefield: false,
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
+                    optional: false,
                 },
                 ..Default::default()
             },
@@ -30927,6 +30941,7 @@ pub fn growing_rites_of_itlimoc() -> CardDefinition {
                     to_battlefield: false,
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
+                    optional: false,
                 },
             },
             TriggeredAbility {
@@ -39751,6 +39766,7 @@ pub fn prophetic_bolt() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
         ]),
         ..Default::default()
@@ -41612,6 +41628,7 @@ pub fn rediscover_the_way() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         }
     }
     CardDefinition {
@@ -44973,6 +44990,7 @@ pub fn memory_deluge() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -45655,6 +45673,7 @@ pub fn collected_company() -> CardDefinition {
             to_battlefield: true,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -48168,6 +48187,7 @@ pub fn peer_through_depths() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -48197,6 +48217,7 @@ pub fn malevolent_rumble() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -50246,6 +50267,7 @@ pub fn six() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: true,
         })],
         static_abilities: vec![StaticAbility {
             description: "During your turn, nonland permanent cards in your graveyard have retrace.",
@@ -53970,6 +53992,7 @@ pub fn thieves_fortune() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -55305,6 +55328,7 @@ pub fn militia_bugler() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         })],
         ..Default::default()
     }
@@ -58442,6 +58466,7 @@ pub fn glimpse_the_cosmos() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -58817,6 +58842,7 @@ pub fn dark_bargain() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::You),

@@ -211,6 +211,7 @@ pub fn loot_exuberant_explorer() -> CardDefinition {
                 to_battlefield: true,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: true,
             },
             ..Default::default()
         }],
@@ -640,6 +641,7 @@ pub fn trail_of_crumbs() -> CardDefinition {
                         to_battlefield: false,
                         gain_life_if_pick: None,
                         gain_life_greatest_power_rest: false,
+                        optional: false,
                     }),
                     else_: None,
                 },

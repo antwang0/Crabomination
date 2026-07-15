@@ -102,6 +102,7 @@ pub fn chrome_courier() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: Some((R::Artifact, 3)),
             gain_life_greatest_power_rest: false,
+            optional: false,
         })],
         ..Default::default()
     }
@@ -123,6 +124,7 @@ pub fn discerning_taste() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: true,
+            optional: false,
         },
         ..Default::default()
     }

@@ -276,6 +276,7 @@ pub fn rakshasas_bargain() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         },
         ..Default::default()
     }
@@ -938,6 +939,7 @@ pub fn commune_with_nature() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: true,
         },
         ..Default::default()
     }

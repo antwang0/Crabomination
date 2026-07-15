@@ -2168,6 +2168,7 @@ pub fn experimental_augury() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             },
             Effect::Proliferate,
         ]),
@@ -4054,6 +4055,7 @@ pub fn testament_bearer() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         })],
         ..Default::default()
     }
@@ -6392,6 +6394,7 @@ pub fn green_suns_twilight() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
+                optional: false,
             }),
         },
         ..Default::default()
@@ -6662,6 +6665,7 @@ pub fn contagious_vorrac() -> CardDefinition {
             to_battlefield: false,
             gain_life_if_pick: None,
             gain_life_greatest_power_rest: false,
+            optional: false,
         };
         match extra {
             Some(e) => Effect::Seq(vec![look, e]),

@@ -1267,6 +1267,10 @@ pub enum PendingEffectState {
         /// by the rest-to-graveyard sweep (Discerning Taste).
         #[serde(default)]
         gain_life_greatest_power_rest: bool,
+        /// Printed "you MAY put ..." — an explicit empty pick from a UI
+        /// player is honored as a decline (no auto-fill).
+        #[serde(default)]
+        optional: bool,
         /// Non-picked cards are exiled instead of bottomed/milled (Devourer
         /// of Destiny's opening-hand reveal). Overrides `rest_to_graveyard`.
         #[serde(default)]

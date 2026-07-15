@@ -252,6 +252,7 @@ pub fn marchesa_dealer_of_death() -> CardDefinition {
                     to_battlefield: false,
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
+                    optional: false,
                 }),
                 else_: None,
             },
