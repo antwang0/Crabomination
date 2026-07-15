@@ -51,7 +51,8 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
     let refused = sl.refused_global + sl.refused_per_ip;
     format!(
         "{{\"uptime_secs\":{},\"matches\":{},\"bot_matches\":{},\"pair_matches\":{},\
-         \"avg_turns\":{},\"min_turns\":{},\"max_turns\":{},\"turn_stddev\":{:.2},\
+         \"avg_turns\":{},\"avg_decisive_turns\":{},\"avg_draw_turns\":{},\
+         \"min_turns\":{},\"max_turns\":{},\"turn_stddev\":{:.2},\
          \"median_turns\":{},\"turn_p10\":{},\"turn_p90\":{},\"turn_iqr\":{},\
          \"inconclusive\":{},\"inconclusive_pct\":{},\"decisive_pct\":{},\"draw_pct\":{},\
          \"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
@@ -70,6 +71,8 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.bot_matches,
         st.pair_matches,
         st.avg_turns(),
+        st.avg_decisive_turns(),
+        st.avg_draw_turns(),
         st.min_turns.unwrap_or(0),
         st.max_turns.unwrap_or(0),
         st.turn_count_stddev(),
@@ -136,6 +139,8 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("bot_matches_total", "counter", "Matches against a bot.", st.bot_matches.to_string());
     m("pair_matches_total", "counter", "Human-vs-human matches.", st.pair_matches.to_string());
     m("avg_turns", "gauge", "Average turns per match.", st.avg_turns().to_string());
+    m("avg_decisive_turns", "gauge", "Average final-turn count of matches with a winner.", st.avg_decisive_turns().to_string());
+    m("avg_draw_turns", "gauge", "Average final-turn count of drawn matches.", st.avg_draw_turns().to_string());
     m("min_turns", "gauge", "Fewest turns in a completed match.", st.min_turns.unwrap_or(0).to_string());
     m("max_turns", "gauge", "Most turns in a completed match.", st.max_turns.unwrap_or(0).to_string());
     m("turn_stddev", "gauge", "Standard deviation of final turn counts.", format!("{:.2}", st.turn_count_stddev()));
@@ -410,6 +415,7 @@ mod tests {
         assert!(body.starts_with('{') && body.trim_end().ends_with('}'), "JSON object");
         // Key fields present with numeric values (no fresh-server nulls).
         for key in ["\"matches\":0", "\"connections_current\":0", "\"refusal_rate_pct\":0",
+                    "\"avg_decisive_turns\":0", "\"avg_draw_turns\":0",
                     "\"poison_wins\":0", "\"deckout_wins\":0", "\"other_wins\":0",
                     "\"first_seat_win_pct\":50", "\"avg_win_life_delta\":0",
                     "\"median_win_life_delta\":0", "\"win_life_delta_p90\":0",

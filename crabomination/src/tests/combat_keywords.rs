@@ -1394,3 +1394,66 @@ fn cr_500_7_view_flags_extra_combat_and_end_step() {
     g.end_steps_this_turn = 2;
     assert!(crate::server::view::project(&g, 0).extra_phase, "second end step is extra");
 }
+
+// ── CR 702.25 Flanking / 702.23 Rampage / 702.45 Bushido combat behavior ─────
+
+/// CR 702.25 — a flanking attacker gives a nonflanking blocker -1/-1.
+#[test]
+fn cr_702_25_flanking_shrinks_nonflanking_blocker() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body_kw("Flanker", 2, 2, vec![Keyword::Flanking]));
+    let blk = g.add_card_to_battlefield(1, body_kw("Blocker", 1, 1, vec![]));
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    // The 1/1 blocker becomes 0/0 and dies to the SBA before dealing damage.
+    assert!(!g.battlefield.iter().any(|c| c.id == blk), "nonflanking blocker died to -1/-1");
+    assert_eq!(g.battlefield_find(atk).unwrap().damage, 0, "flanker took no damage back");
+}
+
+/// CR 702.23 — Rampage N: +N/+N for each blocker beyond the first.
+#[test]
+fn cr_702_23_rampage_pumps_per_extra_blocker() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body_kw("Rampager", 2, 2, vec![Keyword::Rampage(2)]));
+    let b1 = g.add_card_to_battlefield(1, body_kw("B1", 1, 4, vec![]));
+    let b2 = g.add_card_to_battlefield(1, body_kw("B2", 1, 4, vec![]));
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk), (b2, atk)])).expect("block");
+    drain_stack(&mut g);
+    // Two blockers → one "beyond the first" → +2/+2 → a 4/4.
+    assert_eq!(g.computed_permanent(atk).unwrap().power, 4, "Rampage 2 for one extra blocker");
+    assert_eq!(g.computed_permanent(atk).unwrap().toughness, 4);
+}
+
+/// CR 702.45 — Bushido N: +N/+N when this creature blocks or becomes blocked.
+#[test]
+fn cr_702_45_bushido_pumps_when_blocked() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body_kw("Samurai", 2, 2, vec![Keyword::Bushido(2)]));
+    let blk = g.add_card_to_battlefield(1, body_kw("Wall", 0, 4, vec![]));
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+    drain_stack(&mut g);
+    // Becoming blocked triggers Bushido 2 → the 2/2 attacker is a 4/4.
+    assert_eq!(g.computed_permanent(atk).unwrap().power, 4, "Bushido 2 on becoming blocked");
+}

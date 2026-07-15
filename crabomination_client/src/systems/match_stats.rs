@@ -16,6 +16,11 @@ pub struct MatchStats {
     pub drawn: HashMap<usize, u32>,
     pub spells: HashMap<usize, u32>,
     pub damage_taken: HashMap<usize, u32>,
+    /// Total life *lost* per seat — a superset of `damage_taken` that also
+    /// counts drains, life payments (Phyrexian mana, painlands, fetches), and
+    /// "lose N life" effects. Surfaced only when it exceeds damage taken so the
+    /// summary highlights self-inflicted life loss.
+    pub life_lost: HashMap<usize, u32>,
     pub life_gained: HashMap<usize, u32>,
     pub lands_played: HashMap<usize, u32>,
     pub discarded: HashMap<usize, u32>,
@@ -51,6 +56,12 @@ impl MatchStats {
                 line.push_str(&format!(" · {n} {noun}"));
             }
         }
+        // Only call out life lost beyond combat/burn — pure damage already
+        // shows as "dmg taken", so non-damage life loss is the news here.
+        let lost = get(&self.life_lost);
+        if lost > get(&self.damage_taken) {
+            line.push_str(&format!(" · {lost} life lost"));
+        }
         line
     }
 }
@@ -79,6 +90,9 @@ pub fn track_match_stats(events: Res<LatestServerEvents>, mut stats: ResMut<Matc
             }
             GameEventWire::LifeGained { player, amount } => {
                 *stats.life_gained.entry(*player).or_default() += amount;
+            }
+            GameEventWire::LifeLost { player, amount } => {
+                *stats.life_lost.entry(*player).or_default() += amount;
             }
             GameEventWire::LandPlayed { player, .. } => {
                 *stats.lands_played.entry(*player).or_default() += 1;
@@ -117,6 +131,18 @@ mod tests {
             s.seat_line(0, "P0"),
             "P0 — 3 drawn · 2 spells · 4 lands · 5 dmg taken · 6 life gained",
         );
+    }
+
+    #[test]
+    fn life_lost_shown_only_beyond_damage_taken() {
+        let mut s = MatchStats::default();
+        *s.damage_taken.entry(0).or_default() += 4;
+        // 4 lost = 4 damage → nothing extra to report.
+        *s.life_lost.entry(0).or_default() += 4;
+        assert!(!s.seat_line(0, "P0").contains("life lost"));
+        // Two more lost to a drain (non-damage) → surfaced.
+        *s.life_lost.entry(0).or_default() += 2;
+        assert!(s.seat_line(0, "P0").contains("6 life lost"));
     }
 
     #[test]
