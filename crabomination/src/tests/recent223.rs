@@ -6,7 +6,6 @@ use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::effects::EffectContext;
 use crate::game::types::{Attack, AttackTarget, Target, TurnStep};
 use crate::game::{drain_stack, two_player_game, GameState};
-use crate::mana::Color;
 
 /// Warren Warleader carries Offspring and its attack trigger can mint a Rabbit.
 #[test]
