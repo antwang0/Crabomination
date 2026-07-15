@@ -1,6 +1,6 @@
 //! Functionality tests for `catalog::sets::decks::recent214`.
 
-use crate::card::{CounterType, CreatureType, Keyword};
+use crate::card::{CounterType, Keyword};
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::effect::{Effect, Selector, Value};
@@ -279,7 +279,6 @@ fn shipwreck_dowser_returns_instant() {
     }).expect("cast Shipwreck Dowser");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "returned the bolt to hand");
-    let _ = CreatureType::Merfolk;
 }
 
 /// Prayer of Binding exiles an opponent's permanent and gains 2 life.
