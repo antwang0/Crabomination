@@ -6498,6 +6498,9 @@ static DECKS: &[Factory] = &[
     super::decks::byway_barterer,
     super::decks::wicks_patrol,
     super::decks::maha_its_feathers_night,
+    super::decks::serra_redeemer,
+    super::decks::wandertale_mentor,
+    super::decks::starseer_mentor,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
