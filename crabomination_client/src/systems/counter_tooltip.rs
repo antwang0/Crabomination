@@ -1173,6 +1173,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Divinity => "Divinity",
         CounterType::Fellowship => "Fellowship",
         CounterType::Bait => "Bait",
+        CounterType::Supply => "Supply",
     }
 }
 
@@ -1211,6 +1212,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Divinity => "Grants indestructibility; remove it to fire this Myojin's one-shot ability.",
         CounterType::Fellowship => "Banner of Kinship tally — the chosen type gets +1/+1 per counter.",
         CounterType::Bait => "Fishing Pole tally — removed on untap to make a 1/1 Fish.",
+        CounterType::Supply => "Stocking the Pantry tally — remove one to draw a card.",
         _ => return None,
     })
 }

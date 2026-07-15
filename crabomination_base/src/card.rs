@@ -457,6 +457,9 @@ pub enum CounterType {
     /// Bait counter — Fishing Pole accrues one per activation; removing one on
     /// the equipped creature's untap mints a 1/1 Fish.
     Bait,
+    /// Supply counter — Stocking the Pantry accrues one whenever you put +1/+1
+    /// counters on a creature you control; remove one to draw.
+    Supply,
 }
 
 /// Every zone a card can occupy.
