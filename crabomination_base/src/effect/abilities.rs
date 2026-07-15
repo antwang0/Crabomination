@@ -878,6 +878,11 @@ pub enum StaticEffect {
     SuppressCreatureEtbTriggers {
         #[serde(default)]
         also_dies: bool,
+        /// Extends suppression to entering **artifacts** as well (Doorkeeper
+        /// Thrull — "Artifacts and creatures entering don't cause abilities to
+        /// trigger"). `#[serde(default)]`.
+        #[serde(default)]
+        also_artifacts: bool,
     },
     /// "Each other planeswalker you control has the loyalty abilities of
     /// [this]." (Kasmina, Enigma Sage.) Read by `activate_loyalty_ability`,

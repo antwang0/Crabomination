@@ -1007,6 +1007,25 @@ pub(crate) fn etb_trigger_multiplier(
     {
         return 0;
     }
+    // Doorkeeper Thrull — an entering *artifact* likewise causes no triggers
+    // while an `also_artifacts` suppressor is in play.
+    if let Some(id) = entering
+        && state
+            .battlefield
+            .iter()
+            .find(|c| c.id == id)
+            .is_some_and(|c| c.definition.card_types.contains(&crate::card::CardType::Artifact))
+        && state.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    StaticEffect::SuppressCreatureEtbTriggers { also_artifacts: true, .. }
+                )
+            })
+        })
+    {
+        return 0;
+    }
     let mut your_norns = 0usize;
     let mut opp_norns = 0usize;
     // Yarok/Panharmonicon-style doublers add fires for the controller's own
@@ -1101,7 +1120,7 @@ pub(crate) fn creature_dies_triggers_suppressed(state: &crate::game::GameState) 
     use crate::effect::StaticEffect;
     state.battlefield.iter().any(|c| {
         c.definition.static_abilities.iter().any(|sa| {
-            matches!(sa.effect, StaticEffect::SuppressCreatureEtbTriggers { also_dies: true })
+            matches!(sa.effect, StaticEffect::SuppressCreatureEtbTriggers { also_dies: true, .. })
         })
     })
 }

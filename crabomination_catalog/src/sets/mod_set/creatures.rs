@@ -1043,7 +1043,7 @@ pub fn torpor_orb() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         static_abilities: vec![StaticAbility {
             description: "Creatures entering the battlefield don't cause triggered abilities to trigger.",
-            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: false },
+            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: false, also_artifacts: false },
         }],
         ..Default::default()
     }
@@ -1065,7 +1065,7 @@ pub fn tocatli_honor_guard() -> CardDefinition {
         toughness: 3,
         static_abilities: vec![StaticAbility {
             description: "Creatures entering the battlefield don't cause triggered abilities to trigger.",
-            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: false },
+            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: false, also_artifacts: false },
         }],
         ..Default::default()
     }
@@ -1089,7 +1089,7 @@ pub fn hushbringer() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
         static_abilities: vec![StaticAbility {
             description: "Creatures entering the battlefield or dying don't cause triggered abilities to trigger.",
-            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: true },
+            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: true, also_artifacts: false },
         }],
         ..Default::default()
     }

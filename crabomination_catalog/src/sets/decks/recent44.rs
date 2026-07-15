@@ -191,7 +191,7 @@ pub fn hushwing_gryff() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "Creatures entering the battlefield don't cause abilities to trigger.",
-            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: false },
+            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: false, also_artifacts: false },
         }],
         ..Default::default()
     }

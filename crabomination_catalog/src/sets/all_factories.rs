@@ -6546,6 +6546,13 @@ static DECKS: &[Factory] = &[
     super::decks::nightdrinker_moroii,
     super::decks::wojek_investigator,
     super::decks::sandstorm_verge,
+    super::decks::doorkeeper_thrull,
+    super::decks::sanctuary_wall,
+    super::decks::all_out_assault,
+    super::decks::homicide_investigator,
+    super::decks::lead_pipe,
+    super::decks::karlov_watchdog,
+    super::decks::no_witnesses,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
