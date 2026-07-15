@@ -275,16 +275,15 @@ pub fn joined_researchers() -> CardDefinition {
         vec![Keyword::FirstStrike],
         spell,
     );
+    // CR 603.4 — intervening 'if' as `event.filter`: checked at trigger
+    // time, and re-checked at resolution by the step-trigger path.
     front.triggered_abilities.push(TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
-        effect: Effect::If {
-            cond: Predicate::ValueAtLeast(
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+            .with_filter(Predicate::ValueAtLeast(
                 Value::HandSizeOf(PlayerRef::EachOpponent),
                 Value::Sum(vec![Value::HandSizeOf(PlayerRef::You), Value::Const(1)]),
-            ),
-            then: Box::new(becomes_prepared()),
-            else_: Box::new(Effect::Noop),
-        },
+            )),
+        effect: becomes_prepared(),
     });
     front
 }
@@ -501,15 +500,14 @@ pub fn emeritus_of_woe() -> CardDefinition {
         vec![],
         spell,
     ));
+    // CR 603.4 — intervening 'if' as `event.filter`: checked at trigger
+    // time, and re-checked at resolution by the step-trigger path.
     front.triggered_abilities.push(TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
-        effect: Effect::If {
-            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+            .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast {
                 at_least: Value::Const(2),
-            },
-            then: Box::new(becomes_prepared()),
-            else_: Box::new(Effect::Noop),
-        },
+            }),
+        effect: becomes_prepared(),
     });
     front
 }
@@ -547,19 +545,18 @@ pub fn scheming_silvertongue() -> CardDefinition {
         vec![Keyword::Flying, Keyword::Lifelink],
         spell,
     );
+    // CR 603.4 — intervening 'if' as `event.filter`: checked at trigger
+    // time, and re-checked at resolution by the step-trigger path.
     front.triggered_abilities.push(TriggeredAbility {
         event: EventSpec::new(
             EventKind::StepBegins(TurnStep::PostCombatMain),
             EventScope::ActivePlayer,
-        ),
-        effect: Effect::If {
-            cond: Predicate::LifeGainedThisTurnAtLeast {
-                who: PlayerRef::You,
-                at_least: Value::Const(2),
-            },
-            then: Box::new(becomes_prepared()),
-            else_: Box::new(Effect::Noop),
-        },
+        )
+        .with_filter(Predicate::LifeGainedThisTurnAtLeast {
+            who: PlayerRef::You,
+            at_least: Value::Const(2),
+        }),
+        effect: becomes_prepared(),
     });
     front
 }
@@ -578,8 +575,10 @@ pub fn emeritus_of_conflict() -> CardDefinition {
         "Lightning Bolt",
         cost(&[r()]),
         CardType::Instant,
+        // "any target" = creature, player, or planeswalker (CR 115.2) —
+        // a bare Target(0) would accept any permanent (lands included).
         Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
     );
@@ -656,16 +655,22 @@ pub fn emeritus_of_abundance() -> CardDefinition {
         vec![Keyword::Vigilance],
         spell,
     ));
-    front.triggered_abilities.push(on_attack(Effect::If {
-        cond: Predicate::SelectorCountAtLeast {
-            sel: Selector::EachPermanent(
-                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
-            ),
-            n: Value::Const(8),
-        },
+    // CR 603.4 — the intervening 'if' lives in `event.filter` (trigger-time
+    // check); the inner `Effect::If` re-checks at resolution (the attack-
+    // trigger path doesn't re-check filters).
+    let eight_lands = || Predicate::SelectorCountAtLeast {
+        sel: Selector::EachPermanent(
+            SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+        ),
+        n: Value::Const(8),
+    };
+    let mut attack_trigger = on_attack(Effect::If {
+        cond: eight_lands(),
         then: Box::new(becomes_prepared()),
         else_: Box::new(Effect::Noop),
-    }));
+    });
+    attack_trigger.event = attack_trigger.event.with_filter(eight_lands());
+    front.triggered_abilities.push(attack_trigger);
     front
 }
 
@@ -782,8 +787,14 @@ pub fn leech_collector() -> CardDefinition {
         vec![],
         spell,
     );
+    // "For the first time each turn" — the filter reads the pre-batch
+    // "already gained this turn" flag (a gain before Leech Collector hit
+    // the battlefield disqualifies the whole turn), and `once_per_turn`
+    // caps a multi-event first batch to a single fire.
     front.triggered_abilities.push(TriggeredAbility {
-        event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl).once_per_turn(),
+        event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl)
+            .with_filter(Predicate::FirstLifeGainThisTurn { who: PlayerRef::You })
+            .once_per_turn(),
         effect: becomes_prepared(),
     });
     front
@@ -1251,9 +1262,9 @@ pub fn tam_observant_sequencer() -> CardDefinition {
 /// Kirol, History Buff // Pack a Punch — {R}{W} // {1}{R}{W}.
 ///
 /// Front: 2/3 Legendary Vampire Cleric. "Whenever one or more cards
-/// leave your graveyard, Kirol becomes prepared." (The engine fires
-/// `CardLeftGraveyard` once per card; the prepared flag is idempotent
-/// at one counter, matching the "one or more" batching.)
+/// leave your graveyard, Kirol becomes prepared." (Trigger dispatch
+/// batches simultaneous `CardLeftGraveyard` emissions to one fire per
+/// batch, matching the printed "one or more".)
 ///
 /// Prepare spell: sorcery — mill a card. Put two +1/+1 counters on
 /// target creature. It gains trample until end of turn.

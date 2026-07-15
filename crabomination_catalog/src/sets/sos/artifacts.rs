@@ -345,10 +345,11 @@ pub fn resonating_lute() -> CardDefinition {
 /// 1 damage to each opponent and you gain 1 life. / {T}: Mill a card.
 /// You may play that card this turn."
 ///
-/// Wired against the new `EventKind::CardLeftGraveyard` event — every
-/// gy-leave drains 1 (and the printed "one or more" wording is naturally
-/// per-card emission, same approximation as Hardened Academic / Spirit
-/// Mascot / Garrison Excavator).
+/// Wired against the new `EventKind::CardLeftGraveyard` event — a
+/// gy-leave drains 1; trigger dispatch collapses a simultaneous
+/// multi-card exit to a single fire, matching the printed "one or
+/// more" (same batching as Hardened Academic / Spirit Mascot /
+/// Garrison Excavator).
 ///
 /// Push (modern_decks): the {T}: Mill's "you may play that card this
 /// turn" rider is **now wired** via `Effect::GrantMayPlay` +

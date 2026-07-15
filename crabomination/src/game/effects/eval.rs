@@ -929,6 +929,10 @@ impl GameState {
                     .map(|p| self.players[p].life_gained_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::FirstLifeGainThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .map(|p| !self.players[p].gained_life_earlier_this_turn)
+                .unwrap_or(false),
             Predicate::ExpendReached(n) => {
                 // CR 700.14 — fired only on the cost-payment that pushes the
                 // turn's spell-mana total from below `n` up to at least `n`.

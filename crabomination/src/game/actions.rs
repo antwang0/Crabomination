@@ -1785,9 +1785,14 @@ impl GameState {
                     applies_to: crate::effect::Selector::This,
                     condition,
                 } => {
-                    let ctx = crate::game::effects::EffectContext::for_ability(
+                    let mut ctx = crate::game::effects::EffectContext::for_ability(
                         self_id, self_seat, None,
                     );
+                    // X-conditional enters-tapped ("enters tapped if X is 2
+                    // or less" — Slumbering Trudge): the cast's X was
+                    // stamped on the instance at resolution, thread it so
+                    // `Value::XFromCost` predicates read the real X.
+                    ctx.x_value = self.battlefield[idx].cast_x_value;
                     if !self.evaluate_predicate(condition, &ctx) {
                         should_tap = true;
                         break;
@@ -1959,6 +1964,26 @@ impl GameState {
                         .x_value(cast_x)
                         .build(),
                 );
+            }
+            // CR 603 — a triggered ability choosing targets fires
+            // "becomes the target" listeners (Tenured Concocter), same as
+            // the cast/activated paths. Only for effects that DECLARE a
+            // target slot (printed "target …" wording), and only for
+            // battlefield permanents.
+            if multiplier > 0 && effect.requires_target() {
+                let became: Vec<GameEvent> = auto_target
+                    .iter()
+                    .chain(additional.iter())
+                    .filter_map(|t| match t {
+                        Target::Permanent(id) if self.battlefield_find(*id).is_some() => {
+                            Some(GameEvent::BecameTarget { target: *id, caster: controller })
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                if !became.is_empty() {
+                    self.dispatch_triggers_for_events(&became);
+                }
             }
         }
     }
@@ -4954,6 +4979,15 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        // Colored-aware target-conditional reduction (Brush Off's "{1}{U}
+        // less if it targets an instant or sorcery spell") — mandatory per
+        // CR 601.2f, removed pip-by-pip.
+        if let Some((filter, less)) = &card.definition.self_cost_reduction_cost_if_target
+            && let Some(tgt) = target.as_ref()
+            && self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
+        {
+            cost.reduce_by_cost(less);
+        }
         // Delve (CR 702.66): each graveyard card to be exiled pays {1} of the
         // generic cost. The reduction is clamped to the generic portion by
         // `reduce_generic`; the cards themselves are exiled only after a
@@ -5747,10 +5781,21 @@ impl GameState {
         // cast before it this turn. `spells_cast_this_turn` already includes
         // this spell (bumped above), so prior spells = count - 1. Capture the
         // bits needed to mint copies before `card` is moved onto the stack.
-        let storm_copies = card
+        // Statics-granted storm ("Instant and sorcery spells you cast have
+        // storm" — Prismari, the Inspiration): granted at cast time so the
+        // copy count is the true CR 702.40 storm count.
+        let granted_storm = (card.definition.is_instant() || card.definition.is_sorcery())
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::GrantStormToISSpells)
+                    })
+            });
+        let storm_copies = (card
             .definition
             .keywords
             .contains(&Keyword::Storm)
+            || granted_storm)
             .then(|| {
                 (
                     card.definition.clone(),
@@ -7570,6 +7615,14 @@ impl GameState {
         let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref()) + emerge_reduction;
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
+        }
+        // Colored-aware target-conditional reduction — applies uniformly
+        // across cast paths (CR 601.2f).
+        if let Some((filter, less)) = &card.definition.self_cost_reduction_cost_if_target
+            && let Some(tgt) = target.as_ref()
+            && self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
+        {
+            mana_cost.reduce_by_cost(less);
         }
         if let Some((_, ref sac_cost)) = offering_pick {
             mana_cost.reduce_by_cost(sac_cost);

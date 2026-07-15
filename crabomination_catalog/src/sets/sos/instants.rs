@@ -2,7 +2,7 @@
 
 use super::creatures::inkling_token;
 use crate::card::{
-    AlternativeCost, CardDefinition, CardType, CounterType, Effect, Keyword, SelectionRequirement,
+    CardDefinition, CardType, CounterType, Effect, Keyword, SelectionRequirement,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
@@ -45,11 +45,9 @@ pub fn erode() -> CardDefinition {
 /// Harsh Annotation — {1}{W} Instant.
 /// "Destroy target creature. Its controller creates a 1/1 white and black
 /// Inkling creature token with flying." The token goes to the dead
-/// creature's owner via `PlayerRef::OwnerOf` (resolved off LKI;
-/// `place_card_in_dest` walks graveyards if the destroy already moved it).
-/// Accepted approximation: printed text says "its controller creates" —
-/// for a stolen creature (owner ≠ controller) the token goes to the
-/// wrong player here.
+/// creature's CONTROLLER via `PlayerRef::ControllerOf` — resolved off
+/// the death-time LKI snapshot (CR 608.2h), so a stolen creature's
+/// token correctly goes to the thief, not the owner.
 pub fn harsh_annotation() -> CardDefinition {
     CardDefinition {
         name: "Harsh Annotation",
@@ -60,7 +58,7 @@ pub fn harsh_annotation() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Creature),
             },
             Effect::CreateToken {
-                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
                 definition: inkling_token(),
             },
@@ -175,10 +173,10 @@ pub fn banishing_betrayal() -> CardDefinition {
 /// sorcery spell. / Counter target spell."
 ///
 /// Counter half wired via `Effect::CounterSpell`. The "{1}{U} less when
-/// it targets an instant/sorcery" rider is modeled as an `AlternativeCost`
-/// of `{1}{U}` gated by a `target_filter` of IS spells on the stack — aim
-/// at an IS spell and the reduced cost is available; anything else pays
-/// the full `{2}{U}{U}`.
+/// it targets an instant/sorcery" rider is a MANDATORY, colored-aware
+/// cost reduction (`self_cost_reduction_cost_if_target` → CR 601.2f) —
+/// aiming at an IS spell automatically pays {1}{U}; the caster cannot
+/// choose to pay full price against an IS target.
 pub fn brush_off() -> CardDefinition {
     use crate::mana::u;
     CardDefinition {
@@ -188,38 +186,13 @@ pub fn brush_off() -> CardDefinition {
         effect: Effect::CounterSpell {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
         },
-        // Push (modern_decks): "{1}{U} less if it targets an instant or
-        // sorcery spell" rider wired via `AlternativeCost` with a target
-        // filter restricting to spells on the stack matching IS card type.
-        // Alt cost is {1}{U} (the {1}{U} reduction from printed {2}{U}{U})
-        // — when the caster aims at an IS spell on the stack, they can cast
-        // via the alt path at half the mana. Non-IS spells fall back to the
-        // hard-counter at the full {2}{U}{U} cost.
-        alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[generic(1), u()]),
-            life_cost: 0,
-            exile_filter: None,
-            evoke_sacrifice: false,
-            not_your_turn_only: false,
-            target_filter: Some(
-                SelectionRequirement::IsSpellOnStack.and(
-                    SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                ),
+        self_cost_reduction_cost_if_target: Some((
+            SelectionRequirement::IsSpellOnStack.and(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
             ),
-            condition: None,
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
-            effect_override: None,
-            dash: false,
-            blitz: false,
-            flash: false,
-            marks_kicked: false,
-            emerge: None,
-            impending: 0,
-            offering: None,
-            warp: false,        }),
+            cost(&[generic(1), u()]),
+        )),
         ..Default::default()
     }
 }
@@ -281,7 +254,8 @@ pub fn mana_sculpt() -> CardDefinition {
 /// Run Behind — {3}{U} Instant. Target creature's owner puts it on their
 /// choice of the top or bottom of their library (`LibraryPosition::
 /// OwnerChoice`). The "{1} less if it targets an attacking creature" rider
-/// rides `AlternativeCost.target_filter`.
+/// is a MANDATORY automatic reduction via `self_cost_reduction_if_target`
+/// (CR 601.2f).
 pub fn run_behind() -> CardDefinition {
     use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
     use crate::mana::u;
@@ -296,28 +270,13 @@ pub fn run_behind() -> CardDefinition {
                 pos: LibraryPosition::OwnerChoice,
             },
         },
-        alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[generic(2), u()]),
-            life_cost: 0,
-            exile_filter: None,
-            evoke_sacrifice: false,
-            not_your_turn_only: false,
-            target_filter: Some(
-                SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
-            ),
-            condition: None,
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
-            effect_override: None,
-            dash: false,
-            blitz: false,
-            flash: false,
-            marks_kicked: false,
-            emerge: None,
-            impending: 0,
-            offering: None,
-            warp: false,        }),
+        // "{1} less if it targets an attacking creature" — a MANDATORY
+        // reduction (CR 601.2f) via `self_cost_reduction_if_target`, not
+        // an opt-in alternative cost.
+        self_cost_reduction_if_target: Some((
+            SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+            1,
+        )),
         ..Default::default()
     }
 }
@@ -1081,16 +1040,11 @@ pub fn quandrix_charm() -> CardDefinition {
 /// "This spell costs {3} less to cast if it targets a tapped creature.
 /// Destroy target creature."
 ///
-/// Push (modern_decks): "{3} less if it targets a tapped creature" rider
-/// now wired via `AlternativeCost { mana_cost: {1}{W}, target_filter:
-/// Some(Creature + Tapped) }`. When the caster picks a tapped creature
-/// target, they can use the alt-cost cast path at {1}{W} (a {3} mana
-/// reduction from the printed {4}{W}); when the target is untapped,
-/// the alt-cost target filter fails validation and the spell can only
-/// be cast at its printed cost. The destroy-creature body is unchanged.
-/// Same pattern as Killian's target-aware cost reduction (STX) but on
-/// a per-spell alt-cost rather than a static — cleaner because the
-/// discount is intrinsic to this one card.
+/// The "{3} less if it targets a tapped creature" rider is a MANDATORY
+/// automatic reduction via `self_cost_reduction_if_target` (CR 601.2f):
+/// against a tapped target a normal cast simply costs {1}{W}; against
+/// an untapped target the printed {4}{W} applies. The destroy-creature
+/// body is unchanged.
 pub fn ajanis_response() -> CardDefinition {
     CardDefinition {
         name: "Ajani's Response",
@@ -1099,28 +1053,13 @@ pub fn ajanis_response() -> CardDefinition {
         effect: Effect::Destroy {
             what: target_filtered(SelectionRequirement::Creature),
         },
-        alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[generic(1), w()]),
-            life_cost: 0,
-            exile_filter: None,
-            evoke_sacrifice: false,
-            not_your_turn_only: false,
-            target_filter: Some(
-                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
-            ),
-            condition: None,
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
-            effect_override: None,
-            dash: false,
-            blitz: false,
-            flash: false,
-            marks_kicked: false,
-            emerge: None,
-            impending: 0,
-            offering: None,
-            warp: false,        }),
+        // "{3} less if it targets a tapped creature" — a MANDATORY
+        // reduction (CR 601.2f) via `self_cost_reduction_if_target`, not
+        // an opt-in alternative cost.
+        self_cost_reduction_if_target: Some((
+            SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            3,
+        )),
         ..Default::default()
     }
 }
@@ -1244,12 +1183,10 @@ pub fn burrog_barrage() -> CardDefinition {
 /// graveyard this turn. / Wilt in the Heat deals 5 damage to target
 /// creature. If that creature would die this turn, exile it instead."
 ///
-/// Push (modern_decks): the "{2} less if cards left your graveyard this
-/// turn" cost reduction **is now wired** via the new
-/// `AlternativeCost.condition: Some(Predicate)` field gated on
-/// `Predicate::CardsLeftGraveyardThisTurnAtLeast(You, 1)`. When the
-/// gate passes, the spell is castable for {R}{W} via the alt cost path;
-/// otherwise the regular {2}{R}{W} cost applies. The "if that creature
+/// The "{2} less if cards left your graveyard this turn" cost reduction
+/// is a MANDATORY automatic reduction via `StaticEffect::SelfCostReducedIf`
+/// gated on `Predicate::CardsLeftGraveyardThisTurnAtLeast(You, 1)` — when
+/// the gate passes, a normal cast simply costs {R}{W} (CR 601.2f). The "if that creature
 /// would die this turn, exile it instead" rider **is now wired** via the
 /// `Effect::ExileIfWouldDieThisTurn` death-replacement primitive: the
 /// replacement is installed first, then the 5 damage is dealt, so the
@@ -1258,7 +1195,6 @@ pub fn burrog_barrage() -> CardDefinition {
 /// > 5) but dies later this turn is exiled too, and an indestructible
 /// creature — which never dies — is correctly left alone.
 pub fn wilt_in_the_heat() -> CardDefinition {
-    use crate::card::AlternativeCost;
     use crate::effect::Predicate;
     use crate::mana::{r, w};
     CardDefinition {
@@ -1281,29 +1217,20 @@ pub fn wilt_in_the_heat() -> CardDefinition {
                 amount: Value::Const(5),
             },
         ]),
-        alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[r(), w()]),
-            life_cost: 0,
-            exile_filter: None,
-            evoke_sacrifice: false,
-            not_your_turn_only: false,
-            target_filter: None,
-            condition: Some(Predicate::CardsLeftGraveyardThisTurnAtLeast {
-                who: PlayerRef::You,
-                at_least: Value::Const(1),
-            }),
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
-            effect_override: None,
-            dash: false,
-            blitz: false,
-            flash: false,
-            marks_kicked: false,
-            emerge: None,
-            impending: 0,
-            offering: None,
-            warp: false,        }),
+        // "{2} less if one or more cards left your graveyard this turn" —
+        // a MANDATORY reduction (CR 601.2f) via `SelfCostReducedIf`, not
+        // an opt-in alternative cost.
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "This spell costs {2} less to cast if one or more cards \
+                          left your graveyard this turn.",
+            effect: crate::effect::StaticEffect::SelfCostReducedIf {
+                condition: Predicate::CardsLeftGraveyardThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                amount: 2,
+            },
+        }],
         ..Default::default()
     }
 }

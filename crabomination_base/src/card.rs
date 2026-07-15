@@ -2122,6 +2122,15 @@ pub struct CardDefinition {
     /// target at cast time. Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub self_cost_reduction_if_target: Option<(SelectionRequirement, u32)>,
+    /// The colored-aware sibling of `self_cost_reduction_if_target`:
+    /// "This spell costs [cost] less to cast if it targets [filter]."
+    /// The reduction is a full `ManaCost` removed pip-by-pip via
+    /// `ManaCost::reduce_by_cost` (CR 601.2f — a MANDATORY reduction,
+    /// not an opt-in alternative cost). Powers Brush Off's "{1}{U} less
+    /// if it targets an instant or sorcery spell". Defaults to `None`
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub self_cost_reduction_cost_if_target: Option<(SelectionRequirement, ManaCost)>,
     /// "This spell costs `{amount}` less to cast if you control a permanent
     /// matching `filter`." Flat (non-scaling) board-state-gated generic
     /// reductions — Pearl of Wisdom ("{1} less if you control an Otter").

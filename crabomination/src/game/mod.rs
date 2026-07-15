@@ -1349,6 +1349,22 @@ pub struct GameState {
     /// `Effect::ExileResolvingSpell` — same shape, exile-bound.
     #[serde(skip)]
     pub(crate) exile_resolving_spell: bool,
+    /// Transient: players whose `gained_life_earlier_this_turn` flag should
+    /// flip once the current trigger-dispatch batch finishes filter
+    /// evaluation (drained at the end of `push_ordered_trigger_candidates`,
+    /// so "first time each turn" filters inside the same batch still read
+    /// the pre-batch state — including across an order-triggers suspend).
+    #[serde(skip)]
+    pub(crate) life_gain_flag_pending: Vec<usize>,
+    /// Transient: graveyard cards whose `FromYourGraveyard` combat-damage
+    /// trigger already fired during the current combat-damage sub-step.
+    /// "Whenever one or more creatures you control deal combat damage to a
+    /// player" fires once per damage batch (CR 603.2), but the engine walks
+    /// attackers one at a time — this set dedupes the per-attacker walks.
+    /// Cleared at the top of each damage sub-step (first-strike and regular
+    /// damage are separate batches).
+    #[serde(skip)]
+    pub(crate) gy_combat_trigger_fired_this_step: Vec<CardId>,
     /// CR 728 — set by `Effect::EndTheTurn`; consumed after the current
     /// stack item finishes resolving (exile the stack, clear combat, jump
     /// to cleanup).
@@ -2014,6 +2030,8 @@ impl Clone for GameState {
             shuffle_resolving_spell_into_library: self.shuffle_resolving_spell_into_library,
             return_resolving_spell_to_hand: self.return_resolving_spell_to_hand,
             exile_resolving_spell: self.exile_resolving_spell,
+            gy_combat_trigger_fired_this_step: self.gy_combat_trigger_fired_this_step.clone(),
+            life_gain_flag_pending: self.life_gain_flag_pending.clone(),
             end_turn_requested: self.end_turn_requested,
             cipher_encode_pending: self.cipher_encode_pending,
             haunt_pending: self.haunt_pending.clone(),
@@ -2185,6 +2203,8 @@ impl GameState {
             shuffle_resolving_spell_into_library: false,
             return_resolving_spell_to_hand: false,
             exile_resolving_spell: false,
+            gy_combat_trigger_fired_this_step: Vec::new(),
+            life_gain_flag_pending: Vec::new(),
             end_turn_requested: false,
             cipher_encode_pending: None,
             haunt_pending: None,
@@ -9671,6 +9691,39 @@ impl GameState {
             folded = events.iter().cloned().chain(synthesized).collect();
             &folded
         };
+        // "Whenever one or more cards leave your graveyard" fires once per
+        // simultaneous batch (every catalog `CardLeftGraveyard` listener is
+        // of that shape). The emission sites push one event per card — the
+        // per-turn tally and the client event mirror want the per-card
+        // granularity — so collapse to the first event per player here, at
+        // trigger dispatch only.
+        let gy_batched: Vec<GameEvent>;
+        let events: &[GameEvent] = if events
+            .iter()
+            .filter(|e| matches!(e, GameEvent::CardLeftGraveyard { .. }))
+            .count()
+            > 1
+        {
+            let mut seen_players: Vec<usize> = Vec::new();
+            gy_batched = events
+                .iter()
+                .filter(|e| match e {
+                    GameEvent::CardLeftGraveyard { player, .. } => {
+                        if seen_players.contains(player) {
+                            false
+                        } else {
+                            seen_players.push(*player);
+                            true
+                        }
+                    }
+                    _ => true,
+                })
+                .cloned()
+                .collect();
+            &gy_batched
+        } else {
+            events
+        };
         if events.is_empty() {
             return;
         }
@@ -10395,6 +10448,17 @@ impl GameState {
         // so AutoDecider/bot games (and the bulk of the test suite) are
         // untouched; AutoDecider would keep the default order anyway.
         candidates.sort_by_key(|c| apnap_rank(c.controller));
+        // Queue the "gained life earlier this turn" flag flips for this
+        // batch's LifeGained recipients — applied AFTER filter evaluation
+        // in `push_ordered_trigger_candidates`, so "first time each turn"
+        // filters in this very batch still see the pre-batch state.
+        for ev in events {
+            if let GameEvent::LifeGained { player, .. } = ev
+                && !self.life_gain_flag_pending.contains(player)
+            {
+                self.life_gain_flag_pending.push(*player);
+            }
+        }
         // May suspend on a networked controller's `OrderTriggers` pick
         // (CR 603.3b) — the resume path re-enters
         // `push_ordered_trigger_candidates` with the finished order.
@@ -10561,6 +10625,14 @@ impl GameState {
                         intervening_if: None,
                     });
                 }
+            }
+        }
+        // Filter evaluation for this batch is done — flip the queued
+        // "gained life earlier this turn" flags (Leech Collector's
+        // "first time each turn" gate).
+        for p in std::mem::take(&mut self.life_gain_flag_pending) {
+            if let Some(pl) = self.players.get_mut(p) {
+                pl.gained_life_earlier_this_turn = true;
             }
         }
         self.drain_trigger_queue(queue);
@@ -10837,6 +10909,17 @@ impl GameState {
         // `additional_targets`. Without this the auto-targeter under-filled to
         // a single target.
         let additional = self.auto_extra_targets_for(&effect, source, controller, target.clone());
+        // Only effects that DECLARE a target slot (printed "target …"
+        // wording → `Selector::Target`/`TargetFiltered`) count as
+        // targeting for CR 115. An event-bound subject riding the target
+        // slot (Horobi's "destroy it" = `Selector::TriggerSource`) is not
+        // a target and must not fire BecameTarget listeners.
+        let declares_target = effect.requires_target();
+        let target_slots: Vec<Target> = if declares_target {
+            target.iter().cloned().chain(additional.iter().cloned()).collect()
+        } else {
+            Vec::new()
+        };
         self.stack.push(
             TriggerPush::new(source, controller, effect)
                 .target(target)
@@ -10847,6 +10930,22 @@ impl GameState {
                 .intervening_if(intervening_if)
                 .build(),
         );
+        // CR 603 — a TRIGGERED ability choosing targets also fires
+        // "becomes the target of a spell or ability" listeners (Tenured
+        // Concocter); the cast and activated-ability paths already emit
+        // this, triggered abilities previously never did.
+        let became: Vec<GameEvent> = target_slots
+            .iter()
+            .filter_map(|t| match t {
+                Target::Permanent(id) if self.battlefield_find(*id).is_some() => {
+                    Some(GameEvent::BecameTarget { target: *id, caster: controller })
+                }
+                _ => None,
+            })
+            .collect();
+        if !became.is_empty() {
+            self.dispatch_triggers_for_events(&became);
+        }
     }
 
     /// Pick the slot-1+ targets for an engine-resolved `Effect::ApplyToTargets`
@@ -11917,6 +12016,17 @@ impl GameState {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let mut events = vec![];
+                // CR 701.19c — a searched library is shuffled whether or not
+                // anything was found (declines included). Shuffling first is
+                // safe: the pick is extracted by id below. Library
+                // destinations (Goblin Recruiter's "shuffle, then put them on
+                // top") are exempt — the multi-pick search chains single
+                // searches, and a later link's shuffle would bury the cards
+                // an earlier link already placed on top.
+                if !matches!(to, crate::effect::ZoneDest::Library { .. }) {
+                    use rand::seq::SliceRandom;
+                    self.players[player].library.shuffle(&mut rand::rng());
+                }
                 if let Some(card_id) = chosen_id
                     && eligible.as_ref().is_none_or(|e| e.contains(card_id))
                 {
@@ -13758,6 +13868,9 @@ fn static_effect_to_effects(
             // GrantAffinityToISSpells — read at cast time by
             // `cost_reduction_for_spell` directly; no layer effect.
             | StaticEffect::GrantAffinityToISSpells { .. }
+            // GrantStormToISSpells — read at cast time by `cast_spell`'s
+            // intrinsic-storm branch; no layer effect.
+            | StaticEffect::GrantStormToISSpells
             // ExtraEtbCountersForCreatureCasts — read at creature-spell
             // resolution time in `stack.rs::resolve_spell`; no layer effect.
             | StaticEffect::ExtraEtbCountersForCreatureCasts { .. }

@@ -1180,8 +1180,10 @@ pub fn growth_curve() -> CardDefinition {
 /// ✅ Body wired (pump + draw). The graveyard-resident may-pay-to-
 /// return rider now wired via the new `EventScope::FromYourGraveyard`
 /// extension on `fire_combat_damage_to_player_triggers` (push XXV).
-/// When your creature connects, every Killian's Confidence sitting in
-/// your graveyard fires; controller is asked yes/no via `MayPay`, and
+/// When your creatures connect, each Killian's Confidence sitting in
+/// your graveyard fires once per damage batch (the printed "one or
+/// more creatures" wording — several attackers connecting in the same
+/// sub-step give one prompt); controller is asked yes/no via `MayPay`, and
 /// on yes + sufficient mana the card moves back to hand. The {W/B}
 /// may-pay pip is a real `ManaSymbol::Hybrid(White, Black)`, payable
 /// with either color.
@@ -1272,40 +1274,51 @@ pub fn planar_engineering() -> CardDefinition {
 /// their hand, then sacrifices half the permanents they control of
 /// their choice. Round down each time."
 ///
-/// Wired via a `ForEach Selector::Player(EachPlayer)` whose body uses
-/// `PlayerRef::Triggerer` (the iterated player) for each clause. Each
-/// of the three "half" amounts is computed via the new
-/// `Value::HalfDown(...)` primitive against the iterated player's life,
-/// hand size, and `PermanentCountControlledBy` count. Sacrifice uses
-/// `who: Triggerer` so the existing per-controller candidate filter in
-/// `Effect::Sacrifice` correctly limits each player to *their* permanents,
-/// and the `Permanent` filter picks any nonland-or-land permanent.
+/// Wired as a `Seq` of three `ForEach Selector::Player(EachPlayer)`
+/// passes — the printed "then" sequences each clause across ALL players
+/// (everyone loses life, THEN everyone discards, THEN everyone
+/// sacrifices), so player B's discard count is read after player A's
+/// life loss, exactly as a table would resolve it. Each pass's body
+/// uses `PlayerRef::Triggerer` (the iterated player); the three "half"
+/// amounts use `Value::HalfDown(...)` against the iterated player's
+/// life, hand size, and `PermanentCountControlledBy` count. Sacrifice
+/// uses `who: Triggerer` so the existing per-controller candidate
+/// filter in `Effect::Sacrifice` correctly limits each player to
+/// *their* permanents, and the `Permanent` filter picks any
+/// nonland-or-land permanent.
 pub fn pox_plague() -> CardDefinition {
+    let each_player = || Selector::Player(PlayerRef::EachPlayer);
     CardDefinition {
         name: "Pox Plague",
         cost: cost(&[b(), b(), b(), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ForEach {
-            selector: Selector::Player(PlayerRef::EachPlayer),
-            body: Box::new(Effect::Seq(vec![
-                Effect::LoseLife {
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: each_player(),
+                body: Box::new(Effect::LoseLife {
                     who: Selector::Player(PlayerRef::Triggerer),
                     amount: Value::HalfDown(Box::new(Value::LifeOf(PlayerRef::Triggerer))),
-                },
-                Effect::Discard {
+                }),
+            },
+            Effect::ForEach {
+                selector: each_player(),
+                body: Box::new(Effect::Discard {
                     who: Selector::Player(PlayerRef::Triggerer),
                     amount: Value::HalfDown(Box::new(Value::HandSizeOf(PlayerRef::Triggerer))),
                     random: false,
-                },
-                Effect::Sacrifice {
+                }),
+            },
+            Effect::ForEach {
+                selector: each_player(),
+                body: Box::new(Effect::Sacrifice {
                     who: Selector::Player(PlayerRef::Triggerer),
                     count: Value::HalfDown(Box::new(Value::PermanentCountControlledBy(
                         PlayerRef::Triggerer,
                     ))),
                     filter: SelectionRequirement::Permanent,
-                },
-            ])),
-        },
+                }),
+            },
+        ]),
         ..Default::default()
     }
 }

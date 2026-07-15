@@ -143,6 +143,17 @@ pub struct Player {
     /// Default-deserializes to 0 for snapshots predating the field.
     #[serde(default)]
     pub life_gained_this_turn: u32,
+    /// True once a life-gain trigger batch for this player has finished
+    /// dispatching on the current turn. Powers "whenever you gain life for
+    /// the first time each turn" (Leech Collector): the trigger's filter
+    /// reads the flag *before* it flips (set at the end of the dispatch
+    /// batch), so only the turn's first gain batch qualifies — a gain that
+    /// happened before the listener arrived still disqualifies later gains.
+    /// Reset for every player at each untap (the printed "each turn" keys
+    /// on the turn boundary, not the owner's turn). Defaults to false for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub gained_life_earlier_this_turn: bool,
     /// Number of cards this player has drawn on the current turn. Reset
     /// to 0 in `do_untap`. Powers Strixhaven's Quandrix scaling — e.g.
     /// Fractal Anomaly creates a 0/0 with X +1/+1 counters where X is
@@ -692,6 +703,7 @@ impl Player {
             noncreature_spells_cast_this_game_turn: 0,
             nonartifact_spells_cast_this_game_turn: 0,
             life_gained_this_turn: 0,
+            gained_life_earlier_this_turn: false,
             cards_drawn_this_turn: 0,
             cards_drawn_this_step: 0,
             cards_left_graveyard_this_turn: 0,

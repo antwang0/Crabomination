@@ -168,8 +168,9 @@ pub fn owlin_historian() -> CardDefinition {
                 },
             },
             // Whenever one or more cards leave your graveyard, this
-            // creature gets +1/+1 EOT (per-card emission, see
-            // `EventKind::CardLeftGraveyard` in TODO.md).
+            // creature gets +1/+1 EOT (trigger dispatch batches the
+            // per-card `CardLeftGraveyard` emissions — one fire per
+            // simultaneous batch, matching the printed "one or more").
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
                 effect: Effect::PumpPT {
@@ -653,9 +654,9 @@ pub fn rearing_embermare() -> CardDefinition {
 /// creature you control. / At the beginning of combat on your turn, exile
 /// up to one target card from a graveyard."
 ///
-/// Wired with both triggers. The combat trigger uses a graveyard-card
-/// target; AutoDecider picks the first eligible card if any are
-/// available, or no-ops the trigger when graveyards are empty.
+/// Wired with both triggers. The combat trigger's "up to one target"
+/// is a real optional slot (`min_targets: 0`) — the controller may
+/// decline even when graveyard cards exist.
 pub fn ascendant_dustspeaker() -> CardDefinition {
     use crate::card::{CounterType, SelectionRequirement};
     use crate::effect::{ZoneDest};
@@ -685,14 +686,22 @@ pub fn ascendant_dustspeaker() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             },
+            // "Exile up to one target card from a graveyard" — a genuinely
+            // optional target slot (`min_targets: 0`), so the controller
+            // may decline even when graveyard cards exist.
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(TurnStep::BeginCombat),
                     EventScope::ActivePlayer,
                 ),
-                effect: Effect::Move {
-                    what: target_filtered(SelectionRequirement::InGraveyard),
-                    to: ZoneDest::Exile,
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: SelectionRequirement::InGraveyard,
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Exile,
+                    }),
                 },
             },
         ],
@@ -1064,10 +1073,20 @@ pub fn scolding_administrator() -> CardDefinition {
                 amount: Value::Const(1),
             }),
             // Dies → if it had counters, put those counters on a target
-            // creature. Wrapped in `Effect::If` so the body only runs
-            // when the source actually died with +1/+1 counters.
+            // creature. CR 603.4 — the intervening 'if' lives in
+            // `event.filter` (trigger-time check, read off the graveyard
+            // CardInstance via the cross-zone `CountersOn` lookup); the
+            // inner `Effect::If` re-checks at resolution (the dies-trigger
+            // path doesn't re-check filters).
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource)
+                    .with_filter(Predicate::ValueAtLeast(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::PlusOnePlusOne,
+                        },
+                        Value::Const(1),
+                    )),
                 effect: Effect::If {
                     cond: Predicate::ValueAtLeast(
                         Value::CountersOn {
@@ -1151,12 +1170,19 @@ pub fn environmental_scientist() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        // "You MAY search" — the outer `MayDo` preserves the printed
+        // optionality: declining performs no search at all (no shuffle, no
+        // `searched_library_this_turn` mark for Archive Trap effects),
+        // which differs from searching and finding nothing.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Hand(PlayerRef::You),
+            effect: Effect::MayDo {
+                description: "Search your library for a basic land card?".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
             },
         }],
         ..Default::default()
@@ -1403,7 +1429,6 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
 pub fn startled_relic_sloth() -> CardDefinition {
     use crate::card::SelectionRequirement;
     use crate::effect::ZoneDest;
-    use crate::effect::shortcut::target_filtered;
     use crate::game::types::TurnStep;
     use crate::mana::r;
     CardDefinition {
@@ -1417,14 +1442,21 @@ pub fn startled_relic_sloth() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample, Keyword::Lifelink],
+        // "Exile up to one target card from a graveyard" — optional slot
+        // (`min_targets: 0`): the controller may decline.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::BeginCombat),
                 EventScope::ActivePlayer,
             ),
-            effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::InGraveyard),
-                to: ZoneDest::Exile,
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: SelectionRequirement::InGraveyard,
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Exile,
+                }),
             },
         }],
         ..Default::default()
@@ -1440,15 +1472,9 @@ pub fn startled_relic_sloth() -> CardDefinition {
 /// every time a card leaves Hardened Academic's controller's
 /// graveyard (returned-to-hand, exiled-from-gy, reanimated, flashback
 /// cast, persist/undying return), the trigger fires and lands a
-/// +1/+1 counter on a target friendly creature.
-///
-/// Caveat: the printed Oracle says "one or more cards leave your
-/// graveyard" (a single batched trigger no matter how many cards left).
-/// The engine emits one `CardLeftGraveyard` event per card and so
-/// fires the trigger per-card; in 2-player play this is a strict
-/// power upgrade on multi-card-removal turns (Pull from the Grave
-/// returns 1 card today; future multi-target cards would scale extra
-/// counters).
+/// +1/+1 counter on a target friendly creature. The emission is
+/// per-card, but trigger dispatch collapses a simultaneous batch to a
+/// single fire, matching the printed "one or more cards leave".
 pub fn hardened_academic() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     use crate::effect::shortcut::target_filtered;
@@ -1508,16 +1534,16 @@ pub fn hardened_academic() -> CardDefinition {
 /// "This creature enters with a number of stun counters on it equal to
 /// three minus X. If X is 2 or less, it enters tapped."
 ///
-/// X is read at resolution time from `Value::XFromCost` via the
-/// engine's new `StackItem::Trigger.x_value` plumbing. Stun-counter
-/// count is computed as `max(0, 3 - X)` so X≥3 leaves the trudge
-/// counter-free. The "enters tapped if X ≤ 2" half is approximated by
-/// always tapping itself on ETB and letting the stun counters keep it
-/// down for the right number of turns (X=3 leaves it untapped via the
-/// untap step on the next turn anyway since 0 stun counters lift the
-/// can't-untap effect).
+/// Both halves are true CR 614.12/614.13 replacements now:
+/// - Stun counters ride `enters_with_counters` (`max(0, 3 - X)`), landing
+///   before the first SBA sweep and unrespondable.
+/// - "If X is 2 or less, it enters tapped" is a
+///   `StaticEffect::EntersTappedUnless` gated on `X ≥ 3`, evaluated
+///   against the cast's stamped X — with X ≥ 3 the trudge genuinely
+///   enters untapped (no tap-trigger window at all).
 pub fn slumbering_trudge() -> CardDefinition {
     use crate::card::CounterType;
+    use crate::effect::{Predicate, StaticAbility, StaticEffect};
     use crate::mana::{ManaSymbol, g};
     let mut spell_cost = cost(&[g()]);
     spell_cost.symbols.insert(0, ManaSymbol::X);
@@ -1531,21 +1557,19 @@ pub fn slumbering_trudge() -> CardDefinition {
         },
         power: 6,
         toughness: 6,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Tap {
-                    what: Selector::This,
-                },
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::Stun,
-                    amount: Value::NonNeg(Box::new(Value::Diff(
-                        Box::new(Value::Const(3)),
-                        Box::new(Value::XFromCost),
-                    ))),
-                },
-            ]),
+        enters_with_counters: Some((
+            CounterType::Stun,
+            Value::NonNeg(Box::new(Value::Diff(
+                Box::new(Value::Const(3)),
+                Box::new(Value::XFromCost),
+            ))),
+        )),
+        static_abilities: vec![StaticAbility {
+            description: "If X is 2 or less, this creature enters tapped.",
+            effect: StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(3)),
+            },
         }],
         ..Default::default()
     }
@@ -2432,12 +2456,10 @@ pub fn postmortem_professor() -> CardDefinition {
 /// "Whenever one or more cards leave your graveyard, put a +1/+1 counter
 /// on this creature."
 ///
-/// Wired against the new `EventKind::CardLeftGraveyard` — every card
+/// Wired against the new `EventKind::CardLeftGraveyard` — a card
 /// removal from the controller's graveyard puts a +1/+1 counter on the
-/// Mascot. Per-card emission means a multi-card return (future
-/// Borrowed-Knowledge-style) drops more counters than the printed
-/// "one or more" wording promises; this is a strict upgrade and stays
-/// aligned with the typical 1-card-per-effect Strixhaven game flow.
+/// Mascot. Trigger dispatch collapses a simultaneous multi-card exit
+/// to a single fire, matching the printed "one or more".
 pub fn spirit_mascot() -> CardDefinition {
     use crate::card::CounterType;
     use crate::mana::r;
@@ -2537,8 +2559,7 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
 /// from re-triggering on the spells it cascades into (those are cast from
 /// exile, not hand).
 pub fn quandrix_the_proof() -> CardDefinition {
-    use crate::card::{MayPlayDuration, Predicate, Supertype};
-    use crate::effect::{RevealMissDest, ZoneDest};
+    use crate::card::{Predicate, Supertype};
     use crate::mana::{g, u};
     CardDefinition {
         name: "Quandrix, the Proof",
@@ -2552,41 +2573,16 @@ pub fn quandrix_the_proof() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Trample],
-        // Push (modern_decks, batch 79): Cascade. "When you cast this
-        // spell, exile cards from the top of your library until you
-        // exile a nonland card with mana value less than this spell's
-        // mana value. You may cast that card without paying its mana
-        // cost. Put the rest on the bottom of your library in a random
-        // order." Wired as SpellCast/SelfSource trigger →
-        // RevealUntilFind { Nonland ∧ MV ≤ 5 (printed CMC 6 − 1), to:
-        // Exile, miss_dest: BottomRandom } + GrantMayPlay {LastMoved,
-        // EndOfThisTurn}. Same primitive chain as Velomachus Lorehold.
-        // Approximation: the "less than the spell's mana value" cap is
-        // hard-coded to ManaValueAtMost(5) (Quandrix the Proof's
-        // printed CMC is 6, so "less than 6" = "≤ 5"). The cap doesn't
-        // shift if X-cost extensions enter the picture (Quandrix the
-        // Proof has no X in its cost, so this is exact for the printed
-        // card).
+        // Own cascade (CR 702.85): the real `Effect::Cascade` primitive —
+        // strict `mv < this spell's mana value` (read live off the stack
+        // via `ManaValueOf(This)`, not a hard-coded cap), a one-shot
+        // free-cast offer during trigger resolution, and a DECLINED hit is
+        // bottomed with the rest instead of being stranded in exile.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::RevealUntilFind {
-                    who: PlayerRef::You,
-                    find: SelectionRequirement::Nonland
-                        .and(SelectionRequirement::ManaValueAtMost(5)),
-                    to: ZoneDest::Exile,
-                    cap: Value::Const(60),
-                    life_per_revealed: 0,
-                    miss_dest: RevealMissDest::BottomRandom,
-                },
-                Effect::GrantMayPlay {
-                    what: Selector::LastMoved,
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    to_owner: false,
-                    exile_after: false,
-                    pay_own_cost: false, any_color: false,
-                },
-            ]),
+            effect: Effect::Cascade {
+                max_mv: Value::ManaValueOf(Box::new(Selector::This)),
+            },
         },
         // "Instant and sorcery spells you cast from your hand have cascade."
         TriggeredAbility {
@@ -2611,9 +2607,10 @@ pub fn quandrix_the_proof() -> CardDefinition {
 /// "Menace / Whenever one or more cards leave your graveyard, create a
 /// 2/2 red and white Spirit creature token."
 ///
-/// Wired against the new `EventKind::CardLeftGraveyard`. Each card
-/// removal from the controller's graveyard mints a 2/2 R/W Spirit
-/// token (shared `spirit_token()` from the sorceries module).
+/// Wired against the new `EventKind::CardLeftGraveyard`. A graveyard
+/// exit mints a 2/2 R/W Spirit token (shared `spirit_token()` from the
+/// sorceries module); a simultaneous multi-card exit is one batch and
+/// mints one token, matching the printed "one or more".
 pub fn garrison_excavator() -> CardDefinition {
     use super::sorceries::spirit_token;
     use crate::mana::r;
@@ -3203,12 +3200,13 @@ pub fn matterbending_mage() -> CardDefinition {
 /// "This spell costs {3} less to cast if creatures you control have
 /// total toughness 10 or greater. / When Orysa enters, draw two cards."
 ///
-/// The conditional "{3} less if total toughness ≥ 10" rider is wired
-/// as an `alternative_cost` of {1}{U} gated on a `condition` predicate
-/// summing the toughness of creatures you control (`ValueAtLeast(…,
-/// 10)`), evaluated at cast time. The ETB draw 2 is wired faithfully.
+/// The conditional "{3} less if total toughness ≥ 10" rider is a
+/// MANDATORY automatic reduction via `StaticEffect::SelfCostReducedIf`
+/// gated on a predicate summing the toughness of creatures you control
+/// (`ValueAtLeast(…, 10)`), evaluated at cast time (CR 601.2f). The ETB
+/// draw 2 is wired faithfully.
 pub fn orysa_tide_choreographer() -> CardDefinition {
-    use crate::card::{AlternativeCost, Supertype};
+    use crate::card::Supertype;
     use crate::effect::Predicate;
     use crate::mana::u;
     CardDefinition {
@@ -3229,39 +3227,25 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        // Push (modern_decks): "{3} less if creatures you control have
-        // total toughness 10 or greater" alt-cost rider wired via
-        // `AlternativeCost.condition`. The gate evaluates
-        // `ValueAtLeast(Sum of friendly creature toughness, 10)` against
-        // the cast-time context. Alt cost is {1}{U} ({3} less than the
-        // printed {4}{U}). Lets the printed Oracle cast Orysa as an
-        // ETB-draw-2 finisher off a wide go-wide board.
-        alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[generic(1), u()]),
-            life_cost: 0,
-            exile_filter: None,
-            evoke_sacrifice: false,
-            not_your_turn_only: false,
-            target_filter: None,
-            condition: Some(Predicate::ValueAtLeast(
-                Value::ToughnessOf(Box::new(Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                ))),
-                Value::Const(10),
-            )),
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
-            effect_override: None,
-            dash: false,
-            blitz: false,
-            flash: false,
-            marks_kicked: false,
-            emerge: None,
-            impending: 0,
-            offering: None,
-            warp: false,        }),
+        // "{3} less if creatures you control have total toughness 10 or
+        // greater" — a MANDATORY, automatic reduction (CR 601.2f) via
+        // `SelfCostReducedIf`, not an opt-in alternative cost: with the
+        // board condition met, Orysa simply costs {1}{U}, and the
+        // reduction composes with other cost adjustments like any other.
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "This spell costs {3} less to cast if creatures you \
+                          control have total toughness 10 or greater.",
+            effect: crate::effect::StaticEffect::SelfCostReducedIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::ToughnessOf(Box::new(Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ))),
+                    Value::Const(10),
+                ),
+                amount: 3,
+            },
+        }],
         ..Default::default()
     }
 }
@@ -4106,15 +4090,17 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
 /// mana cost from among them and put it into your hand. Put the rest on
 /// the bottom of your library in a random order."
 ///
-/// Now wired (push XVI): the "land OR card with {X}" filter uses the
-/// new `SelectionRequirement::HasXInCost` predicate ORed with `Land`.
-/// Misses go to the bottom of the library in a random order
-/// (`miss_dest: RevealMissDest::BottomRandom`), matching the printed
-/// "rest on the bottom of your library in a random order" rider. The
-/// `{G/U}` pip is a real `ManaSymbol::Hybrid(Green, Blue)`, payable with
-/// either green or blue.
+/// Wired via `Effect::LookPickToHand` — the true "look at the top five,
+/// pick ONE matching card of your choice, rest of ALL FIVE to the
+/// bottom" shape (the previous `RevealUntilFind` mandatorily grabbed the
+/// first match and left un-walked cards on top). The "land OR card with
+/// {X}" filter uses `SelectionRequirement::HasXInCost` ORed with `Land`.
+/// Engine-wide residual (shared with Dragonologist and every
+/// `LookPickToHand` user): a declined pick auto-fills under the
+/// AutoDecider harness, and the bottomed order is deterministic rather
+/// than random. The `{G/U}` pip is a real `ManaSymbol::Hybrid(Green,
+/// Blue)`, payable with either green or blue.
 pub fn paradox_surveyor() -> CardDefinition {
-    use crate::effect::ZoneDest;
     use crate::mana::{g, u};
     CardDefinition {
         name: "Paradox Surveyor",
@@ -4129,15 +4115,17 @@ pub fn paradox_surveyor() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::RevealUntilFind {
+            effect: Effect::LookPickToHand {
                 who: PlayerRef::You,
-                find: SelectionRequirement::Land.or(SelectionRequirement::HasXInCost),
-                to: ZoneDest::Hand(PlayerRef::You),
-                cap: Value::Const(5),
-                life_per_revealed: 0,
-                // Printed: "Put the rest on the bottom of your library
-                // in a random order."
-                miss_dest: crate::effect::RevealMissDest::BottomRandom,
+                count: Value::Const(5),
+                rest_to_graveyard: false,
+                pick_filter: Some(
+                    SelectionRequirement::Land.or(SelectionRequirement::HasXInCost),
+                ),
+                take: None,
+                to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             },
         }],
         ..Default::default()
@@ -4177,16 +4165,11 @@ pub fn magmablood_archaic() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Trample, Keyword::Reach],
+        // Converge — a true CR 614.12 "enters with" replacement (counters
+        // land before the first SBA sweep and are not respondable), not an
+        // ETB trigger. Same mechanism as Wildgrowth Archaic / Pterafractyl.
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
         triggered_abilities: vec![
-            // Converge ETB — gain +1/+1 counters equal to colors spent.
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ConvergedValue,
-                },
-            },
             // Push (modern_decks): per-cast IS pump. Each friendly creature
             // gets +X/+0 EOT where X = colors spent on the iterated spell.
             // Reads `Value::ConvergedValue` which is now threaded onto the
@@ -4701,7 +4684,7 @@ pub fn deluge_virtuoso() -> CardDefinition {
 /// matching cards, the move resolves to nothing.
 pub fn moseo_veins_new_dean() -> CardDefinition {
     use super::sorceries::pest_token;
-    use crate::card::{Predicate, Supertype, Zone};
+    use crate::card::{Predicate, Supertype};
     use crate::effect::{Duration as _Duration, ZoneDest};
     let _ = _Duration::EndOfTurn;
     CardDefinition {
@@ -4730,29 +4713,30 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
                 },
             },
             // Infusion end-step: if you gained life this turn, return up
-            // to one creature card from your graveyard to your hand.
+            // to one TARGET creature card from your graveyard to your
+            // hand. CR 603.4 — the Infusion gate is a trigger-time
+            // `event.filter` (re-checked at resolution by the step-trigger
+            // path); the return is a real optional target slot
+            // (`min_targets: 0`), so the controller picks WHICH card (or
+            // declines) instead of an auto-take of the top match.
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(crate::game::types::TurnStep::End),
                     EventScope::ActivePlayer,
-                ),
-                effect: Effect::If {
-                    cond: Predicate::LifeGainedThisTurnAtLeast {
-                        who: PlayerRef::You,
-                        at_least: Value::Const(1),
-                    },
-                    then: Box::new(Effect::Move {
-                        what: Selector::take(
-                            Selector::CardsInZone {
-                                who: PlayerRef::You,
-                                zone: Zone::Graveyard,
-                                filter: SelectionRequirement::Creature,
-                            },
-                            Value::Const(1),
-                        ),
+                )
+                .with_filter(Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                }),
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::InYourGraveyard),
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
                         to: ZoneDest::Hand(PlayerRef::You),
                     }),
-                    else_: Box::new(Effect::Noop),
                 },
             },
         ],
@@ -5278,19 +5262,13 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
 /// `CopySpell { count: StormCount }` trigger (see the inline note
 /// below).
 pub fn prismari_the_inspiration() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
-    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    use crate::effect::{StaticAbility, StaticEffect};
     use crate::mana::{r, u};
-    // Push (modern_decks, batch 89): "Instant and sorcery spells you
-    // cast have storm" is wired via a SpellCast/YourControl trigger
-    // gated on `cast_is_instant_or_sorcery` + `Effect::CopySpell {
-    // what: TriggerSource, count: Value::StormCount }`. Each IS spell
-    // cast while Prismari is on the bf fires a copy-it-N-times trigger
-    // (N = spells_cast_this_turn − 1). The copy targets default to the
-    // original's targets (engine-wide gap shared with all CopySpell
-    // users — "you may choose new targets" is not modeled). When
-    // Prismari leaves the bf, the trigger is no longer on her, so
-    // future casts don't get the storm grant.
+    // "Instant and sorcery spells you cast have storm" — a true keyword
+    // grant read at CAST time (`StaticEffect::GrantStormToISSpells`), so
+    // the copy count is the real CR 702.40 storm count (spells cast
+    // before it this turn) and responses can't inflate it. Copies are
+    // real uncounterable stack copies that resolve before the original.
     CardDefinition {
         name: "Prismari, the Inspiration",
         cost: cost(&[generic(5), u(), r()]),
@@ -5303,13 +5281,9 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::Life(5))],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(cast_is_instant_or_sorcery()),
-            effect: Effect::CopySpell {
-                what: Selector::TriggerSource,
-                count: Value::StormCount,
-            },
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast have storm.",
+            effect: StaticEffect::GrantStormToISSpells,
         }],
         ..Default::default()
     }

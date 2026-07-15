@@ -1710,6 +1710,10 @@ impl GameState {
         blocker_filter: impl Fn(&[Keyword]) -> bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         let mut events = vec![];
+        // Each call is one combat-damage batch (first-strike and regular
+        // damage are separate sub-steps): reset the "one or more creatures
+        // you control deal combat damage" graveyard-trigger dedupe.
+        self.gy_combat_trigger_fired_this_step.clear();
 
         let computed_of =
             |id: CardId| -> Option<&ComputedPermanent> { computed.iter().find(|c| c.id == id) };
@@ -2627,13 +2631,22 @@ impl GameState {
         // Phase 2: walk every player's graveyard for `FromYourGraveyard`
         // triggers. Only fire if the attacker is controlled by the gy
         // owner (the printed "creatures you control" filter on the
-        // attacker side).
+        // attacker side). These cards read "whenever ONE OR MORE creatures
+        // you control deal combat damage to a player" — one fire per
+        // damage batch (CR 603.2), so each graveyard card fires at most
+        // once per sub-step even when several attackers connect
+        // (`gy_combat_trigger_fired_this_step` dedupes the per-attacker
+        // walks; it's cleared at the top of each damage sub-step).
         if let Some(atk_controller) = attacker_controller {
+            let mut fired: Vec<CardId> = Vec::new();
             for player in &self.players {
                 if player.id.0 != atk_controller {
                     continue;
                 }
                 for gy_card in &player.graveyard {
+                    if self.gy_combat_trigger_fired_this_step.contains(&gy_card.id) {
+                        continue;
+                    }
                     for t in &gy_card.definition.triggered_abilities {
                         if t.event.kind == kind
                             && matches!(
@@ -2648,10 +2661,12 @@ impl GameState {
                                 t.event.filter.clone(),
                                 false,
                             ));
+                            fired.push(gy_card.id);
                         }
                     }
                 }
             }
+            self.gy_combat_trigger_fired_this_step.extend(fired);
         }
 
         // CR 702.46 — Cipher. A card exiled encoded on this creature offers its

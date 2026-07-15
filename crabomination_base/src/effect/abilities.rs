@@ -1114,6 +1114,13 @@ pub enum StaticEffect {
     GrantAffinityToISSpells {
         permanent_filter: SelectionRequirement,
     },
+    /// "Instant and sorcery spells you cast have storm." (CR 702.40.)
+    /// Read at CAST time in `cast_spell`'s intrinsic-storm branch, so the
+    /// copy count is the true storm count — spells cast before this one
+    /// this turn — and responses cast after it can't inflate the number
+    /// (unlike a resolution-time `Value::StormCount` trigger). Powers
+    /// Prismari, the Inspiration.
+    GrantStormToISSpells,
     /// "Whenever you cast a creature spell, that creature enters with
     /// N additional counters of `kind` on it." Read at creature-spell
     /// resolution time (`stack.rs::resolve_spell`'s ETB-counter path)

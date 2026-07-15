@@ -2881,7 +2881,8 @@ fn pestilent_cauldron_sac_mills_and_drains() {
 /// Tapped: destroys it. Untapped: cast-time filter rejects.
 #[test]
 fn ajanis_response_alt_cost_destroys_tapped_rejects_untapped() {
-    // Tapped target: alt cast destroys it.
+    // Tapped target: the automatic {3} reduction (CR 601.2f) makes the
+    // normal cast cost {1}{W}.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
@@ -2890,30 +2891,30 @@ fn ajanis_response_alt_cost_destroys_tapped_rejects_untapped() {
     let id = g.add_card_to_hand(0, catalog::ajanis_response());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpellAlternative {
-        card_id: id, pitch_card: None, target: Some(Target::Permanent(bear)),
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
         additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Ajani's Response alt-cast should resolve when target is tapped");
+    }).expect("Ajani's Response costs {1}{W} against a tapped target");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Tapped bear should be destroyed via alt cost");
+        "Tapped bear should be destroyed via the reduced cast");
 
-    // Untapped target: cast-time filter rejects.
+    // Untapped target: no reduction — {1}{W} floated can't pay {4}{W}.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::ajanis_response());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
-    let err = g.perform_action(GameAction::CastSpellAlternative {
-        card_id: id, pitch_card: None, target: Some(Target::Permanent(bear)),
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
         additional_targets: vec![], mode: None, x_value: None,
     });
     assert!(err.is_err(),
-        "Alt-cost cast should reject untapped target (filter requires Tapped)");
+        "full {{4}}{{W}} unaffordable against an untapped target (no reduction)");
 }
 
-/// Run Behind can be alt-cast at {2}{U} when it targets an attacking
-/// creature.
+/// Run Behind's "{1} less if it targets an attacking creature" is an
+/// automatic reduction — a normal cast pays {2}{U} against an attacker.
 #[test]
 fn run_behind_alt_cost_bounces_attacking_creature_to_library_bottom() {
     let mut g = two_player_game();
@@ -2928,15 +2929,14 @@ fn run_behind_alt_cost_bounces_attacking_creature_to_library_bottom() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
 
-    g.perform_action(GameAction::CastSpellAlternative {
+    g.perform_action(GameAction::CastSpell {
         card_id: id,
-        pitch_card: None,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Run Behind alt-cast at {2}{U} should resolve");
+    .expect("Run Behind costs {2}{U} against an attacker (automatic reduction)");
     drain_stack(&mut g);
 
     // Bear should be at the bottom of P1's library.
@@ -3200,20 +3200,21 @@ fn brush_off_alt_cost_counters_instant_on_stack() {
     })
     .expect("Lightning Bolt castable");
 
-    // P0 responds with Brush Off at alt cost.
+    // P0 responds with Brush Off — the "{1}{U} less if it targets an
+    // instant or sorcery spell" reduction is automatic, so a normal cast
+    // against the Bolt costs {1}{U}.
     g.priority.player_with_priority = 0;
     let id = g.add_card_to_hand(0, catalog::brush_off());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpellAlternative {
+    g.perform_action(GameAction::CastSpell {
         card_id: id,
-        pitch_card: None,
         target: Some(Target::Permanent(bolt)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Brush Off alt-cost at {1}{U} should resolve");
+    .expect("Brush Off costs {1}{U} against an IS spell (automatic reduction)");
     drain_stack(&mut g);
 
     // P0 should still be at 20 (no Bolt damage).

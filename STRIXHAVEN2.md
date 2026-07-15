@@ -54,6 +54,64 @@ share Kasmina's loyalty abilities" static
 
 Full per-card history: `git log -- crabomination_catalog/src/sets/{stx,sos}/`.
 
+## 2026-07-14 full-mechanics audit (approximations = incorrect)
+
+An 8-agent sweep audited all 256 SOS card functions clause-by-clause against
+their doc-comment oracle text (~100 cards had at least one deviation:
+3 false engine claims in doc comments, ~38 undocumented drifts, ~60 documented
+approximations). Fixed in the same pass:
+
+**Engine-level**
+- `Effect::Search` now shuffles the searched library (CR 701.19c), including
+  declines; library destinations (Goblin Recruiter) are exempt because the
+  chained multi-pick search would bury earlier picks. Regression:
+  `cr_701_19c_search_shuffles_library_even_on_decline`.
+- "One or more cards leave your graveyard" triggers now fire once per
+  simultaneous batch (dedup at trigger dispatch; emission stays per-card for
+  the tally + client mirror). Fixes Ark of Hunger, Owlin Historian, Hardened
+  Academic, Spirit Mascot, Garrison Excavator, Kirol, and tarkir's Attuned
+  Hunter.
+- "One or more creatures you control deal combat damage to a player"
+  graveyard triggers (Killian's Confidence) fire once per damage sub-step,
+  not once per attacker.
+- Triggered abilities that DECLARE a target slot now emit `BecameTarget`
+  (cast + activated paths already did) — Tenured Concocter fires on
+  opponents' triggered abilities. Effects whose "target" slot is an
+  event-bound subject (Horobi's "destroy it") correctly do not.
+- `PlayerRef::ControllerOf` on a dead permanent resolves via death-time LKI
+  (CR 608.2h) instead of falling back to owner — Erode, Foolish Fate, and
+  Harsh Annotation now hit the right player for stolen creatures.
+- New `StaticEffect::GrantStormToISSpells`: Prismari, the Inspiration grants
+  REAL storm at cast time (copy count can't be inflated by responses).
+- New `CardDefinition::self_cost_reduction_cost_if_target` (colored-aware
+  mandatory reduction via `reduce_by_cost`).
+- New `Predicate::FirstLifeGainThisTurn` + per-turn flag: "gain life for the
+  first time each turn" (Leech Collector) keys on the turn's actual first
+  gain, not the listener's first observed gain.
+- `EntersTappedUnless` now reads the cast's stamped X (Slumbering Trudge).
+
+**Per-card** (previously undocumented drift, now faithful): school taplands
+(EntersTapped replacement + stray basic land types dropped), 7 intervening-
+'if' cards moved to trigger-time `event.filter` (Living History, Primary
+Research, Joined Researchers, Emeritus of Woe, Scheming Silvertongue,
+Emeritus of Abundance, Scolding Administrator), Quandrix the Proof (real
+`Effect::Cascade` — declined hit is bottomed, cap derived not hardcoded),
+Magmablood Archaic + Slumbering Trudge (true enters-with replacements),
+Pox Plague (clause-by-clause across players), Emeritus of Conflict (Bolt =
+`target_any()`), Brush Off / Run Behind / Ajani's Response / Wilt in the
+Heat / Orysa (mandatory reductions, alt-costs deleted), Environmental
+Scientist ("may search" honored), Moseo / Ascendant Dustspeaker / Startled
+Relic Sloth ("up to one target" declinable via `ApplyToTargets min 0`),
+Paradox Surveyor (`LookPickToHand` — sees all five, rest bottomed).
+
+**Still open** (tracked, not fixed): Lorehold the Historian's miracle grant
+is an until-EOT {2} alt-cost, not a real miracle window; `Effect::CopySpell`
+never offers "you may choose new targets" (Mica, Lumaret's Favor,
+Choreographed Sparks, Silverquill the Disputant); `LookPickToHand` declines
+auto-fill under the AutoDecider; `BottomRandom` bottoms deterministically;
+Aziza's tap-three cost auto-picks which creatures tap; plus the ~55
+in-source documented approximations (grep `Approximation|omitted|dropped`).
+
 ## Removed status tables (2026-07-12)
 
 The per-card status tables formerly in this file were removed. The three

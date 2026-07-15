@@ -15969,6 +15969,13 @@ impl GameState {
                         .battlefield_find(cid)
                         .map(|c| c.controller)
                         .or_else(|| self.stack_caster_for_card(cid))
+                        // LKI (CR 608.2h) — "its controller" for a permanent
+                        // destroyed earlier in the same resolution (Erode's
+                        // searcher, Foolish Fate's life loss) is the
+                        // controller at death, NOT the card's owner; the two
+                        // differ for stolen creatures.
+                        .or_else(|| self.died_card_snapshots.get(&cid).map(|c| c.controller))
+                        .or_else(|| self.leaves_bf_lki.get(&cid).map(|c| c.controller))
                         .or_else(|| self.find_card_owner(cid)),
                     _ => None,
                 }),

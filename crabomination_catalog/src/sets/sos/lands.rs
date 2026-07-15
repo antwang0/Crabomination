@@ -5,19 +5,17 @@
 //! activated ability gated by tap. The engine has the surveil primitive
 //! already (see `Effect::Surveil`), so wiring these is straightforward.
 
-use super::super::etb_tap;
-use crate::card::{
-    CardDefinition, CardType, Effect, LandType, Subtypes,
-};
-use crate::effect::{ActivatedAbility, PlayerRef, Value};
+use crate::card::{CardDefinition, CardType, Effect, StaticAbility};
+use crate::effect::{ActivatedAbility, PlayerRef, Selector, StaticEffect, Value};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, r, u, w};
 
-/// Build a Strixhaven school land — enters tapped, two color-pip mana
-/// abilities, and a `{2}{c1}{c2}, {T}: Surveil 1` ability.
+/// Build a Strixhaven school land — enters tapped (a true CR 614.13
+/// replacement, not an ETB trigger, so it can never tap for mana in the
+/// window before a trigger would resolve), two color-pip mana abilities,
+/// and a `{2}{c1}{c2}, {T}: Surveil 1` ability. No basic land types —
+/// the template is a plain dual, not a typed one.
 fn school_land(
     name: &'static str,
-    type_a: LandType,
-    type_b: LandType,
     color_a: Color,
     color_b: Color,
     surveil_pips: [ManaSymbol; 2],
@@ -46,74 +44,38 @@ fn school_land(
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![type_a, type_b],
-            ..Default::default()
-        },
         activated_abilities: vec![tap_add(color_a), tap_add(color_b), surveil],
-        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
         ..Default::default()
     }
 }
 
 /// Forum of Amity — Silverquill (W/B) school land.
 pub fn forum_of_amity() -> CardDefinition {
-    school_land(
-        "Forum of Amity",
-        LandType::Plains,
-        LandType::Swamp,
-        Color::White,
-        Color::Black,
-        [w(), b()],
-    )
+    school_land("Forum of Amity", Color::White, Color::Black, [w(), b()])
 }
 
 /// Fields of Strife — Lorehold (R/W) school land.
 pub fn fields_of_strife() -> CardDefinition {
-    school_land(
-        "Fields of Strife",
-        LandType::Mountain,
-        LandType::Plains,
-        Color::Red,
-        Color::White,
-        [r(), w()],
-    )
+    school_land("Fields of Strife", Color::Red, Color::White, [r(), w()])
 }
 
 /// Paradox Gardens — Quandrix (G/U) school land.
 pub fn paradox_gardens() -> CardDefinition {
-    school_land(
-        "Paradox Gardens",
-        LandType::Forest,
-        LandType::Island,
-        Color::Green,
-        Color::Blue,
-        [g(), u()],
-    )
+    school_land("Paradox Gardens", Color::Green, Color::Blue, [g(), u()])
 }
 
 /// Titan's Grave — Witherbloom (B/G) school land.
 pub fn titans_grave() -> CardDefinition {
-    school_land(
-        "Titan's Grave",
-        LandType::Swamp,
-        LandType::Forest,
-        Color::Black,
-        Color::Green,
-        [b(), g()],
-    )
+    school_land("Titan's Grave", Color::Black, Color::Green, [b(), g()])
 }
 
 /// Spectacle Summit — Prismari (U/R) school land.
 pub fn spectacle_summit() -> CardDefinition {
-    school_land(
-        "Spectacle Summit",
-        LandType::Island,
-        LandType::Mountain,
-        Color::Blue,
-        Color::Red,
-        [u(), r()],
-    )
+    school_land("Spectacle Summit", Color::Blue, Color::Red, [u(), r()])
 }
 
 /// Great Hall of the Biblioplex — colorless legendary utility land.
@@ -141,8 +103,9 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
     use crate::effect::{ActivatedAbility, ManaPayload};
     use crate::mana::SpendRestriction;
     // Pure mana ability (`AddMana` only) → resolves immediately without
-    // going on the stack. Life is paid up front; pre-flight rejects
-    // activation if controller would drop to 0 life.
+    // going on the stack. Life is paid up front; per CR 119.4 paying your
+    // last life point is legal (pre-flight only rejects `life < cost`),
+    // and the SBA loss follows.
     let pay_life_for_any = ActivatedAbility {
         energy_cost: 0,
         discard_cost: None,

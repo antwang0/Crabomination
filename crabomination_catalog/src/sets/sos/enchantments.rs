@@ -72,8 +72,16 @@ pub fn living_history() -> CardDefinition {
             // On any attack you control: if a card left your graveyard
             // this turn, +2/+0 EOT to the attacking creature
             // (TriggerSource = the just-declared attacker).
+            // CR 603.4 — the intervening 'if' lives in `event.filter`
+            // (trigger-time check); the inner `Effect::If` re-checks at
+            // resolution (the event-trigger path doesn't re-check filters).
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                    Predicate::CardsLeftGraveyardThisTurnAtLeast {
+                        who: PlayerRef::You,
+                        at_least: Value::Const(1),
+                    },
+                ),
                 effect: Effect::If {
                     cond: Predicate::CardsLeftGraveyardThisTurnAtLeast {
                         who: PlayerRef::You,
@@ -182,21 +190,21 @@ pub fn primary_research() -> CardDefinition {
                 },
             },
             // Your end step: if a card left your gy this turn, draw.
+            // CR 603.4 — intervening 'if' as `event.filter`: checked at
+            // trigger time, and the step-trigger path re-checks it at
+            // resolution (`intervening_if`), so no `Effect::If` is needed.
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(TurnStep::End),
                     EventScope::ActivePlayer,
-                ),
-                effect: Effect::If {
-                    cond: Predicate::CardsLeftGraveyardThisTurnAtLeast {
-                        who: PlayerRef::You,
-                        at_least: Value::Const(1),
-                    },
-                    then: Box::new(Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    }),
-                    else_: Box::new(Effect::Noop),
+                )
+                .with_filter(Predicate::CardsLeftGraveyardThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                }),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
                 },
             },
         ],

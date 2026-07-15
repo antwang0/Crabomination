@@ -3114,6 +3114,38 @@ fn cr_701_19_search_up_to_n_picks_matches_only() {
         "the non-Minotaur stays in the library");
 }
 
+// ── CR 701.19c — a searched library is shuffled, found or not ─────────────────
+/// Declining every pick still counts as searching, so the library must be
+/// shuffled afterward (with 30 cards, an unchanged order is a ~1/30! fluke).
+#[test]
+fn cr_701_19c_search_shuffles_library_even_on_decline() {
+    let mut g = two_player_game();
+    for _ in 0..30 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let before: Vec<_> = g.players[0].library.iter().map(|c| c.id).collect();
+    let spell = g.add_card_to_hand(0, catalog::deathbellow_war_cry());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(5);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(None),
+        crate::decision::DecisionAnswer::Search(None),
+        crate::decision::DecisionAnswer::Search(None),
+        crate::decision::DecisionAnswer::Search(None),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let after: Vec<_> = g.players[0].library.iter().map(|c| c.id).collect();
+    let mut before_sorted = before.clone();
+    let mut after_sorted = after.clone();
+    before_sorted.sort();
+    after_sorted.sort();
+    assert_eq!(before_sorted, after_sorted, "nothing was taken — same cards remain");
+    assert_ne!(before, after, "searching shuffles the library (CR 701.19c)");
+}
+
 // ── CR 700.5 — Devotion (Altar of the Pantheon bonus flips a God on) ─────────
 
 #[test]

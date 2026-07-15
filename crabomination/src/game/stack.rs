@@ -1371,6 +1371,20 @@ impl GameState {
                                     .mana_spent(mana_spent)
                                     .build(),
                             );
+                            // CR 603 — a triggered ability that DECLARES a
+                            // target slot (printed "target …" wording) fires
+                            // "becomes the target" listeners (Tenured
+                            // Concocter), same as the cast/activated paths.
+                            if effect.requires_target()
+                                && let Some(Target::Permanent(tid)) = &auto_target
+                                && self.battlefield_find(*tid).is_some()
+                            {
+                                let evs = vec![GameEvent::BecameTarget {
+                                    target: *tid,
+                                    caster,
+                                }];
+                                self.dispatch_triggers_for_events(&evs);
+                            }
                         }
                     }
 
@@ -2054,6 +2068,12 @@ impl GameState {
         // checks remain accurate per-player. (Same convention as
         // `lands_played_this_turn` and `spells_cast_this_turn`.)
         self.players[p].life_gained_this_turn = 0;
+        // "For the first time each turn" life-gain gates key on the turn
+        // boundary itself, so this flag resets for EVERY player at each
+        // untap (unlike the per-player-turn tallies above).
+        for pl in &mut self.players {
+            pl.gained_life_earlier_this_turn = false;
+        }
         // Reset cards-drawn tally for the active player. Powers Quandrix
         // scaling cards (Fractal Anomaly's "X = cards drawn this turn"
         // and similar). Other players' tallies advance independently

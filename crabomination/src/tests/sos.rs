@@ -1166,7 +1166,9 @@ fn zealous_lorecaster_etb_returns_instant_from_graveyard() {
 fn environmental_scientist_etb_searches_basic_to_hand() {
     let mut g = two_player_game();
     let forest = g.add_card_to_library(0, catalog::forest());
+    // "You MAY search" — accept the MayDo, then pick the Forest.
     g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
         DecisionAnswer::Search(Some(forest)),
     ]));
     let id = g.add_card_to_hand(0, catalog::environmental_scientist());
@@ -2555,6 +2557,8 @@ fn slumbering_trudge_x_three_enters_without_stun_counters() {
     let inst = g.battlefield.iter().find(|c| c.id == id).unwrap();
     assert_eq!(inst.counter_count(CounterType::Stun), 0,
         "X=3 → 0 stun counters (NonNeg(3-3))");
+    assert!(!inst.tapped,
+        "X=3 (> 2) — the enters-tapped replacement does not apply, Trudge is untapped");
 }
 
 // ── Fractal Anomaly ─────────────────────────────────────────────────────────
@@ -4721,30 +4725,30 @@ fn orysa_etb_draws_two_cards() {
 
 #[test]
 fn orysa_alt_cost_rejected_when_total_toughness_under_ten() {
-    // Push (modern_decks): "{3} less if creatures you control have total
-    // toughness ≥ 10" alt cost. With one bear (toughness 2) on the bf,
-    // the gate is 2 ≥ 10 = false → alt cast rejected.
+    // "{3} less if creatures you control have total toughness ≥ 10" is a
+    // MANDATORY, automatic reduction. With one bear (toughness 2), no
+    // reduction applies — {1}{U} floated can't pay the printed {4}{U}.
     let mut g = two_player_game();
     let _bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::orysa_tide_choreographer());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
 
-    let res = g.perform_action(GameAction::CastSpellAlternative {
+    let res = g.perform_action(GameAction::CastSpell {
         card_id: id,
-        pitch_card: None,
         target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
     });
     assert!(res.is_err(),
-        "Alt cast rejected with total toughness < 10; got {:?}", res);
+        "cast unaffordable with total toughness < 10; got {:?}", res);
 }
 
 #[test]
 fn orysa_alt_cost_succeeds_when_total_toughness_ten_or_more() {
-    // 5 bears (5 × 2 toughness = 10) make the alt-cost {1}{U} legal.
+    // 5 bears (5 × 2 toughness = 10) → the automatic {3} reduction makes
+    // the normal cast cost {1}{U}. No alternative-cast action needed.
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -4758,19 +4762,18 @@ fn orysa_alt_cost_succeeds_when_total_toughness_ten_or_more() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
 
-    g.perform_action(GameAction::CastSpellAlternative {
+    g.perform_action(GameAction::CastSpell {
         card_id: id,
-        pitch_card: None,
         target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Orysa alt cost {1}{U} legal at total toughness ≥ 10");
+    .expect("Orysa costs {1}{U} at total toughness ≥ 10 (automatic reduction)");
     drain_stack(&mut g);
     assert!(
         g.battlefield.iter().any(|c| c.definition.name == "Orysa, Tide Choreographer"),
-        "Orysa lands via alt cost",
+        "Orysa lands via the reduced cost",
     );
 }
 
@@ -5742,37 +5745,36 @@ fn wilt_in_the_heat_does_not_exile_indestructible_creature() {
 
 #[test]
 fn wilt_in_the_heat_alt_cost_rejected_with_empty_graveyard_history() {
-    // Push (modern_decks): alt cost {R}{W} is gated on
-    // `CardsLeftGraveyardThisTurnAtLeast(You, 1)`. At turn start with
-    // no cards leaving the graveyard, the alt cast must reject.
+    // "{2} less if one or more cards left your graveyard this turn" is a
+    // MANDATORY reduction. With no graveyard exits, no reduction: {R}{W}
+    // floated can't pay the printed {2}{R}{W}.
     let mut g = two_player_game();
     let _bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
-    // No generic mana — only enough for the alt cost.
+    // No generic mana — only enough for the reduced cost.
     assert_eq!(g.players[0].cards_left_graveyard_this_turn, 0);
 
-    let res = g.perform_action(GameAction::CastSpellAlternative {
+    let res = g.perform_action(GameAction::CastSpell {
         card_id: id,
-        pitch_card: None,
         target: Some(Target::Permanent(_bear)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
     });
     assert!(res.is_err(),
-        "Alt cast rejected when no cards left graveyard this turn; got {:?}", res);
+        "cast unaffordable when no cards left graveyard this turn; got {:?}", res);
     assert!(
         g.players[0].hand.iter().any(|c| c.id == id),
-        "Wilt should still be in hand (alt cast rejected before any state mutation)",
+        "Wilt should still be in hand (cast rejected before any state mutation)",
     );
 }
 
 #[test]
 fn wilt_in_the_heat_alt_cost_succeeds_after_graveyard_recursion() {
-    // Push (modern_decks): once a card has left the controller's
-    // graveyard this turn, the alt cost {R}{W} is legal.
+    // Once a card has left the controller's graveyard this turn, the
+    // automatic {2} reduction makes the normal cast cost {R}{W}.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
@@ -5782,18 +5784,17 @@ fn wilt_in_the_heat_alt_cost_succeeds_after_graveyard_recursion() {
     // per-turn counter directly.
     g.players[0].cards_left_graveyard_this_turn = 1;
 
-    g.perform_action(GameAction::CastSpellAlternative {
+    g.perform_action(GameAction::CastSpell {
         card_id: id,
-        pitch_card: None,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Wilt's alt cost {R}{W} is legal after a card leaves your gy this turn");
+    .expect("Wilt costs {R}{W} after a card leaves your gy this turn");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Bear takes 5 damage via the alt-cost path");
+        "Bear takes 5 damage via the reduced cast");
 }
 
 #[test]
@@ -12889,10 +12890,11 @@ fn fractal_tender_end_step_skips_when_no_counter_gained() {
 
 #[test]
 fn quandrix_the_proof_cascade_exiles_nonland_with_lower_mv() {
-    // Push (modern_decks, batch 79): When Quandrix is cast, walk top
-    // of library. With 2 Forests (MV 0) followed by 1 Lightning Bolt
-    // (MV 1) on top, the cascade trigger should land the Bolt in
-    // exile with may-play permission for P0.
+    // Real cascade (CR 702.85): when Quandrix is cast, exile from the top
+    // until a nonland with MV < 6 — 2 Forests (lands) then a Lightning
+    // Bolt (MV 1). The free-cast offer is accepted (AutoDecider), so the
+    // Bolt is cast for free and ends in the graveyard; the exiled Forests
+    // are bottomed.
     let mut g = two_player_game();
     use crate::card::CardInstance;
     let mut bolt = CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
@@ -12911,6 +12913,8 @@ fn quandrix_the_proof_cascade_exiles_nonland_with_lower_mv() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(4);
+    // Accept the cascade free-cast offer.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
 
     g.perform_action(GameAction::CastSpell {
         card_id: qp_id, target: None,
@@ -12918,12 +12922,28 @@ fn quandrix_the_proof_cascade_exiles_nonland_with_lower_mv() {
     }).expect("Quandrix castable at {4}{G}{U}");
     drain_stack(&mut g);
 
-    // Bolt should be in exile with may_play stamped.
-    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
-        .expect("Bolt exiled by Cascade");
+    // Bolt was cast for free during trigger resolution → graveyard.
     assert!(
-        exiled.may_play_until.is_some(),
-        "Bolt has may_play permission stamped (cascade-free-cast permission)",
+        g.players[0].graveyard.iter().any(|c| c.id == bolt_id),
+        "Bolt free-cast by cascade and resolved to the graveyard"
+    );
+    assert!(
+        !g.exile.iter().any(|c| c.id == bolt_id),
+        "no card stranded in exile after cascade"
+    );
+    // The exiled Forests were bottomed, not left in exile.
+    assert!(
+        !g.exile.iter().any(|c| c.definition.name == "Forest"),
+        "cascade misses go to the bottom of the library"
+    );
+    assert_eq!(
+        g.players[0]
+            .library
+            .iter()
+            .filter(|c| c.definition.name == "Forest")
+            .count(),
+        2,
+        "both Forests back in the library"
     );
 }
 
@@ -15636,5 +15656,204 @@ fn ui_player_loyalty_graveyard_target_via_card_picker() {
     assert!(
         g.battlefield.iter().any(|c| c.id == dead),
         "picked creature reanimated by the −2",
+    );
+}
+
+/// The five school lands enter tapped via a true CR 614.13 replacement —
+/// the land is already tapped the moment it hits the battlefield, with no
+/// trigger window in which it could be tapped for mana. They also carry
+/// no basic land types (plain duals, not typed ones).
+#[test]
+fn school_lands_enter_tapped_as_replacement_not_trigger() {
+    for def in [
+        catalog::forum_of_amity,
+        catalog::fields_of_strife,
+        catalog::paradox_gardens,
+        catalog::titans_grave,
+        catalog::spectacle_summit,
+    ] {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, def());
+        g.perform_action(GameAction::PlayLand(id)).unwrap();
+        // No drain_stack: tapped state must hold before any trigger could
+        // resolve (CR 614.13 replacement, not an ETB trigger).
+        let land = g.battlefield_find(id).unwrap();
+        assert!(land.tapped, "{} enters tapped immediately", land.definition.name);
+        assert!(
+            land.definition.subtypes.land_types.is_empty(),
+            "{} has no basic land types",
+            land.definition.name
+        );
+    }
+}
+
+/// "Whenever one or more cards leave your graveyard" fires once per
+/// simultaneous batch (CR 603.2), not once per card: a mass exile of a
+/// three-card graveyard grants Hardened Academic's payoff exactly one
+/// +1/+1 counter.
+#[test]
+fn cards_leave_graveyard_batch_triggers_once() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hardened_academic());
+    for _ in 0..3 {
+        let id = g.next_id();
+        let mut card = crate::card::CardInstance::new(id, catalog::lightning_bolt(), 0);
+        card.controller = 0;
+        g.players[0].graveyard.push(card);
+    }
+    let counters_before: u32 = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0)
+        .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
+        .sum();
+    // Opponent's Bojuka Bog exiles player 0's whole graveyard in one batch.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bog = g.add_card_to_hand(1, catalog::bojuka_bog());
+    g.perform_action(GameAction::PlayLand(bog)).expect("play Bojuka Bog");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty(), "graveyard exiled");
+    let counters_after: u32 = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0)
+        .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
+        .sum();
+    assert_eq!(
+        counters_after,
+        counters_before + 1,
+        "three cards leaving at once is ONE batch — exactly one counter"
+    );
+}
+
+/// "Whenever ONE OR MORE creatures you control deal combat damage to a
+/// player" fires once per damage batch (CR 603.2): two attackers
+/// connecting give Killian's Confidence a single may-pay prompt, not two.
+#[test]
+fn killians_confidence_two_attackers_one_trigger() {
+    let mut g = two_player_game();
+    let kc = g.add_card_to_graveyard(0, catalog::killians_confidence());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    // Two W floated + two scripted yeses: a per-attacker double-fire would
+    // consume both; the batched trigger must leave one W unspent.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attackers declared");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage resolved");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == kc), "KC returned to hand");
+    assert_eq!(
+        g.players[0].mana_pool.amount(Color::White),
+        1,
+        "exactly one {{W/B}} paid — the batch fired the trigger once"
+    );
+}
+
+/// Leech Collector prepares on the turn's FIRST life gain only: a gain that
+/// happened before it hit the battlefield disqualifies later gains that turn
+/// (oracle "whenever you gain life for the first time each turn" — not
+/// "the first time this ability sees a gain").
+#[test]
+fn leech_collector_only_first_gain_of_turn_prepares() {
+    // First gain of the turn happens with Leech Collector on the field →
+    // it becomes prepared.
+    let mut g = two_player_game();
+    let lc = g.add_card_to_battlefield(0, catalog::leech_collector());
+    let fountain = g.add_card_to_hand(0, catalog::radiant_fountain());
+    g.perform_action(GameAction::PlayLand(fountain)).expect("fountain");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(lc).unwrap();
+    assert_eq!(c.counter_count(CounterType::Prepared), 1, "first gain prepares");
+
+    // The turn's first gain happened BEFORE Leech Collector arrived → a
+    // later gain the same turn does not prepare it.
+    let mut g = two_player_game();
+    g.players[0].extra_land_plays = 1;
+    let f1 = g.add_card_to_hand(0, catalog::radiant_fountain());
+    g.perform_action(GameAction::PlayLand(f1)).expect("first fountain");
+    drain_stack(&mut g); // gain 2 — flips the "gained earlier" flag
+    let lc = g.add_card_to_battlefield(0, catalog::leech_collector());
+    let f2 = g.add_card_to_hand(0, catalog::radiant_fountain());
+    g.perform_action(GameAction::PlayLand(f2)).expect("second fountain");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(lc).unwrap();
+    assert_eq!(
+        c.counter_count(CounterType::Prepared),
+        0,
+        "a pre-arrival gain used up the turn's 'first time'"
+    );
+}
+
+/// "Its controller creates ..." reads the destroyed creature's death-time
+/// CONTROLLER (CR 608.2h LKI), not its owner — a stolen creature's Inkling
+/// goes to the thief.
+#[test]
+fn harsh_annotation_token_goes_to_death_time_controller() {
+    let mut g = two_player_game();
+    // P0 owns the bear, but P1 has stolen it.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().controller = 1;
+    let spell = g.add_card_to_hand(0, catalog::harsh_annotation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Harsh Annotation castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear destroyed");
+    let inkling_controller: Vec<usize> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Inkling")
+        .map(|c| c.controller)
+        .collect();
+    assert_eq!(inkling_controller, vec![1], "token minted for the CONTROLLER (P1), not the owner");
+}
+
+/// Tenured Concocter's "becomes the target of a spell or ability an
+/// opponent controls" also fires for opponents' TRIGGERED abilities
+/// (Ravenous Chupacabra's ETB targets it), not just spells and
+/// activated abilities.
+#[test]
+fn tenured_concocter_triggers_on_opponent_triggered_ability_target() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let tc = g.add_card_to_battlefield(0, catalog::tenured_concocter());
+    let hand_before = g.players[0].hand.len();
+    // The "you may draw" MayDo: accept.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // Opponent's Chupacabra ETB auto-targets P0's only creature.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let chupa = g.add_card_to_hand(1, catalog::ravenous_chupacabra());
+    g.players[1].mana_pool.add(Color::Black, 2);
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: chupa, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Chupacabra castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == tc), "Concocter destroyed by the ETB");
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before + 1,
+        "being targeted by the opponent's TRIGGERED ability drew a card"
     );
 }

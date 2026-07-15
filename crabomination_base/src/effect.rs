@@ -815,6 +815,14 @@ pub enum Predicate {
     /// Backed by `Player.life_gained_this_turn`. Used by Strixhaven's
     /// **Infusion** rider — "If you gained life this turn, …".
     LifeGainedThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// True while `who` has NOT yet completed a life-gain trigger batch
+    /// this turn. Used as the event filter on `LifeGained` triggers that
+    /// read "whenever you gain life for the first time each turn" (Leech
+    /// Collector): a gain that happened before the listener arrived
+    /// already flipped the flag, so later gains that turn don't qualify.
+    /// Pair with `once_per_turn()` so a multi-event first batch still
+    /// fires only once. Backed by `Player.gained_life_earlier_this_turn`.
+    FirstLifeGainThisTurn { who: PlayerRef },
     /// CR 700.14 — true exactly on the spell-cast whose payment first
     /// pushes the active player's running mana-spent-on-spells total to
     /// `n` (i.e. prior total `< n` and new total `>= n`). Used as the
