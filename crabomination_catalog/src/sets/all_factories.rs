@@ -6572,6 +6572,12 @@ static DECKS: &[Factory] = &[
     super::decks::shackle_slinger,
     super::decks::thunder_salvo,
     super::decks::fledgling_dragon,
+    super::decks::primal_might,
+    super::decks::boom_box,
+    super::decks::prizefight,
+    super::decks::out_cold,
+    super::decks::harvester_of_misery,
+    super::decks::krovod_haunch,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

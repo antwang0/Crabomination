@@ -15,11 +15,12 @@ target. Shipped: Dune Drifter.
   the trigger fizzles ("target player loses N"). Kalastria Highborn was modeled
   as each-opponent instead. Fix: recurse into MayPay/MayPayGeneric bodies in
   `auto_targets_for_effect_all_slots` + the target-declaration walk.
-- **Per-slot optional target for arbitrary effects** — only `ApplyToTargets`
-  slots are declinable; a plain `Effect::Fight` defender or an
-  `ExileUntilSourceLeaves` "up to one" can't be optional. Prayer of Binding,
-  Immersturm Predator's exile, and (deferred) Primal Might's fight are modeled
-  as required-target. Add an optional flag for single-slot effects.
+- **Per-slot optional target — shipped (recent229).** `Effect::OptionalTargets
+  { min, body }` marks slots `>= min` declinable for a `body` whose slots come
+  from *distinct* effects (the case `ApplyToTargets` can't express). Ships Primal
+  Might (min 1: required pumped creature + optional fight target) and Boom Box
+  (min 0: three optional destroy slots). Prayer of Binding and Immersturm
+  Predator's exile can now wrap their optional slot the same way.
 - **Gate Colossus** — "whenever a Gate you control enters, put this from your
   graveyard on top of your library" is a from-graveyard trigger on a
   non-recursion permanent (`EventScope::FromYourGraveyard` fires the ability but
@@ -51,11 +52,12 @@ target. Shipped: Dune Drifter.
 - **Buildable gap cards noticed but skipped (recent225–228):** Tumbleweed Rising
   (X/X token where X = greatest power — needs a fixed-at-creation evaluated P/T,
   not `dynamic_pt`), Unscrupulous Contractor / Victimize (reflexive-sacrifice
-  chains that target a player / return two gy targets), Harvester of Misery &
-  Fear of Burning Alive (a from-hand "discard this card" activated / delirium
-  rider each), Krovod Haunch (Equipment with a may-pay dies rider). The
-  **optional single-target slot** primitive (Primal Might, Boom Box, Out Cold,
-  Hotshot Investigators, Clandestine Meddler) is the highest-leverage unlock.
+  chains that target a player / return two gy targets), Fear of Burning Alive
+  (delirium rider). Shipped in recent229: Primal Might, Boom Box, Out Cold,
+  Prizefight, Harvester of Misery (from-hand `discard_self_cost` ability), Krovod
+  Haunch. Still open: Hotshot Investigators ("if you controlled it, investigate"
+  — needs a "you controlled the returned target" predicate), Clandestine Meddler
+  (suspected-attackers → surveil trigger).
 - **Search-to-exile linked recursion** — Hoarding Dragon ("search an artifact,
   exile it; when this dies, return the exiled card to hand") needs the search's
   `ZoneDest::Exile` to stamp `exiled_with = source` so a death trigger can read

@@ -2699,6 +2699,9 @@ impl GameState {
             // collected into `ctx.targets` across slots `0..max_targets` at
             // cast time; run the inner effect once per still-present target
             // with `Selector::Target(0)` rebound to it.
+            // Transparent at resolution — the wrapper only marks slots optional
+            // for the targeting walk; the body's selectors no-op on absent slots.
+            Effect::OptionalTargets { body, .. } => self.run_effect(body, ctx, events),
             Effect::ApplyToTargets { effect: inner, .. } => {
                 let targets: Vec<Target> = ctx
                     .targets

@@ -3816,6 +3816,17 @@ pub enum Effect {
         filter: SelectionRequirement,
         effect: Box<Effect>,
     },
+    /// Transparent wrapper declaring that target slots `>= min` are optional
+    /// ("up to one target …") for an otherwise-conventional `body` whose slots
+    /// come from *distinct* effects — the case `ApplyToTargets` can't express
+    /// because it rebinds every supplied target to `Target(0)`. Primal Might is
+    /// `OptionalTargets { min: 1, body: Seq[counters on Target(0), Fight{
+    /// attacker: Target(0), defender: Target(1) }] }`: slot 0 (the friendly
+    /// creature) is required, slot 1 (the enemy it fights) may be declined, and
+    /// the Fight no-ops when slot 1 resolves to nothing. Evaluation just runs
+    /// `body`; the wrapper only feeds the targeting walk (`min_targets_in_mode`
+    /// / `target_slot_optional`).
+    OptionalTargets { min: u8, body: Box<Effect> },
     /// Eerie Ultimatum — return any number of permanent cards with different
     /// names from the controller's graveyard to the battlefield. The controller
     /// picks at resolution (`Decision::ChooseCards`); duplicate names are

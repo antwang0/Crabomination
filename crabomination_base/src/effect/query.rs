@@ -348,6 +348,7 @@ impl Effect {
             // consumed at resolution; no fixed cast-time slot is demanded.
             Effect::Spree { .. } | Effect::Tiered { .. } => false,
             Effect::MayDo { body, .. } => body.requires_target(),
+            Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
             Effect::OnYourNextSpellCastThisTurn { body }
@@ -979,6 +980,7 @@ impl Effect {
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter()),
             Effect::DelayUntil { body, .. } => body.primary_target_filter(),
+            Effect::OptionalTargets { body, .. } => body.primary_target_filter(),
             // The copy *source* is the targeted slot ("becomes a copy of
             // target land").
             Effect::BecomeCopyOf { source, .. }
@@ -2019,6 +2021,7 @@ impl Effect {
                 | Effect::OnYourNextSpellCastThisTurn { body }
                 | Effect::OnYourNextInstantSorceryThisTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
+                | Effect::OptionalTargets { body, .. }
                 | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => eff_find(then, slot, mode, kicked),
                 Effect::PayEnergyOrElse { otherwise, .. }
@@ -2065,6 +2068,7 @@ impl Effect {
     pub fn min_targets_in_mode(&self, mode: Option<usize>) -> Option<u8> {
         match self {
             Effect::ApplyToTargets { min_targets, .. } => Some(*min_targets),
+            Effect::OptionalTargets { min, .. } => Some(*min),
             Effect::Seq(v) => v.iter().find_map(|e| e.min_targets_in_mode(None)),
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes.get(m).and_then(|e| e.min_targets_in_mode(None)),
