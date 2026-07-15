@@ -1,14 +1,16 @@
 //! Mixed gap batch — Bloomburrow expend payoffs (Teapot Slinger, Byway
-//! Barterer) and Foundations' Wick's Patrol, riding the new
-//! `Value::GreatestManaValueInGraveyard`. Tests in `tests/recent216.rs`.
+//! Barterer), Foundations' Wick's Patrol (riding the new
+//! `Value::GreatestManaValueInGraveyard`), and Tarkir's Maha (riding the new
+//! `StaticEffect::SetBaseToughnessForMatching`). Tests in `tests/recent216.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, Subtypes,
-    TriggeredAbility,
+    CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, StaticAbility,
+    Subtypes, Supertype, TriggeredAbility, WardCost,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, Value,
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector,
+    StaticEffect, Value,
 };
 use crate::mana::{b, cost, generic, r};
 
@@ -100,6 +102,32 @@ pub fn wicks_patrol() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]))],
+        ..Default::default()
+    }
+}
+
+/// Maha, Its Feathers Night — {3}{B}{B} 6/5 Elemental Bird. Flying, trample,
+/// Ward—Discard a card. Creatures your opponents control have base toughness 1.
+pub fn maha_its_feathers_night() -> CardDefinition {
+    CardDefinition {
+        name: "Maha, Its Feathers Night",
+        cost: cost(&[generic(3), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Ward(WardCost::Discard(1))],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures your opponents control have base toughness 1.",
+            effect: StaticEffect::SetBaseToughnessForMatching {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+                toughness: 1,
+            },
+        }],
         ..Default::default()
     }
 }

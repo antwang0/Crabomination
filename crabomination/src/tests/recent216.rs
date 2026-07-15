@@ -1,5 +1,6 @@
 //! Functionality tests for `catalog::sets::decks::recent216`.
 
+use crate::card::CounterType;
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::types::Target;
@@ -64,4 +65,22 @@ fn wicks_patrol_debuffs_by_greatest_gy_mv() {
     drain_stack(&mut g);
     // Moose MV 6 is the greatest → -6/-6 kills the 2/2.
     assert!(g.battlefield_find(target).is_none(), "2/2 dies to -6/-6");
+}
+
+/// Maha sets opponents' creatures to base toughness 1 (power untouched, and
+/// +1/+1 counters stack on top per CR 613); your own creatures are unaffected.
+#[test]
+fn maha_sets_opponent_base_toughness_to_one() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::maha_its_feathers_night());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2, yours
+    let cp = g.computed_permanent(foe).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 1), "opponent's 2/2 → 2/1");
+    let cm = g.computed_permanent(mine).unwrap();
+    assert_eq!((cm.power, cm.toughness), (2, 2), "your own creature is unaffected");
+    // A +1/+1 counter stacks on the reduced base (1 → 2 toughness, 2 → 3 power).
+    g.battlefield_find_mut(foe).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let cp2 = g.computed_permanent(foe).unwrap();
+    assert_eq!((cp2.power, cp2.toughness), (3, 2), "counter stacks on base toughness 1");
 }

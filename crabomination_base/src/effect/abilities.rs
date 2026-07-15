@@ -125,6 +125,12 @@ pub enum StaticEffect {
         #[serde(default)]
         keywords: Vec<Keyword>,
     },
+    /// "[Creatures the selector picks] have base toughness N" — a layer-7b
+    /// characteristic-setting anthem (Maha, Its Feathers Night's "creatures your
+    /// opponents control have base toughness 1"). Emits a
+    /// `Modification::SetToughness` for `selector_to_affected(applies_to)`; base
+    /// power is untouched and +1/+1 counters / 7c pumps stack on top per CR 613.
+    SetBaseToughnessForMatching { applies_to: Selector, toughness: i32 },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
     /// CR 702.122e / 702.171 — "crews Vehicles and saddles Mounts as though

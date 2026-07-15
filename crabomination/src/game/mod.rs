@@ -13443,6 +13443,20 @@ fn static_effect_to_effects(
                     None => vec![],
                 }
             }
+            StaticEffect::SetBaseToughnessForMatching { applies_to, toughness } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetToughness(*toughness),
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::PumpPTPerOwnCreatureType { applies_to, per_power, per_toughness, max } => {
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => vec![ContinuousEffect {

@@ -6497,6 +6497,7 @@ static DECKS: &[Factory] = &[
     super::decks::teapot_slinger,
     super::decks::byway_barterer,
     super::decks::wicks_patrol,
+    super::decks::maha_its_feathers_night,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
