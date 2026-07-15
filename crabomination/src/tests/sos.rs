@@ -15857,3 +15857,62 @@ fn tenured_concocter_triggers_on_opponent_triggered_ability_target() {
         "being targeted by the opponent's TRIGGERED ability drew a card"
     );
 }
+
+/// "Pay X life" is an additional COST paid on cast (CR 601.2h): a
+/// countered Vicious Rivalry still cost its caster the X life, and the
+/// board is untouched.
+#[test]
+fn vicious_rivalry_life_cost_paid_even_when_countered() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2 ≤ X
+    let vr = g.add_card_to_hand(0, catalog::vicious_rivalry());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: vr, target: None, additional_targets: vec![], mode: None,
+        x_value: Some(3),
+    })
+    .expect("Vicious Rivalry castable, X=3 life paid on cast");
+    assert_eq!(g.players[0].life, life_before - 3, "life paid at CAST time");
+    // Opponent counters it.
+    g.priority.player_with_priority = 1;
+    let cs = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cs, target: Some(Target::Permanent(vr)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Counterspell castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == vr), "VR countered to graveyard");
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "nothing destroyed");
+    assert_eq!(g.players[0].life, life_before - 3,
+        "the X life stays paid — costs are not refunded on counter (CR 601.2h)");
+}
+
+/// The pay-X-life pre-flight rejects X above the caster's life total but
+/// allows paying down to exactly 0 (CR 119.4).
+#[test]
+fn vicious_rivalry_x_capped_by_life_total() {
+    let mut g = two_player_game();
+    g.players[0].life = 5;
+    let vr = g.add_card_to_hand(0, catalog::vicious_rivalry());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: vr, target: None, additional_targets: vec![], mode: None,
+        x_value: Some(6),
+    });
+    assert!(err.is_err(), "X=6 with 5 life is unpayable");
+    assert!(g.players[0].hand.iter().any(|c| c.id == vr), "cast rejected cleanly");
+    // X=5 (down to exactly 0) is legal.
+    g.perform_action(GameAction::CastSpell {
+        card_id: vr, target: None, additional_targets: vec![], mode: None,
+        x_value: Some(5),
+    })
+    .expect("paying your last life point is legal (CR 119.4)");
+    assert_eq!(g.players[0].life, 0);
+}

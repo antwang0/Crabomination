@@ -2339,9 +2339,17 @@ impl GameState {
             if x_value.is_none()
                 && self.players[p].wants_ui
                 && let Some(card) = self.find_card_anywhere(card_id)
-                && card.definition.cost.has_x()
+                && (card.definition.cost.has_x() || card.definition.additional_cost_pay_x_life)
             {
-                let max = self.max_prompt_x(p, &card.definition.cost);
+                // A "pay X life" additional cost with no {X} mana pip is
+                // bounded by the caster's life total (CR 119.4), not mana.
+                let max = if card.definition.additional_cost_pay_x_life
+                    && !card.definition.cost.has_x()
+                {
+                    self.effective_life(p).max(0) as u32
+                } else {
+                    self.max_prompt_x(p, &card.definition.cost)
+                };
                 let source_name = card.definition.name.to_string();
                 self.pending_decision = Some(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseAmount {
@@ -5023,6 +5031,19 @@ impl GameState {
             cost.symbols.clear();
         }
 
+        // "Pay X life" additional cost — pre-flight before any payment
+        // mutation (CR 119.4: paying down to exactly 0 is legal; below is
+        // not). The life itself is paid after the mana receipt succeeds.
+        let pay_x_life: u32 = if card.definition.additional_cost_pay_x_life {
+            x_value.unwrap_or(0)
+        } else {
+            0
+        };
+        if self.effective_life(p) < pay_x_life as i32 {
+            self.players[p].hand.push(card);
+            return Err(GameError::InsufficientLife);
+        }
+
         // Snapshot pristine state before convoke + auto-tap mutate it, so a
         // failed payment can revert both convoke taps and any lands that
         // auto-tap tapped.
@@ -5097,6 +5118,9 @@ impl GameState {
         };
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
+        // "Pay X life" additional cost — paid on cast alongside the mana
+        // (CR 601.2h); it stays paid if the spell is countered.
+        self.pay_life_cost(p, pay_x_life);
 
         // CR 702.150 — Compleated: remember the life paid to Phyrexian pips so
         // the planeswalker enters with that much less loyalty.

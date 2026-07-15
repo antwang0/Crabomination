@@ -570,28 +570,19 @@ pub fn end_of_the_hunt() -> CardDefinition {
 /// "As an additional cost to cast this spell, pay X life. / Destroy
 /// all artifacts and creatures with mana value X or less."
 ///
-/// Approximation: the engine has no per-cast "pay X life" additional
-/// cost primitive yet, so X is read off the spell's cost (`{X}` slot)
-/// and the life loss is applied as the first resolution step
-/// (`Effect::LoseLife { amount: XFromCost }`) rather than as a
-/// cast-time cost — the caster still loses X life, just at resolution.
-/// Net: a flexible mass removal that scales with X — Wrath shape at
-/// higher X, Pyroclasm-on-artifacts shape at lower X. Tracked under
-/// TODO.md "X-life additional cost primitive".
+/// The "pay X life" additional cost is a real CAST-TIME cost via
+/// `CardDefinition::additional_cost_pay_x_life` (CR 601.2h): X is chosen
+/// at cast (capped by the caster's life, CR 119.4), the life is paid on
+/// cast and stays paid if the spell is countered, and the printed mana
+/// cost carries no {X} pip. Resolution reads X via `Value::XFromCost`.
 pub fn vicious_rivalry() -> CardDefinition {
-    use crate::mana::{ManaSymbol, g};
-    let mut spell_cost = cost(&[generic(2), b(), g()]);
-    spell_cost.symbols.insert(0, ManaSymbol::X);
+    use crate::mana::g;
     CardDefinition {
         name: "Vicious Rivalry",
-        cost: spell_cost,
+        cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Sorcery],
+        additional_cost_pay_x_life: true,
         effect: Effect::Seq(vec![
-            // Approximate "pay X life" additional cost.
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::XFromCost,
-            },
             // Destroy all matching permanents whose mana value ≤ X.
             // We run two `ForEach` passes — one for artifacts, one for
             // creatures — each gated by a per-iteration mana-value
@@ -1993,10 +1984,10 @@ pub fn social_snub() -> CardDefinition {
 /// Return each artifact and creature card with mana value X from your
 /// graveyard to the battlefield."
 ///
-/// The "pay X life" additional cost is modeled with the same convention
-/// as Vicious Rivalry: an `{X}` pip is inserted at the front of the mana
-/// cost so the caster chooses X at cast time, and the resolution pays
-/// `Value::XFromCost` life. The reanimation now matches the printed
+/// The "pay X life" additional cost is a real CAST-TIME cost via
+/// `CardDefinition::additional_cost_pay_x_life` (CR 601.2h, same as
+/// Vicious Rivalry): X is chosen at cast, the life is paid on cast and
+/// stays paid if countered, no {X} mana pip. The reanimation matches the printed
 /// **exact mana value X** (not the prior `≤ 2` approximation): a
 /// per-iteration `Predicate::ValueEquals(ManaValueOf(card), XFromCost)`
 /// gate over every artifact/creature card in the graveyard returns all
@@ -2005,20 +1996,14 @@ pub fn social_snub() -> CardDefinition {
 /// `fix_whats_broken_only_returns_cards_at_exact_mv`.
 pub fn fix_whats_broken() -> CardDefinition {
     use crate::effect::{Predicate, ZoneDest};
-    use crate::mana::{w, b, ManaSymbol};
+    use crate::mana::{w, b};
     use crate::card::Zone;
-    let mut spell_cost = cost(&[generic(2), w(), b()]);
-    spell_cost.symbols.insert(0, ManaSymbol::X);
     CardDefinition {
         name: "Fix What's Broken",
-        cost: spell_cost,
+        cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
+        additional_cost_pay_x_life: true,
         effect: Effect::Seq(vec![
-            // Additional cost: pay X life (X read off the {X} pip).
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::XFromCost,
-            },
             // Return EACH artifact/creature card with mana value exactly X
             // from your graveyard to the battlefield. We iterate over the
             // matching cards in the graveyard and return those whose MV

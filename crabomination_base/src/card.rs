@@ -2152,6 +2152,16 @@ pub struct CardDefinition {
     /// for snapshot back-compat.
     #[serde(default)]
     pub self_cost_reduction_cost_if_target: Option<(SelectionRequirement, ManaCost)>,
+    /// "As an additional cost to cast this spell, pay X life." X is chosen
+    /// at cast time (the X prompt fires for this flag even when the mana
+    /// cost carries no {X} pip, capped at the caster's life total),
+    /// pre-flighted against the caster's life (CR 119.4 — paying down to
+    /// exactly 0 is legal), and paid as a COST on cast (CR 601.2h) — the
+    /// life stays paid if the spell is countered. Resolution reads the
+    /// chosen X through the normal `Value::XFromCost` plumbing. Vicious
+    /// Rivalry, Fix What's Broken.
+    #[serde(default)]
+    pub additional_cost_pay_x_life: bool,
     /// "This spell costs `{amount}` less to cast if you control a permanent
     /// matching `filter`." Flat (non-scaling) board-state-gated generic
     /// reductions — Pearl of Wisdom ("{1} less if you control an Otter").
