@@ -27,10 +27,20 @@ target. Shipped: Dune Drifter.
 - **Drakuseth, Maw of Flames** — "4 damage to any target and 3 to each of up to
   two other targets" needs cross-effect target-slot allocation (single-target
   `DealDamage` slot 0 + `ApplyToTargets` slots 1–2 excluding slot 0).
-- **once-per-game activation** — Mild-Mannered Librarian's "Activate only once"
-  has no `once_per_game` flag on `ActivatedAbility` (only `once_per_turn`).
 - **Ordeal cycle / Nine-Lives Familiar** — need a "when you sacrifice this"
   self-trigger and a delayed return-with-counter-decrement at the next end step.
+- **Base-toughness anthem shipped** — `StaticEffect::SetBaseToughnessForMatching`
+  + `Modification::SetToughness` (layer 7b); Maha, Its Feathers Night ships.
+- **Persistent mana ("don't lose this mana as steps/phases end")** — Savage
+  Ventmaw needs a per-mana "doesn't empty" flag on the mana pool; the current
+  pool empties at every step/phase boundary. Blocks Savage Ventmaw, Kruphix-style
+  ramp riders beyond the existing colorless-conversion static.
+- **Search-to-exile linked recursion** — Hoarding Dragon ("search an artifact,
+  exile it; when this dies, return the exiled card to hand") needs the search's
+  `ZoneDest::Exile` to stamp `exiled_with = source` so a death trigger can read
+  `Selector::CardExiledWithSource`.
+- **Supply / Incubation counter types** — Stocking the Pantry (supply) and Drake
+  Hatcher (incubation) need new `CounterType` variants + client display entries.
 
 **Next-up cards noticed this run (recent185–190), each blocked on one
 primitive:**

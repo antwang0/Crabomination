@@ -16,6 +16,17 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **recent215–218 (FDN/BLB/MKM/TDM gaps):** `StaticEffect::SetBaseToughnessForMatching`
+  + `Modification::SetToughness` (layer-7b base-toughness anthem — Maha, Its
+  Feathers Night); `Value::GreatestManaValueInGraveyard` (Wick's Patrol's
+  `-X/-X`). 21 cards incl. `activate_once` once-per-game (Mild-Mannered
+  Librarian), page-counter inline threshold (Mazemind Tome), upkeep clone
+  (Extravagant Replication), `tap_n_filter` token taps (Baylen), expend-4 payoffs
+  (Teapot Slinger, Byway Barterer, Wandertale Mentor), Raid reanimation (Alesha),
+  suspect-on-attack (Rubblebelt Braggart), and 4 legends (Lathril, Ayli, Kykar,
+  Garna). Tests in `tests/recent215`–`recent218` + CR 700.14/702.108/602.5
+  conformance.
+
 - **recent214 (FDN reprint gaps):** `Selector::AllTargets` (every declared
   permanent/player target — "then do X to each of those targets": Biogenic
   Upgrade distributes 3 counters among up-to-3 then doubles on each) and

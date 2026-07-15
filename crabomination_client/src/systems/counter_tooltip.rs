@@ -1088,7 +1088,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
 fn humanize_keyword_debug(kw: &crabomination::card::Keyword) -> String {
     let dbg = format!("{kw:?}");
     let name = dbg
-        .split(|c| c == '(' || c == '{' || c == ' ')
+        .split(['(', '{', ' '])
         .next()
         .unwrap_or(&dbg);
     let mut out = String::new();

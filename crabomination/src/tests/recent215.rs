@@ -1,6 +1,6 @@
 //! Functionality tests for `catalog::sets::decks::recent215`.
 
-use crate::card::{CardType, CounterType, CreatureType, Keyword};
+use crate::card::{CounterType, CreatureType, Keyword};
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::types::{Attack, AttackTarget, Target};
