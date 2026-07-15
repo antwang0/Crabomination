@@ -9461,3 +9461,46 @@ fn cr_118_remove_counter_cost_requires_enough_counters() {
         "activatable once a third counter lands"
     );
 }
+
+/// CR 500.4/106.4 — "you don't lose this mana as steps and phases end": mana
+/// kept this turn survives a step/phase empty and clears at cleanup.
+#[test]
+fn cr_500_4_kept_mana_survives_step_empty() {
+    let mut g = two_player_game();
+    let vent = g.add_card_to_battlefield(0, catalog::savage_ventmaw());
+    let effect = catalog::savage_ventmaw().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &crate::game::effects::EffectContext::for_trigger(vent, 0, None, 0)).unwrap();
+    g.empty_mana_pools();
+    assert_eq!(g.players[0].mana_pool.total(), 6, "kept mana survives the empty");
+    g.players[0].kept_mana_this_turn.empty();
+    g.empty_mana_pools();
+    assert_eq!(g.players[0].mana_pool.total(), 0, "cleared at cleanup");
+}
+
+/// CR 701.60 — a suspected creature has menace and can't block.
+#[test]
+fn cr_701_60_suspected_creature_has_menace_and_cant_block() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.resolve_effect(
+        &crate::effect::Effect::Suspect { what: crate::effect::Selector::Target(0) },
+        &crate::game::effects::EffectContext { targets: vec![crate::game::types::Target::Permanent(bear)], ..crate::game::effects::EffectContext::for_spell(0, None, 0, 0) },
+    ).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Menace), "suspected → menace");
+    assert!(cp.keywords.contains(&Keyword::CantBlock), "suspected → can't block");
+}
+
+/// CR 614 — Doorkeeper Thrull suppresses ETB triggers of entering *artifacts*
+/// (not just creatures): the entering artifact's trigger multiplier is 0.
+#[test]
+fn cr_614_artifact_etb_triggers_suppressed_by_doorkeeper_thrull() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::doorkeeper_thrull());
+    let sal = g.add_card_to_battlefield(0, catalog::sandstorm_salvager());
+    assert_eq!(
+        crate::game::actions::etb_trigger_multiplier(&g, 0, Some(sal)),
+        0,
+        "an entering artifact fires no ETB triggers under the suppressor",
+    );
+}
