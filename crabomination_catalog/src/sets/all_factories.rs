@@ -6587,6 +6587,11 @@ static DECKS: &[Factory] = &[
     super::decks::rampaging_soulrager,
     super::decks::haunted_screen,
     super::decks::fear_of_infinity,
+    super::decks::metamorphic_blast,
+    super::decks::return_the_favor,
+    super::decks::trash_the_town,
+    super::decks::unfortunate_accident,
+    super::decks::thunder_lasso,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
