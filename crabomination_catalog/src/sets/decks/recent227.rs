@@ -2,12 +2,12 @@
 //! `tests/recent227.rs`.
 
 use crate::card::{
-    ArtifactSubtype, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, SelectionRequirement as R, Subtypes, TriggeredAbility,
+    ArtifactSubtype, CardDefinition, CardType, CreatureType, EntersAsCopy, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement as R, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{each_opponent, etb, investigate};
 use crate::effect::{Duration, Effect, Predicate, Selector, Value};
-use crate::mana::{b, cost, generic, w};
+use crate::mana::{b, cost, generic, u, w};
 
 /// Persuasive Interrogators — {4}{B}{B} 5/6 Gorgon Detective. ETB: investigate.
 /// Whenever you sacrifice a Clue, target opponent gets two poison counters.
@@ -33,6 +33,33 @@ pub fn persuasive_interrogators() -> CardDefinition {
                 effect: Effect::AddPoison { who: each_opponent(), amount: Value::Const(2) },
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Visage Bandit — {3}{U} 2/2 Shapeshifter Rogue. May enter as a copy of a
+/// creature you control (staying a Shapeshifter Rogue). Plot {2}{U}.
+pub fn visage_bandit() -> CardDefinition {
+    CardDefinition {
+        name: "Visage Bandit",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Creature.and(R::ControlledByYou),
+            extra_creature_types: vec![CreatureType::Shapeshifter, CreatureType::Rogue],
+            extra_triggered: vec![],
+            extra_keywords: vec![],
+            keep_name: false,
+            non_legendary: false,
+            extra_card_types: vec![],
+        }),
+        plot_cost: Some(cost(&[generic(2), u()])),
         ..Default::default()
     }
 }
