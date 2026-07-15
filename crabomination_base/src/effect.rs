@@ -1134,6 +1134,10 @@ pub enum Predicate {
     /// (`ctx.trigger_source`) — Void Mirror's counter gate. Free casts
     /// (suspend, cascade) spend no mana, so they match.
     CastSpellNoColoredManaSpent,
+    /// True if the just-cast spell (`ctx.trigger_source`) is one of the source
+    /// permanent's chosen color (`CardInstance.chosen_color` on `ctx.source`).
+    /// Diamond Mare's "whenever you cast a spell of the chosen color" payoff.
+    CastSpellSharesChosenColorOfSource,
     /// Gate on whether colorless `{C}` mana was spent casting the just-cast
     /// spell (`ctx.trigger_source`). `spent: true` = "if {C} was spent" (Drowner
     /// of Truth), `false` = "if {C} wasn't spent" (Wumpus Aberration). Computed

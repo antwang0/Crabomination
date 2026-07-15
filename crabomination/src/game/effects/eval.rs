@@ -1337,6 +1337,20 @@ impl GameState {
                     .find(|(c, _)| c == color)
                     .is_some_and(|(_, n)| *n >= *at_least)
             }
+            Predicate::CastSpellSharesChosenColorOfSource => {
+                let Some(color) = ctx.source.and_then(|s| self.find_card_anywhere(s)).and_then(|c| c.chosen_color) else {
+                    return false;
+                };
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => {
+                        card.definition.printed_colors().contains(&color)
+                    }
+                    _ => false,
+                })
+            }
             Predicate::CastSpellNoColoredManaSpent => {
                 // Read the just-cast spell's per-color payment off the stack.
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {

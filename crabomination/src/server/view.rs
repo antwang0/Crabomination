@@ -1554,6 +1554,7 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
             "morbid".into()
         }
         Predicate::CastSpellHasX => "cast spell w/ {X}".into(),
+        Predicate::CastSpellSharesChosenColorOfSource => "cast spell of chosen color".into(),
         Predicate::CastSpellTargetsMatch(_) => "cast spell targets match".into(),
         Predicate::CastSpellIsAdventure => "after Adventure cast".into(),
         Predicate::CastSpellMatches(_) => "cast spell matches".into(),
