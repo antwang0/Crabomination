@@ -48,6 +48,14 @@ target. Shipped: Dune Drifter.
   combat-damage tracking + X-value destroy), Primal Might (optional single fight
   target, below), Nine-Lives Familiar (revival delayed return), Gate Colossus /
   Drakuseth (above).
+- **Buildable gap cards noticed but skipped (recent225–228):** Tumbleweed Rising
+  (X/X token where X = greatest power — needs a fixed-at-creation evaluated P/T,
+  not `dynamic_pt`), Unscrupulous Contractor / Victimize (reflexive-sacrifice
+  chains that target a player / return two gy targets), Harvester of Misery &
+  Fear of Burning Alive (a from-hand "discard this card" activated / delirium
+  rider each), Krovod Haunch (Equipment with a may-pay dies rider). The
+  **optional single-target slot** primitive (Primal Might, Boom Box, Out Cold,
+  Hotshot Investigators, Clandestine Meddler) is the highest-leverage unlock.
 - **Search-to-exile linked recursion** — Hoarding Dragon ("search an artifact,
   exile it; when this dies, return the exiled card to hand") needs the search's
   `ZoneDest::Exile` to stamp `exiled_with = source` so a death trigger can read
