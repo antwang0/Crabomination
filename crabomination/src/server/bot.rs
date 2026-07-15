@@ -284,7 +284,17 @@ impl Bot for RandomBot {
                     let opp_blockers: Vec<&crate::card::CardInstance> = state
                         .battlefield
                         .iter()
-                        .filter(|c| c.controller == opp_seat && c.can_block())
+                        .filter(|c| {
+                            // A creature that's tapped, not a creature, or has a
+                            // computed `CantBlock` (Sandstorm Verge, pacifism-
+                            // style effects) can't block — don't let the bot hold
+                            // attackers back for a blocker that can't legally block.
+                            c.controller == opp_seat
+                                && c.can_block()
+                                && !state
+                                    .computed_permanent(c.id)
+                                    .is_some_and(|cp| cp.keywords.contains(&Keyword::CantBlock))
+                        })
                         .collect();
                     let has_ground_deathtouch = opp_blockers
                         .iter()
@@ -4888,6 +4898,32 @@ mod tests {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.iter().any(|atk_decl| atk_decl.attacker == atk),
                     "menace attacker should swing past a lone blocker");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
+    }
+
+    /// A blocker with a computed `CantBlock` (Sandstorm Verge, pacifism) isn't
+    /// counted as a threat — the bot swings its 2/2 past a can't-block
+    /// deathtouch creature that would otherwise scare it off.
+    #[test]
+    fn bot_ignores_cant_block_opponents_when_attacking() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(atk);
+        let mut deadly = catalog::grizzly_bears();
+        deadly.name = "Pacified Deathtoucher";
+        deadly.keywords.push(crate::card::Keyword::Deathtouch);
+        deadly.keywords.push(crate::card::Keyword::CantBlock);
+        g.add_card_to_battlefield(1, deadly);
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => {
+                assert!(a.iter().any(|d| d.attacker == atk),
+                    "should swing past a can't-block deathtouch creature");
             }
             other => panic!("expected DeclareAttackers, got {:?}", other),
         }

@@ -558,6 +558,11 @@ pub struct PlayerView {
     #[serde(default)]
     pub rad_counters: u32,
     pub mana_pool: ManaPool,
+    /// CR 500.4 exception — how much of `mana_pool` is "kept this turn" mana
+    /// that won't empty as steps and phases end (Savage Ventmaw). Surfaced so
+    /// the HUD can flag persistent mana. `#[serde(default)]`.
+    #[serde(default)]
+    pub kept_mana: u32,
     pub library: LibraryView,
     pub graveyard: Vec<GraveyardCardView>,
     /// CR 702.26 — this player's phased-out permanents (id + name). They're

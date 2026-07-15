@@ -946,6 +946,15 @@ pub fn update_mana_pips(
                 ));
             });
         }
+        // CR 500.4 exception — flag mana that won't empty this turn (Savage
+        // Ventmaw). A small lock chip next to the pips.
+        if p.kept_mana > 0 {
+            row.spawn((
+                Text::new(format!("🔒{}", p.kept_mana)),
+                ui_fonts.tf(11.0),
+                TextColor(theme::TEXT_MUTED),
+            ));
+        }
     });
 }
 

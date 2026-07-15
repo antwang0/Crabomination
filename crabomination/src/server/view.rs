@@ -554,6 +554,7 @@ fn project_player(
         at_max_speed: player.speed >= 4,
         rad_counters: player.rad_counters,
         mana_pool: player.mana_pool.clone(),
+        kept_mana: player.kept_mana_this_turn.total(),
         library: LibraryView {
             size: player.library.len(),
             known_top,

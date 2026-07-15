@@ -177,6 +177,7 @@ mod tests {
                 experience: 0,
                 rad_counters: 0,
                 mana_pool: ManaPool::default(),
+                kept_mana: 0,
                 library: LibraryView::default(),
                 graveyard: vec![],
                 hand: vec![],
