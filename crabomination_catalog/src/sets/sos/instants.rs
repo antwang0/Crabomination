@@ -1657,9 +1657,10 @@ pub fn prismari_charm() -> CardDefinition {
 /// The "this spell can't be copied" rider is now wired via the
 /// `CardDefinition.cant_be_copied` flag, which `Effect::CopySpell` honors
 /// by skipping it as a copy target. The "choose one or both" multi-mode
-/// rider collapses to
-/// "pick one mode" since the engine lacks a generic multi-mode picker
-/// over per-mode targets — same gap as Moment of Reckoning.
+/// rider is a true cast-time selection via `Effect::ChooseModesCast`
+/// (min 1, max 2): `CastSpellSpree` carries the chosen modes, each with
+/// its own target slot. A plain `CastSpell { mode }` still works as a
+/// single-mode cast.
 pub fn choreographed_sparks() -> CardDefinition {
     use crate::card::Keyword;
     use crate::mana::r;
@@ -1692,7 +1693,12 @@ pub fn choreographed_sparks() -> CardDefinition {
         // "This spell can't be copied." (CR 707) — an Effect::CopySpell
         // targeting Choreographed Sparks is skipped by the resolver.
         keywords: vec![Keyword::CantBeCopied],
-        effect: Effect::ChooseMode(vec![copy_is_spell, copy_creature_spell]),
+        effect: Effect::ChooseModesCast {
+            modes: vec![copy_is_spell, copy_creature_spell],
+            min: 1,
+            max: 2,
+            allow_repeats: false,
+        },
         ..Default::default()
     }
 }

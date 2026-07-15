@@ -15916,3 +15916,98 @@ fn vicious_rivalry_x_capped_by_life_total() {
     .expect("paying your last life point is legal (CR 119.4)");
     assert_eq!(g.players[0].life, 0);
 }
+
+/// Moment of Reckoning's real "Choose up to four. You may choose the same
+/// mode more than once." — one cast destroys TWO permanents and reanimates
+/// TWO cards, each instance with its own target slot.
+#[test]
+fn moment_of_reckoning_four_mode_instances_in_one_cast() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dead1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dead2 = g.add_card_to_graveyard(0, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::moment_of_reckoning());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![0, 0, 1, 1],
+        target: Some(Target::Permanent(bear1)),
+        additional_targets: vec![
+            Target::Permanent(bear2),
+            Target::Permanent(dead1),
+            Target::Permanent(dead2),
+        ],
+        x_value: None,
+    })
+    .expect("four mode instances castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear1), "first destroy");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear2), "second destroy");
+    assert!(g.battlefield.iter().any(|c| c.id == dead1), "first reanimation");
+    assert!(g.battlefield.iter().any(|c| c.id == dead2), "second reanimation");
+}
+
+/// The "up to four" cap rejects a five-instance pick.
+#[test]
+fn moment_of_reckoning_rejects_more_than_four_instances() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::moment_of_reckoning());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let err = g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![0, 0, 0, 1, 1],
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    });
+    assert!(err.is_err(), "five instances exceed the printed 'up to four'");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "cast rejected cleanly");
+}
+
+/// Choreographed Sparks' "Choose one or both" — both modes in one cast:
+/// copy the instant on the stack AND copy the creature spell on the stack.
+#[test]
+fn choreographed_sparks_copies_both_in_one_cast() {
+    let mut g = two_player_game();
+    // Creature spell on the stack (don't drain).
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bear cast");
+    // Instant on the stack above it.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt cast");
+    // Sparks: mode 0 copies the bolt, mode 1 copies the bear spell.
+    let sparks = g.add_card_to_hand(0, catalog::choreographed_sparks());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: sparks,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![Target::Permanent(bear)],
+        x_value: None,
+    })
+    .expect("one or both — both modes castable");
+    drain_stack(&mut g);
+    // Bolt + its copy: 6 damage total.
+    assert_eq!(g.players[1].life, foe_life - 6, "original bolt + copied bolt");
+    // Bear + its token copy on the battlefield.
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        2,
+        "original bear + token copy of the creature spell"
+    );
+}

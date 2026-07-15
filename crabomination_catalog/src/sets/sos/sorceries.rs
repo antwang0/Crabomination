@@ -763,18 +763,23 @@ pub fn render_speechless() -> CardDefinition {
 /// • Return target nonland permanent card from your graveyard to the
 ///   battlefield."
 ///
-/// Approximation: the printed card lets the controller pick up to four
-/// modes, repeats allowed. The engine's `ChooseMode` picks exactly one
-/// mode per resolution, so we collapse to a plain two-mode picker: each
-/// cast either destroys a target nonland permanent or returns a nonland
-/// permanent card from your graveyard — one effect, not up to four.
+/// True cast-time multi-mode via `Effect::ChooseModesCast` (min 0,
+/// max 4, repeats allowed): `GameAction::CastSpellSpree` carries the
+/// chosen mode instances, each target-bearing instance consuming its
+/// own target slot at resolution — e.g. destroy two different
+/// permanents and reanimate two different cards in one cast. A plain
+/// `CastSpell { mode }` still works as a single-mode cast.
 pub fn moment_of_reckoning() -> CardDefinition {
     use crate::effect::ZoneDest;
     CardDefinition {
         name: "Moment of Reckoning",
         cost: cost(&[generic(3), w(), w(), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseMode(vec![
+        effect: Effect::ChooseModesCast {
+            min: 0,
+            max: 4,
+            allow_repeats: true,
+            modes: vec![
             // Mode 0: destroy target nonland permanent.
             Effect::Destroy {
                 what: target_filtered(
@@ -792,7 +797,8 @@ pub fn moment_of_reckoning() -> CardDefinition {
                     tapped: false,
                 },
             },
-        ]),
+            ],
+        },
         ..Default::default()
     }
 }

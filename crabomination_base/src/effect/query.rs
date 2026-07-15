@@ -346,7 +346,7 @@ impl Effect {
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             // Spree targets are supplied per chosen mode at cast time and
             // consumed at resolution; no fixed cast-time slot is demanded.
-            Effect::Spree { .. } | Effect::Tiered { .. } => false,
+            Effect::Spree { .. } | Effect::Tiered { .. } | Effect::ChooseModesCast { .. } => false,
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
@@ -1225,6 +1225,9 @@ impl Effect {
             }
             Effect::Spree { .. } => "spree (choose one or more additional costs)".into(),
             Effect::Tiered { .. } => "tiered (choose one additional cost)".into(),
+            Effect::ChooseModesCast { min, max, .. } => {
+                format!("choose {min}-{max} modes")
+            }
             Effect::DestroyNoRegen { .. } => {
                 format!("destroy {} (can't be regenerated)", self.target_phrase())
             }
@@ -1796,6 +1799,15 @@ impl Effect {
                 // single-mode cast of any non-first mode). No cast-time slot
                 // filter is surfaced; see `Effect::Spree`'s resolution arm.
                 Effect::Spree { .. } | Effect::Tiered { .. } => None,
+                // ChooseModesCast: the plain single-mode cast path
+                // (`CastSpell { mode }`) validates like ChooseMode; a
+                // multi-mode `CastSpellSpree` cast validates its per-instance
+                // targets at resolution (falling back to the first mode that
+                // surfaces the slot, mirroring ChooseN).
+                Effect::ChooseModesCast { modes, .. } => match mode {
+                    Some(m) if m < modes.len() => eff_find(&modes[m], slot, None, kicked),
+                    _ => modes.iter().find_map(|m| eff_find(m, slot, None, kicked)),
+                },
                 Effect::MayDo { body, .. }
                 | Effect::MayPay { body, .. }
                 | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),

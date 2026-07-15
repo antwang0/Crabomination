@@ -3946,6 +3946,10 @@ fn effect_uses_x(eff: &Effect) -> bool {
 fn modal_mode_count(eff: &Effect) -> Option<usize> {
     match eff {
         Effect::ChooseMode(modes) => Some(modes.len()),
+        // Cast-time multi-mode spells (Choreographed Sparks, Moment of
+        // Reckoning): the bot casts them single-mode via the plain
+        // `CastSpell { mode }` back-compat path.
+        Effect::ChooseModesCast { modes, .. } => Some(modes.len()),
         Effect::Seq(steps) => steps.iter().find_map(modal_mode_count),
         _ => None,
     }
@@ -3958,6 +3962,7 @@ fn modal_mode_count(eff: &Effect) -> Option<usize> {
 fn mode_branch(eff: &Effect, mode: Option<usize>) -> &Effect {
     match (eff, mode) {
         (Effect::ChooseMode(modes), Some(m)) if m < modes.len() => &modes[m],
+        (Effect::ChooseModesCast { modes, .. }, Some(m)) if m < modes.len() => &modes[m],
         (Effect::Seq(steps), Some(_)) => steps
             .iter()
             .find(|s| matches!(s, Effect::ChooseMode(_)))

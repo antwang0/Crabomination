@@ -116,7 +116,11 @@ types; "pay X life" is a true cast-time additional cost
 (`additional_cost_pay_x_life` — Vicious Rivalry, Fix What's Broken); the
 five copy cards with printed "you may choose new targets" (Lumaret's
 Favor, Choreographed Sparks mode 0, Aziza, Mica, Silverquill's casualty)
-now use `Effect::CopySpellMayChooseTargets`.
+now use `Effect::CopySpellMayChooseTargets`; and true cast-time
+multi-mode selection ships via `Effect::ChooseModesCast` (shares
+`CastSpellSpree` plumbing, per-instance target slots) — Moment of
+Reckoning ("up to four, repeats allowed") and Choreographed Sparks
+("one or both") are fully faithful.
 
 ## Removed status tables (2026-07-12)
 

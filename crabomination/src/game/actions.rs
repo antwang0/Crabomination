@@ -3331,28 +3331,38 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        // The card must be a Spree or Tiered spell in hand; validate the modes.
-        // Tiered (FIN "Choose one additional cost.") allows exactly one mode.
-        let (mode_count, exactly_one) = self.players[p]
+        // The card must be a Spree / Tiered / ChooseModesCast spell in hand;
+        // validate the modes. Selection bounds per variant:
+        // - Spree (CR 702.172a): 1..=all, distinct.
+        // - Tiered (FIN "Choose one additional cost."): exactly one.
+        // - ChooseModesCast: `min..=max`, repeats iff `allow_repeats`
+        //   (Choreographed Sparks "one or both"; Moment of Reckoning
+        //   "up to four, same mode more than once").
+        let (mode_count, min_pick, max_pick, allow_repeats) = self.players[p]
             .hand
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| match &c.definition.effect {
-                crate::effect::Effect::Spree { modes } => Some((modes.len(), false)),
-                crate::effect::Effect::Tiered { modes } => Some((modes.len(), true)),
+                crate::effect::Effect::Spree { modes } => {
+                    Some((modes.len(), 1usize, modes.len(), false))
+                }
+                crate::effect::Effect::Tiered { modes } => Some((modes.len(), 1, 1, false)),
+                crate::effect::Effect::ChooseModesCast { modes, min, max, allow_repeats } => {
+                    Some((modes.len(), *min as usize, *max as usize, *allow_repeats))
+                }
                 _ => None,
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
-        // Distinct, in range, at least one (CR 702.172a — "one or more"),
-        // kept in printed order so target slots line up with resolution.
+        // In range, distinct unless repeats are allowed, kept in printed
+        // order so target slots line up with resolution.
         let mut chosen: Vec<u8> = Vec::new();
         for &i in &spree_modes {
-            if (i as usize) < mode_count && !chosen.contains(&i) {
+            if (i as usize) < mode_count && (allow_repeats || !chosen.contains(&i)) {
                 chosen.push(i);
             }
         }
         chosen.sort_unstable();
-        if chosen.is_empty() || (exactly_one && chosen.len() != 1) {
+        if chosen.len() < min_pick || chosen.len() > max_pick {
             return Err(GameError::InvalidTarget);
         }
         self.cast_atomically(|g| {

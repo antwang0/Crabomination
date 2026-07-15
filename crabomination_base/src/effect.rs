@@ -2195,6 +2195,17 @@ pub enum Effect {
     /// onto `CardInstance.spree_modes`) but the cast validator enforces a
     /// one-mode selection. Fire/Ice/Thunder/Restoration Magic.
     Tiered { modes: Vec<SpreeMode> },
+    /// Cast-time multi-mode selection without per-mode costs: "Choose one
+    /// or both —" (Choreographed Sparks: min 1, max 2, no repeats) and
+    /// "Choose up to four. You may choose the same mode more than once."
+    /// (Moment of Reckoning: min 0, max 4, repeats). Shares Spree's cast
+    /// plumbing — `GameAction::CastSpellSpree` validates the picks against
+    /// min/max/repeats and stamps them onto `CardInstance.spree_modes`; at
+    /// resolution the chosen instances run in printed order, each
+    /// target-bearing instance consuming the next target slot (slot 0 =
+    /// `target`, then `additional_targets`). A plain `CastSpell { mode }`
+    /// falls back to running that single mode (bot / back-compat path).
+    ChooseModesCast { modes: Vec<Effect>, min: u8, max: u8, allow_repeats: bool },
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
     /// `description` string is shown to the player (and serialized into

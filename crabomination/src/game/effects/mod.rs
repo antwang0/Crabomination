@@ -2163,6 +2163,37 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseModesCast { modes, .. } => {
+                // Cast-time multi-mode selection (Choreographed Sparks'
+                // "one or both", Moment of Reckoning's "up to four,
+                // repeats allowed") — the chosen instances were validated
+                // by `cast_spell_spree` and stamped onto `ctx.spree_modes`.
+                // Run them in printed order; each target-bearing INSTANCE
+                // (repeats included) consumes the next target slot. A plain
+                // `CastSpell { mode }` arrives with no stamped modes and
+                // falls back to that single mode (bot / back-compat path).
+                let chosen: Vec<u8> = if ctx.spree_modes.is_empty() {
+                    vec![(ctx.mode as u8).min(modes.len().saturating_sub(1) as u8)]
+                } else {
+                    ctx.spree_modes.clone()
+                };
+                let mut next_slot = 0usize;
+                for &i in &chosen {
+                    if let Some(m) = modes.get(i as usize) {
+                        if m.requires_target() {
+                            let mut sub_ctx = ctx.clone();
+                            sub_ctx.targets =
+                                ctx.targets.get(next_slot).cloned().into_iter().collect();
+                            next_slot += 1;
+                            self.run_effect(m, &sub_ctx, events)?;
+                        } else {
+                            self.run_effect(m, ctx, events)?;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::MayDo { description, body } => {
                 // Yes/no decision via `Decision::OptionalTrigger`, asked of
                 // the *controller* of the effect (`ctx.controller`). A
