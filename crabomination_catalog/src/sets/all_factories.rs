@@ -6486,6 +6486,14 @@ static DECKS: &[Factory] = &[
     super::decks::prayer_of_binding,
     super::decks::wildborn_preserver,
     super::decks::immersturm_predator,
+    super::decks::mild_mannered_librarian,
+    super::decks::mazemind_tome,
+    super::decks::extravagant_replication,
+    super::decks::lathril_blade_of_the_elves,
+    super::decks::ayli_eternal_pilgrim,
+    super::decks::kykar_zephyr_awakener,
+    super::decks::alesha_who_laughs_at_fate,
+    super::decks::garna_bloodfist_of_keld,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
