@@ -6522,6 +6522,8 @@ static DECKS: &[Factory] = &[
     super::decks::terrian_world_tyrant,
     super::decks::sundial_dawn_tyrant,
     super::decks::vizier_of_the_menagerie,
+    super::decks::warren_warleader,
+    super::decks::for_the_common_good,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
