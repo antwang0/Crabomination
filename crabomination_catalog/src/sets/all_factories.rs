@@ -6592,6 +6592,12 @@ static DECKS: &[Factory] = &[
     super::decks::trash_the_town,
     super::decks::unfortunate_accident,
     super::decks::thunder_lasso,
+    super::decks::surgical_suite_hospital_room,
+    super::decks::underwater_tunnel_slimy_aquarium,
+    super::decks::moldering_gym_weight_room,
+    super::decks::greenhouse_rickety_gazebo,
+    super::decks::walk_in_closet_forgotten_cellar,
+    super::decks::orphans_of_the_wheat,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

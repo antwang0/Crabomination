@@ -3380,6 +3380,15 @@ pub enum Effect {
     /// control" (Tangle Wire). Auto-pick: lands, then other noncreatures,
     /// then creatures by ascending power. Taps as many as exist when short.
     PlayerTapsUntapped { who: PlayerRef, filter: SelectionRequirement, amount: Value },
+    /// "Tap any number of untapped permanents matching `filter` you control;
+    /// this source gets +`power`/+`toughness` until end of turn for each one
+    /// tapped this way" (Orphans of the Wheat). The controller chooses which
+    /// to tap (min 0); the pump scales with the count.
+    TapAnyNumberThenPumpPerTapped {
+        filter: SelectionRequirement,
+        power: i32,
+        toughness: i32,
+    },
     /// Entrancing Lyre — tap `what` and lock it from untapping for as long as
     /// the source permanent stays tapped (`CardInstance.untap_locked_by`).
     TapAndUntapLock { what: Selector },

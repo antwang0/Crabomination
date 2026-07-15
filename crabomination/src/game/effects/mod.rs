@@ -5788,6 +5788,61 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TapAnyNumberThenPumpPerTapped { filter, power, toughness } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let seat = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && !c.tapped && c.id != source)
+                    .filter(|c| crate::game::layers::requirement_matches_card(filter, c, seat))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Tap any number of untapped creatures you control".to_string(),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: candidates.len() as u32,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => ids,
+                    _ => Vec::new(),
+                };
+                let mut tapped = 0i32;
+                for cid in chosen {
+                    if !candidates.iter().any(|(id, _)| *id == cid) {
+                        continue;
+                    }
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        if !c.tapped {
+                            c.tapped = true;
+                            tapped += 1;
+                            events.push(GameEvent::PermanentTapped {
+                                card_id: cid,
+                                actor: Some(seat),
+                            });
+                        }
+                    }
+                }
+                if tapped > 0 {
+                    if let Some(c) = self.battlefield_find_mut(source) {
+                        c.power_bonus += power * tapped;
+                        c.toughness_bonus += toughness * tapped;
+                    }
+                    events.push(GameEvent::PumpApplied {
+                        card_id: source,
+                        power: power * tapped,
+                        toughness: toughness * tapped,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::LookTopKeepOneRestToGraveyard { who: Some(who), count, exile_rest: _ } => {
                 // Dimir Charm mode 3. Auto-pick: keep the lowest-MV card on
                 // an opponent's library, the highest on your own.
@@ -9725,6 +9780,10 @@ impl GameState {
                 if let Some(other_id) = other {
                     self.move_card_to(other_id, &ZoneDest::Graveyard, ctx, events);
                 }
+                // Expose the manifested creature on `Selector::LastMoved` so a
+                // chained "then put a +1/+1 counter on that creature" rider
+                // (Slimy Aquarium, Weight Room) can reference it.
+                self.last_moved_cards = vec![chosen];
                 Ok(())
             }
 
