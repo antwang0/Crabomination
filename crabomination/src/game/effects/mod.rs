@@ -2326,6 +2326,51 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayPayX { description, body } => {
+                // "You may pay {X}. When you do, [body]." — X is chosen at
+                // resolution (0 = decline), capped by the controller's
+                // floated pool (MayPay convention: no mid-resolution mana
+                // abilities), paid as {X} generic, and threaded into the
+                // body as `ctx.x_value`.
+                use crate::decision::{Decision, DecisionAnswer};
+                let source = ctx.source.unwrap_or(CardId(0));
+                let pool_max = self.players[ctx.controller].mana_pool.total();
+                if pool_max == 0 {
+                    return Ok(());
+                }
+                let decision = Decision::ChooseAmount {
+                    source,
+                    prompt: description.clone(),
+                    max: pool_max,
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::AmountAnswerPending { max: pool_max },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
+                let n = match answer {
+                    DecisionAnswer::Amount(v) => v.min(pool_max),
+                    _ => 0,
+                };
+                if n == 0 {
+                    return Ok(());
+                }
+                let x_cost = crate::mana::ManaCost::new(vec![crate::mana::generic(n)]);
+                if self.players[ctx.controller].mana_pool.pay(&x_cost).is_err() {
+                    return Ok(());
+                }
+                let mut sub = ctx.clone();
+                sub.x_value = n;
+                self.run_effect(body, &sub, events)
+            }
+
             Effect::MayPayLife { description, amount, body, else_ } => {
                 // CR 119.4 — "you may pay N life." Ask yes/no, then pay only
                 // while life ≥ amount (paying life is a life loss). Declined or

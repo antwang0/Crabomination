@@ -2244,6 +2244,14 @@ pub enum Effect {
     /// `GameState`. Card factories pass `"…".into()` which is a no-cost
     /// `&str → String` move at construction time.
     MayDo { description: String, body: Box<Effect> },
+    /// "You may pay {X}. When you do, [body with X]." — the controller
+    /// picks X at resolution via `Decision::ChooseAmount` (0 = decline,
+    /// the AutoDecider default), capped by their FLOATED mana (the MayPay
+    /// convention: mana abilities aren't activatable mid-resolution), pays
+    /// {X} generic from the pool, and `body` runs with `ctx.x_value = X`
+    /// so `Value::XFromCost` reads the chosen amount. Tester of the
+    /// Tangential's "pay {X}: move X +1/+1 counters".
+    MayPayX { description: String, body: Box<Effect> },
 
     /// Optional **paid** branch: the controller is asked yes/no, and if
     /// they accept *and* can afford `mana_cost`, the engine deducts the

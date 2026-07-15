@@ -2050,10 +2050,10 @@ pub fn pensive_professor() -> CardDefinition {
 /// onto another target creature."
 ///
 /// Increment wired via `shortcut::increment_self_plus_one()`. The
-/// pay-X-to-move-counters combat trigger is wired with X collapsed to
-/// 1: a BeginCombat/ActivePlayer trigger wraps `MayPay {1}` around
-/// moving one +1/+1 counter to another target creature (no X-cost
-/// optional trigger primitive yet, so one counter per combat).
+/// pay-X-to-move-counters combat trigger is a real resolution-time
+/// `Effect::MayPayX`: the controller picks X (capped by floated mana,
+/// 0 = decline), pays {X}, and X +1/+1 counters move to another target
+/// creature — full X scaling, exactly as printed.
 pub fn tester_of_the_tangential() -> CardDefinition {
     use crate::card::{CounterType, EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::shortcut::{increment_self_plus_one, target_filtered};
@@ -2071,27 +2071,21 @@ pub fn tester_of_the_tangential() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![
             increment_self_plus_one(),
-            // Push (modern_decks, batch 86): "At the beginning of combat
-            // on your turn, you may pay {X}. When you do, move X +1/+1
-            // counters from this creature onto another target creature."
-            // Approximation: X is collapsed to 1 (the engine has no
-            // X-cost optional trigger primitive). The trigger fires at
-            // BeginCombat/ActivePlayer, wraps a `MayPay { {1}, … }`
-            // around `MoveCounter(self → target friendly creature, 1)`.
-            // AutoDecider declines (Bool(false)); ScriptedDecider can
-            // accept to move 1 counter at a time. For typical play
-            // patterns this captures the "redistribute counter to a
-            // bigger attacker" spirit even though the X-scaling is
-            // omitted.
+            // "At the beginning of combat on your turn, you may pay {X}.
+            // When you do, move X +1/+1 counters from this creature onto
+            // another target creature." `MayPayX` asks the amount at
+            // resolution (AutoDecider answers 0 = decline; ScriptedDecider
+            // supplies `Amount(n)`), pays {X} from the floated pool, and
+            // the body reads the chosen X via `Value::XFromCost`.
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(TurnStep::BeginCombat),
                     EventScope::ActivePlayer,
                 ),
-                effect: Effect::MayPay {
-                    description: "Pay {1}: move a +1/+1 counter from Tester to another creature?"
-                        .into(),
-                    mana_cost: cost(&[generic(1)]),
+                effect: Effect::MayPayX {
+                    description:
+                        "Pay {X}: move X +1/+1 counters from Tester to another creature?"
+                            .into(),
                     body: Box::new(Effect::MoveCounter {
                         from: Selector::This,
                         to: target_filtered(
@@ -2099,9 +2093,8 @@ pub fn tester_of_the_tangential() -> CardDefinition {
                                 .and(SelectionRequirement::OtherThanSource),
                         ),
                         kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(1),
+                        amount: Value::XFromCost,
                     }),
-                    else_: None,
                 },
             },
         ],

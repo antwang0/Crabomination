@@ -352,6 +352,7 @@ impl Effect {
             // consumed at resolution; no fixed cast-time slot is demanded.
             Effect::Spree { .. } | Effect::Tiered { .. } | Effect::ChooseModesCast { .. } => false,
             Effect::MayDo { body, .. } => body.requires_target(),
+            Effect::MayPayX { body, .. } => body.requires_target(),
             Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
@@ -1009,7 +1010,7 @@ impl Effect {
             // MayDo wraps an inner effect — surface its filter so the
             // cast prompt narrows correctly when the inner effect needs
             // a target (e.g. "you may sacrifice [target permanent]").
-            Effect::MayDo { body, .. } => body.primary_target_filter(),
+            Effect::MayDo { body, .. } | Effect::MayPayX { body, .. } => body.primary_target_filter(),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.primary_target_filter(),
             Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => then.primary_target_filter(),
             Effect::Process { then, .. } => then.primary_target_filter(),
@@ -1124,7 +1125,9 @@ impl Effect {
             Effect::DelayUntil { body, .. } | Effect::Repeat { body, .. } => {
                 body.prefers_friendly_target()
             }
-            Effect::ForEach { body, .. } | Effect::MayDo { body, .. } => {
+            Effect::ForEach { body, .. }
+            | Effect::MayDo { body, .. }
+            | Effect::MayPayX { body, .. } => {
                 body.prefers_friendly_target()
             }
             Effect::Process { then, .. } => then.prefers_friendly_target(),
@@ -1171,6 +1174,7 @@ impl Effect {
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
+            | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. } => body.prefers_graveyard_target(),
             Effect::Process { then, .. } => then.prefers_graveyard_target(),
@@ -1462,6 +1466,7 @@ impl Effect {
                 }
             }
             Effect::MayDo { body, .. }
+            | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. }
             | Effect::DelayUntil { body, .. }
@@ -1616,7 +1621,10 @@ impl Effect {
             Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
-            Effect::MayDo { body, .. } | Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.accepts_player_target(),
+            Effect::MayDo { body, .. }
+            | Effect::MayPayX { body, .. }
+            | Effect::MayPay { body, .. }
+            | Effect::MayPayLife { body, .. } => body.accepts_player_target(),
             Effect::Process { then, .. } => then.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
@@ -1813,6 +1821,7 @@ impl Effect {
                     _ => modes.iter().find_map(|m| eff_find(m, slot, None, kicked)),
                 },
                 Effect::MayDo { body, .. }
+                | Effect::MayPayX { body, .. }
                 | Effect::MayPay { body, .. }
                 | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::CollectEvidence { then, .. } => eff_find(then, slot, mode, kicked),
@@ -2097,6 +2106,7 @@ impl Effect {
                 None => modes.iter().find_map(|e| e.min_targets_in_mode(None)),
             },
             Effect::MayDo { body, .. }
+            | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. } => body.min_targets_in_mode(mode),
             _ => None,
@@ -2129,6 +2139,7 @@ impl Effect {
                 None => modes.iter().find_map(|e| e.distinct_target_count(None)),
             },
             Effect::MayDo { body, .. }
+            | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. } => body.distinct_target_count(mode),
             _ => None,

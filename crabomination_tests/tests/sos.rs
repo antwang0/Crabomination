@@ -16312,3 +16312,55 @@ fn mana_sculpt_banks_paid_mana_at_next_main_phase() {
         "3 colorless banked — the amount PAID for Divination"
     );
 }
+
+/// Tester of the Tangential's begin-combat "you may pay {X}" moves the
+/// CHOSEN X counters — full X scaling, capped by floated mana, 0 declines.
+#[test]
+fn tester_of_the_tangential_pays_x_and_moves_x_counters() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let tester = g.add_card_to_battlefield(0, catalog::tester_of_the_tangential());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tester).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    // Float 2 → the pick is capped at 2 even though 3 counters sit on Tester.
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(2)]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::BeginCombat;
+    let evs = g.fire_step_triggers(TurnStep::BeginCombat);
+    let _ = evs;
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(tester).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "X=2 counters left the Tester"
+    );
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "X=2 counters arrived on the bear"
+    );
+    assert_eq!(g.players[0].mana_pool.total(), 0, "{{X}} = {{2}} paid from the pool");
+}
+
+/// Answering 0 declines the pay-{X} offer entirely.
+#[test]
+fn tester_of_the_tangential_zero_declines() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let tester = g.add_card_to_battlefield(0, catalog::tester_of_the_tangential());
+    let _bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tester).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(0)]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::BeginCombat;
+    let _ = g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(tester).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "declined — counters stay put"
+    );
+    assert_eq!(g.players[0].mana_pool.total(), 3, "nothing paid");
+}

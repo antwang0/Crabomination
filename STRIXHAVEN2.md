@@ -134,7 +134,10 @@ wired (`ExcessDamageDealtThisResolution` → exile top-N → play until the
 end of your next turn at full cost; land plays through may-play remain
 an engine gap); Mana Sculpt banks {C} equal to the countered spell's
 actually-PAID mana at the caster's next main phase
-(`CounteredSpellManaSpent` + `AddManaAtNextMainPhase`).
+(`CounteredSpellManaSpent` + `AddManaAtNextMainPhase`); Tester of the
+Tangential's "you may pay {X}" is a real resolution-time amount pick
+(`Effect::MayPayX` — ChooseAmount capped by floated mana, 0 declines,
+body reads the chosen X via `XFromCost`).
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost
