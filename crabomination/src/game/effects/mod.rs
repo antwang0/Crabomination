@@ -5826,15 +5826,15 @@ impl GameState {
                     if !candidates.iter().any(|(id, _)| *id == cid) {
                         continue;
                     }
-                    if let Some(c) = self.battlefield_find_mut(cid) {
-                        if !c.tapped {
-                            c.tapped = true;
-                            tapped += 1;
-                            events.push(GameEvent::PermanentTapped {
-                                card_id: cid,
-                                actor: Some(seat),
-                            });
-                        }
+                    if let Some(c) = self.battlefield_find_mut(cid)
+                        && !c.tapped
+                    {
+                        c.tapped = true;
+                        tapped += 1;
+                        events.push(GameEvent::PermanentTapped {
+                            card_id: cid,
+                            actor: Some(seat),
+                        });
                     }
                 }
                 if tapped > 0 {
