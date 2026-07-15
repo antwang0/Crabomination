@@ -9504,3 +9504,65 @@ fn cr_614_artifact_etb_triggers_suppressed_by_doorkeeper_thrull() {
         "an entering artifact fires no ETB triggers under the suppressor",
     );
 }
+
+// ── CR 115 / 601.2c — Effect::OptionalTargets declinable slot ────────────────
+
+/// CR 601.2c — Primal Might's fight target is "up to one"; cast against your own
+/// creature with no opposing creature present, the optional fight slot is simply
+/// skipped and the spell still pumps the chosen creature.
+#[test]
+fn cr_601_2c_optional_targets_fight_slot_is_skippable() {
+    use crate::game::{drain_stack, GameAction, TurnStep};
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::primal_might());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2); // X = 2
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("castable targeting only your creature — the fight target is optional");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 4, "+2/+2 applied without a fight");
+}
+
+/// CR 709.5 — Rampaging Soulrager's static reads the count of unlocked doors
+/// among Rooms you control via `Predicate::UnlockedDoorsControlledAtLeast`.
+#[test]
+fn cr_709_5_unlocked_doors_gate_self_pump() {
+    let mut g = two_player_game();
+    let sr = g.add_card_to_battlefield(0, catalog::rampaging_soulrager());
+    let room = g.add_card_to_battlefield(0, catalog::roaring_furnace_steaming_sauna());
+    assert_eq!(g.computed_permanent(sr).unwrap().power, 1, "no doors → 1/4");
+    g.battlefield_find_mut(room).unwrap().unlock_room_door(false);
+    assert_eq!(g.computed_permanent(sr).unwrap().power, 1, "one door is not enough");
+    g.battlefield_find_mut(room).unwrap().unlock_room_door(true);
+    assert_eq!(g.computed_permanent(sr).unwrap().power, 4, "two unlocked doors → +3/+0");
+}
+
+// ── CR 702.16e — protection from a creature *type* prevents combat damage ─────
+
+/// CR 702.16e — Resilient Roadrunner has protection from Coyotes, so a Coyote's
+/// combat damage to it is prevented (the protection check keys on creature type,
+/// not just color/creatures).
+#[test]
+fn cr_702_16e_protection_from_creature_type_prevents_damage() {
+    let mut g = two_player_game();
+    let roadrunner = g.add_card_to_battlefield(0, catalog::resilient_roadrunner());
+    let coyote = g.add_card_to_battlefield(1, catalog::driftgloom_coyote());
+    assert!(
+        g.damage_prevented_by_protection(coyote, roadrunner),
+        "a Coyote can't deal combat damage to a creature with protection from Coyotes",
+    );
+    assert!(
+        !g.damage_prevented_by_protection(roadrunner, coyote),
+        "the Roadrunner still damages the Coyote normally",
+    );
+}

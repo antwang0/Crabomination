@@ -5,8 +5,9 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword,
     SelectionRequirement as R, Subtypes,
 };
+use crate::card::StaticAbility;
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
+use crate::effect::{Effect, PlayerRef, Predicate, Selector, StaticEffect, Value, ZoneDest};
 use crate::mana::{cost, g, generic, r, u};
 
 /// Volcanic Spite — {1}{R} Instant. Deals 3 damage to target creature,
@@ -33,6 +34,29 @@ pub fn volcanic_spite() -> CardDefinition {
                 }),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Rampaging Soulrager — {2}{R} 1/4 Spirit. Gets +3/+0 as long as there are two
+/// or more unlocked doors among Rooms you control.
+pub fn rampaging_soulrager() -> CardDefinition {
+    CardDefinition {
+        name: "Rampaging Soulrager",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Gets +3/+0 as long as there are two or more unlocked doors among Rooms you control.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::UnlockedDoorsControlledAtLeast { who: PlayerRef::You, count: 2 },
+                power: 3,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
         ..Default::default()
     }
 }

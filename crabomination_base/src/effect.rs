@@ -1345,6 +1345,12 @@ pub enum Predicate {
     /// `Player.committed_crime_this_turn`. Powers "as long as / if you've
     /// committed a crime this turn" riders (Nimble Brigand's evasion).
     CommittedCrimeThisTurn { who: PlayerRef },
+    /// CR 709.5 — `who` controls at least `count` unlocked doors among the
+    /// Rooms they control (each Room can have up to two doors unlocked). Powers
+    /// "as long as there are N or more unlocked doors among Rooms you control"
+    /// statics (Rampaging Soulrager). Reads `CardInstance.unlocked_doors`
+    /// (a per-door bitmask).
+    UnlockedDoorsControlledAtLeast { who: PlayerRef, count: u32 },
     /// CR 700.12 — `who` controls an **outlaw**: a creature that is an
     /// Assassin, Mercenary, Pirate, Rogue, or Warlock. Powers "as long as you
     /// control an outlaw" / "if you control an outlaw" riders (Take the Fall).

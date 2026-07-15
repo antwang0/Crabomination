@@ -1726,6 +1726,16 @@ impl GameState {
             Predicate::CommittedCrimeThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].committed_crime_this_turn),
+            Predicate::UnlockedDoorsControlledAtLeast { who, count } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let total: u32 = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.room.is_some())
+                    .map(|c| c.unlocked_doors.count_ones())
+                    .sum();
+                total >= *count
+            }
             Predicate::ControlsOutlaw { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 self.battlefield.iter().any(|c| c.controller == p && card_is_outlaw(c))

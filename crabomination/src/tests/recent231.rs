@@ -40,6 +40,19 @@ fn volcanic_spite_loots_when_accepted() {
     assert_eq!(g.players[0].hand.len(), hand_before, "bottomed one, drew one");
 }
 
+/// Rampaging Soulrager is 1/4 with no unlocked doors and 4/4 once two doors
+/// among your Rooms are unlocked.
+#[test]
+fn rampaging_soulrager_grows_with_two_doors() {
+    let mut g = two_player_game();
+    let sr = g.add_card_to_battlefield(0, catalog::rampaging_soulrager());
+    assert_eq!(g.computed_permanent(sr).unwrap().power, 1, "1/4 with no doors");
+    let room = g.add_card_to_battlefield(0, catalog::roaring_furnace_steaming_sauna());
+    g.battlefield_find_mut(room).unwrap().unlock_room_door(false);
+    g.battlefield_find_mut(room).unwrap().unlock_room_door(true);
+    assert_eq!(g.computed_permanent(sr).unwrap().power, 4, "+3/+0 with two unlocked doors");
+}
+
 /// Lilysplash Mentor blinks your creature and returns it with a +1/+1 counter.
 #[test]
 fn lilysplash_mentor_blinks_with_counter() {
