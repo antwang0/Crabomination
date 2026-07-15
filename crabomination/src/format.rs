@@ -644,6 +644,3 @@ pub fn validate_commander_deck(
     }
 }
 
-#[cfg(test)]
-#[path = "tests/format.rs"]
-mod tests;

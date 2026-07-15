@@ -768,7 +768,7 @@ fn pick_land_to_play(state: &GameState, seat: usize) -> Option<CardId> {
 /// discard on the bot). `AutoDecider` declines *every* optional trigger,
 /// which means a bot would never take a beneficial "you may" (Provoke's
 /// "you may", Boast token riders, etc.); this makes those fire.
-pub(crate) fn optional_trigger_beneficial(state: &GameState, source: CardId, description: &str) -> bool {
+pub fn optional_trigger_beneficial(state: &GameState, source: CardId, description: &str) -> bool {
     // Locate the source card's definition in any zone the bot can see.
     let def = state
         .battlefield

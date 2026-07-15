@@ -731,7 +731,7 @@ pub enum DelayedKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingDecision {
     pub decision: Decision,
-    pub(crate) resume: ResumeContext,
+    pub resume: ResumeContext,
 }
 
 impl PendingDecision {
@@ -806,7 +806,7 @@ impl PendingEffectState {
 /// scope so the same-controller ordering pass can take ownership of the
 /// collected vector.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct TriggerCandidate {
+pub struct TriggerCandidate {
     pub source: CardId,
     pub effect: Effect,
     pub controller: usize,
@@ -879,7 +879,7 @@ pub enum AbilityCostChoice {
 /// after the answered decision is applied (e.g. the `Draw` half of `Opt`
 /// suspended on its `Scry`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) enum ResumeContext {
+pub enum ResumeContext {
     /// CR 603.3b — a networked controller is ordering a same-controller
     /// run of simultaneous triggers. `ordered` holds the runs already
     /// sequenced, `run` the one being asked about, `rest` the candidates
@@ -1192,7 +1192,7 @@ impl GameAction {
 /// CombatDamage` is waiting on: the order its multiple blockers are dealt
 /// damage in (CR 510.1c), or how its power is divided among them (510.1d).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum CombatDecisionKind {
+pub enum CombatDecisionKind {
     Order,
     Assign,
 }

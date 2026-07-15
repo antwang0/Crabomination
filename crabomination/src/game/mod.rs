@@ -32,890 +32,7 @@ pub mod effects;
 pub mod layers;
 #[doc(hidden)]
 pub mod stack;
-#[cfg(test)]
-#[path = "../tests/game.rs"]
-mod tests;
-#[cfg(test)]
-#[path = "../tests/modern.rs"]
-mod tests_modern;
-#[cfg(test)]
-#[path = "../tests/c21.rs"]
-mod tests_c21;
-#[cfg(test)]
-#[path = "../tests/recent.rs"]
-mod tests_recent;
-#[cfg(test)]
-#[path = "../tests/freerunning.rs"]
-mod tests_freerunning;
-#[cfg(test)]
-#[path = "../tests/recent2.rs"]
-mod tests_recent2;
-#[cfg(test)]
-#[path = "../tests/recent3.rs"]
-mod tests_recent3;
-#[cfg(test)]
-#[path = "../tests/recent4.rs"]
-mod tests_recent4;
-#[cfg(test)]
-#[path = "../tests/recent5.rs"]
-mod tests_recent5;
-#[cfg(test)]
-#[path = "../tests/recent6.rs"]
-mod tests_recent6;
-#[cfg(test)]
-#[path = "../tests/recent7.rs"]
-mod tests_recent7;
-#[cfg(test)]
-#[path = "../tests/recent8.rs"]
-mod tests_recent8;
-#[cfg(test)]
-#[path = "../tests/recent9.rs"]
-mod tests_recent9;
-#[cfg(test)]
-#[path = "../tests/recent10.rs"]
-mod tests_recent10;
-#[cfg(test)]
-#[path = "../tests/recent11.rs"]
-mod tests_recent11;
-#[cfg(test)]
-#[path = "../tests/recent12.rs"]
-mod tests_recent12;
-#[cfg(test)]
-#[path = "../tests/recent13.rs"]
-mod tests_recent13;
-#[cfg(test)]
-#[path = "../tests/recent14.rs"]
-mod tests_recent14;
-#[cfg(test)]
-#[path = "../tests/recent15.rs"]
-mod tests_recent15;
-#[cfg(test)]
-#[path = "../tests/recent16.rs"]
-mod tests_recent16;
-#[cfg(test)]
-#[path = "../tests/recent17.rs"]
-mod tests_recent17;
-#[cfg(test)]
-#[path = "../tests/recent18.rs"]
-mod tests_recent18;
-#[cfg(test)]
-#[path = "../tests/recent19.rs"]
-mod tests_recent19;
-#[cfg(test)]
-#[path = "../tests/recent20.rs"]
-mod tests_recent20;
-#[cfg(test)]
-#[path = "../tests/recent21.rs"]
-mod tests_recent21;
-#[cfg(test)]
-#[path = "../tests/recent22.rs"]
-mod tests_recent22;
-#[cfg(test)]
-#[path = "../tests/recent23.rs"]
-mod tests_recent23;
-#[cfg(test)]
-#[path = "../tests/recent24.rs"]
-mod tests_recent24;
-#[cfg(test)]
-#[path = "../tests/recent25.rs"]
-mod tests_recent25;
-#[cfg(test)]
-#[path = "../tests/recent26.rs"]
-mod tests_recent26;
-#[cfg(test)]
-#[path = "../tests/recent27.rs"]
-mod tests_recent27;
-#[cfg(test)]
-#[path = "../tests/recent28.rs"]
-mod tests_recent28;
-#[cfg(test)]
-#[path = "../tests/recent29.rs"]
-mod tests_recent29;
-#[cfg(test)]
-#[path = "../tests/recent30.rs"]
-mod tests_recent30;
-#[cfg(test)]
-#[path = "../tests/recent31.rs"]
-mod tests_recent31;
-#[cfg(test)]
-#[path = "../tests/recent32.rs"]
-mod tests_recent32;
-#[cfg(test)]
-#[path = "../tests/recent33.rs"]
-mod tests_recent33;
-#[cfg(test)]
-#[path = "../tests/recent34.rs"]
-mod tests_recent34;
-#[cfg(test)]
-#[path = "../tests/recent35.rs"]
-mod tests_recent35;
-#[cfg(test)]
-#[path = "../tests/recent36.rs"]
-mod tests_recent36;
-#[cfg(test)]
-#[path = "../tests/recent37.rs"]
-mod tests_recent37;
-#[cfg(test)]
-#[path = "../tests/recent38.rs"]
-mod tests_recent38;
-#[cfg(test)]
-#[path = "../tests/recent39.rs"]
-mod tests_recent39;
-#[cfg(test)]
-#[path = "../tests/recent40.rs"]
-mod tests_recent40;
-#[cfg(test)]
-#[path = "../tests/recent41.rs"]
-mod tests_recent41;
-#[cfg(test)]
-#[path = "../tests/recent42.rs"]
-mod tests_recent42;
-#[cfg(test)]
-#[path = "../tests/recent43.rs"]
-mod tests_recent43;
-#[cfg(test)]
-#[path = "../tests/recent44.rs"]
-mod tests_recent44;
-#[cfg(test)]
-#[path = "../tests/recent45.rs"]
-mod tests_recent45;
-#[cfg(test)]
-#[path = "../tests/recent46.rs"]
-mod tests_recent46;
-#[cfg(test)]
-#[path = "../tests/recent47.rs"]
-mod tests_recent47;
-#[cfg(test)]
-#[path = "../tests/recent48.rs"]
-mod tests_recent48;
-#[cfg(test)]
-#[path = "../tests/recent49.rs"]
-mod tests_recent49;
-#[cfg(test)]
-#[path = "../tests/recent50.rs"]
-mod tests_recent50;
-#[cfg(test)]
-#[path = "../tests/recent51.rs"]
-mod tests_recent51;
-#[cfg(test)]
-#[path = "../tests/recent52.rs"]
-mod tests_recent52;
-#[cfg(test)]
-#[path = "../tests/recent53.rs"]
-mod tests_recent53;
-#[cfg(test)]
-#[path = "../tests/recent54.rs"]
-mod tests_recent54;
-#[cfg(test)]
-#[path = "../tests/recent55.rs"]
-mod tests_recent55;
-#[cfg(test)]
-#[path = "../tests/recent56.rs"]
-mod tests_recent56;
-#[cfg(test)]
-#[path = "../tests/recent57.rs"]
-mod tests_recent57;
-#[cfg(test)]
-#[path = "../tests/recent58.rs"]
-mod tests_recent58;
-#[cfg(test)]
-#[path = "../tests/recent59.rs"]
-mod tests_recent59;
-#[cfg(test)]
-#[path = "../tests/recent60.rs"]
-mod tests_recent60;
-#[cfg(test)]
-#[path = "../tests/recent61.rs"]
-mod tests_recent61;
-#[cfg(test)]
-#[path = "../tests/recent62.rs"]
-mod tests_recent62;
-#[cfg(test)]
-#[path = "../tests/recent63.rs"]
-mod tests_recent63;
-#[cfg(test)]
-#[path = "../tests/recent64.rs"]
-mod tests_recent64;
-#[cfg(test)]
-#[path = "../tests/recent65.rs"]
-mod tests_recent65;
-#[cfg(test)]
-#[path = "../tests/recent66.rs"]
-mod tests_recent66;
-#[cfg(test)]
-#[path = "../tests/recent67.rs"]
-mod tests_recent67;
-#[cfg(test)]
-#[path = "../tests/recent68.rs"]
-mod tests_recent68;
-#[cfg(test)]
-#[path = "../tests/recent69.rs"]
-mod tests_recent69;
-#[cfg(test)]
-#[path = "../tests/recent70.rs"]
-mod tests_recent70;
-#[cfg(test)]
-#[path = "../tests/recent71.rs"]
-mod tests_recent71;
-#[cfg(test)]
-#[path = "../tests/recent72.rs"]
-mod tests_recent72;
-#[cfg(test)]
-#[path = "../tests/recent73.rs"]
-mod tests_recent73;
-#[cfg(test)]
-#[path = "../tests/recent74.rs"]
-mod tests_recent74;
-#[cfg(test)]
-#[path = "../tests/recent75.rs"]
-mod tests_recent75;
-#[cfg(test)]
-#[path = "../tests/recent76.rs"]
-mod tests_recent76;
-#[cfg(test)]
-#[path = "../tests/recent77.rs"]
-mod tests_recent77;
-#[cfg(test)]
-#[path = "../tests/recent78.rs"]
-mod tests_recent78;
-#[cfg(test)]
-#[path = "../tests/recent79.rs"]
-mod tests_recent79;
-#[cfg(test)]
-#[path = "../tests/recent80.rs"]
-mod tests_recent80;
-#[cfg(test)]
-#[path = "../tests/recent81.rs"]
-mod tests_recent81;
-#[cfg(test)]
-#[path = "../tests/recent82.rs"]
-mod tests_recent82;
-#[cfg(test)]
-#[path = "../tests/recent83.rs"]
-mod tests_recent83;
 
-#[cfg(test)]
-#[path = "../tests/recent84.rs"]
-mod tests_recent84;
-
-#[cfg(test)]
-#[path = "../tests/recent85.rs"]
-mod tests_recent85;
-
-#[cfg(test)]
-#[path = "../tests/recent86.rs"]
-mod tests_recent86;
-
-#[cfg(test)]
-#[path = "../tests/recent87.rs"]
-mod tests_recent87;
-
-#[cfg(test)]
-#[path = "../tests/recent88.rs"]
-mod tests_recent88;
-
-#[cfg(test)]
-#[path = "../tests/recent89.rs"]
-mod tests_recent89;
-#[cfg(test)]
-#[path = "../tests/recent90.rs"]
-mod tests_recent90;
-#[cfg(test)]
-#[path = "../tests/experience.rs"]
-mod tests_experience;
-#[cfg(test)]
-#[path = "../tests/recent91.rs"]
-mod tests_recent91;
-#[cfg(test)]
-#[path = "../tests/recent92.rs"]
-mod tests_recent92;
-#[cfg(test)]
-#[path = "../tests/recent93.rs"]
-mod tests_recent93;
-#[cfg(test)]
-#[path = "../tests/recent94.rs"]
-mod tests_recent94;
-#[cfg(test)]
-#[path = "../tests/recent95.rs"]
-mod tests_recent95;
-#[cfg(test)]
-#[path = "../tests/recent96.rs"]
-mod tests_recent96;
-#[cfg(test)]
-#[path = "../tests/recent97.rs"]
-mod tests_recent97;
-#[cfg(test)]
-#[path = "../tests/recent98.rs"]
-mod tests_recent98;
-#[cfg(test)]
-#[path = "../tests/recent99.rs"]
-mod tests_recent99;
-#[cfg(test)]
-#[path = "../tests/recent100.rs"]
-mod tests_recent100;
-#[cfg(test)]
-#[path = "../tests/recent101.rs"]
-mod tests_recent101;
-#[cfg(test)]
-#[path = "../tests/afr.rs"]
-mod tests_afr;
-#[cfg(test)]
-#[path = "../tests/recent102.rs"]
-mod tests_recent102;
-#[cfg(test)]
-#[path = "../tests/recent103.rs"]
-mod tests_recent103;
-#[cfg(test)]
-#[path = "../tests/recent104.rs"]
-mod tests_recent104;
-#[cfg(test)]
-#[path = "../tests/quests.rs"]
-mod tests_quests;
-#[cfg(test)]
-#[path = "../tests/recent105.rs"]
-mod tests_recent105;
-#[cfg(test)]
-#[path = "../tests/recent106.rs"]
-mod tests_recent106;
-#[cfg(test)]
-#[path = "../tests/recent107.rs"]
-mod tests_recent107;
-#[cfg(test)]
-#[path = "../tests/recent108.rs"]
-mod tests_recent108;
-#[cfg(test)]
-#[path = "../tests/recent109.rs"]
-mod tests_recent109;
-#[cfg(test)]
-#[path = "../tests/recent110.rs"]
-mod tests_recent110;
-#[cfg(test)]
-#[path = "../tests/recent111.rs"]
-mod tests_recent111;
-#[cfg(test)]
-#[path = "../tests/recent112.rs"]
-mod tests_recent112;
-#[cfg(test)]
-#[path = "../tests/recent113.rs"]
-mod tests_recent113;
-#[cfg(test)]
-#[path = "../tests/recent114.rs"]
-mod tests_recent114;
-#[cfg(test)]
-#[path = "../tests/mh2b.rs"]
-mod tests_mh2b;
-#[cfg(test)]
-#[path = "../tests/mh2c.rs"]
-mod tests_mh2c;
-#[cfg(test)]
-#[path = "../tests/mh2d.rs"]
-mod tests_mh2d;
-#[cfg(test)]
-#[path = "../tests/mh2e.rs"]
-mod tests_mh2e;
-#[cfg(test)]
-#[path = "../tests/mh2f.rs"]
-mod tests_mh2f;
-#[cfg(test)]
-#[path = "../tests/mh2g.rs"]
-mod tests_mh2g;
-#[cfg(test)]
-#[path = "../tests/mh2h.rs"]
-mod tests_mh2h;
-#[cfg(test)]
-#[path = "../tests/mh2i.rs"]
-mod tests_mh2i;
-#[cfg(test)]
-#[path = "../tests/echo.rs"]
-mod tests_echo;
-#[cfg(test)]
-#[path = "../tests/abilitywords.rs"]
-mod tests_abilitywords;
-#[cfg(test)]
-#[path = "../tests/spree.rs"]
-mod tests_spree;
-#[cfg(test)]
-#[path = "../tests/avatar_water.rs"]
-mod tests_avatar_water;
-#[cfg(test)]
-#[path = "../tests/catalog_registration.rs"]
-mod tests_catalog_registration;
-#[cfg(test)]
-#[path = "../tests/lci_craft.rs"]
-mod tests_lci_craft;
-#[cfg(test)]
-#[path = "../tests/lci.rs"]
-mod tests_lci;
-#[cfg(test)]
-#[path = "../tests/blight.rs"]
-mod tests_blight;
-#[cfg(test)]
-#[path = "../tests/tla.rs"]
-mod tests_tla;
-#[cfg(test)]
-#[path = "../tests/mom.rs"]
-mod tests_mom;
-#[cfg(test)]
-#[path = "../tests/eoe.rs"]
-mod tests_eoe;
-#[cfg(test)]
-#[path = "../tests/one.rs"]
-mod tests_one;
-#[cfg(test)]
-#[path = "../tests/ltr.rs"]
-mod tests_ltr;
-#[cfg(test)]
-#[path = "../tests/fin.rs"]
-mod tests_fin;
-#[cfg(test)]
-#[path = "../tests/innistrad.rs"]
-mod tests_innistrad;
-#[cfg(test)]
-#[path = "../tests/sos.rs"]
-mod tests_sos;
-#[cfg(test)]
-#[path = "../tests/stx/mod.rs"]
-mod tests_stx;
-#[cfg(test)]
-#[path = "../tests/multiplayer.rs"]
-mod tests_multiplayer;
-#[cfg(test)]
-#[path = "../tests/xtra.rs"]
-mod tests_xtra;
-#[cfg(test)]
-#[path = "../tests/combat_keywords.rs"]
-mod tests_combat_keywords;
-#[cfg(test)]
-#[path = "../tests/classic.rs"]
-mod tests_classic;
-#[cfg(test)]
-#[path = "../tests/counters.rs"]
-mod tests_counters;
-#[cfg(test)]
-#[path = "../tests/energy.rs"]
-mod tests_energy;
-#[cfg(test)]
-#[path = "../tests/akh.rs"]
-mod tests_akh;
-#[cfg(test)]
-#[path = "../tests/mkm.rs"]
-mod tests_mkm;
-#[cfg(test)]
-#[path = "../tests/mh3.rs"]
-mod tests_mh3;
-#[cfg(test)]
-#[path = "../tests/mh3b.rs"]
-mod tests_mh3b;
-#[cfg(test)]
-#[path = "../tests/mh3c.rs"]
-mod tests_mh3c;
-#[cfg(test)]
-#[path = "../tests/mh3d.rs"]
-mod tests_mh3d;
-#[cfg(test)]
-#[path = "../tests/mh3e.rs"]
-mod tests_mh3e;
-#[cfg(test)]
-#[path = "../tests/recent115.rs"]
-mod tests_recent115;
-#[cfg(test)]
-#[path = "../tests/recent116.rs"]
-mod tests_recent116;
-#[cfg(test)]
-#[path = "../tests/recent117.rs"]
-mod tests_recent117;
-#[cfg(test)]
-#[path = "../tests/recent118.rs"]
-mod tests_recent118;
-#[cfg(test)]
-#[path = "../tests/recent119.rs"]
-mod tests_recent119;
-#[cfg(test)]
-#[path = "../tests/recent120.rs"]
-mod tests_recent120;
-#[cfg(test)]
-#[path = "../tests/recent121.rs"]
-mod tests_recent121;
-#[cfg(test)]
-#[path = "../tests/recent122.rs"]
-mod tests_recent122;
-#[cfg(test)]
-#[path = "../tests/recent123.rs"]
-mod tests_recent123;
-#[cfg(test)]
-#[path = "../tests/recent124.rs"]
-mod tests_recent124;
-#[cfg(test)]
-#[path = "../tests/recent125.rs"]
-mod tests_recent125;
-#[cfg(test)]
-#[path = "../tests/recent126.rs"]
-mod tests_recent126;
-#[cfg(test)]
-#[path = "../tests/recent127.rs"]
-mod tests_recent127;
-#[cfg(test)]
-#[path = "../tests/recent128.rs"]
-mod tests_recent128;
-#[cfg(test)]
-#[path = "../tests/recent129.rs"]
-mod tests_recent129;
-#[cfg(test)]
-#[path = "../tests/recent130.rs"]
-mod tests_recent130;
-
-#[cfg(test)]
-#[path = "../tests/recent131.rs"]
-mod tests_recent131;
-
-#[cfg(test)]
-#[path = "../tests/recent132.rs"]
-mod tests_recent132;
-
-#[cfg(test)]
-#[path = "../tests/recent133.rs"]
-mod tests_recent133;
-
-#[cfg(test)]
-#[path = "../tests/recent134.rs"]
-mod tests_recent134;
-#[cfg(test)]
-#[path = "../tests/recent135.rs"]
-mod tests_recent135;
-#[cfg(test)]
-#[path = "../tests/recent136.rs"]
-mod tests_recent136;
-#[cfg(test)]
-#[path = "../tests/recent137.rs"]
-mod tests_recent137;
-#[cfg(test)]
-#[path = "../tests/recent138.rs"]
-mod tests_recent138;
-#[cfg(test)]
-#[path = "../tests/recent139.rs"]
-mod tests_recent139;
-#[cfg(test)]
-#[path = "../tests/recent140.rs"]
-mod tests_recent140;
-#[cfg(test)]
-#[path = "../tests/recent141.rs"]
-mod tests_recent141;
-#[cfg(test)]
-#[path = "../tests/recent142.rs"]
-mod tests_recent142;
-#[cfg(test)]
-#[path = "../tests/recent143.rs"]
-mod tests_recent143;
-#[cfg(test)]
-#[path = "../tests/recent144.rs"]
-mod tests_recent144;
-#[cfg(test)]
-#[path = "../tests/recent145.rs"]
-mod tests_recent145;
-#[cfg(test)]
-#[path = "../tests/recent146.rs"]
-mod tests_recent146;
-#[cfg(test)]
-#[path = "../tests/recent147.rs"]
-mod tests_recent147;
-#[cfg(test)]
-#[path = "../tests/recent148.rs"]
-mod tests_recent148;
-#[cfg(test)]
-#[path = "../tests/recent149.rs"]
-mod tests_recent149;
-#[cfg(test)]
-#[path = "../tests/recent150.rs"]
-mod tests_recent150;
-#[cfg(test)]
-#[path = "../tests/recent151.rs"]
-mod tests_recent151;
-#[cfg(test)]
-#[path = "../tests/recent152.rs"]
-mod tests_recent152;
-#[cfg(test)]
-#[path = "../tests/recent153.rs"]
-mod tests_recent153;
-#[cfg(test)]
-#[path = "../tests/recent154.rs"]
-mod tests_recent154;
-#[cfg(test)]
-#[path = "../tests/recent155.rs"]
-mod tests_recent155;
-#[cfg(test)]
-#[path = "../tests/recent156.rs"]
-mod tests_recent156;
-#[cfg(test)]
-#[path = "../tests/recent157.rs"]
-mod tests_recent157;
-#[cfg(test)]
-#[path = "../tests/recent158.rs"]
-mod tests_recent158;
-#[cfg(test)]
-#[path = "../tests/recent159.rs"]
-mod tests_recent159;
-#[cfg(test)]
-#[path = "../tests/recent160.rs"]
-mod tests_recent160;
-#[cfg(test)]
-#[path = "../tests/recent161.rs"]
-mod tests_recent161;
-#[cfg(test)]
-#[path = "../tests/recent165.rs"]
-mod tests_recent165;
-#[cfg(test)]
-#[path = "../tests/recent166.rs"]
-mod tests_recent166;
-#[cfg(test)]
-#[path = "../tests/spm.rs"]
-mod tests_spm;
-#[cfg(test)]
-#[path = "../tests/recent167.rs"]
-mod tests_recent167;
-#[cfg(test)]
-#[path = "../tests/recent168.rs"]
-mod tests_recent168;
-#[cfg(test)]
-#[path = "../tests/recent169.rs"]
-mod tests_recent169;
-#[cfg(test)]
-#[path = "../tests/recent170.rs"]
-mod tests_recent170;
-#[cfg(test)]
-#[path = "../tests/recent171.rs"]
-mod tests_recent171;
-#[cfg(test)]
-#[path = "../tests/recent172.rs"]
-mod tests_recent172;
-#[cfg(test)]
-#[path = "../tests/recent173.rs"]
-mod tests_recent173;
-#[cfg(test)]
-#[path = "../tests/recent174.rs"]
-mod tests_recent174;
-#[cfg(test)]
-#[path = "../tests/recent175.rs"]
-mod tests_recent175;
-#[cfg(test)]
-#[path = "../tests/recent176.rs"]
-mod tests_recent176;
-#[cfg(test)]
-#[path = "../tests/recent177.rs"]
-mod tests_recent177;
-#[cfg(test)]
-#[path = "../tests/recent178.rs"]
-mod tests_recent178;
-#[cfg(test)]
-#[path = "../tests/recent179.rs"]
-mod tests_recent179;
-#[cfg(test)]
-#[path = "../tests/recent180.rs"]
-mod tests_recent180;
-#[cfg(test)]
-#[path = "../tests/recent181.rs"]
-mod tests_recent181;
-#[cfg(test)]
-#[path = "../tests/recent182.rs"]
-mod tests_recent182;
-#[cfg(test)]
-#[path = "../tests/recent183.rs"]
-mod tests_recent183;
-#[cfg(test)]
-#[path = "../tests/recent184.rs"]
-mod tests_recent184;
-#[cfg(test)]
-#[path = "../tests/recent185.rs"]
-mod tests_recent185;
-#[cfg(test)]
-#[path = "../tests/recent186.rs"]
-mod tests_recent186;
-#[cfg(test)]
-#[path = "../tests/recent187.rs"]
-mod tests_recent187;
-#[cfg(test)]
-#[path = "../tests/recent188.rs"]
-mod tests_recent188;
-#[cfg(test)]
-#[path = "../tests/recent189.rs"]
-mod tests_recent189;
-#[cfg(test)]
-#[path = "../tests/recent190.rs"]
-mod tests_recent190;
-#[cfg(test)]
-#[path = "../tests/recent191.rs"]
-mod tests_recent191;
-#[cfg(test)]
-#[path = "../tests/recent192.rs"]
-mod tests_recent192;
-#[cfg(test)]
-#[path = "../tests/recent193.rs"]
-mod tests_recent193;
-#[cfg(test)]
-#[path = "../tests/recent194.rs"]
-mod tests_recent194;
-#[cfg(test)]
-#[path = "../tests/recent195.rs"]
-mod tests_recent195;
-#[cfg(test)]
-#[path = "../tests/recent196.rs"]
-mod tests_recent196;
-#[cfg(test)]
-#[path = "../tests/recent197.rs"]
-mod tests_recent197;
-#[cfg(test)]
-#[path = "../tests/recent198.rs"]
-mod tests_recent198;
-#[cfg(test)]
-#[path = "../tests/recent199.rs"]
-mod tests_recent199;
-#[cfg(test)]
-#[path = "../tests/recent200.rs"]
-mod tests_recent200;
-#[cfg(test)]
-#[path = "../tests/recent201.rs"]
-mod tests_recent201;
-#[cfg(test)]
-#[path = "../tests/recent202.rs"]
-mod tests_recent202;
-#[cfg(test)]
-#[path = "../tests/recent203.rs"]
-mod tests_recent203;
-#[cfg(test)]
-#[path = "../tests/recent204.rs"]
-mod tests_recent204;
-#[cfg(test)]
-#[path = "../tests/recent205.rs"]
-mod tests_recent205;
-#[cfg(test)]
-#[path = "../tests/recent206.rs"]
-mod tests_recent206;
-#[cfg(test)]
-#[path = "../tests/recent207.rs"]
-mod tests_recent207;
-#[cfg(test)]
-#[path = "../tests/recent208.rs"]
-mod tests_recent208;
-#[cfg(test)]
-#[path = "../tests/recent209.rs"]
-mod tests_recent209;
-#[cfg(test)]
-#[path = "../tests/recent210.rs"]
-mod tests_recent210;
-#[cfg(test)]
-#[path = "../tests/recent211.rs"]
-mod tests_recent211;
-#[cfg(test)]
-#[path = "../tests/recent212.rs"]
-mod tests_recent212;
-#[cfg(test)]
-#[path = "../tests/recent213.rs"]
-mod tests_recent213;
-
-#[cfg(test)]
-#[path = "../tests/recent214.rs"]
-mod tests_recent214;
-#[cfg(test)]
-#[path = "../tests/recent215.rs"]
-mod tests_recent215;
-#[cfg(test)]
-#[path = "../tests/recent216.rs"]
-mod tests_recent216;
-#[cfg(test)]
-#[path = "../tests/recent217.rs"]
-mod tests_recent217;
-#[cfg(test)]
-#[path = "../tests/recent218.rs"]
-mod tests_recent218;
-#[cfg(test)]
-#[path = "../tests/recent219.rs"]
-mod tests_recent219;
-#[cfg(test)]
-#[path = "../tests/recent220.rs"]
-mod tests_recent220;
-#[cfg(test)]
-#[path = "../tests/recent221.rs"]
-mod tests_recent221;
-#[cfg(test)]
-#[path = "../tests/recent222.rs"]
-mod tests_recent222;
-#[cfg(test)]
-#[path = "../tests/recent223.rs"]
-mod tests_recent223;
-#[cfg(test)]
-#[path = "../tests/recent224.rs"]
-mod tests_recent224;
-#[cfg(test)]
-#[path = "../tests/recent225.rs"]
-mod tests_recent225;
-#[cfg(test)]
-#[path = "../tests/recent226.rs"]
-mod tests_recent226;
-#[cfg(test)]
-#[path = "../tests/recent227.rs"]
-mod tests_recent227;
-#[cfg(test)]
-#[path = "../tests/recent228.rs"]
-mod tests_recent228;
-#[cfg(test)]
-#[path = "../tests/recent229.rs"]
-mod tests_recent229;
-#[cfg(test)]
-#[path = "../tests/recent230.rs"]
-mod tests_recent230;
-#[cfg(test)]
-#[path = "../tests/recent231.rs"]
-mod tests_recent231;
-#[cfg(test)]
-#[path = "../tests/recent232.rs"]
-mod tests_recent232;
-#[cfg(test)]
-#[path = "../tests/recent233.rs"]
-mod tests_recent233;
-#[cfg(test)]
-#[path = "../tests/recent234.rs"]
-mod tests_recent234;
-#[cfg(test)]
-#[path = "../tests/recent235.rs"]
-mod tests_recent235;
-#[cfg(test)]
-#[path = "../tests/recent236.rs"]
-mod tests_recent236;
-#[cfg(test)]
-#[path = "../tests/recent237.rs"]
-mod tests_recent237;
-#[cfg(test)]
-#[path = "../tests/recent238.rs"]
-mod tests_recent238;
-#[cfg(test)]
-#[path = "../tests/tdm.rs"]
-mod tests_tdm;
-#[cfg(test)]
-#[path = "../tests/recent164.rs"]
-mod tests_recent164;
-#[cfg(test)]
-#[path = "../tests/recent163.rs"]
-mod tests_recent163;
-#[cfg(test)]
-#[path = "../tests/recent162.rs"]
-mod tests_recent162;
-#[cfg(test)]
-#[path = "../tests/ogw.rs"]
-mod tests_ogw;
-#[cfg(test)]
-#[path = "../tests/cr_rules.rs"]
-mod tests_cr_rules;
-#[cfg(test)]
-#[path = "../tests/thb.rs"]
-mod tests_thb;
-#[cfg(test)]
-#[path = "../tests/chk.rs"]
-mod tests_chk;
-#[cfg(test)]
-#[path = "../tests/bro.rs"]
-mod tests_bro;
-#[cfg(test)]
-#[path = "../tests/gpt.rs"]
-mod tests_gpt;
 pub mod types;
 
 #[doc(hidden)]
@@ -983,10 +100,18 @@ pub fn cast_at(g: &mut GameState, id: CardId, target: Target) -> Vec<GameEvent> 
 
 pub use types::*;
 
-use crate::card::{CardDefinition, CardId, CardInstance, CardType, Keyword, SelectionRequirement};
-use crate::decision::{AutoDecider, Decider, DeciderKind, Decision, DecisionAnswer};
-use crate::effect::Effect;
-use crate::game::effects::EffectContext;
+// `pub use` (doc-hidden) rather than plain `use`: the out-of-crate test
+// suite (`crabomination_tests`) reaches these via `crabomination::game::*`,
+// which only sees public re-exports — the old in-crate test glob also
+// picked up private imports.
+#[doc(hidden)]
+pub use crate::card::{CardDefinition, CardId, CardInstance, CardType, Keyword, SelectionRequirement};
+#[doc(hidden)]
+pub use crate::decision::{AutoDecider, Decider, DeciderKind, Decision, DecisionAnswer};
+#[doc(hidden)]
+pub use crate::effect::Effect;
+#[doc(hidden)]
+pub use crate::game::effects::EffectContext;
 use crate::game::layers::{
     AffectedPermanents, ComputedPermanent, ContinuousEffect, EffectDuration, Layer, Modification,
     PtSublayer,
@@ -1179,9 +304,9 @@ pub struct GameState {
     pub(crate) next_id: u32,
     /// Attackers declared this combat, each with the player or planeswalker
     /// it is attacking.
-    pub(crate) attacking: Vec<Attack>,
+    pub attacking: Vec<Attack>,
     /// Blocker → attacker mapping for the current combat.
-    pub(crate) block_map: HashMap<CardId, CardId>,
+    pub block_map: HashMap<CardId, CardId>,
     /// CR 510.1c — the active player's chosen blocker order for each attacker
     /// that has multiple blockers, gathered (and cached) before combat damage
     /// is applied so the choice can suspend for a `wants_ui` player. Read by
@@ -1204,14 +329,14 @@ pub struct GameState {
     /// Set to true once `declare_blockers` has been called during the current DeclareBlockers step.
     pub(crate) blockers_declared: bool,
     /// Skip the draw on the very first turn (turn 1, first player).
-    pub(crate) skip_first_draw: bool,
+    pub skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
     pub spells_cast_this_turn: u32,
     /// CR 702.29 — per-game tally of how many times a card with each name has
     /// been cycled (Yidaro, Wandering Monster's "four or more times this game"
     /// recursion). Keyed by card name; never reset. `#[serde(default)]`.
     #[serde(default)]
-    pub(crate) cycled_count_by_name: std::collections::HashMap<String, u32>,
+    pub cycled_count_by_name: std::collections::HashMap<String, u32>,
     /// CR 700.14 — running total of mana the active player has spent to
     /// cast spells this turn (Expend). Bumped in `finalize_cast` by each
     /// spell's `mana_spent`; reset at cleanup. `#[serde(default)]`.
@@ -1222,7 +347,7 @@ pub struct GameState {
     /// `Predicate::ExpendReached` to detect threshold crossings.
     /// Transient scratch — `#[serde(skip)]`.
     #[serde(skip)]
-    pub(crate) expend_prev_total: u32,
+    pub expend_prev_total: u32,
     /// Total spells cast during the previous turn (snapshotted from
     /// `spells_cast_this_turn` at Cleanup). Drives the classic Innistrad
     /// werewolf transform check ("if no spells were cast last turn …").
@@ -1368,7 +493,7 @@ pub struct GameState {
     /// mode 1, Colossus of the Blood Age, etc.). Reset to 0 between
     /// independent resolutions.
     #[serde(skip)]
-    pub(crate) cards_discarded_this_resolution: u32,
+    pub cards_discarded_this_resolution: u32,
     /// Transient: amount of {E} paid by `Effect::PayAnyEnergy` within the
     /// current resolution. Read by `Value::EnergyPaidThisEffect` so a later
     /// step in the same `Effect::Seq` can scale off "each {E} paid this way"
@@ -1487,7 +612,7 @@ pub struct GameState {
     /// `Predicate::ExcessDamageDealtThisResolution` to gate "if excess damage
     /// was dealt this way" riders (Orbital Plunge). Reset between resolutions.
     #[serde(skip)]
-    pub(crate) excess_damage_this_resolution: u32,
+    pub excess_damage_this_resolution: u32,
     /// Transient: seats that sacrificed at least one permanent during the
     /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
@@ -1516,7 +641,7 @@ pub struct GameState {
     /// legal choice). Never needs to survive a snapshot — it lives only
     /// across the synchronous resume → cast call.
     #[serde(skip, default)]
-    pub(crate) pending_cast_sacrifices: Option<Vec<CardId>>,
+    pub pending_cast_sacrifices: Option<Vec<CardId>>,
     /// Transient sibling of [`pending_cast_sacrifices`] for a spell's
     /// "as an additional cost, discard a card" requirement
     /// (`AdditionalCastCost::Discard` — Big Score, Illuminate History). The
@@ -1549,7 +674,7 @@ pub struct GameState {
     /// (float-spend confirm, additional-cost pick) parks the copy in the
     /// caster's hand across a client round-trip.
     #[serde(default)]
-    pub(crate) pending_prepare_copies: Vec<(CardId, CardId)>,
+    pub pending_prepare_copies: Vec<(CardId, CardId)>,
     /// Transient: the library card a `wants_ui` cycler picked for a
     /// landcycling / typecycling fetch (CR 702.29e). Set by the
     /// `ActionSearchPick` resume just before it replays the Landcycle
@@ -1641,12 +766,12 @@ pub struct GameState {
     /// for non-damage knock-ons all still resolve — only the damage
     /// number itself is set to 0 per CR 615.1).
     #[serde(default)]
-    pub(crate) prevent_combat_damage_this_turn: bool,
+    pub prevent_combat_damage_this_turn: bool,
     /// EOE Void — true once any nonland permanent has left the battlefield
     /// this turn. The left half of `Predicate::VoidActive`; reset at the turn
     /// boundary.
     #[serde(default)]
-    pub(crate) nonland_permanent_left_bf_this_turn: bool,
+    pub nonland_permanent_left_bf_this_turn: bool,
     /// CR 615.1 fog with an exception (Inspire Awe). When `Some(filter)` and
     /// `prevent_combat_damage_this_turn` is set, a creature's combat damage is
     /// prevented unless the *dealer* matches `filter`. `None` = prevent all.
@@ -1681,44 +806,44 @@ pub struct GameState {
     /// to Begin Combat (decrementing) instead of advancing to the postcombat
     /// main. Reset at cleanup so it can't bleed into the next turn.
     #[serde(default)]
-    pub(crate) additional_combat_phases: u32,
+    pub additional_combat_phases: u32,
     /// CR 505.1b — combat phases banked by `AdditionalCombatPhaseAfterMain`
     /// (Relentless Assault): when the active player leaves a main phase with
     /// one banked, the turn enters Begin Combat instead of the next phase
     /// (the follow-up main comes from the normal EndCombat → PostMain flow).
     /// Reset at cleanup.
     #[serde(default)]
-    pub(crate) additional_post_main_combats: u32,
+    pub additional_post_main_combats: u32,
     /// How many Begin Combat steps have started this turn (1 during the first
     /// combat, 2 during an extra combat, …). Read by
     /// `Predicate::IsFirstCombatPhaseThisTurn` so "if it's the first combat
     /// phase of the turn" riders (Genji Glove) don't loop on the extra combat
     /// they grant. Reset at cleanup.
     #[serde(default)]
-    pub(crate) combat_phases_this_turn: u32,
+    pub combat_phases_this_turn: u32,
     /// CR 500.7 — additional end steps banked by `Effect::AdditionalEndStep`.
     /// When the active player leaves the End step with this set, the turn loops
     /// back to another End step (decrementing) instead of advancing to cleanup
     /// (Y'shtola Rhul). Reset at cleanup.
     #[serde(default)]
-    pub(crate) additional_end_steps: u32,
+    pub additional_end_steps: u32,
     /// How many End steps have begun this turn (1 during the first, 2 during an
     /// extra, …). Read by `Predicate::IsFirstEndStepThisTurn` so "if it's the
     /// first end step" riders don't loop on the extra step they grant.
     #[serde(default)]
-    pub(crate) end_steps_this_turn: u32,
+    pub end_steps_this_turn: u32,
     /// CR 500.9 — additional upkeep steps banked by
     /// `Effect::AdditionalUpkeepStep`. When the active player leaves the
     /// Upkeep step with this set, the turn loops back to another Upkeep
     /// (decrementing) instead of advancing to Draw (Paradox Haze). Reset at
     /// cleanup.
     #[serde(default)]
-    pub(crate) additional_upkeep_steps: u32,
+    pub additional_upkeep_steps: u32,
     /// How many Upkeep steps have begun this turn. Read by
     /// `Predicate::IsFirstUpkeepThisTurn` so Paradox Haze's "first upkeep
     /// step of your turn" gate doesn't loop on the extra step it grants.
     #[serde(default)]
-    pub(crate) upkeep_steps_this_turn: u32,
+    pub upkeep_steps_this_turn: u32,
     /// CR 614.9 / 615 — creatures whose combat damage is prevented in both
     /// directions for the rest of the turn (Maze of Ith: "prevent all combat
     /// damage that would be dealt to and dealt by that creature"). The combat
@@ -1743,7 +868,7 @@ pub struct GameState {
     /// whose opponents' creatures enter under their control instead this
     /// turn. Cleared at cleanup.
     #[serde(default)]
-    pub(crate) creature_etb_steal_this_turn: Vec<usize>,
+    pub creature_etb_steal_this_turn: Vec<usize>,
     /// Players who have paid the Leonin Arbiter search tax this turn
     /// (covers further searches until end of turn). Cleared at cleanup.
     #[serde(default)]
@@ -1752,7 +877,7 @@ pub struct GameState {
     /// (Elspeth Conquers Death II). Each entry taxes matching spells cast by
     /// opponents of `controller`; cleared at `controller`'s untap.
     #[serde(default)]
-    pub(crate) turn_scoped_spell_taxes: Vec<TurnScopedSpellTax>,
+    pub turn_scoped_spell_taxes: Vec<TurnScopedSpellTax>,
     /// CR 615.7 — sources whose damage is prevented entirely this turn
     /// (Burrenton Forge-Tender's chosen source). Cleared at cleanup.
     #[serde(default)]
@@ -1777,12 +902,12 @@ pub struct GameState {
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
     /// cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub(crate) prevention_shields: Vec<crate::game::types::PreventionShield>,
+    pub prevention_shields: Vec<crate::game::types::PreventionShield>,
     /// CR 615.12 — "Damage can't be prevented this turn" (Skullcrack,
     /// Impractical Joke). While set, every prevention shield is ignored.
     /// Cleared at cleanup.
     #[serde(default)]
-    pub(crate) damage_cant_be_prevented_this_turn: bool,
+    pub damage_cant_be_prevented_this_turn: bool,
     /// Registered replacement effects (Phase H — Commander prerequisite).
     /// Walked by zone-change paths (`place_card_in_dest`,
     /// `remove_from_battlefield_to_*`) at placement time; a matching
@@ -1833,7 +958,7 @@ pub struct GameState {
     /// `#[serde(skip)]` because it's transient scratch — snapshots
     /// don't need to preserve mid-SBA state.
     #[serde(skip)]
-    pub(crate) died_card_snapshots: HashMap<CardId, CardInstance>,
+    pub died_card_snapshots: HashMap<CardId, CardInstance>,
     /// Auras that lost their host this turn, keyed by the (now-gone) host's
     /// CardId → list of `(aura id, aura controller)`. Populated in the
     /// orphan-Aura SBA sweep before the Aura is sent to the graveyard, so
@@ -1874,7 +999,7 @@ pub struct GameState {
     /// the new `Predicate::SourceGainedCounterThisTurn` predicate.
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub(crate) permanents_gained_counter_this_turn: std::collections::HashSet<CardId>,
+    pub permanents_gained_counter_this_turn: std::collections::HashSet<CardId>,
     /// Permanents whose `StaticEffect::CounterAmplifierOncePerTurn` extra
     /// +1/+1 counter has already been added this turn (Cursed Wombat). The
     /// granted ability "triggers only once each turn" per permanent; cleared at
@@ -1896,7 +1021,7 @@ pub struct GameState {
     /// modeled today since that's what the printed catalog needs.
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub(crate) granted_triggers_eot:
+    pub granted_triggers_eot:
         std::collections::HashMap<CardId, Vec<crate::card::TriggeredAbility>>,
     /// Permanents whose death is replaced by exile for the rest of the
     /// turn — "if that creature would die this turn, exile it instead"
@@ -1940,27 +1065,27 @@ pub struct GameState {
     /// dropped (a new object keeps nothing). `#[serde(default)]` for
     /// snapshot back-compat.
     #[serde(default)]
-    pub(crate) temporary_copies: Vec<TempCopy>,
+    pub temporary_copies: Vec<TempCopy>,
     /// CR 702.143b — cards foretold this turn can't be cast from exile until
     /// a later turn. Tracks the cards a player foretold during the current
     /// turn; cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub(crate) foretold_this_turn: std::collections::HashSet<CardId>,
+    pub foretold_this_turn: std::collections::HashSet<CardId>,
     /// CR 702.170 — cards currently plotted (exiled face-up, castable from
     /// exile without paying their mana cost on a later turn).
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub(crate) plotted_cards: std::collections::HashSet<CardId>,
+    pub plotted_cards: std::collections::HashSet<CardId>,
     /// CR 702.170d — cards plotted *this* turn can't be cast until a later
     /// turn. Cleared at cleanup. `#[serde(default)]` for back-compat.
     #[serde(default)]
-    pub(crate) plotted_this_turn: std::collections::HashSet<CardId>,
+    pub plotted_this_turn: std::collections::HashSet<CardId>,
     /// CR 603.3d — triggered abilities flagged `TriggeredAbility::once_per_turn`
     /// ("this ability triggers only once each turn") that have already fired
     /// this turn, keyed by (source card, trigger index). Cleared at cleanup.
     /// `#[serde(default)]` for snapshot back-compat. Powers Dramatic Finale.
     #[serde(default)]
-    pub(crate) triggered_once_per_turn_used: std::collections::HashSet<(CardId, usize)>,
+    pub triggered_once_per_turn_used: std::collections::HashSet<(CardId, usize)>,
     /// `EventSpec::per_subject_cap` tallies: fires of a capped trigger this
     /// turn, keyed by (watcher, event subject). Cleared at cleanup.
     #[serde(default)]
@@ -1979,7 +1104,7 @@ pub struct GameState {
     /// day/night turn-based check (which consults the *previous* turn's
     /// active player's spell count). `#[serde(default)]` for back-compat.
     #[serde(default)]
-    pub(crate) previous_turn_active: Option<usize>,
+    pub previous_turn_active: Option<usize>,
 }
 
 /// A pending control-reversion entry — see `GameState.temporary_control`.
@@ -1997,7 +1122,7 @@ pub(crate) struct TempControl {
 
 /// A turn-scoped spell tax — see `GameState.turn_scoped_spell_taxes`.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub(crate) struct TurnScopedSpellTax {
+pub struct TurnScopedSpellTax {
     /// The effect's controller: their opponents pay, and the tax clears at
     /// their untap step.
     pub(crate) controller: usize,
@@ -2007,7 +1132,7 @@ pub(crate) struct TurnScopedSpellTax {
 
 /// A pending copy-reversion entry — see `GameState.temporary_copies`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub(crate) struct TempCopy {
+pub struct TempCopy {
     pub(crate) card: CardId,
     /// Live handle to the pre-copy definition. Skipped in snapshots —
     /// recovered by name through the registry resolver on load (the same

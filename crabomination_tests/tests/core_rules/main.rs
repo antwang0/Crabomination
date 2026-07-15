@@ -1,0 +1,22 @@
+//! Core rules, formats, and cross-set mechanic tests. Grouped into one integration-test binary to keep
+//! link time and `target/` size in check.
+
+mod abilitywords;
+mod c21;
+mod catalog_registration;
+mod classic;
+mod combat_keywords;
+mod counters;
+mod cr_rules;
+mod echo;
+mod energy;
+mod experience;
+mod format;
+mod freerunning;
+mod game;
+mod jewel;
+mod lci_craft;
+mod multiplayer;
+mod quests;
+mod spree;
+mod xtra;

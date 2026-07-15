@@ -1,6 +1,24 @@
-//! Functional tests for classic / pre-modern-horizons sets, one module per
-//! set. Grouped into a single integration-test binary to keep link time and
-//! `target/` size in check (one binary per set would link ~40 copies of the
-//! engine).
+//! Functional tests for classic / standalone sets, one module per set. Grouped into one integration-test binary to keep
+//! link time and `target/` size in check.
 
+mod afr;
+mod akh;
+mod avatar_water;
+mod blight;
+mod bro;
+mod chk;
+mod eoe;
+mod fin;
+mod gpt;
+mod innistrad;
 mod ktk;
+mod lci;
+mod ltr;
+mod mkm;
+mod mom;
+mod ogw;
+mod one;
+mod spm;
+mod tdm;
+mod thb;
+mod tla;
