@@ -9272,3 +9272,75 @@ fn cr_702_17_flash_permanent_castable_at_instant_speed() {
         card_id: flashy, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).is_ok(), "Flash lets it resolve on the opponent's turn");
 }
+
+/// CR 700.14 — "expend N" counts the total mana a player spends to cast spells
+/// in a turn and triggers when the running total first reaches N. A cheaper
+/// spell (2 mana) doesn't reach 4; a 6-mana spell crosses it, and the payoff
+/// fires only once even though the total keeps climbing.
+#[test]
+fn cr_700_14_expend_four_triggers_once_when_crossed() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teapot_slinger()); // expend 4 → 2 to each opp
+    // Cross expend 4 with a 6-mana spell — the payoff fires once.
+    let first = g.add_card_to_hand(0, catalog::galewind_moose()); // {4}{G}{G}, 6 mana
+    let second = g.add_card_to_hand(0, catalog::galewind_moose());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: first, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast 6-mana spell (crosses expend 4)");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "expend 4 pings once");
+    // A second spell the same turn is already past the threshold — no re-ping.
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: second, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a second 6-mana spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "expend 4 doesn't re-fire later the same turn");
+}
+
+/// CR 702.108 (Raid) — a Raid trigger checks whether its controller attacked
+/// this turn. Alesha's end-step reanimation fires only after she (or another
+/// creature) has attacked; with no attack, the graveyard creature stays put.
+#[test]
+fn cr_702_108_raid_end_step_requires_an_attack() {
+    // No attack this turn → the Raid trigger's condition fails, no reanimation.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::alesha_who_laughs_at_fate());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cr_advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == dead),
+        "no attack this turn → Raid doesn't reanimate");
+}
+
+/// CR 602.5 — an activated ability marked "Activate only once" (once per game,
+/// not once per turn) stays spent across turn boundaries. Mild-Mannered
+/// Librarian can't re-transform even on a later turn.
+#[test]
+fn cr_602_5_activate_once_persists_across_turns() {
+    let mut g = two_player_game();
+    let lib = g.add_card_to_battlefield(0, catalog::mild_mannered_librarian());
+    g.add_card_to_library(0, catalog::forest());
+    g.clear_sickness(lib);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lib, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("first activation");
+    drain_stack(&mut g);
+    // Simulate a fresh turn: clear the per-turn used state the way cleanup would.
+    g.battlefield_find_mut(lib).unwrap().once_per_turn_used.clear();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: lib, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "once-per-game ability stays spent across turns");
+}

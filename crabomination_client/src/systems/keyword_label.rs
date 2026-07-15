@@ -263,7 +263,10 @@ fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
         // The power threshold in the evasion/blocker restrictions is a real
         // combat read — "Eva≤2" (Rust-Shield Rampager) vs "Eva≤3" gate
         // different blockers; "NoBlk≥4" says which attackers this can't stop.
-        CantBeBlockedByPowerAtMost(n) | CantBlockPowerAtLeast(n) => *n,
+        // "Eva≥N" (can't be blocked by power N or more) carries its threshold
+        // too so it reads symmetrically with its "Eva≤N" sibling.
+        CantBeBlockedByPowerAtMost(n) | CantBlockPowerAtLeast(n)
+        | CantBeBlockedByPowerAtLeast(n) => *n,
         _ => return None,
     };
     Some(n.to_string())
@@ -475,6 +478,8 @@ mod tests {
         // Rust-Shield Rampager — "can't be blocked by power 2 or less".
         assert_eq!(keyword_strip(&[Keyword::CantBeBlockedByPowerAtMost(2)]), "Eva≤2");
         assert_eq!(keyword_strip(&[Keyword::CantBlockPowerAtLeast(4)]), "NoBlk≥4");
+        // "Eva≥N" carries its threshold symmetrically with "Eva≤N".
+        assert_eq!(keyword_strip(&[Keyword::CantBeBlockedByPowerAtLeast(3)]), "Eva≥3");
     }
 
     #[test]

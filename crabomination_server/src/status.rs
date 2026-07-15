@@ -226,6 +226,25 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     for (seat, wins) in st.seat_wins.iter().enumerate() {
         out.push_str(&format!("crab_seat_wins_total{{seat=\"{seat}\"}} {wins}\n"));
     }
+    // Per-format completed matches + their average game length. Already in the
+    // plaintext summary and dashboard; exposing them here lets a scraper alert
+    // on a format-specific stall (e.g. cube averaging 3× demo's turns) or a
+    // traffic shift between formats without parsing the human summary.
+    out.push_str("# HELP crab_matches_by_format_total Completed matches by format.\n");
+    out.push_str("# TYPE crab_matches_by_format_total counter\n");
+    for (i, count) in st.format_buckets.iter().enumerate() {
+        if let Some(label) = crate::stats::format_label_for_bucket(i) {
+            out.push_str(&format!("crab_matches_by_format_total{{format=\"{label}\"}} {count}\n"));
+        }
+    }
+    out.push_str("# HELP crab_format_avg_turns Average final-turn count by format.\n");
+    out.push_str("# TYPE crab_format_avg_turns gauge\n");
+    for (i, _) in st.format_buckets.iter().enumerate() {
+        if let Some(label) = crate::stats::format_label_for_bucket(i) {
+            let avg = st.format_avg_turns(i).unwrap_or(0);
+            out.push_str(&format!("crab_format_avg_turns{{format=\"{label}\"}} {avg}\n"));
+        }
+    }
     // Refusal breakdown so operators can tell a capacity-limit refusal (server
     // full) from an abuse refusal (one IP over its per-IP cap).
     out.push_str("# HELP crab_connections_refused_by_reason_total Refused connections by reason.\n");
@@ -473,6 +492,10 @@ mod tests {
         // Turn-count histogram + per-seat wins as labelled series.
         assert!(body.contains("crab_match_turn_bucket{band=\"1-2\"} 0"));
         assert!(body.contains("crab_seat_wins_total{seat=\"0\"} 0"));
+        // Per-format match counts + average game length as labelled series.
+        assert!(body.contains("crab_matches_by_format_total{format=\"demo\"} 0"));
+        assert!(body.contains("crab_matches_by_format_total{format=\"cube\"} 0"));
+        assert!(body.contains("crab_format_avg_turns{format=\"cube\"} 0"));
         // Play/draw balance + win-margin gauges.
         assert!(body.contains("crab_first_seat_win_pct 50"));
         assert!(body.contains("# TYPE crab_avg_win_life_delta gauge"));
