@@ -6585,6 +6585,8 @@ static DECKS: &[Factory] = &[
     super::decks::volcanic_spite,
     super::decks::lilysplash_mentor,
     super::decks::rampaging_soulrager,
+    super::decks::haunted_screen,
+    super::decks::fear_of_infinity,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
