@@ -9230,3 +9230,45 @@ fn g_614_2_helper(attacker_seat: usize, defender_seat: usize, expected_life: i32
     drain_stack(&mut g);
     assert_eq!(g.players[defender_seat].life, expected_life);
 }
+
+/// CR 601.2d + 701.10 — Biogenic Upgrade distributes three +1/+1 counters among
+/// two targets (2/1, the even split) then doubles the counters on each of those
+/// targets via `Selector::AllTargets` (→ 4 and 2).
+#[test]
+fn cr_601_2d_distribute_counters_then_double_on_all_targets() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::biogenic_upgrade());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("cast Biogenic Upgrade on two targets");
+    drain_stack(&mut g);
+    let n = |id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    // 3 split 2/1, then each doubled.
+    assert_eq!((n(a), n(b)), (4, 2), "distributed 2/1 then doubled to 4/2");
+}
+
+/// CR 702.17 — Flash lets a permanent be cast any time you could cast an instant
+/// (here, during the opponent's turn); a creature without Flash can't.
+#[test]
+fn cr_702_17_flash_permanent_castable_at_instant_speed() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1; // opponent's turn
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let flashy = g.add_card_to_hand(0, catalog::wildborn_preserver()); // {1}{G} Flash
+    let vanilla = g.add_card_to_hand(0, catalog::grizzly_bears()); // no Flash
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: vanilla, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "a vanilla creature can't be cast at instant speed");
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: flashy, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_ok(), "Flash lets it resolve on the opponent's turn");
+}
