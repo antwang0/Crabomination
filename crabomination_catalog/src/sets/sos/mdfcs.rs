@@ -155,9 +155,12 @@ pub fn emeritus_of_truce() -> CardDefinition {
         vec![],
         spell,
     );
+    // Printed "target player creates a 1/1 ... Inkling" — a real player
+    // slot (the auto-decider mints for the controller; a UI caster may
+    // gift the token, e.g. politically in multiplayer).
     front.triggered_abilities.push(etb(Effect::Seq(vec![
         Effect::CreateToken {
-            who: PlayerRef::You,
+            who: PlayerRef::Target(0),
             count: Value::Const(1),
             definition: inkling_token(),
         },
@@ -252,19 +255,24 @@ pub fn honorbound_page() -> CardDefinition {
 /// Prepare spell: sorcery — printed "You and target opponent each draw
 /// three cards."
 ///
-/// Approximation: kept as the each-player fan-out via
-/// `Selector::Player(PlayerRef::EachPlayer)` (same primitive Wheel of
-/// Fortune uses in `lea::sorceries`) — equivalent to the printed text
-/// in two-player games.
+/// "You and TARGET OPPONENT each draw three cards" — the opponent is a
+/// real player-target slot (exactly the printed text, multiplayer
+/// included).
 pub fn joined_researchers() -> CardDefinition {
     let spell = spell_back(
         "Secret Rendezvous",
         cost(&[generic(1), w(), w()]),
         CardType::Sorcery,
-        Effect::Draw {
-            who: Selector::Player(PlayerRef::EachPlayer),
-            amount: Value::Const(3),
-        },
+        Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
+                amount: Value::Const(3),
+            },
+        ]),
     );
     let mut front = vanilla_front(
         "Joined Researchers",

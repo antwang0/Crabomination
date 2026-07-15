@@ -2011,8 +2011,14 @@ impl Effect {
                 | Effect::BecomeCopyOfFor { what, source, .. } => {
                     sel_find(what, slot).or_else(|| sel_find(source, slot))
                 }
-                Effect::CreateTokenCopyOf { source, .. }
-                | Effect::CreateTokenCopiesHasteSac { source, .. } => sel_find(source, slot),
+                // The token RECEIVER ("target player creates ...",
+                // Echocasting Symposium / Emeritus of Truce) is a player
+                // slot alongside the copied source's own slot.
+                Effect::CreateTokenCopyOf { who, source, .. } => {
+                    sel_find(source, slot).or_else(|| implicit_player_for_ref_slot(who, slot))
+                }
+                Effect::CreateToken { who, .. } => implicit_player_for_ref_slot(who, slot),
+                Effect::CreateTokenCopiesHasteSac { source, .. } => sel_find(source, slot),
                 Effect::Endure { target, .. } => sel_find(target, slot),
                 Effect::Airbend { what } => sel_find(what, slot),
                 Effect::LifeGainLockThisTurn { who }

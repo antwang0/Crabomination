@@ -185,9 +185,9 @@ pub fn daydream() -> CardDefinition {
 /// GrantKeyword(Lifelink)])` — the controller picks the mode at
 /// resolution time (auto-decider picks mode 0 = double strike, which
 /// is also what the prior collapsed body did). The counter fan-out
-/// still collapses the printed "target player" to **you** (multi-
-/// target prompt is engine-wide). Flashback {1}{W} is wired via
-/// `Keyword::Flashback`.
+/// hits each creature TARGET PLAYER controls (slot 0 — Suppression Ray
+/// pattern; auto-decider aims at you); the pumped creature is slot 1.
+/// Flashback {1}{W} is wired via `Keyword::Flashback`.
 pub fn practiced_offense() -> CardDefinition {
     use crate::card::{CounterType, Keyword};
     use crate::mana::{ManaCost, ManaSymbol};
@@ -200,25 +200,30 @@ pub fn practiced_offense() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
-            Effect::ForEach {
-                selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                body: Box::new(Effect::AddCounter {
-                    what: Selector::TriggerSource,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                }),
+            // Slot 0: target player — a counter on each creature they control.
+            Effect::AddCounter {
+                what: Selector::ControlledBy {
+                    who: PlayerRef::Target(0),
+                    filter: SelectionRequirement::Creature,
+                },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
             },
-            // Modal: pick double strike OR lifelink for the target.
+            // Slot 1: target creature — pick double strike OR lifelink.
             Effect::ChooseMode(vec![
                 Effect::GrantKeyword {
-                    what: target_filtered(SelectionRequirement::Creature),
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature,
+                    },
                     keyword: Keyword::DoubleStrike,
                     duration: Duration::EndOfTurn,
                 },
                 Effect::GrantKeyword {
-                    what: target_filtered(SelectionRequirement::Creature),
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature,
+                    },
                     keyword: Keyword::Lifelink,
                     duration: Duration::EndOfTurn,
                 },
@@ -351,12 +356,11 @@ pub fn procrastinate() -> CardDefinition {
 /// "Target player draws 2ˣ cards. (2⁰ = 1, 2¹ = 2, 2² = 4, 2³ = 8, 2⁴ = 16,
 /// 2⁵ = 32, and so on.)"
 ///
-/// Approximation: the target-player slot is collapsed to "you" — the
-/// engine has no multi-target-player prompt for sorceries, and casting
-/// Mathemagics on yourself is the typical play pattern. Powered by the
-/// engine's new `Value::Pow2(XFromCost)` primitive. The Pow2 evaluator
-/// caps the exponent at 30 so absurd X values can't deck the player out
-/// or overflow.
+/// "Target player" is a real player-target slot (the auto-decider aims
+/// it at the caster — the typical play pattern — while a UI caster may
+/// point it anywhere, e.g. to deck an opponent out). Powered by
+/// `Value::Pow2(XFromCost)`; the Pow2 evaluator caps the exponent at 30
+/// so absurd X values can't overflow.
 pub fn mathemagics() -> CardDefinition {
     use crate::mana::{u, x};
     CardDefinition {
@@ -364,7 +368,7 @@ pub fn mathemagics() -> CardDefinition {
         cost: cost(&[x(), x(), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Draw {
-            who: Selector::You,
+            who: target_filtered(SelectionRequirement::Player),
             amount: Value::Pow2(Box::new(Value::XFromCost)),
         },
         ..Default::default()
@@ -617,13 +621,10 @@ pub fn vicious_rivalry() -> CardDefinition {
 /// • Discard your hand, then draw cards equal to the number of cards
 ///   discarded this way."
 ///
-/// Mode 0: discard your hand, then draw a number of cards equal to the
-/// opponent's hand size. Approximation: the printed "target opponent"
-/// is collapsed to the first opponent (`PlayerRef::EachOpponent`'s
-/// singular fallback — exact in 1v1, same collapse as Mathemagics).
-/// The old wiring read `PlayerRef::Target(0)` but the card registers
-/// no target slot, so the draw always evaluated to 0 — discard your
-/// hand, draw nothing.
+/// Mode 0: discard your hand, then draw a number of cards equal to
+/// TARGET OPPONENT's hand size — a real player-target slot registered
+/// via `ApplyToTargets { filter: OpponentPlayer }`, whose body reads
+/// `HandSizeOf(Target(0))`.
 ///
 /// Mode 1: discard your hand, then draw cards equal to the number of
 /// cards discarded this way. Wired faithfully via the new
@@ -639,16 +640,21 @@ pub fn borrowed_knowledge() -> CardDefinition {
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseMode(vec![
-            // Mode 0: discard hand, then draw = target opponent's hand size.
+            // Mode 0: discard hand, then draw = TARGET opponent's hand size.
             Effect::Seq(vec![
                 Effect::Discard {
                     who: Selector::You,
                     amount: Value::HandSizeOf(PlayerRef::You),
                     random: false,
                 },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::HandSizeOf(PlayerRef::EachOpponent),
+                Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 1,
+                    filter: SelectionRequirement::OpponentPlayer,
+                    effect: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::HandSizeOf(PlayerRef::Target(0)),
+                    }),
                 },
             ]),
             // Mode 1: discard hand, then draw cards equal to the number
@@ -1053,10 +1059,8 @@ pub fn cost_of_brilliance() -> CardDefinition {
 /// `GameState`. The selector walks the IDs captured during
 /// `Effect::Discard` resolution, looks them up in their owner's
 /// graveyard, and filters by Land. Wrapped in `Selector::Take { count: 1 }`
-/// to match the printed "up to one land" cap. The discard half still
-/// uses `EachOpponent` for auto-target safety; the printed card lets
-/// the caster choose any player but the caster never has an incentive
-/// to discard from themselves.
+/// to match the printed "up to one land" cap. The discard half is a
+/// real "target player" slot (the auto-decider aims at an opponent).
 pub fn mind_roots() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::g;
@@ -1065,11 +1069,11 @@ pub fn mind_roots() -> CardDefinition {
         cost: cost(&[generic(1), b(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            // Each opponent discards 2 cards. The Discard handler stamps
+            // Target player discards 2 cards. The Discard handler stamps
             // every discarded card's id onto
             // `state.discarded_card_ids_this_resolution`.
             Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(2),
                 random: false,
             },
@@ -2109,8 +2113,9 @@ pub fn follow_the_lumarets() -> CardDefinition {
 /// "Target player creates a token that's a copy of target creature you
 /// control." Paradigm offers a free repeat each pre-combat main.
 ///
-/// `CreateTokenCopyOf` of the targeted creature; the "target player
-/// creates" slot collapses to "you" (no two-typed-target-slot primitive).
+/// `CreateTokenCopyOf` of the targeted creature (slot 0); the printed
+/// "target player creates" is a real second slot (`PlayerRef::Target(1)`
+/// — the token enters under THAT player's control).
 pub fn echocasting_symposium() -> CardDefinition {
     use crate::card::SpellSubtype;
     use crate::effect::shortcut::target_filtered;
@@ -2126,7 +2131,7 @@ pub fn echocasting_symposium() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CreateTokenCopyOf {
                 extra_keywords: vec![],
-                who: PlayerRef::You,
+                who: PlayerRef::Target(1),
                 count: Value::Const(1),
                 source: target_filtered(
                     SelectionRequirement::Creature

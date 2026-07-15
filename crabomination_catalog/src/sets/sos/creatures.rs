@@ -4470,8 +4470,10 @@ pub fn professor_dellian_fel() -> CardDefinition {
                     what: target_filtered(SelectionRequirement::Creature),
                 },
             },
-            // -6: You get an emblem with "Whenever you gain life, each
-            // opponent loses that much life."
+            // -6: You get an emblem with "Whenever you gain life, TARGET
+            // OPPONENT loses that much life" — a real per-trigger target
+            // slot (auto-picked for bots; a UI controller aims it each
+            // time it fires).
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: -6,
@@ -4482,7 +4484,9 @@ pub fn professor_dellian_fel() -> CardDefinition {
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
                         effect: Effect::LoseLife {
-                            who: Selector::Player(PlayerRef::EachOpponent),
+                            who: crate::effect::shortcut::target_filtered(
+                                SelectionRequirement::OpponentPlayer,
+                            ),
                             amount: Value::TriggerEventAmount,
                         },
                     }],

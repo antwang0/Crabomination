@@ -1631,7 +1631,7 @@ fn mind_roots_makes_opponent_discard_two() {
     let opp_hand_before = g.players[1].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Mind Roots castable for {1}{B}{G}");
     drain_stack(&mut g);
@@ -1658,7 +1658,7 @@ fn mind_roots_steals_a_discarded_land_to_caster_battlefield() {
     let bf_before = g.battlefield.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Mind Roots castable for {1}{B}{G}");
     drain_stack(&mut g);
@@ -4456,7 +4456,7 @@ fn mathemagics_draws_two_to_the_x() {
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: None,
+        target: Some(Target::Player(0)),
         additional_targets: vec![],
         mode: None,
         x_value: Some(3),
@@ -4480,7 +4480,7 @@ fn mathemagics_x_zero_draws_one_card() {
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: None,
+        target: Some(Target::Player(0)),
         additional_targets: vec![],
         mode: None,
         x_value: Some(0),
@@ -5430,7 +5430,12 @@ fn practiced_offense_pumps_creatures_and_grants_double_strike() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear1)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id,
+        // Slot 0 = target player (whose creatures get counters), slot 1 =
+        // the creature picking up the keyword.
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear1)],
+        mode: None, x_value: None,
     })
     .expect("Practiced Offense castable for {2}{W}");
     drain_stack(&mut g);
@@ -8718,7 +8723,8 @@ fn joined_researchers_prepare_spell_each_player_draws_three() {
 
     g.perform_action(GameAction::CastPrepareSpell {
         creature_id: id,
-        target: None,
+        // "You and TARGET OPPONENT each draw three."
+        target: Some(Target::Player(1)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
@@ -11724,8 +11730,9 @@ fn echocasting_symposium_creates_a_copy_of_target_creature() {
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
+        // Slot 0: the creature to copy; slot 1: the player who creates.
         target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
+        additional_targets: vec![Target::Player(0)],
         mode: None,
         x_value: None,
     })
@@ -15501,7 +15508,7 @@ fn borrowed_knowledge_mode_0_draws_opponent_hand_size() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: Some(0), x_value: None,
     })
     .expect("Borrowed Knowledge castable");
     drain_stack(&mut g);

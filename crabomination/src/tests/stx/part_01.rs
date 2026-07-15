@@ -1567,8 +1567,8 @@ fn practiced_offense_auto_picks_double_strike() {
 
     g.perform_action(GameAction::CastSpell {
         card_id: po,
-        target: Some(Target::Permanent(bear2)),
-        additional_targets: vec![],
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear2)],
         mode: None, x_value: None,
     })
     .expect("Practiced Offense castable for {2}{W}");
@@ -1604,8 +1604,8 @@ fn practiced_offense_can_pick_lifelink_via_cast_time_mode() {
 
     g.perform_action(GameAction::CastSpell {
         card_id: po,
-        target: Some(Target::Permanent(bear2)),
-        additional_targets: vec![],
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear2)],
         mode: Some(1),
         x_value: None,
     })

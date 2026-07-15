@@ -115,7 +115,13 @@ plus the in-source documented approximations (grep
 2026-07-15 cont.: `RevealMissDest::BottomRandom` genuinely shuffles the
 miss batch before bottoming; Aziza's tap-three is a real all-or-nothing
 cost with a `ChooseCards` pick of which creatures tap
-(`TapUpToValue { exact: true }` behind a three-untapped `If` gate).
+(`TapUpToValue { exact: true }` behind a three-untapped `If` gate); the
+eight collapsed "target player/opponent" slots are restored as real
+player targets (Practiced Offense, Mathemagics, Mind Roots, Borrowed
+Knowledge, Echocasting Symposium's two-slot token gift, Professor
+Dellian Fel's emblem, Emeritus of Truce, Joined Researchers // Secret
+Rendezvous), with `CreateToken`/`CreateTokenCopyOf` player-receiver
+slots surfaced for cast-time validation.
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost
