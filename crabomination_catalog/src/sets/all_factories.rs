@@ -6524,6 +6524,9 @@ static DECKS: &[Factory] = &[
     super::decks::vizier_of_the_menagerie,
     super::decks::warren_warleader,
     super::decks::for_the_common_good,
+    super::decks::long_river_lurker,
+    super::decks::kolodin_triumph_caster,
+    super::decks::mu_yanling_wind_rider,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
