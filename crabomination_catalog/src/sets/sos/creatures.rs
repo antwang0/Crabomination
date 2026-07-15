@@ -1408,7 +1408,7 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
                         Value::Const(3),
                     ),
                 },
-                Effect::CopySpell {
+                Effect::CopySpellMayChooseTargets {
                     what: Selector::TriggerSource,
                     count: Value::Const(1),
                 },
@@ -5061,8 +5061,8 @@ pub fn silverquill_the_disputant() -> CardDefinition {
     // AutoDecider declines (the printed casualty is a "you may" cost);
     // ScriptedDecider can accept to exercise the sac+copy path. The
     // power-≥-1 sub-filter on the sacrifice picker is implemented via
-    // `Sacrifice { filter: PowerAtLeast(1) }`. Copy inherits original
-    // targets (engine-wide gap shared with all CopySpell users).
+    // `Sacrifice { filter: PowerAtLeast(1) }`. The copy may choose new
+    // targets (`CopySpellMayChooseTargets`, per the casualty reminder).
     CardDefinition {
         name: "Silverquill, the Disputant",
         cost: cost(&[generic(2), w(), b()]),
@@ -5087,7 +5087,7 @@ pub fn silverquill_the_disputant() -> CardDefinition {
                         filter: SelectionRequirement::Creature
                             .and(SelectionRequirement::PowerAtLeast(1)),
                     },
-                    Effect::CopySpell {
+                    Effect::CopySpellMayChooseTargets {
                         what: Selector::TriggerSource,
                         count: Value::Const(1),
                     },
@@ -5235,7 +5235,7 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
                     count: Value::Const(1),
                     filter: SelectionRequirement::HasCardType(CardType::Artifact),
                 },
-                Effect::CopySpell {
+                Effect::CopySpellMayChooseTargets {
                     what: Selector::TriggerSource,
                     count: Value::Const(1),
                 },

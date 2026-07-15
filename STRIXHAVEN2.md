@@ -105,12 +105,18 @@ Relic Sloth ("up to one target" declinable via `ApplyToTargets min 0`),
 Paradox Surveyor (`LookPickToHand` — sees all five, rest bottomed).
 
 **Still open** (tracked, not fixed): Lorehold the Historian's miracle grant
-is an until-EOT {2} alt-cost, not a real miracle window; `Effect::CopySpell`
-never offers "you may choose new targets" (Mica, Lumaret's Favor,
-Choreographed Sparks, Silverquill the Disputant); `LookPickToHand` declines
-auto-fill under the AutoDecider; `BottomRandom` bottoms deterministically;
-Aziza's tap-three cost auto-picks which creatures tap; plus the ~55
-in-source documented approximations (grep `Approximation|omitted|dropped`).
+is an until-EOT {2} alt-cost, not a real miracle window; `LookPickToHand`
+declines auto-fill under the AutoDecider; `BottomRandom` bottoms
+deterministically; Aziza's tap-three cost auto-picks which creatures tap;
+plus the ~55 in-source documented approximations (grep
+`Approximation|omitted|dropped`).
+
+2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
+types; "pay X life" is a true cast-time additional cost
+(`additional_cost_pay_x_life` — Vicious Rivalry, Fix What's Broken); the
+five copy cards with printed "you may choose new targets" (Lumaret's
+Favor, Choreographed Sparks mode 0, Aziza, Mica, Silverquill's casualty)
+now use `Effect::CopySpellMayChooseTargets`.
 
 ## Removed status tables (2026-07-12)
 

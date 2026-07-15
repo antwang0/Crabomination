@@ -637,7 +637,7 @@ pub fn lumarets_favor() -> CardDefinition {
                     at_least: Value::Const(1),
                 },
             ),
-            effect: Effect::CopySpell {
+            effect: Effect::CopySpellMayChooseTargets {
                 what: Selector::This,
                 count: Value::Const(1),
             },
@@ -1663,7 +1663,7 @@ pub fn prismari_charm() -> CardDefinition {
 pub fn choreographed_sparks() -> CardDefinition {
     use crate::card::Keyword;
     use crate::mana::r;
-    let copy_is_spell = Effect::CopySpell {
+    let copy_is_spell = Effect::CopySpellMayChooseTargets {
         what: target_filtered(
             SelectionRequirement::IsSpellOnStack.and(
                 SelectionRequirement::HasCardType(CardType::Instant)
