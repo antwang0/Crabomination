@@ -634,7 +634,10 @@ Each unblocks a large swath of cards.
   target filters (Hearth Kami's "artifact with mana value X" via
   `ManaValueExactlyXFromCost`). "Up to N targets" ships via
   `Effect::ApplyToTargets` (Sea God's Scorn bounce-3, Wrap in Flames
-  1-to-each-of-3, Elemental Expressionism bounce-2). Protection now gates spells
+  1-to-each-of-3, Elemental Expressionism bounce-2); an **optional single slot
+  alongside a required one** ships via `Effect::OptionalTargets { min, body }`
+  (Primal Might's required pumped creature + optional fight target, Boom Box's
+  three optional destroy slots). Protection now gates spells
   *and* abilities (CR 702.16c — `ability_target_has_protection`) across color /
   creatures / creature-type (Kitsune Riftwalker, Yawgmoth, Baneslayer) /
   spell-subtype / **multicolored** (`ProtectionFromMulticolored` — Stonecoil

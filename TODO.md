@@ -49,15 +49,20 @@ target. Shipped: Dune Drifter.
   combat-damage tracking + X-value destroy), Primal Might (optional single fight
   target, below), Nine-Lives Familiar (revival delayed return), Gate Colossus /
   Drakuseth (above).
-- **Buildable gap cards noticed but skipped (recent225–228):** Tumbleweed Rising
-  (X/X token where X = greatest power — needs a fixed-at-creation evaluated P/T,
-  not `dynamic_pt`), Unscrupulous Contractor / Victimize (reflexive-sacrifice
-  chains that target a player / return two gy targets), Fear of Burning Alive
-  (delirium rider). Shipped in recent229: Primal Might, Boom Box, Out Cold,
-  Prizefight, Harvester of Misery (from-hand `discard_self_cost` ability), Krovod
-  Haunch. Still open: Hotshot Investigators ("if you controlled it, investigate"
-  — needs a "you controlled the returned target" predicate), Clandestine Meddler
-  (suspected-attackers → surveil trigger).
+- **Buildable gap cards still open:** Tumbleweed Rising (X/X token where X =
+  greatest power — needs a fixed-at-creation evaluated P/T, not `dynamic_pt`),
+  Unscrupulous Contractor / Victimize (reflexive-sacrifice chains that target a
+  player / return two gy targets), Fear of Burning Alive (delirium rider),
+  Hotshot Investigators ("if you controlled it, investigate" — needs a "you
+  controlled the returned target" predicate), Clandestine Meddler
+  (suspected-attackers → surveil trigger), Shifting Grift (two-target ExchangeControl
+  Spree modes — the spree slot-assignment assumes one target per mode), One Last Job
+  (aura-attach-from-graveyard Spree mode). Shipped across recent229–234: Primal
+  Might, Boom Box, Out Cold, Prizefight, Harvester of Misery, Krovod Haunch,
+  Wickerfolk Thresher, Resilient Roadrunner, Giant Beaver, Ornery Tumblewagg,
+  Volcanic Spite, Lilysplash Mentor, Rampaging Soulrager, Haunted Screen, Fear of
+  Infinity, Metamorphic Blast, Return the Favor, Trash the Town, Unfortunate
+  Accident, Thunder Lasso.
 - **Search-to-exile linked recursion** — Hoarding Dragon ("search an artifact,
   exile it; when this dies, return the exiled card to hand") needs the search's
   `ZoneDest::Exile` to stamp `exiled_with = source` so a death trigger can read
@@ -209,8 +214,9 @@ skipped this run, each needing one primitive:
   bespoke mode effect: Getaway Glamer (destroy-if-no-greater-power), Betrayer's
   Bargain (sac-or-pay choice), Lively Dirge (return-up-to-two-total-MV≤4),
   Great Train Heist (extra-combat + delayed treasure-on-damage).
-- **DSK Rooms / doors** (Rampaging Soulrager, Keys to the House's door mode,
-  the `Enchantment — Room` split cards).
+- **DSK Rooms / doors** — `Predicate::UnlockedDoorsControlledAtLeast` (CR 709.5)
+  counts unlocked doors among Rooms you control; ships Rampaging Soulrager
+  (`PumpSelfIf` +3/+0). Remaining: Keys to the House's door mode, lock-a-door.
 - **BLB Gift / Valiant / Offspring / Expend** ability words (Jolly Gerbils,
   Flowerfoot Swordmaster, Junkblade Bruiser, the Gift spells).
 - **"Becomes the target of an opponent's spell/ability"** (Cactarantula).
