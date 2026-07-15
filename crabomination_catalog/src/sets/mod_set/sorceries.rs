@@ -597,9 +597,8 @@ pub fn archdruids_charm() -> CardDefinition {
 
 /// Awaken the Honored Dead — {5}{W}{B} Sorcery.
 ///
-/// Oracle: "Return all creature cards from your graveyard to the battlefield."
-///
-/// Mass reanimation; approximation of the printed text's "all creature cards."
+/// Awaken the Honored Dead — return all creature cards from your graveyard to
+/// the battlefield (`Selector::EachMatching` over the graveyard).
 pub fn awaken_the_honored_dead() -> CardDefinition {
     CardDefinition {
         name: "Awaken the Honored Dead",

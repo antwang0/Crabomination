@@ -6598,6 +6598,11 @@ static DECKS: &[Factory] = &[
     super::decks::greenhouse_rickety_gazebo,
     super::decks::walk_in_closet_forgotten_cellar,
     super::decks::orphans_of_the_wheat,
+    super::decks::grand_entryway_elegant_rotunda,
+    super::decks::derelict_attic_widows_walk,
+    super::decks::funeral_room_awakening_hall,
+    super::decks::painters_studio_defaced_gallery,
+    super::decks::terror_of_towashi,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
