@@ -116,6 +116,12 @@ pub enum Selector {
     Target(u8),
     /// A chosen target slot with a restriction that must be validated at cast time.
     TargetFiltered { slot: u8, filter: SelectionRequirement },
+    /// Every declared target slot (permanents/players still legal). Powers
+    /// "then [do X] to each of those [targets]" riders that operate on the
+    /// whole cast-time target list rather than a single slot — Biogenic
+    /// Upgrade ("distribute counters among 1–3 creatures, then double the
+    /// counters on each of those creatures").
+    AllTargets,
     /// The object that caused this trigger (attacker, dying creature, etc).
     TriggerSource,
     /// The permanent the source chose and remembered as it entered — the

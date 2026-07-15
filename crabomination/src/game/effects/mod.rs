@@ -15348,6 +15348,17 @@ impl GameState {
                 .map(target_to_entity)
                 .into_iter()
                 .collect(),
+            Selector::AllTargets => ctx
+                .targets
+                .iter()
+                .filter_map(|t| match target_to_entity(t) {
+                    EntityRef::Permanent(id) if self.battlefield_find(id).is_some() => {
+                        Some(EntityRef::Permanent(id))
+                    }
+                    EntityRef::Player(p) => Some(EntityRef::Player(p)),
+                    _ => None,
+                })
+                .collect(),
             Selector::TriggerSource => ctx.trigger_source.into_iter().collect(),
             Selector::ChosenPermanentOfSource => ctx
                 .source
