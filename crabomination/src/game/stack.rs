@@ -435,6 +435,7 @@ impl GameState {
                     pl.noncreature_spells_cast_this_game_turn = 0;
                     pl.nonartifact_spells_cast_this_game_turn = 0;
                     pl.multicolored_spells_cast_this_turn = 0;
+                    pl.spells_cast_from_hand_this_turn = 0;
                     pl.oil_activity_this_turn = false;
                     pl.channel_life_for_mana = false;
                     // CR 603.7e — unused "your next creature spell this turn"
@@ -2027,6 +2028,7 @@ impl GameState {
         self.players[p].hexproof_until_next_turn = false;
         self.players[p].creatures_attacked_this_turn = 0;
         self.players[p].spells_cast_this_turn = 0;
+        self.players[p].spells_cast_from_hand_this_turn = 0;
         // Reset the Bloodthirst "damaged this turn" flag for *every* player
         // at the turn boundary (not just the active player) so a creature
         // cast on your turn reads damage dealt since this turn began.
@@ -2248,6 +2250,8 @@ impl GameState {
             }
             // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
             player.turn_spell_discounts.clear();
+            // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
+            player.extra_plus_one_counters_this_turn = 0;
         }
         // Expire UntilEndOfTurn continuous effects from the layer system
         self.expire_end_of_turn_effects();

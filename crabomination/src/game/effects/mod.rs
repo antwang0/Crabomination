@@ -5788,6 +5788,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantExtraPlusOneCountersThisTurn { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.players[p].extra_plus_one_counters_this_turn =
+                        self.players[p].extra_plus_one_counters_this_turn.saturating_add(1);
+                }
+                Ok(())
+            }
+
             Effect::TapAnyNumberThenPumpPerTapped { filter, power, toughness } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let seat = ctx.controller;

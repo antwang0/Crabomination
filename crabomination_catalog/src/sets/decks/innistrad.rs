@@ -2866,6 +2866,7 @@ pub fn cobbled_lancer() -> CardDefinition {
         toughness: 3,
         additional_cast_cost: vec![AdditionalCastCost::ExileFromGraveyard {
             filter: SelectionRequirement::Creature,
+            count: 1,
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), u()]),

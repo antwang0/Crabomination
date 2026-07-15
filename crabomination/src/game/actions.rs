@@ -210,7 +210,7 @@ pub(crate) fn flashback_additional_cost_for_name(
         // mana cost on the card; the life is the additional rider).
         "Deep Analysis" => vec![A::PayLife { amount: 3 }],
         // "Flashback—{4}{W}, Exile a card from your graveyard."
-        "Resurgent Belief" => vec![A::ExileFromGraveyard { filter: S::Any }],
+        "Resurgent Belief" => vec![A::ExileFromGraveyard { filter: S::Any, count: 1 }],
         _ => vec![],
     }
 }
@@ -3617,7 +3617,7 @@ impl GameState {
         card.turn_face_down();
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
-        self.finalize_cast(p, card, None, vec![], None, 0, 0, mana_spent);
+        self.finalize_cast(p, card, None, vec![], None, 0, 0, mana_spent, true);
         Ok(events)
     }
 
@@ -3747,6 +3747,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             mana_spent,
+            false,
         );
         Ok(events)
     }
@@ -3811,6 +3812,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             mana_spent,
+            true,
         );
         Ok(events)
     }
@@ -3881,6 +3883,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             mana_spent,
+            true,
         );
         Ok(events)
     }
@@ -3944,6 +3947,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             mana_spent,
+            true,
         );
         Ok(events)
     }
@@ -4044,6 +4048,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             mana_spent,
+            true,
         );
         Ok(events)
     }
@@ -4113,6 +4118,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             mana_spent,
+            false,
         );
         Ok(events)
     }
@@ -4212,6 +4218,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             0,
+            false,
         );
         Ok(events)
     }
@@ -5219,6 +5226,7 @@ impl GameState {
             final_x,
             converged_value,
             mana_spent,
+            true,
         );
 
         Ok(events)
@@ -5354,10 +5362,14 @@ impl GameState {
                 }).count();
                 matching >= *count as usize
             }
-            A::ExileFromGraveyard { filter } => self.players[p]
-                .graveyard
-                .iter()
-                .any(|c| self.evaluate_requirement_on_card(filter, c, p)),
+            A::ExileFromGraveyard { filter, count } => {
+                self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .count()
+                    >= *count as usize
+            }
             // Reveal-or-pay / sacrifice-or-pay are always announceable: with
             // no match the pay half is folded into the spell's cost
             // (`extra_cost_for_spell`) and mana payment enforces it.
@@ -5572,21 +5584,24 @@ impl GameState {
                         );
                     }
                 }
-                A::ExileFromGraveyard { filter } => {
-                    // Auto-exile the lowest-MV matching card from the caster's
-                    // graveyard; its mana value becomes the spell's X.
-                    let pick = self.players[p]
+                A::ExileFromGraveyard { filter, count } => {
+                    // Auto-exile the `count` lowest-MV matching cards from the
+                    // caster's graveyard; the first one's mana value becomes X.
+                    let mut picks: Vec<(crate::card::CardId, u32)> = self.players[p]
                         .graveyard
                         .iter()
                         .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                        .min_by_key(|c| c.definition.cost.cmc())
-                        .map(|c| (c.id, c.definition.cost.cmc()));
-                    if let Some((id, mv)) = pick {
+                        .map(|c| (c.id, c.definition.cost.cmc()))
+                        .collect();
+                    picks.sort_by_key(|(_, mv)| *mv);
+                    for (i, (id, mv)) in picks.into_iter().take(*count as usize).enumerate() {
                         if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
                             self.exile.push(card);
                             events.push(GameEvent::PermanentExiled { card_id: id });
                         }
-                        sac_power = Some(mv);
+                        if i == 0 {
+                            sac_power = Some(mv);
+                        }
                     }
                 }
                 // Knowledge-only when a matching card is in hand; the pay
@@ -5767,11 +5782,15 @@ impl GameState {
         x_value: u32,
         converged_value: u32,
         mana_spent: u32,
+        from_hand: bool,
     ) {
         let card_id = card.id;
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
+        if from_hand {
+            self.players[p].spells_cast_from_hand_this_turn += 1;
+        }
         // CR 715 / 702.183 — when cast as its Adventure/Omen half the card is an
         // instant/sorcery spell, not a creature spell, so the spell-type
         // tallies (Magecraft / Prowess) read the half's types.
@@ -6289,7 +6308,7 @@ impl GameState {
             GameEvent::CardLeftGraveyard { player: p, card_id },
             GameEvent::SpellCast { player: p, card_id, face: CastFace::Front },
         ];
-        self.finalize_cast(p, card, target, additional_targets, None, 0, 0, mana_spent);
+        self.finalize_cast(p, card, target, additional_targets, None, 0, 0, mana_spent, false);
         Ok(events)
     }
 
@@ -6667,7 +6686,7 @@ impl GameState {
                 face: CastFace::Flashback,
             },
         ];
-        self.finalize_cast(p, card, target, additional_targets, mode, x_value, 0, mana_spent);
+        self.finalize_cast(p, card, target, additional_targets, mode, x_value, 0, mana_spent, false);
         Ok(events)
     }
 
@@ -6770,6 +6789,7 @@ impl GameState {
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
         self.finalize_cast(
             p, card, target, additional_targets, mode, x_value.unwrap_or(0), 0, mana_spent,
+            false,
         );
         Ok(events)
     }
@@ -6886,6 +6906,7 @@ impl GameState {
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
         self.finalize_cast(
             p, card, target, additional_targets, mode, x_value.unwrap_or(0), 0, mana_spent,
+            false,
         );
         Ok(events)
     }
@@ -7102,6 +7123,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             0,
+            false,
         );
         Ok(events)
     }
@@ -7343,6 +7365,7 @@ impl GameState {
             x_value.unwrap_or(0),
             converged_value,
             mana_spent,
+            false,
         );
 
         Ok(events)
@@ -7847,6 +7870,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             alt_mana_spent,
+            true,
         );
         Ok(events)
     }

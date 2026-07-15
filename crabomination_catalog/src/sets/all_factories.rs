@@ -6607,6 +6607,11 @@ static DECKS: &[Factory] = &[
     super::decks::restricted_office_lecture_hall,
     super::decks::peer_past_the_veil,
     super::decks::the_swarmweaver,
+    super::decks::prized_griffin,
+    super::decks::abhorrent_oculus,
+    super::decks::lively_dirge,
+    super::decks::smugglers_surprise,
+    super::decks::prairie_dog,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

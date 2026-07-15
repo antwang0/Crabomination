@@ -879,6 +879,9 @@ mod tests_recent236;
 #[path = "../tests/recent237.rs"]
 mod tests_recent237;
 #[cfg(test)]
+#[path = "../tests/recent238.rs"]
+mod tests_recent238;
+#[cfg(test)]
 #[path = "../tests/tdm.rs"]
 mod tests_tdm;
 #[cfg(test)]
@@ -3202,7 +3205,8 @@ impl GameState {
     /// `DoubleCounters` multiplier.
     pub fn plus_counter_adders_for(&self, seat: usize) -> u32 {
         use crate::effect::StaticEffect;
-        self.battlefield
+        let statics: u32 = self
+            .battlefield
             .iter()
             .filter(|c| c.controller == seat)
             .map(|c| {
@@ -3212,7 +3216,9 @@ impl GameState {
                     .filter(|sa| matches!(sa.effect, StaticEffect::ExtraPlusOneCounters))
                     .count() as u32
             })
-            .sum()
+            .sum();
+        // Plus any "until end of turn" bonus (Prairie Dog's {4}{W}).
+        statics + self.players.get(seat).map_or(0, |p| p.extra_plus_one_counters_this_turn)
     }
 
     /// CR 614.16 counter-placement replacement chain for a `base`-count

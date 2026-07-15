@@ -394,6 +394,17 @@ pub struct Player {
     /// back-compat.
     #[serde(default)]
     pub instants_or_sorceries_cast_this_turn: u32,
+    /// Count of spells this player cast **from their hand** this turn (CR
+    /// 601). Unlike `spells_cast_this_turn`, casts from exile (Plot, impulse),
+    /// graveyard (flashback/escape/disturb/retrace/aftermath), or the command
+    /// zone don't bump it. Gates "if you haven't cast a spell from your hand
+    /// this turn" payoffs (Prairie Dog, Emergent Haunting). Reset each turn.
+    #[serde(default)]
+    pub spells_cast_from_hand_this_turn: u32,
+    /// Transient Hardened-Scales bonus granted "until end of turn" (Prairie
+    /// Dog's {4}{W}). Adds to `plus_counter_adders_for`; cleared at cleanup.
+    #[serde(default)]
+    pub extra_plus_one_counters_this_turn: u32,
     /// One-shot "next instant/sorcery you cast this turn costs {N} less"
     /// discounts (Thundertrap Trainer). Each entry is `(amount, granted_at)`
     /// where `granted_at` is `instants_or_sorceries_cast_this_turn` at grant
@@ -754,6 +765,8 @@ impl Player {
             cards_exiled_this_turn: 0,
             cards_to_graveyard_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
+            spells_cast_from_hand_this_turn: 0,
+            extra_plus_one_counters_this_turn: 0,
             pending_is_discounts: Vec::new(),
             pending_spell_discounts: Vec::new(),
             turn_spell_discounts: Vec::new(),

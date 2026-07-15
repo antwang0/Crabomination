@@ -1027,6 +1027,12 @@ pub enum Predicate {
     /// ("if you've cast another instant or sorcery spell this turn, …")
     /// and similar pumps that key off spell-count.
     SpellsCastThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// True if `who` has **not** cast any spell from their hand this turn
+    /// (CR 601). Backed by `Player.spells_cast_from_hand_this_turn == 0` —
+    /// casts from exile/graveyard/command zone don't count. Gates "if you
+    /// haven't cast a spell from your hand this turn" (Prairie Dog,
+    /// Emergent Haunting).
+    NoSpellCastFromHandThisTurn { who: PlayerRef },
     /// `who` has cast *exactly* `count` spells so far this turn. Backed by
     /// `Player.spells_cast_this_turn` (already incremented for the current
     /// cast at trigger time). Used by "whenever a player casts their second
@@ -3380,6 +3386,11 @@ pub enum Effect {
     /// control" (Tangle Wire). Auto-pick: lands, then other noncreatures,
     /// then creatures by ascending power. Taps as many as exist when short.
     PlayerTapsUntapped { who: PlayerRef, filter: SelectionRequirement, amount: Value },
+    /// "Until end of turn, if you would put one or more +1/+1 counters on a
+    /// creature you control, put that many plus one instead" (Prairie Dog).
+    /// Bumps `Player.extra_plus_one_counters_this_turn`, a transient
+    /// Hardened-Scales bonus cleared at cleanup.
+    GrantExtraPlusOneCountersThisTurn { who: PlayerRef },
     /// "Tap any number of untapped permanents matching `filter` you control;
     /// this source gets +`power`/+`toughness` until end of turn for each one
     /// tapped this way" (Orphans of the Wheat). The controller chooses which

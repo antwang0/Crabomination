@@ -2232,6 +2232,7 @@ pub fn draconic_intervention() -> CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::ExileFromGraveyard {
             filter: SelectionRequirement::HasCardType(CardType::Instant)
                 .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            count: 1,
         }],
         effect: Effect::Seq(vec![
             Effect::ExileIfWouldDieThisTurn {

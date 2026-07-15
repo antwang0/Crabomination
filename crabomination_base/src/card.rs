@@ -2634,13 +2634,17 @@ pub enum AdditionalCastCost {
         #[serde(default = "one_u32")]
         count: u32,
     },
-    /// "As an additional cost to cast this spell, exile a [filter] card from
-    /// your graveyard." The exiled card's mana value becomes the spell's X
-    /// (read at resolution via `Value::XFromCost`) — Draconic Intervention
-    /// ("X is the exiled card's mana value"). Auto-picker exiles the lowest-MV
-    /// match. Cast is rejected if no matching card is in the graveyard.
+    /// "As an additional cost to cast this spell, exile [count] [filter]
+    /// card(s) from your graveyard." The first (lowest-MV) exiled card's mana
+    /// value becomes the spell's X (read at resolution via `Value::XFromCost`)
+    /// — Draconic Intervention ("X is the exiled card's mana value"). Auto-picker
+    /// exiles the lowest-MV matches. Cast is rejected if fewer than `count`
+    /// matching cards are in the graveyard. `count` defaults to 1 for cards /
+    /// snapshots predating the field (Abhorrent Oculus exiles six).
     ExileFromGraveyard {
         filter: SelectionRequirement,
+        #[serde(default = "one_u32")]
+        count: u32,
     },
     /// "As an additional cost to cast this spell, reveal a [filter] card from
     /// your hand or pay {pay}." Silvergill Adept. When the caster's hand
