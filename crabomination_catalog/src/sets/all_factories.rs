@@ -6501,6 +6501,12 @@ static DECKS: &[Factory] = &[
     super::decks::serra_redeemer,
     super::decks::wandertale_mentor,
     super::decks::starseer_mentor,
+    super::decks::baylen_the_haymaker,
+    super::decks::haazda_vigilante,
+    super::decks::neighborhood_guardian,
+    super::decks::griffnaut_tracker,
+    super::decks::rubblebelt_braggart,
+    super::decks::gearbane_orangutan,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
