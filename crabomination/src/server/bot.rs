@@ -1530,6 +1530,38 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // SOS Prepare — a prepared creature's inset spell is a castable
+    // resource: offer `CastPrepareSpell` whenever the cost is payable and
+    // the spell has a legal target (`would_accept` gates timing/cost).
+    // Casting unprepares the creature; enters-prepared bodies were
+    // previously dead weight under bot control.
+    for c in state.battlefield.iter().filter(|c| c.controller == seat) {
+        let Some(spell) = c.definition.prepare_spell.as_deref() else { continue };
+        if c.counter_count(crate::card::CounterType::Prepared) == 0 {
+            continue;
+        }
+        let (target, additional_targets) = if spell.effect.requires_target() {
+            let (t, extras) =
+                state.auto_targets_for_effect_all_slots(&spell.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastPrepareSpell {
+            creature_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Conspire (CR 702.78): for any hand card with `Keyword::Conspire`, tap
     // the first two untapped creatures sharing a color with it to copy the
     // spell. The bot conspires whenever it can — the copy is strictly upside

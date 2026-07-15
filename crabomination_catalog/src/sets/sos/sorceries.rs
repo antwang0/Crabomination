@@ -2253,14 +2253,12 @@ pub fn improvisation_capstone() -> CardDefinition {
                 },
                 to: ZoneDest::Exile,
             },
-            Effect::ForEach {
-                selector: Selector::LastMoved,
-                body: Box::new(Effect::CastWithoutPayingImmediate {
-                    what: Selector::TriggerSource,
-                    source_zone: Zone::Exile,
-                    exile_after: false,
-                copy: false,
-            }),
+            // "You may cast any number of spells from among them without
+            // paying their mana costs" — CONTROLLER-CHOSEN cast order: a
+            // declined card is re-offered after each accepted cast.
+            Effect::CastAnyOrderWithoutPaying {
+                what: Selector::LastMoved,
+                source_zone: Zone::Exile,
             },
             Effect::RegisterParadigm,
         ]),

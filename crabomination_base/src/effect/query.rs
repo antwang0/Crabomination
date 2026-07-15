@@ -164,7 +164,9 @@ impl Effect {
             | Effect::TapAnyNumberThenPumpPerTapped { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }
             // Amount is a scratch read (CounteredSpellManaSpent), no slots.
-            | Effect::AddManaAtNextMainPhase { .. } => false,
+            | Effect::AddManaAtNextMainPhase { .. }
+            // Free-cast offers pick their own targets at cast time.
+            | Effect::CastAnyOrderWithoutPaying { .. } => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,

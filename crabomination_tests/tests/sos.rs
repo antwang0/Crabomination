@@ -16364,3 +16364,123 @@ fn tester_of_the_tangential_zero_declines() {
     );
     assert_eq!(g.players[0].mana_pool.total(), 3, "nothing paid");
 }
+
+/// Great Hall of the Biblioplex's {5}: a PERMANENT 2/4 Wizard animation
+/// (still a land) carrying the granted magecraft pump; the "isn't a
+/// creature" gate blocks a second activation.
+#[test]
+fn great_hall_animates_permanently_with_magecraft_pump() {
+    use crabomination::card::CardType;
+    let mut g = two_player_game();
+    let hall = g.add_card_to_battlefield(0, catalog::great_hall_of_the_biblioplex());
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hall, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("{5} animation");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(hall).expect("on battlefield");
+    assert!(cp.card_types.contains(&CardType::Creature), "now a creature");
+    assert!(cp.card_types.contains(&CardType::Land), "still a land");
+    assert_eq!((cp.power, cp.toughness), (2, 4), "2/4 Wizard");
+    // Second activation is gated off ("if this land isn't a creature").
+    g.players[0].mana_pool.add_colorless(5);
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: hall, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(err.is_err(), "already a creature — condition fails");
+    // Granted magecraft: casting an instant pumps it +1/+0 EOT.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(hall).unwrap();
+    assert_eq!(cp.power, 3, "magecraft pump: 2 + 1");
+}
+
+/// Petrified Hamlet: the ETB name choice locks non-mana activations of
+/// matching sources and grants matching lands "{T}: Add {C}".
+#[test]
+fn petrified_hamlet_name_lockout_and_land_grant() {
+    let mut g = two_player_game();
+    // Opponent has a Great Hall (an activated-ability land we can name).
+    let hall = g.add_card_to_battlefield(1, catalog::great_hall_of_the_biblioplex());
+    // And we control a Forest that will match the chosen name... name the
+    // opponent's Great Hall instead to exercise the lockout, then check
+    // the grant against another copy of the named land under our control.
+    let ours = g.add_card_to_battlefield(0, catalog::great_hall_of_the_biblioplex());
+    let _ = ours;
+    let hamlet = g.add_card_to_hand(0, catalog::petrified_hamlet());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::NamedCard(
+        "Great Hall of the Biblioplex".to_string(),
+    )]));
+    g.perform_action(GameAction::PlayLand(hamlet)).expect("play Hamlet");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(hamlet).unwrap().named_card.as_deref(),
+        Some("Great Hall of the Biblioplex"),
+        "name stamped"
+    );
+    // Lockout: the opponent's Great Hall {5} animation (non-mana) is
+    // suppressed; its mana abilities still work.
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add_colorless(5);
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: hall, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(err.is_err(), "non-mana activation locked by the chosen name");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hall, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("mana abilities are exempt from the lockout");
+    // Grant: OUR land with the chosen name gained "{T}: Add {C}" — its
+    // granted ability index sits after the printed three.
+    g.priority.player_with_priority = 0;
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ours, ability_index: 3, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("granted {T}: Add {C} on the named land");
+    assert_eq!(g.players[0].mana_pool.total(), before + 1, "granted mana ability produced {{C}}");
+}
+
+/// Improvisation Capstone's free casts are order-choosable: declining a
+/// card keeps it available, so the controller can cast B before A.
+#[test]
+fn improvisation_capstone_declined_cards_are_reoffered() {
+    let mut g = two_player_game();
+    // Top of library: two bolts (MV 1+1... need total MV >= 4): bolt(1),
+    // divination(3) → cumulative 4 → both exiled.
+    let div = g.add_card_to_library(0, catalog::divination());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let _ = (div, bolt);
+    // library top order: bolt first, then divination.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest()); // draw fodder for Divination
+    }
+    let id = g.add_card_to_hand(0, catalog::improvisation_capstone());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    // Offers: bolt (decline), divination (accept), bolt re-offered (accept).
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    let foe_life = g.players[1].life;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Capstone castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 3, "the declined bolt was re-offered and cast");
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before - 1 + 2,
+        "Divination cast free too (−Capstone +2 draws)"
+    );
+}

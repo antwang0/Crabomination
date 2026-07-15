@@ -4288,6 +4288,13 @@ pub enum Effect {
         #[serde(default)]
         copy: bool,
     },
+    /// "You may cast any number of spells from among them without paying
+    /// their mana costs" — repeatedly offers the remaining castable cards
+    /// (a declined card is re-offered after each accepted cast), so the
+    /// controller effectively picks the CAST ORDER; the loop ends after a
+    /// full pass with no accepts. Lands are skipped (played, not cast).
+    /// Improvisation Capstone.
+    CastAnyOrderWithoutPaying { what: Selector, source_zone: crate::card::Zone },
     /// "You may cast a [filter] spell from your hand without paying its
     /// mana cost" (Maelstrom Archangel; Oracle of Bones restricts to
     /// instants/sorceries). The controller picks one matching nonland hand

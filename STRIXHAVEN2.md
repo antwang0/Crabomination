@@ -137,7 +137,20 @@ actually-PAID mana at the caster's next main phase
 (`CounteredSpellManaSpent` + `AddManaAtNextMainPhase`); Tester of the
 Tangential's "you may pay {X}" is a real resolution-time amount pick
 (`Effect::MayPayX` — ChooseAmount capped by floated mana, 0 declines,
-body reads the chosen X via `XFromCost`).
+body reads the chosen X via `XFromCost`); Great Hall's `{5}` is a real
+PERMANENT 2/4 Wizard animation with the granted magecraft pump;
+Petrified Hamlet ships all four printed abilities (ETB `NameCard`, the
+CR 201.3 lockout, `GrantActivatedAbility` on `NamedBySource` lands —
+residual: the name prompt doesn't restrict to land names);
+Improvisation Capstone's free casts are order-choosable
+(`CastAnyOrderWithoutPaying` re-offers declined cards); and bots now
+cast prepare spells (`CastPrepareSpell` candidates in bot.rs).
+
+The SOS catalog's audited gaps are now closed except: land plays
+through may-play grants, the miracle window's step-bounded (rather than
+trigger-exact) timing, and the NameCard land-name restriction — all
+engine-wide residuals noted above. The STX sibling set's 44 documented
+approximations remain untouched.
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost

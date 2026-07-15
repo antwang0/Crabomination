@@ -93,10 +93,13 @@ pub fn spectacle_summit() -> CardDefinition {
 ///   `ManaPayload::Restricted(AnyOneColor, InstantSorceryOnly)`, so it can
 ///   only fund I/S spells (enforced by `ManaPool::pay_for_spell`). The
 ///   life cost uses the `ActivatedAbility::life_cost` slot.
-/// - `{5}: becomes 2/4 Wizard creature` clause is omitted (no
-///   land-becomes-creature primitive — same gap as Mishra's Factory).
-///   The vanilla mana-fixing role still slots into Strixhaven decks as
-///   a colorless 5-color rainbow tap-with-life-payment.
+/// - `{5}: If this land isn't a creature, it becomes a 2/4 Wizard
+///   creature with "Whenever you cast an instant or sorcery spell, this
+///   creature gets +1/+0 until end of turn." It's still a land.` — a
+///   PERMANENT animation via `Effect::BecomeCreature { duration:
+///   Permanent }` (it keeps the Land type), the magecraft pump granted
+///   permanently via `GrantTriggeredAbility`, and the "isn't a creature"
+///   gate as the ability's activation condition.
 pub fn great_hall_of_the_biblioplex() -> CardDefinition {
     use super::super::tap_add_colorless;
     use crate::card::Supertype;
@@ -129,11 +132,44 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
         ..Default::default()
     };
+    // {5}: If this land isn't a creature, it becomes a 2/4 Wizard
+    // creature with the magecraft pump. It's still a land. The printed
+    // text has no "until end of turn" — the animation is permanent.
+    let animate = ActivatedAbility {
+        mana_cost: cost(&[crate::mana::generic(5)]),
+        condition: Some(crate::effect::Predicate::EntityMatches {
+            what: crate::effect::Selector::This,
+            filter: crate::card::SelectionRequirement::Not(Box::new(
+                crate::card::SelectionRequirement::Creature,
+            )),
+        }),
+        effect: Effect::Seq(vec![
+            Effect::BecomeCreature {
+                what: crate::effect::Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(4),
+                creature_types: vec![crate::card::CreatureType::Wizard],
+                keywords: vec![],
+                duration: crate::effect::Duration::Permanent,
+            },
+            Effect::GrantTriggeredAbility {
+                what: crate::effect::Selector::This,
+                trigger: Box::new(crate::effect::shortcut::magecraft(Effect::PumpPT {
+                    what: crate::effect::Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: crate::effect::Duration::EndOfTurn,
+                })),
+                duration: crate::effect::Duration::Permanent,
+            },
+        ]),
+        ..Default::default()
+    };
     CardDefinition {
         name: "Great Hall of the Biblioplex",
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Land],
-        activated_abilities: vec![tap_add_colorless(), pay_life_for_any],
+        activated_abilities: vec![tap_add_colorless(), pay_life_for_any, animate],
         ..Default::default()
     }
 }
@@ -195,18 +231,42 @@ pub fn skycoach_waypoint() -> CardDefinition {
 /// unless they're mana abilities. / Lands with the chosen name have
 /// '{T}: Add {C}.' / {T}: Add {C}."
 ///
-/// Approximation: the engine has no "choose a card name" prompt, no name-
-/// match selector primitive, and no static "abilities of source X with
-/// name Y can't activate" filter. We collapse to the printed colorless
-/// mana ability ({T}: Add {C}) so the card still slots into colorless
-/// utility roles. The lock-out clause is omitted (tracked in TODO.md
-/// under "Choose a Card Name" engine work). Mana ability is a faithful
-/// {T}: Add {C} via the shared `tap_add_colorless` helper.
+/// All four printed abilities wired:
+/// - ETB `Effect::NameCard` (the Pithing Needle prompt/heuristic) stamps
+///   the chosen name.
+/// - The lock-out ("activated abilities of sources with the chosen name
+///   can't be activated unless they're mana abilities") is the engine's
+///   global `named_card` suppression — the same CR 201.3 rail Pithing
+///   Needle rides.
+/// - "Lands with the chosen name have '{T}: Add {C}'" via
+///   `GrantActivatedAbility { EachPermanent(Land ∧ NamedBySource) }`.
+/// - The printed `{T}: Add {C}` via the shared `tap_add_colorless`.
+/// Residual: the NameCard decision offers any card name (the printed
+/// text restricts the choice to LAND names — the UI doesn't yet filter
+/// the namespace, though naming a nonland simply makes the two
+/// name-keyed abilities dead).
 pub fn petrified_hamlet() -> CardDefinition {
     use super::super::tap_add_colorless;
+    use crate::card::{SelectionRequirement, TriggeredAbility};
+    use crate::effect::{
+        EventKind, EventScope, EventSpec, Selector, StaticAbility, StaticEffect,
+    };
     CardDefinition {
         name: "Petrified Hamlet",
         card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::NameCard { what: Selector::This },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Lands with the chosen name have \"{T}: Add {C}.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::NamedBySource),
+                ),
+                ability: tap_add_colorless(),
+            },
+        }],
         activated_abilities: vec![tap_add_colorless()],
         ..Default::default()
     }

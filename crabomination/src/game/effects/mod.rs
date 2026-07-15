@@ -15133,6 +15133,74 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CastAnyOrderWithoutPaying { what, source_zone } => {
+                // "Cast any number ... without paying" with CONTROLLER-CHOSEN
+                // ORDER: offer each remaining castable card; after any accept,
+                // re-offer the declined ones (so declining A to cast B first,
+                // then casting A, is expressible). A full pass with no accepts
+                // ends the loop. Lands are skipped (played, not cast).
+                use crate::decision::{Decision, DecisionAnswer};
+                let mut remaining: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Card(id) | EntityRef::Permanent(id) => Some(id),
+                        _ => None,
+                    })
+                    .collect();
+                let source_for_ask = ctx.source.unwrap_or(CardId(0));
+                loop {
+                    let mut progressed = false;
+                    for cid in remaining.clone() {
+                        if self.find_card_zone(cid) != Some(*source_zone) {
+                            remaining.retain(|c| *c != cid);
+                            continue;
+                        }
+                        let Some(card_ref) = self.find_card_anywhere(cid) else {
+                            remaining.retain(|c| *c != cid);
+                            continue;
+                        };
+                        if card_ref.definition.card_types.contains(&crate::card::CardType::Land) {
+                            remaining.retain(|c| *c != cid);
+                            continue;
+                        }
+                        let name = card_ref.definition.name;
+                        let card_def = card_ref.definition.clone();
+                        let answer = self.decider.decide(&Decision::OptionalTrigger {
+                            source: source_for_ask,
+                            description: format!(
+                                "Cast {name} without paying? (declined cards are re-offered)"
+                            ),
+                        });
+                        if !matches!(answer, DecisionAnswer::Bool(true)) {
+                            continue;
+                        }
+                        let auto_target = self.auto_target_for_effect_avoiding(
+                            &card_def.effect,
+                            ctx.controller,
+                            Some(cid),
+                        );
+                        let cast_events = self.cast_card_for_free(
+                            ctx.controller,
+                            cid,
+                            *source_zone,
+                            auto_target,
+                            vec![],
+                            None,
+                            None,
+                            false,
+                        )?;
+                        events.extend(cast_events);
+                        remaining.retain(|c| *c != cid);
+                        progressed = true;
+                    }
+                    if !progressed || remaining.is_empty() {
+                        break;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CastFromHandWithoutPaying { filter } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;
