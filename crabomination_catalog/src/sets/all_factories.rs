@@ -6578,6 +6578,10 @@ static DECKS: &[Factory] = &[
     super::decks::out_cold,
     super::decks::harvester_of_misery,
     super::decks::krovod_haunch,
+    super::decks::wickerfolk_thresher,
+    super::decks::resilient_roadrunner,
+    super::decks::giant_beaver,
+    super::decks::ornery_tumblewagg,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

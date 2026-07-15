@@ -1,7 +1,7 @@
 //! Functionality tests for `catalog::sets::decks::recent229` — the optional
 //! single-target primitive (`Effect::OptionalTargets`) and its cards.
 
-use crate::card::{CardType, CounterType, Keyword};
+use crate::card::{CounterType, Keyword};
 use crate::catalog;
 use crate::game::effects::EffectContext;
 use crate::game::types::Target;
