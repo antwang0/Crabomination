@@ -9,6 +9,29 @@ concretizes `{X}`-from-cost filters via `auto_target_for_effect_avoiding_set_x`,
 so a trigger filtered by `ManaValueAtMostXFromCost` (Dune Drifter) picks a legal
 target. Shipped: Dune Drifter.
 
+**Discovered during recent214 (each blocked on one primitive):**
+- **MayPay body player-targeting** — a triggered `Effect::MayPay { body: Drain {
+  from: Player(Target(0)) } }` doesn't declare/auto-target the player slot, so
+  the trigger fizzles ("target player loses N"). Kalastria Highborn was modeled
+  as each-opponent instead. Fix: recurse into MayPay/MayPayGeneric bodies in
+  `auto_targets_for_effect_all_slots` + the target-declaration walk.
+- **Per-slot optional target for arbitrary effects** — only `ApplyToTargets`
+  slots are declinable; a plain `Effect::Fight` defender or an
+  `ExileUntilSourceLeaves` "up to one" can't be optional. Prayer of Binding,
+  Immersturm Predator's exile, and (deferred) Primal Might's fight are modeled
+  as required-target. Add an optional flag for single-slot effects.
+- **Gate Colossus** — "whenever a Gate you control enters, put this from your
+  graveyard on top of your library" is a from-graveyard trigger on a
+  non-recursion permanent (`EventScope::FromYourGraveyard` fires the ability but
+  the card body isn't a recursion shape); needs generalizing.
+- **Drakuseth, Maw of Flames** — "4 damage to any target and 3 to each of up to
+  two other targets" needs cross-effect target-slot allocation (single-target
+  `DealDamage` slot 0 + `ApplyToTargets` slots 1–2 excluding slot 0).
+- **once-per-game activation** — Mild-Mannered Librarian's "Activate only once"
+  has no `once_per_game` flag on `ActivatedAbility` (only `once_per_turn`).
+- **Ordeal cycle / Nine-Lives Familiar** — need a "when you sacrifice this"
+  self-trigger and a delayed return-with-counter-decrement at the next end step.
+
 **Next-up cards noticed this run (recent185–190), each blocked on one
 primitive:**
 - **BLB Gift instants/sorceries** — Sazacap's Brew, Dewdrop Cure, and Consumed

@@ -419,6 +419,109 @@ pub fn shipwreck_dowser() -> CardDefinition {
     }
 }
 
+/// Immersturm Predator — {2}{B}{R} 3/3 Vampire Dragon. Flying. Whenever it
+/// becomes tapped, exile a card from a graveyard and put a +1/+1 counter on it.
+/// Sacrifice another creature: it gains indestructible until end of turn and
+/// taps. (Printed "up to one" exile modeled as one; counter kept unconditional
+/// via a sibling trigger so it grows even with empty graveyards.)
+pub fn immersturm_predator() -> CardDefinition {
+    CardDefinition {
+        name: "Immersturm Predator",
+        cost: cost(&[generic(2), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                effect: Effect::Move { what: target_filtered(R::InGraveyard), to: ZoneDest::Exile },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Tap { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wildborn Preserver — {1}{G} 2/2 Elf Archer. Flash, reach. Whenever another
+/// non-Human creature you control enters, you may pay {X}; if you do, put X
+/// +1/+1 counters on this creature.
+pub fn wildborn_preserver() -> CardDefinition {
+    CardDefinition {
+        name: "Wildborn Preserver",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::Not(Box::new(R::HasCreatureType(CreatureType::Human)))),
+                }),
+            effect: Effect::MayPayGenericUpTo {
+                max: Value::Const(20),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::TriggerEventAmount,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Prayer of Binding — {3}{W} Enchantment with Flash. When it enters, exile a
+/// target nonland permanent an opponent controls until this leaves, and gain 2
+/// life. (Printed "up to one" modeled as one target — O-Ring style.)
+pub fn prayer_of_binding() -> CardDefinition {
+    CardDefinition {
+        name: "Prayer of Binding",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    R::Permanent.and(R::ControlledByOpponent).and(R::Not(Box::new(R::Land))),
+                ),
+                return_to: crate::card::ExileReturnZone::Battlefield,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Gratuitous Violence — {2}{R}{R}{R} Enchantment. If a creature you control
 /// would deal damage to a permanent or player, it deals double that damage.
 pub fn gratuitous_violence() -> CardDefinition {

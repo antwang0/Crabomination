@@ -282,6 +282,63 @@ fn shipwreck_dowser_returns_instant() {
     let _ = CreatureType::Merfolk;
 }
 
+/// Prayer of Binding exiles an opponent's permanent and gains 2 life.
+#[test]
+fn prayer_of_binding_exiles_and_gains_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let prayer = g.add_card_to_hand(0, catalog::prayer_of_binding());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: prayer, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Prayer of Binding");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "opponent's creature exiled");
+    assert_eq!(g.players[0].life, 22, "gained 2 life");
+}
+
+/// Wildborn Preserver grows by X when another non-Human enters and you pay {X}.
+#[test]
+fn wildborn_preserver_grows_on_nonhuman_etb() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_battlefield(0, catalog::wildborn_preserver());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // a Bear (non-Human)
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3); // 1 for the bear + 2 for the pay
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the Bear");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(elf).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "paid {{2}} → two +1/+1 counters");
+}
+
+/// Immersturm Predator's sac ability taps it (indestructible), and the
+/// becomes-tapped triggers grow it and exile a graveyard card.
+#[test]
+fn immersturm_predator_sac_taps_and_grows() {
+    let mut g = two_player_game();
+    let pred = g.add_card_to_battlefield(0, catalog::immersturm_predator());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gy = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.clear_sickness(pred);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pred, ability_index: 0,
+        target: Some(Target::Permanent(fodder)), additional_targets: Vec::new(), x_value: None,
+    }).expect("sac another creature");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(pred).expect("predator alive");
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "gained indestructible");
+    assert!(g.battlefield_find(pred).unwrap().tapped, "tapped by its own ability");
+    assert_eq!(g.battlefield_find(pred).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "becomes-tapped grew it");
+    assert!(g.exile.iter().any(|c| c.id == gy), "exiled a graveyard card");
+}
+
 /// Gratuitous Violence doubles a controlled creature's damage but not the
 /// opponent's (source-restricted CR 614.2 doubler).
 #[test]

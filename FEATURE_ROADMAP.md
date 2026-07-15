@@ -16,6 +16,16 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **recent214 (FDN reprint gaps):** `Selector::AllTargets` (every declared
+  permanent/player target — "then do X to each of those targets": Biogenic
+  Upgrade distributes 3 counters among up-to-3 then doubles on each) and
+  `StaticEffect::DoubleDamageFromControlledCreatures` (source-restricted CR
+  614.2 doubler, combat + noncombat — Gratuitous Violence). 20 FDN cards
+  (Herald of Faith, Arcanis, Confiscate control-Aura, Sphinx of the Final Word,
+  Kalastria Highborn, Kargan/Kitesail conditional flyers, Surrak, Immersturm
+  Predator, Wildborn Preserver, …). Tests in `tests/recent214` + CR 614.2
+  conformance.
+
 - **recent209–213 (FDN reprint gaps):** `StaticEffect::AnthemForChosenColor`
   (chosen-color anthem resolved live in `gather_continuous_effects` — Heraldic
   Banner), and the `EventKind::CounterAdded` trigger wired for a +1/+1-counter
