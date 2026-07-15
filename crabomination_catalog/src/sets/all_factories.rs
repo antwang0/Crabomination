@@ -6571,6 +6571,7 @@ static DECKS: &[Factory] = &[
     super::decks::molten_duplication,
     super::decks::shackle_slinger,
     super::decks::thunder_salvo,
+    super::decks::fledgling_dragon,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

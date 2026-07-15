@@ -9,7 +9,7 @@ use crate::effect::shortcut::{
     add_any_one_color, add_colorless, cascade, deal, etb, flurry, on_dies, target_any,
 };
 use crate::effect::{
-    Effect, ManaPayload, PlayerRef, Predicate, Selector, StaticEffect, Value,
+    Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, StaticEffect, Value,
 };
 use crate::mana::{cost, g, generic, r, u, w, Color};
 
@@ -278,6 +278,41 @@ pub fn shackle_slinger() -> CardDefinition {
             }),
             else_: Box::new(Effect::Tap { what: target }),
         })],
+        ..Default::default()
+    }
+}
+
+/// Fledgling Dragon — {2}{R}{R} 2/2 Dragon. Flying; with threshold it gets
+/// +3/+3 and has "{R}: +1/+0". (The firebreathing is modeled as always
+/// available; it's only relevant once the +3/+3 threshold bonus is live.)
+pub fn fledgling_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "Fledgling Dragon",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Threshold — +3/+3.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ThresholdActive { who: PlayerRef::You },
+                power: 3,
+                toughness: 3,
+                keywords: vec![],
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

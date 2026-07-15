@@ -149,6 +149,18 @@ fn thunder_salvo_burns_a_creature() {
     assert!(!g.battlefield.iter().any(|c| c.id == enemy), "0/1 dies to the salvo");
 }
 
+/// Fledgling Dragon grows to 5/5 with threshold active.
+#[test]
+fn fledgling_dragon_grows_with_threshold() {
+    let mut g = two_player_game();
+    let drag = g.add_card_to_battlefield(0, catalog::fledgling_dragon());
+    assert_eq!(g.computed_permanent(drag).unwrap().power, 2, "2/2 without threshold");
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    assert_eq!(g.computed_permanent(drag).unwrap().power, 5, "+3/+3 with seven cards in gy");
+}
+
 /// Annoyed Altisaur has reach, trample, and a cascade trigger.
 #[test]
 fn annoyed_altisaur_has_cascade() {
