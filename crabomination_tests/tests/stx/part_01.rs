@@ -108,36 +108,71 @@ fn quick_study_draws_two_cards_for_target_player() {
     assert_eq!(g.players[0].library.len(), lib_before - 2);
 }
 
-// The Strixhaven Command cycle uses `Effect::ChooseN { picks, modes }`
-// (CR 700.2d) — the auto-decider picks the per-card `picks` indices,
-// so each Command always runs both of its chosen modes.
+/// Witherbloom Command's printed "choose two" is a true cast-time
+/// selection (`Effect::ChooseModesCast`, min 2 / max 2): pick mill-3 +
+/// drain-2 via `CastSpellSpree`.
 #[test]
-fn witherbloom_command_auto_picks_mill_and_drain() {
+fn witherbloom_command_choose_two_mill_and_drain() {
     let mut g = two_player_game();
-    // P1 (target opponent) has at least 4 cards in their library.
+    // P1 (target player) has at least 3 cards in their library.
     for _ in 0..6 { g.add_card_to_library(1, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::witherbloom_command());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
     let p0_life_before = g.players[0].life;
     let p1_life_before = g.players[1].life;
     let p1_lib_before = g.players[1].library.len();
     let p1_gy_before = g.players[1].graveyard.len();
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![0, 3],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
     })
-    .expect("Witherbloom Command castable for {2}{B}{G}");
+    .expect("Witherbloom Command castable for {B}{G} picking modes 0 + 3");
     drain_stack(&mut g);
-    // Auto-pick = [0 (mill 4), 2 (drain 2)].
-    assert_eq!(g.players[1].library.len(), p1_lib_before - 4,
-        "P1 milled 4");
-    assert_eq!(g.players[1].graveyard.len(), p1_gy_before + 4,
-        "P1 gy +4");
+    // Mode 0: target player mills 3 (the may-return-land rider is
+    // declined by the AutoDecider — no land in our graveyard anyway).
+    assert_eq!(g.players[1].library.len(), p1_lib_before - 3,
+        "P1 milled 3");
+    assert_eq!(g.players[1].graveyard.len(), p1_gy_before + 3,
+        "P1 gy +3");
+    // Mode 3: each opponent loses 2 life and you gain 2 life.
     assert_eq!(g.players[0].life, p0_life_before + 2,
         "P0 +2 from drain");
     assert_eq!(g.players[1].life, p1_life_before - 2,
         "P1 -2 from drain");
+}
+
+/// Mode 0's "you may return a land card from your graveyard to your
+/// hand" rider fires when the controller accepts, and mode 2's -3/-1
+/// shrinks a target creature.
+#[test]
+fn witherbloom_command_mill_returns_land_and_shrinks() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(1, catalog::island()); }
+    let swamp = g.add_card_to_graveyard(0, catalog::swamp());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    // Accept the "return a land card" offer.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![0, 2],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear)],
+        x_value: None,
+    })
+    .expect("Witherbloom Command castable picking modes 0 + 2");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == swamp),
+        "milled-mode rider returned the Swamp to hand");
+    let b = g.battlefield.iter().find(|c| c.id == bear).expect("bear survives at 2/1");
+    assert_eq!((b.power(), b.toughness()), (-1, 1), "bear at -1/1 from -3/-1");
 }
 
 #[test]
@@ -167,81 +202,192 @@ fn lorehold_command_auto_picks_spirit_token_and_team_pump() {
         "bear gained haste");
 }
 
+/// Quandrix Command "choose two" — bounce (mode 0) + counters (mode 2)
+/// in one cast, each with its own target slot.
 #[test]
-fn quandrix_command_auto_picks_counters_and_mill_two() {
+fn quandrix_command_choose_two_bounce_and_counters() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.clear_sickness(bear);
-    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mine);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::quandrix_command());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
-    let p1_lib_before = g.players[1].library.len();
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![0, 2],
+        // Slots line up with printed mode order: mode 0 (bounce) takes
+        // slot 0, mode 2 (counters) takes slot 1.
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![Target::Permanent(mine)],
+        x_value: None,
     })
-    .expect("Quandrix Command castable for {1}{G}{U}");
+    .expect("Quandrix Command choose-two castable for {1}{G}{U}");
     drain_stack(&mut g);
-    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs),
+        "opp bear bounced off the battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs),
+        "opp bear returned to its owner's hand");
+    let bear_card = g.battlefield.iter().find(|c| c.id == mine).unwrap();
     assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2,
-        "Bear should have 2 +1/+1 counters");
-    // Auto-pick also fired mode 2 (mill 2). P1 lost 2 from library.
-    assert_eq!(g.players[1].library.len(), p1_lib_before - 2,
-        "Mill 2 fired against P1");
+        "my bear gained 2 +1/+1 counters");
 }
 
+/// Quandrix Command "choose two" — counters (mode 2) + graveyard shuffle
+/// (mode 3): up to three cards go from your graveyard back into your
+/// library.
 #[test]
-fn silverquill_command_auto_picks_drain_and_counters() {
+fn quandrix_command_shuffle_mode_recycles_three_graveyard_cards() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
+    for _ in 0..4 { g.add_card_to_graveyard(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::quandrix_command());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![2, 3],
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("Quandrix Command counters+shuffle castable");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2,
+        "bear gained 2 +1/+1 counters");
+    assert_eq!(g.players[0].library.len(), lib_before + 3,
+        "three graveyard cards shuffled back into the library");
+    // 4 islands - 3 shuffled + the resolved Command itself.
+    assert_eq!(g.players[0].graveyard.len(), 2,
+        "one island + the spent Command remain in the graveyard");
+}
+
+/// Silverquill Command "choose two" — pump+flying (mode 0) on my creature
+/// and a forced sacrifice (mode 3) from the targeted opponent.
+#[test]
+fn silverquill_command_choose_two_pump_and_opponent_sacrifice() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mine);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::silverquill_command());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
-    let p0_life_before = g.players[0].life;
-    let p1_life_before = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![0, 3],
+        // Mode 0 (pump) takes slot 0, mode 3 (opp sacrifices) slot 1.
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Player(1)],
+        x_value: None,
     })
-    .expect("Silverquill Command castable for {2}{W}{B}");
+    .expect("Silverquill Command choose-two castable for {2}{W}{B}");
     drain_stack(&mut g);
-    // Auto-pick = [1 (drain 2), 3 (two +1/+1 counters on creature)].
-    assert_eq!(g.players[0].life, p0_life_before + 2, "P0 +2 from drain");
-    assert_eq!(g.players[1].life, p1_life_before - 2, "P1 -2 from drain");
-    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2,
-        "Bear gained 2 +1/+1 counters from mode 3");
+    let c = g.computed_permanent(mine).expect("my bear survives");
+    assert_eq!(c.power, 5, "2/2 + 3/3 pump = 5 power");
+    assert_eq!(c.toughness, 5, "2/2 + 3/3 pump = 5 toughness");
+    assert!(g.battlefield_find(mine).unwrap().has_keyword(&Keyword::Flying),
+        "pumped bear gained flying until end of turn");
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs),
+        "opponent sacrificed their only creature");
 }
 
+/// Silverquill Command "choose two" — reanimate an MV≤2 creature (mode 1)
+/// and target player draws a card and loses 1 life (mode 2).
 #[test]
-fn prismari_command_auto_picks_loot_and_treasure() {
+fn silverquill_command_reanimates_and_target_player_draws_loses_one() {
     let mut g = two_player_game();
-    // Seed a library card so the loot draw succeeds.
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::silverquill_command());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1_life = g.players[1].life;
+    let p1_hand = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![1, 2],
+        target: Some(Target::Permanent(dead)),
+        additional_targets: vec![Target::Player(1)],
+        x_value: None,
+    })
+    .expect("Silverquill Command reanimate+draw castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == dead),
+        "the 2-MV bear was reanimated onto the battlefield");
+    assert_eq!(g.players[1].hand.len(), p1_hand + 1, "P1 drew a card");
+    assert_eq!(g.players[1].life, p1_life - 1, "P1 lost 1 life");
+}
+
+/// Prismari Command's printed "choose two" is a true cast-time
+/// selection (`Effect::ChooseModesCast`, min 2 / max 2): pick
+/// draw-2-discard-2 + Treasure via `CastSpellSpree`, both aimed at the
+/// caster.
+#[test]
+fn prismari_command_choose_two_loot_and_treasure() {
+    let mut g = two_player_game();
+    // Seed library cards so the draw-2 succeeds.
+    g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(0, catalog::island());
     let _filler = g.add_card_to_hand(0, catalog::island()); // to discard
+    let _filler2 = g.add_card_to_hand(0, catalog::island()); // to discard
     let id = g.add_card_to_hand(0, catalog::prismari_command());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
 
     let hand_before = g.players[0].hand.len();
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![1, 2],
+        // Mode 1: target player (you) draws 2 then discards 2.
+        target: Some(Target::Player(0)),
+        // Mode 2: target player (you) creates a Treasure.
+        additional_targets: vec![Target::Player(0)],
+        x_value: None,
     })
-    .expect("Prismari Command castable for {1}{U}{R}");
+    .expect("Prismari Command castable for {1}{U}{R} picking modes 1 + 2");
     drain_stack(&mut g);
 
-    // Auto-pick = [1 (loot), 2 (Treasure)].
-    // Hand: -1 (cast) -1 (discard) +1 (draw) = -1 net.
+    // Hand: -1 (cast) +2 (draw) -2 (discard) = -1 net.
     assert_eq!(g.players[0].hand.len(), hand_before - 1,
-        "Hand size shifted by -1 (cast + loot is a wash, the cast itself was the only consumption)");
+        "draw two then discard two nets the cast itself");
     let treasures: Vec<_> = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Treasure"
             && c.controller == 0)
         .collect();
     assert_eq!(treasures.len(), 1, "One Treasure token from mode 2");
+}
+
+/// The other two Prismari Command modes: 2 damage to any target +
+/// destroy target artifact, in a single choose-two cast.
+#[test]
+fn prismari_command_choose_two_damage_and_shatter() {
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::prismari_command());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![0, 3],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(stone)],
+        x_value: None,
+    })
+    .expect("Prismari Command castable picking modes 0 + 3");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 2, "mode 0 dealt 2 to the player");
+    assert!(g.battlefield_find(stone).is_none(), "mode 3 destroyed the artifact");
 }
 
 #[test]
@@ -1086,8 +1232,9 @@ fn quandrix_charm_mode_2_setbasept_layers_under_counter() {
     assert_eq!(view.toughness, 6, "5 base + 1 counter = 6 toughness");
 }
 
-/// Decisive Denial mode 1 (fight) — a 4/4 friendly creature fights an
-/// auto-picked 2/2 opp creature; the 2/2 dies, the 4/4 survives.
+/// Decisive Denial mode 1 (fight) — both fighters are real targets:
+/// slot 0 the friendly 6/4, slot 1 the enemy 2/2. The 2/2 dies, the
+/// 6/4 survives.
 #[test]
 fn decisive_denial_mode_1_fight_via_chelonian_template() {
     let mut g = two_player_game();
@@ -1102,8 +1249,8 @@ fn decisive_denial_mode_1_fight_via_chelonian_template() {
     g.players[0].mana_pool.add(Color::Blue, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
+        card_id: id, target: Some(Target::Permanent(big)),
+        additional_targets: vec![Target::Permanent(bear)],
         mode: Some(1), x_value: None,
     }).expect("Decisive Denial castable for {G}{U}");
     drain_stack(&mut g);
@@ -1749,6 +1896,49 @@ fn mage_duel_pumps_and_fights() {
     assert!(g.battlefield_find(opp_bear).is_none(), "opp bear dies to the fight");
     let me = g.battlefield_find(friendly).expect("our pumped creature survives");
     assert_eq!(me.damage, 2, "took 2 from the fight (4 toughness survives)");
+}
+
+/// Mage Duel's printed "{2} less if you've cast another instant or
+/// sorcery spell this turn" — after a Bolt, Mage Duel costs just {G};
+/// without a prior IS cast, {G} alone can't pay {2}{G}.
+#[test]
+fn mage_duel_costs_two_less_after_instant_cast() {
+    // No prior IS cast: {G} alone is not enough for {2}{G}.
+    let mut g = two_player_game();
+    let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    let id = g.add_card_to_hand(0, catalog::mage_duel());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(friendly)),
+        additional_targets: vec![Target::Permanent(opp_bear)],
+        mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "full {{2}}{{G}} unaffordable without a prior IS cast");
+
+    // After casting a Bolt this turn the CR 601.2f reduction makes it {G}.
+    let mut g = two_player_game();
+    let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    let id = g.add_card_to_hand(0, catalog::mage_duel());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(friendly)),
+        additional_targets: vec![Target::Permanent(opp_bear)],
+        mode: None, x_value: None,
+    }).expect("Mage Duel castable for just {G} after a Bolt this turn");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp_bear).is_none(), "the fight still happens");
 }
 
 /// Eccentric Apprentice's magecraft trigger pumps the source +1/+0 EOT
@@ -3444,42 +3634,84 @@ fn goblin_lore_draws_four_and_discards_three() {
 
 // ── Whirlwind Denial (STA reprint) ──────────────────────────────────────────
 
-/// Whirlwind Denial counters target spell unless its controller pays
-/// {4}. When the opp can't afford {4}, the spell is countered.
+/// Whirlwind Denial sweeps the whole stack (no target, per the printed
+/// text): EVERY opponent spell is countered unless its controller pays
+/// {4} for each. Two Bolts on the stack + no opp mana → both countered.
 #[test]
 fn whirlwind_denial_counters_spell_unless_four_paid() {
     let mut g = two_player_game();
-    // P1 casts Bolt at P0 first (so it's on the stack).
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
+    // P1 casts two Bolts at P0 first (so both are on the stack).
+    let bolt_a = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt_b = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 2);
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Player(0)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Bolt castable for {R}");
-    // P0 responds with Whirlwind Denial targeting the bolt; opp has no
-    // mana to pay {4} → bolt is countered.
+    for bolt in [bolt_a, bolt_b] {
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Bolt castable for {R}");
+    }
+    // P0 responds with Whirlwind Denial (targetless stack sweep); opp
+    // has no mana to pay {4} per spell → both bolts are countered.
     g.priority.player_with_priority = 0;
     let denial = g.add_card_to_hand(0, catalog::whirlwind_denial());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
         card_id: denial,
-        target: Some(Target::Permanent(bolt)),
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Whirlwind Denial castable for {3}{U}");
+    .expect("Whirlwind Denial castable for {2}{U}");
     drain_stack(&mut g);
 
-    // P0 should still be at 20 (Bolt countered).
-    assert_eq!(g.players[0].life, 20, "Bolt should be countered");
+    // P0 should still be at 20 (both Bolts countered).
+    assert_eq!(g.players[0].life, 20, "both Bolts should be countered");
+    assert_eq!(
+        g.players[1].graveyard.iter().filter(|c| c.definition.name == "Lightning Bolt").count(),
+        2,
+        "both countered Bolts land in the opponent's graveyard"
+    );
+}
+
+/// Whirlwind Denial leaves the caster's own other spells on the stack
+/// untouched (the tax reads "spells your opponents control").
+#[test]
+fn whirlwind_denial_spares_your_own_spells() {
+    let mut g = two_player_game();
+    // P0 casts their own Bolt at P1, then Denial on top of it.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    let denial = g.add_card_to_hand(0, catalog::whirlwind_denial());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: denial,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Whirlwind Denial castable for {2}{U}");
+    drain_stack(&mut g);
+
+    // Own Bolt resolves untaxed — P1 took the 3.
+    assert_eq!(g.players[1].life, 17, "the caster's own Bolt still resolves");
 }
 
 // ── New STA reprint card tests (push modern_decks) ──────────────────────────
@@ -4241,21 +4473,22 @@ fn pursuit_of_knowledge_accumulates_charge_counter_on_draw_action() {
         .iter()
         .find(|c| c.id == pok)
         .expect("PoK still on bf");
-    let charge = pok_on_bf
+    let study = pok_on_bf
         .counters
-        .get(&CounterType::Charge)
+        .get(&CounterType::Study)
         .copied()
         .unwrap_or(0);
     assert!(
-        charge >= 1,
-        "PoK accumulated at least one charge counter from Divination"
+        study >= 1,
+        "PoK accumulated at least one study counter from Divination"
     );
 }
 
 #[test]
 fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
-    // Bench-test the activation gate: PoK with 3 charge counters fails;
-    // with 4 it succeeds (draws 3 and sacrifices itself).
+    // The activation cost is a real CR 602.5b `remove_counter_cost`:
+    // PoK with 3 study counters can't be activated; with 5 it succeeds
+    // (removes exactly 4, draws 3, and sacrifices itself).
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     for _ in 0..5 {
@@ -4263,7 +4496,7 @@ fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
     }
     let pok = g.add_card_to_battlefield(0, catalog::pursuit_of_knowledge());
     if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == pok) {
-        c.counters.insert(CounterType::Charge, 3);
+        c.counters.insert(CounterType::Study, 3);
     }
     let res_three = g.perform_action(GameAction::ActivateAbility {
         card_id: pok,
@@ -4271,12 +4504,12 @@ fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
         target: None, additional_targets: Vec::new(), x_value: None });
     assert!(
         res_three.is_err(),
-        "PoK activation with only 3 charge counters fails"
+        "PoK activation with only 3 study counters fails"
     );
 
-    // Bump to 4 and try again.
+    // Bump to 5 and try again — the cost deducts 4 at announcement.
     if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == pok) {
-        c.counters.insert(CounterType::Charge, 4);
+        c.counters.insert(CounterType::Study, 5);
     }
     let hand_before = g.players[0].hand.len();
     let lib_before = g.players[0].library.len();
@@ -4284,7 +4517,10 @@ fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
         card_id: pok,
         ability_index: 0,
         target: None, additional_targets: Vec::new(), x_value: None })
-    .expect("PoK activatable with 4+ charge counters");
+    .expect("PoK activatable with 4+ study counters");
+    // The remove-counter cost is paid at announcement: 5 − 4 = 1 left
+    // while the ability is on the stack (the sac cost already binned it
+    // otherwise — check via wherever the card now lives).
     drain_stack(&mut g);
 
     // 3 cards drawn (gates: hand +3, library -3).
@@ -4295,6 +4531,13 @@ fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
         !g.battlefield.iter().any(|c| c.id == pok),
         "PoK sacrificed"
     );
+    // Exactly 4 study counters were deducted by the cost (5 − 4 = 1
+    // remains on the card in the graveyard, counters cleared on zone
+    // change notwithstanding — assert via the graveyard instance).
+    let gy_pok = g.players[0].graveyard.iter().find(|c| c.id == pok)
+        .expect("PoK in graveyard");
+    let leftover = gy_pok.counters.get(&CounterType::Study).copied().unwrap_or(0);
+    assert!(leftover <= 1, "cost removed 4 of the 5 study counters");
 }
 
 #[test]
@@ -4849,11 +5092,16 @@ fn wandering_archaic_back_explore_the_vastlands_castable_from_hand() {
     );
 }
 
-/// Pestilent Cauldron // Restorative Burst — the (already-defined) back face is
-/// castable from hand: {2}{B} Sorcery drains 4.
+/// Pestilent Cauldron // Restorative Burst — the back face is castable
+/// from hand: {2}{B} Sorcery, "Return up to three creature cards from
+/// your graveyard to your hand. You gain 3 life."
 #[test]
 fn pestilent_cauldron_back_restorative_burst_castable_from_hand() {
     let mut g = two_player_game();
+    // Seed the graveyard: two creature cards + a non-creature.
+    let bear_a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::pestilent_cauldron());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
@@ -4868,8 +5116,15 @@ fn pestilent_cauldron_back_restorative_burst_castable_from_hand() {
     })
     .expect("Restorative Burst (back face) castable for {2}{B}");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, p1 - 4, "back-face drain hits the opponent for 4");
-    assert_eq!(g.players[0].life, p0 + 4, "you gain 4");
+    assert_eq!(g.players[0].life, p0 + 3, "you gain 3");
+    assert_eq!(g.players[1].life, p1, "the opponent is untouched");
+    // Both creature cards returned to hand; the island stayed put.
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear_a), "bear A back to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear_b), "bear B back to hand");
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.definition.name == "Island"),
+        "non-creature card stays in the graveyard"
+    );
 }
 
 /// Selfless Glyphweaver // Deadly Vanity — the back face is a {4}{B}{B}{B}
@@ -4903,7 +5158,8 @@ fn selfless_glyphweaver_back_deadly_vanity_each_player_keeps_one() {
 
 /// Pestilent Cauldron — after sacrificing it (which grants the one-shot
 /// permission), its back face Restorative Burst is castable from the
-/// graveyard ("...then cast it transformed"), draining 4 more.
+/// graveyard ("...then cast it transformed"), returning up to three
+/// creature cards to hand and gaining 3 more life.
 #[test]
 fn pestilent_cauldron_back_castable_from_graveyard_after_sacrifice() {
     let mut g = two_player_game();
@@ -4911,6 +5167,8 @@ fn pestilent_cauldron_back_castable_from_graveyard_after_sacrifice() {
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_library(1, catalog::island());
     }
+    // A creature card in the graveyard for Restorative Burst to return.
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let pc = g.add_card_to_battlefield(0, catalog::pestilent_cauldron());
     g.clear_sickness(pc);
     let p0 = g.players[0].life;
@@ -4946,8 +5204,12 @@ fn pestilent_cauldron_back_castable_from_graveyard_after_sacrifice() {
     }).expect("Restorative Burst castable from the graveyard for {2}{B}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].life, p1 - 3 - 4, "Restorative Burst drains 4 more");
-    assert_eq!(g.players[0].life, p0 + 3 + 4);
+    assert_eq!(g.players[1].life, p1 - 3, "Restorative Burst doesn't touch the opponent");
+    assert_eq!(g.players[0].life, p0 + 3 + 3, "Restorative Burst gains 3 more");
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == bear),
+        "the graveyard creature card came back to hand"
+    );
     // The one-shot permission was consumed.
     assert!(
         !g.players[0].graveyard.iter().any(|c| c.id == pc && c.may_cast_back_from_graveyard),

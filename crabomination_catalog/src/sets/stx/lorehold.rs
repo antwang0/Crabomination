@@ -818,9 +818,10 @@ pub fn lorehold_pyrebrand() -> CardDefinition {
 ///
 /// Four-mana single-target reanimate with a Spirit-tribal kicker. Pairs
 /// with Quintorius / Lorehold Excavation for tribal anthem stacking.
-/// The "Spirit-in-addition" rider is omitted — the engine has no
-/// type-add-on-zone-change primitive yet, so the reanimated card keeps
-/// its printed types.
+/// The "Spirit-in-addition" rider is wired: the reanimated card (read
+/// back off `Selector::LastMoved`) gains the Spirit creature type in
+/// addition to its own via `Effect::AddCreatureTypes` with
+/// `Duration::Permanent` (CR 613.4, layer-4 additive).
 pub fn lorehold_reclamation() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;
@@ -828,17 +829,25 @@ pub fn lorehold_reclamation() -> CardDefinition {
         name: "Lorehold Reclamation",
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Move {
-            what: Selector::one_of(Selector::CardsInZone {
-                who: PlayerRef::You,
-                zone: Zone::Graveyard,
-                filter: SelectionRequirement::Creature,
-            }),
-            to: ZoneDest::Battlefield {
-                controller: PlayerRef::You,
-                tapped: false,
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
-        },
+            // "It's a Spirit in addition to its other types."
+            Effect::AddCreatureTypes {
+                what: Selector::LastMoved,
+                creature_types: vec![CreatureType::Spirit],
+                duration: Duration::Permanent,
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -13195,14 +13204,27 @@ pub fn lorehold_reverence_b169() -> CardDefinition {
 }
 
 /// Lorehold Lectern (b169) — {3} Artifact.
-/// Whenever you cast an instant or sorcery spell, you may pay {1} to scry 1.
-/// Approximation: magecraft scry 1 unconditionally (no engine "may pay {1}").
+/// "Whenever you cast an instant or sorcery spell, you may pay {1}. If
+/// you do, scry 1."
+///
+/// Fully wired via `Effect::MayPay`: the magecraft trigger asks yes/no,
+/// deducts {1} from the controller's floated pool on accept, and only
+/// then scrys. (Per the MayPay convention, the cost must come from
+/// already-floated mana.)
 pub fn lorehold_lectern_b169() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lectern (b169)",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![magecraft_scry(1)],
+        triggered_abilities: vec![magecraft(Effect::MayPay {
+            description: "Pay {1} to scry 1".into(),
+            mana_cost: cost(&[generic(1)]),
+            body: Box::new(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            }),
+            else_: None,
+        })],
         ..Default::default()
     }
 }

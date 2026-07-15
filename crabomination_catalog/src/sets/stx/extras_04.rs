@@ -1630,11 +1630,16 @@ pub fn mystical_inquiry() -> CardDefinition {
 /// draw — useful for both blue control and graveyard-based decks
 /// (snake the right card back into the library for a future tutor).
 /// Wired with `cost: 0`, `{1}` mana cost + `sac_cost: true` on the
-/// activation. The "put gy card on bottom" approximation moves a
-/// chosen creature card from gy → library bottom; if no creature
-/// is available, the activation still resolves with just the draw.
+/// activation. ✅ The "put a card from your graveyard on the bottom of
+/// your library" clause is now wired: the effect bottoms one chosen
+/// card (any type) from your graveyard via `ZoneDest::Library { pos:
+/// Bottom }`, then draws. With an empty graveyard the move is a no-op
+/// and the activation still draws (the sacrificed Bauble itself is in
+/// the graveyard by resolution, so a target virtually always exists —
+/// matching the printed card's play pattern).
 /// Tests: `conjurers_bauble_zero_mana_artifact`,
-/// `conjurers_bauble_sac_activation_cantrips`.
+/// `conjurers_bauble_sac_activation_cantrips`,
+/// `conjurers_bauble_bottoms_a_graveyard_card`.
 pub fn conjurers_bauble() -> CardDefinition {
     CardDefinition {
         name: "Conjurer's Bauble",
@@ -1652,10 +1657,23 @@ pub fn conjurers_bauble() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             once_per_turn: false,
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Any,
+                    }),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::You,
+                        pos: crate::effect::LibraryPosition::Bottom,
+                    },
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
             ..Default::default()

@@ -149,8 +149,31 @@ cast prepare spells (`CastPrepareSpell` candidates in bot.rs).
 The SOS catalog's audited gaps are now closed except: land plays
 through may-play grants, the miracle window's step-bounded (rather than
 trigger-exact) timing, and the NameCard land-name restriction — all
-engine-wide residuals noted above. The STX sibling set's 44 documented
-approximations remain untouched.
+engine-wide residuals noted above.
+
+## 2026-07-15 STX approximation sweep
+
+A 4-agent pass over the STX catalog's 44 flagged approximation sites
+fixed 33 cards outright (each verified against its doc-comment oracle,
+with new/updated tests): the four college Commands are true choose-two
+`ChooseModesCast` modals over their real printed modes; Past in Flames
+is a real flashback grant (pay own cost, exile on resolve); Tend the
+Pests sacrifices at CAST time; Whirlwind Denial sweeps the whole stack;
+Pursuit of Knowledge pays a real remove-4-Study-counters cost;
+Velomachus's reveal cap reads its LIVE power
+(`SelectionRequirement::resolve_source_power` threading in
+`RevealUntilFind`); plus MayPay/MayPayLife optionality, once-per-turn
+gates, Battle targets, token-discounts, and doc-only corrections.
+
+Still blocked (each doc-comment states the exact missing piece):
+Approach of the Second Sun (cast-count-by-name tracker + 7th-from-top
+put, migrate together), Channeled Force (Value-only player-target slots
+not surfaced), Multiple Choice (no predicate over the chosen-mode set),
+Transforming Flourish (impulse grantee ≠ caster), Fractal Bloom
+(distribute among same-resolution tokens), Stormwild Capridor (CR 615
+noncombat prevention→counters), Quandrix Command mode 3 (graveyard-card
+targets in `ShuffleGraveyardCardsIntoLibrary`), Strategic Planning
+(lives in decks/modern.rs).
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost

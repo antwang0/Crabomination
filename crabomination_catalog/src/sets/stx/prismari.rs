@@ -199,33 +199,56 @@ pub fn prismari_pyrowriter() -> CardDefinition {
 /// • Target player creates a Treasure token.
 /// • Destroy target artifact."
 ///
-/// Approximation: AutoDecider picks loot + Treasure. Choose-two
-/// collapsed to Seq of the two auto-default modes (matches gameplay
-/// outcome when the controller picks loot + Treasure).
+/// True cast-time choose-two via `Effect::ChooseModesCast` (min 2,
+/// max 2, no repeats): `GameAction::CastSpellSpree` carries the chosen
+/// modes, each target-bearing mode consuming its own target slot. A
+/// plain `CastSpell { mode }` still works as a single-mode fallback
+/// (bot / back-compat path).
 pub fn prismari_command() -> CardDefinition {
     use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Prismari Command",
         cost: cost(&[generic(1), u(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            // Loot: draw 1, discard 1 (collapsed from "draw 2 discard 2"
-            // so we don't deck-out on the test which seeds 1 lib card).
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: treasure_token(),
-            },
-        ]),
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
+            modes: vec![
+                // Mode 0: deal 2 damage to any target.
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(2),
+                },
+                // Mode 1: target player draws two cards, then discards
+                // two cards.
+                Effect::Seq(vec![
+                    Effect::Draw {
+                        who: target_filtered(SelectionRequirement::Player),
+                        amount: Value::Const(2),
+                    },
+                    Effect::Discard {
+                        who: Selector::Target(0),
+                        amount: Value::Const(2),
+                        random: false,
+                    },
+                ]),
+                // Mode 2: target player creates a Treasure token.
+                Effect::CreateToken {
+                    who: PlayerRef::Target(0),
+                    count: Value::Const(1),
+                    definition: treasure_token(),
+                },
+                // Mode 3: destroy target artifact.
+                Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Artifact),
+                },
+            ],
+        },
         ..Default::default()
     }
 }
@@ -10509,11 +10532,15 @@ pub fn prismari_sparkbloomer_b185() -> CardDefinition {
 // ── Batch 182 (modern_decks) — closer to a balanced Prismari cube ────────
 
 /// Prismari Mage-Mentor (b182) — {U}{R} 2/2 Elemental Wizard.
-/// Magecraft draws on first instant or sorcery each turn.
-/// Approximation: every magecraft trigger draws 1 (we don't track per-turn limit yet).
-/// Use loot to avoid being too strong.
+/// "Whenever you cast your first instant or sorcery spell each turn,
+/// draw a card."
+///
+/// Fully wired: a magecraft-shaped `SpellCast` trigger marked
+/// `EventSpec::once_per_turn()` (CR 603.3d) — it fires on the first
+/// instant/sorcery you cast each turn and stays silent for the rest of
+/// the turn, drawing exactly one card.
 pub fn prismari_mage_mentor_b182() -> CardDefinition {
-    use crate::effect::shortcut::magecraft_loot;
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
     CardDefinition {
         name: "Prismari Mage-Mentor (b182)",
         cost: cost(&[u(), r()]),
@@ -10524,7 +10551,15 @@ pub fn prismari_mage_mentor_b182() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft_loot()],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery())
+                .once_per_turn(),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
         ..Default::default()
     }
 }

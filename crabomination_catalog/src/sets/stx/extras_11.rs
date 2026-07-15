@@ -1174,11 +1174,18 @@ pub fn quandrix_mathematician_b104() -> CardDefinition {
 /// tokens. Put three +1/+1 counters distributed across them; for
 /// simplicity, two on the first and one on the second."
 ///
-/// Engine approximation: we mint two distinct Fractal tokens, each
-/// minted in its own `CreateToken` step so `Selector::LastCreatedToken`
-/// targets the most recent mint. The first mint gets 2 counters, the
-/// second gets 1 — keeping the printed "three counters distributed"
-/// total intact.
+/// Engine approximation (fixed split, not player-chosen): we mint two
+/// distinct Fractal tokens, each in its own `CreateToken` step so
+/// `Selector::LastCreatedToken` addresses the most recent mint; the
+/// first gets 2 counters, the second gets 1 — the printed three-counter
+/// total is exact. What's missing: a player-chosen distribution. The
+/// engine's `Effect::DistributeCounters` is CR 601.2d *target*-based —
+/// targets are locked in at cast, and tokens created by this same
+/// resolution don't exist yet, so they can't be targeted. A faithful
+/// wire needs a resolution-time "divide among the permanents just
+/// created" primitive (no such primitive today). Since both tokens are
+/// identical 0/0 Fractals, the fixed 2/1 split is materially
+/// indistinguishable from any chosen split.
 pub fn fractal_bloom_b104() -> CardDefinition {
     use crate::card::CounterType;
     use crate::catalog::sets::sos::fractal_token;

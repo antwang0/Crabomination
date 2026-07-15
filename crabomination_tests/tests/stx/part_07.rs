@@ -583,6 +583,7 @@ fn lorehold_bookbinder_etb_recurs_and_grants_haste() {
 
 #[test]
 fn quandrix_wavecaster_magecraft_adds_counter_to_target() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -590,6 +591,8 @@ fn quandrix_wavecaster_magecraft_adds_counter_to_target() {
     drain_stack(&mut g);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
+    // Accept the "you may put a +1/+1 counter" optional.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
@@ -602,6 +605,67 @@ fn quandrix_wavecaster_magecraft_adds_counter_to_target() {
         bear_card.counter_count(CounterType::PlusOnePlusOne) == 1 ||
         body.counter_count(CounterType::PlusOnePlusOne) == 1
     );
+}
+
+/// Wavecaster's conditional rider: with three or more creatures you control
+/// carrying +1/+1 counters after the (accepted) counter placement, the
+/// magecraft trigger also draws a card.
+#[test]
+fn quandrix_wavecaster_draws_with_three_countered_creatures() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    // Two creatures pre-seeded with +1/+1 counters; the trigger's own
+    // counter on a third crosses the threshold.
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wc = g.add_card_to_battlefield(0, catalog::quandrix_wavecaster());
+    // Three creatures you control already carrying +1/+1 counters — the
+    // rider's threshold is met however the trigger's counter is aimed.
+    for id in [a, b, wc] {
+        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == id) {
+            c.add_counters(CounterType::PlusOnePlusOne, 1);
+        }
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // -1 (bolt cast) +1 (rider draw) → net even.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "three countered creatures → magecraft rider draws");
+}
+
+/// Declining the optional counter with only two countered creatures on the
+/// battlefield: no counter is placed and no card is drawn.
+#[test]
+fn quandrix_wavecaster_no_draw_below_threshold() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _wc = g.add_card_to_battlefield(0, catalog::quandrix_wavecaster());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 0,
+        "declined optional places no counter");
+    assert_eq!(g.players[0].hand.len(), hand_before - 1,
+        "no rider draw below the three-creature threshold");
 }
 
 #[test]
@@ -1716,11 +1780,12 @@ fn pestpod_lurker_grows_on_lifegain() {
         "Lurker should grow on lifegain");
 }
 
-/// Lorehold Neophyte — magecraft self-pump.
+/// Lorehold Neophyte — magecraft "you may exile … if you do, +1/+0".
 #[test]
 fn lorehold_neophyte_magecraft_pumps_self() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    // Seed graveyard so exile target finds a card.
+    // Seed graveyard so the optional exile finds a card.
     let bolt_dead = g.next_id();
     let mut inst = crabomination::card::CardInstance::new(bolt_dead, catalog::lightning_bolt(), 0);
     inst.controller = 0;
@@ -1730,6 +1795,8 @@ fn lorehold_neophyte_magecraft_pumps_self() {
     let pump_before = g.computed_permanent(src).unwrap().power;
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
+    // Accept the "you may exile a card from a graveyard" optional.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
@@ -1738,6 +1805,35 @@ fn lorehold_neophyte_magecraft_pumps_self() {
     let view = g.computed_permanent(src).unwrap();
     assert!(view.power > pump_before,
         "Neophyte should pump +1/+0 on magecraft");
+    assert!(g.exile.iter().any(|c| c.id == bolt_dead),
+        "the graveyard card was exiled as part of the accepted optional");
+}
+
+/// Declining the Neophyte's optional exile means no pump ("If you do").
+#[test]
+fn lorehold_neophyte_declined_exile_means_no_pump() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bolt_dead = g.next_id();
+    let mut inst = crabomination::card::CardInstance::new(bolt_dead, catalog::lightning_bolt(), 0);
+    inst.controller = 0;
+    g.players[0].graveyard.push(inst);
+    let src = g.add_card_to_battlefield(0, catalog::lorehold_neophyte());
+    drain_stack(&mut g);
+    let pump_before = g.computed_permanent(src).unwrap().power;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(src).unwrap();
+    assert_eq!(view.power, pump_before,
+        "declined exile → no +1/+0 pump");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt_dead),
+        "graveyard card stays put when the optional is declined");
 }
 
 /// Lorehold Recallmage — ETB recurs a creature from gy.
@@ -1973,24 +2069,30 @@ fn witherbloom_recursion_reanimates_creature_at_two_life() {
         "Recursion costs 2 life on resolve");
 }
 
-/// Lorehold Battle Banner — per-attacker +1/+0 pump.
+/// Lorehold Battle Banner — one "whenever you attack" trigger pumps every
+/// attacker (`EventKind::YouAttack`, CR 508).
 #[test]
 fn lorehold_battle_banner_pumps_attackers() {
     let mut g = two_player_game();
     let _banner = g.add_card_to_battlefield(0, catalog::lorehold_battle_banner());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
+    g.clear_sickness(bear2);
     g.battlefield.iter_mut().for_each(|c| c.tapped = false);
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: bear,
-        target: AttackTarget::Player(1),
-    }])).expect("Bear can attack");
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+        Attack { attacker: bear2, target: AttackTarget::Player(1) },
+    ])).expect("Bears can attack");
     drain_stack(&mut g);
-    let view = g.computed_permanent(bear).unwrap();
-    assert_eq!(view.power, 3, "Bear should get +1/+0 from Battle Banner");
+    // A single declaration trigger pumps BOTH attackers by exactly +1/+0.
+    for id in [bear, bear2] {
+        let view = g.computed_permanent(id).unwrap();
+        assert_eq!(view.power, 3, "each attacker gets exactly +1/+0 from Battle Banner");
+    }
 }
 
 /// Silverquill Inkpact — drain 3.

@@ -7437,11 +7437,12 @@ pub fn inkling_pact_caller() -> CardDefinition {
 
 /// Silverquill Bloodscribe — {1}{W}{B}, 2/2 Vampire Cleric Flying +
 /// Lifelink. "Whenever you sacrifice a creature, you may pay 1 life.
-/// If you do, draw a card." Simplified: drains 1 + draws 1 on each
-/// sacrifice (the optional life-cost gate is dropped to a flat trigger
-/// — pays out at net cost 0 since lifelink will offset the 1 life on
-/// the next combat attack).
+/// If you do, draw a card."
 ///
+/// Fully wired: the optional life-cost gate rides `Effect::MayPayLife`
+/// (CR 119.4) — the controller is asked yes/no on each trigger, pays
+/// 1 life only on accept, and draws only if the life was paid
+/// (`AutoDecider` declines by default, per "you may").
 /// Engine: rides the `EventKind::CreatureSacrificed/YourControl` event.
 pub fn silverquill_bloodscribe() -> CardDefinition {
     CardDefinition {
@@ -7457,9 +7458,14 @@ pub fn silverquill_bloodscribe() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
-            effect: Effect::Draw {
-                who: Selector::You,
+            effect: Effect::MayPayLife {
+                description: "Pay 1 life to draw a card".into(),
                 amount: Value::Const(1),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+                else_: None,
             },
         }],
         ..Default::default()
@@ -13685,28 +13691,75 @@ pub fn silverquill_penlord_b168() -> CardDefinition {
 
 // ── Silverquill Command ────────────────────────────────────────────────────
 
-/// Silverquill Command — {2}{W}{B} Sorcery. Choose two among 4 modes.
+/// Silverquill Command — {2}{W}{B} Sorcery. "Choose two —
+/// • Target creature gets +3/+3 and gains flying until end of turn.
+/// • Return target creature card with mana value 2 or less from your
+///   graveyard to the battlefield.
+/// • Target player draws a card and loses 1 life.
+/// • Target opponent sacrifices a creature of their choice."
 ///
-/// Approximation: AutoDecider picks drain 2 + +1/+1 counters (×2).
-/// Choose-two collapsed to Seq of the two auto-default modes.
+/// True cast-time "choose two" via `Effect::ChooseModesCast` (min 2,
+/// max 2, no repeats): `GameAction::CastSpellSpree` carries the two
+/// chosen modes, each consuming its own target slot; a plain
+/// `CastSpell { mode }` runs a single mode (bot path). All four printed
+/// modes are fully wired.
 pub fn silverquill_command() -> CardDefinition {
-    use crate::card::CounterType;
     CardDefinition {
         name: "Silverquill Command",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-            Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
+            modes: vec![
+                // Mode 0: target creature gets +3/+3 and gains flying EOT.
+                Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Flying,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                // Mode 1: return target creature card with MV ≤ 2 from
+                // your graveyard to the battlefield.
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::HasCardType(CardType::Creature)
+                            .and(SelectionRequirement::InYourGraveyard)
+                            .and(SelectionRequirement::ManaValueAtMost(2)),
+                    ),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                },
+                // Mode 2: target player draws a card and loses 1 life.
+                Effect::Seq(vec![
+                    Effect::Draw {
+                        who: target_filtered(SelectionRequirement::Player),
+                        amount: Value::Const(1),
+                    },
+                    Effect::LoseLife {
+                        who: Selector::Target(0),
+                        amount: Value::Const(1),
+                    },
+                ]),
+                // Mode 3: target opponent sacrifices a creature of their
+                // choice.
+                Effect::Sacrifice {
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                },
+            ],
+        },
         ..Default::default()
     }
 }

@@ -13004,6 +13004,21 @@ impl GameState {
                     None
                 };
                 let find: &SelectionRequirement = dynamic_find.as_ref().unwrap_or(find);
+                // Concretize source-power-relative gates (Velomachus
+                // Lorehold's "MV ≤ this creature's power") against the
+                // source's LKI power — the library-walk matcher below is
+                // source-less and would treat the raw variant as vacuous.
+                let power_resolved;
+                let find: &SelectionRequirement = match ctx
+                    .source
+                    .and_then(|s| self.source_power_lki(s))
+                {
+                    Some(pw) => {
+                        power_resolved = find.resolve_source_power(pw);
+                        &power_resolved
+                    }
+                    None => find,
+                };
                 let mut revealed = 0usize;
                 let mut found_idx: Option<usize> = None;
                 for i in 0..cap_n.min(self.players[p].library.len()) {

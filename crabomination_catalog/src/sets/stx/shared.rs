@@ -80,34 +80,33 @@ pub fn inkling_summoning() -> CardDefinition {
 /// tokens with 'When this creature dies, you gain 1 life,' where X is the
 /// sacrificed creature's power."
 ///
-/// 🟡 simplification: the "additional cost" sacrifice is folded into
-/// resolution (cost-as-first-step, same approximation Thud uses). The
-/// bot/UI never tries to interrupt between the cost being paid and the
-/// spell resolving. The spawned Pest tokens **now carry** the "die →
-/// gain 1 life" trigger via the new `TokenDefinition.triggered_abilities`
-/// field, so the Witherbloom lifegain chain works end-to-end (each Pest
-/// dies → +1 life → Pest Mascot / Killian's Confidence riders fire).
+/// ✅ Fully faithful: the "additional cost" sacrifice now rides
+/// `AdditionalCastCost::SacrificePermanent`, which is paid while casting
+/// (CR 601.2b/601.2h) — the sacrificed creature's power is stamped as the
+/// spell's X and read back at resolution via `Value::XFromCost`. Killing
+/// the spell on the stack no longer refunds the creature, matching the
+/// printed card. The spawned Pest tokens carry the "die → gain 1 life"
+/// trigger via `TokenDefinition.triggered_abilities`, so the Witherbloom
+/// lifegain chain works end-to-end (each Pest dies → +1 life → Pest
+/// Mascot / Killian's Confidence riders fire).
 pub fn tend_the_pests() -> CardDefinition {
     let pest = stx_pest_token();
     CardDefinition {
         name: "Tend the Pests",
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            count: 1,
+        }],
+        effect: Effect::Repeat {
+            count: Value::XFromCost,
+            body: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
-            },
-            Effect::Repeat {
-                count: Value::SacrificedPower,
-                body: Box::new(Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: pest,
-                }),
-            },
-        ]),
+                count: Value::Const(1),
+                definition: pest,
+            }),
+        },
         ..Default::default()
     }
 }

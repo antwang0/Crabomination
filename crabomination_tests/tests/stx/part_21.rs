@@ -1750,22 +1750,48 @@ fn lorehold_reverence_b169_mints_two_spirits() {
     assert_eq!(spirits, 2);
 }
 
+/// Lectern's magecraft is a real "may pay {1}" — accepting with a
+/// floated {1} spends it and scrys 1.
 #[test]
-fn lorehold_lectern_b169_scrys_on_is_cast() {
+fn lorehold_lectern_b169_pays_one_to_scry_on_is_cast() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(0, catalog::forest());
     let _l = g.add_card_to_battlefield(0, catalog::lorehold_lectern_b169());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1); // the {1} for the may-cost
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let lib_before = g.players[0].library.len();
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("bolt");
     drain_stack(&mut g);
-    // Scry 1 may move 1 card around but library size should not decrease unless we send a card to gy
+    // The floated {1} was consumed by the accepted may-cost.
+    assert_eq!(g.players[0].mana_pool.total(), 0, "paid {{1}} for the scry");
+    // Scry 1 may move 1 card around but library size should not decrease.
     assert!(g.players[0].library.len() <= lib_before);
+}
+
+/// Declining the may-cost (the AutoDecider default) keeps the floated
+/// mana and skips the scry.
+#[test]
+fn lorehold_lectern_b169_declines_may_cost_keeps_mana() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _l = g.add_card_to_battlefield(0, catalog::lorehold_lectern_b169());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1,
+        "declined may-cost leaves the floated {{1}} in the pool");
 }
 
 #[test]

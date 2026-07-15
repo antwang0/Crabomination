@@ -486,10 +486,15 @@ pub fn curate() -> CardDefinition {
 // ── Strategic Planning (already defined in `decks::modern`) ────────────────
 //
 // Strategic Planning is wired in `catalog::sets::decks::modern::strategic_planning`
-// — a Mill 3 + Draw 1 approximation that pairs well with reanimator
-// shells. STX shares the same printed text, so the STX module re-uses
-// the existing function rather than redefining it. (Adding a duplicate
-// here would shadow the existing glob re-export from `catalog::*`.)
+// — currently a Mill 3 + Draw 1 approximation of the printed "look at
+// the top three cards; put one into your hand and the rest into your
+// graveyard" (the approximation removes the pick: you get the *top*
+// card, not your choice of the three). The faithful shape exists today
+// as `Effect::LookPickToHand { count: 3, rest_to_graveyard: true }`,
+// but the definition lives in `decks::modern` (outside this file's
+// ownership) and STX re-uses that function rather than redefining it —
+// adding a duplicate here would clash with the glob re-export from
+// `catalog::*`. Fix belongs in `decks/modern.rs`.
 
 // ── Solve the Equation ─────────────────────────────────────────────────────
 
@@ -569,10 +574,10 @@ pub fn resculpt() -> CardDefinition {
 /// Mortality Spear — {2}{B}{G} Instant. "Destroy target creature,
 /// planeswalker, or battle."
 ///
-/// ✅ Catch-all removal: `Destroy` against a Creature ∨ Planeswalker
-/// target. Battle subtype isn't yet modelled (no MoM/March of the
-/// Machine in this catalog), so the printed third clause is dropped —
-/// it's a no-op in the current card pool anyway.
+/// ✅ Catch-all removal, fully faithful: `Destroy` against a Creature ∨
+/// Planeswalker ∨ Battle target (`CardType::Battle` is a real card type
+/// in the engine, so the printed third clause is wired even though no
+/// battle cards exist in this catalog yet).
 pub fn mortality_spear() -> CardDefinition {
     CardDefinition {
         name: "Mortality Spear",
@@ -580,7 +585,9 @@ pub fn mortality_spear() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Destroy {
             what: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker)
+                    .or(SelectionRequirement::HasCardType(CardType::Battle)),
             ),
         },
         ..Default::default()
@@ -936,14 +943,20 @@ pub fn specter_of_the_fens() -> CardDefinition {
     }
 }
 
-/// Mascot Interception — {3}{R} Sorcery. "Gain control of target creature
-/// until end of turn. Untap that creature. It gets +2/+0 and gains haste
-/// until end of turn." (The "costs {3} less if it targets a token" reduction
-/// is dropped.)
+/// Mascot Interception — {3}{R} Sorcery. "This spell costs {3} less to
+/// cast if it targets a token. / Gain control of target creature until
+/// end of turn. Untap that creature. It gets +2/+0 and gains haste
+/// until end of turn."
+///
+/// ✅ Fully faithful: the token discount is a mandatory CR 601.2f
+/// generic reduction via `self_cost_reduction_if_target: (IsToken, 3)`
+/// (same primitive as Ride's End), evaluated against the chosen target
+/// at cast time.
 pub fn mascot_interception() -> CardDefinition {
     CardDefinition {
         name: "Mascot Interception",
         cost: cost(&[generic(3), r()]),
+        self_cost_reduction_if_target: Some((SelectionRequirement::IsToken, 3)),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::GainControl {
@@ -986,8 +999,12 @@ pub fn twinscroll_shaman() -> CardDefinition {
 }
 
 /// Practical Research — {3}{U}{R} Instant. "Draw four cards. Then discard two
-/// cards unless you discard an instant or sorcery card." (The discard is
-/// modeled as a flat discard-2; the IS-discard exemption is dropped.)
+/// cards unless you discard an instant or sorcery card."
+///
+/// ✅ Fully faithful: the discard rider uses `Effect::DiscardUnlessKind`
+/// (the Wrench Mind primitive) — with an instant or sorcery card in hand
+/// the discarder pitches that single card (lowest-MV match) instead of
+/// two; otherwise the full two-card discard applies.
 pub fn practical_research() -> CardDefinition {
     CardDefinition {
         name: "Practical Research",
@@ -995,7 +1012,12 @@ pub fn practical_research() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Draw { who: Selector::You, amount: Value::Const(4) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            Effect::DiscardUnlessKind {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                instead: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            },
         ]),
         ..Default::default()
     }
@@ -1333,18 +1355,20 @@ pub fn quintorius_field_historian() -> CardDefinition {
 ///
 /// ✅ The headline copy half wires faithfully via `Effect::CopySpell`
 /// (push XVII): targets a friendly IS spell on the stack and pushes
-/// one copy above it. The Magecraft self-exile rider — which routes
-/// Iteration from the stack/graveyard into exile after its own cast —
-/// is omitted because the engine has no exile-self-on-resolution
-/// primitive that sequences correctly with the stack-top copy. The
-/// gameplay difference is **strictly graveyard vs exile** (the copy
-/// still resolves identically); for the Prismari instant-doubling
-/// play pattern (twin-cast a Lightning Bolt for {U}{R}) the body is
-/// fully faithful. Tracked in TODO.md.
+/// one copy above it. The Magecraft self-exile rider is wired via
+/// `exile_on_resolve: true` — casting Galvanic Iteration is itself
+/// casting an instant, so its own Magecraft always fires and the card
+/// routes to exile instead of the graveyard when it resolves,
+/// sequencing after the stack-top copy exactly like the printed rider.
+/// Sole residue: if Iteration is countered it lands in the graveyard,
+/// and a later IS cast won't exile it from there (the engine has no
+/// graveyard-watching self-exile trigger) — a corner with no gameplay
+/// read in this catalog.
 pub fn galvanic_iteration() -> CardDefinition {
     CardDefinition {
         name: "Galvanic Iteration",
         cost: cost(&[u(), r()]),
+        exile_on_resolve: true,
         card_types: vec![CardType::Instant],
         effect: Effect::CopySpell {
             what: target_filtered(
@@ -2033,18 +2057,34 @@ pub fn mage_hunters_mark() -> CardDefinition {
 
 // ── Mage Duel ───────────────────────────────────────────────────────────────
 
-/// Mage Duel — {2}{G} Sorcery. Target creature you control gets +1/+2 until
-/// end of turn, then it fights target creature you don't control.
+/// Mage Duel — {2}{G} Sorcery. "This spell costs {2} less to cast if
+/// you've cast another instant or sorcery spell this turn. / Target
+/// creature you control gets +1/+2 until end of turn, then it fights
+/// target creature you don't control."
 ///
-/// Two-slot spell: slot 0 is the friendly creature (pumped, then the fight's
-/// attacker), slot 1 (`additional_targets[0]`) is the opponent's victim. The
-/// "{2} less if you've cast another instant/sorcery this turn" discount is
-/// dropped.
+/// ✅ Two-slot spell: slot 0 is the friendly creature (pumped, then the
+/// fight's attacker), slot 1 (`additional_targets[0]`) is the opponent's
+/// victim. The "another instant/sorcery this turn" discount is wired via
+/// `StaticEffect::SelfCostReducedIf` gated on
+/// `Predicate::InstantsOrSorceriesCastThisTurnAtLeast(You, 1)` — at cost
+/// determination (CR 601.2f) Mage Duel itself hasn't been counted yet,
+/// so "at least 1" is exactly the printed "another".
 pub fn mage_duel() -> CardDefinition {
     CardDefinition {
         name: "Mage Duel",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {2} less to cast if you've cast \
+                          another instant or sorcery spell this turn.",
+            effect: StaticEffect::SelfCostReducedIf {
+                condition: Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                amount: 2,
+            },
+        }],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(

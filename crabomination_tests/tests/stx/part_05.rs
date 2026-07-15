@@ -1840,6 +1840,14 @@ fn lorehold_reclamation_returns_creature_to_battlefield() {
         c.controller == 0 && c.definition.name == "Grizzly Bears"
     }).collect();
     assert_eq!(bf_after.len(), bf_count_before + 1, "Bear returned to battlefield");
+    // "It's a Spirit in addition to its other types." — a layer-4
+    // additive grant, so read the computed (post-layers) types.
+    let bear_id = bf_after[0].id;
+    let computed = g.computed_permanent(bear_id).expect("computed bear");
+    assert!(computed.subtypes.creature_types.contains(&crabomination::card::CreatureType::Spirit),
+        "reanimated creature is a Spirit in addition to its other types");
+    assert!(computed.subtypes.creature_types.contains(&crabomination::card::CreatureType::Bear),
+        "printed creature type is kept (Spirit is additive)");
 }
 
 #[test]

@@ -246,28 +246,73 @@ pub fn witherbloom_vinemaster() -> CardDefinition {
 
 // ── Witherbloom Command ─────────────────────────────────────────────────
 
-/// Witherbloom Command — {B}{G} Sorcery. Choose two among 4 modes.
+/// Witherbloom Command — {B}{G} Sorcery. "Choose two —
+/// • Target player mills three cards, then you may return a land card
+///   from your graveyard to your hand.
+/// • Destroy target noncreature, nonland permanent with mana value 2
+///   or less.
+/// • Target creature gets -3/-1 until end of turn.
+/// • Each opponent loses 2 life and you gain 2 life."
 ///
-/// Approximation: AutoDecider picks mill 4 + drain 2. Choose-two
-/// collapsed to Seq of the two auto-default modes.
+/// True cast-time choose-two via `Effect::ChooseModesCast` (min 2,
+/// max 2, no repeats): `GameAction::CastSpellSpree` carries the chosen
+/// modes, each target-bearing mode consuming its own target slot. A
+/// plain `CastSpell { mode }` still works as a single-mode fallback
+/// (bot / back-compat path).
 pub fn witherbloom_command() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Command",
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            // Mode 0: mill 4 (real card is 4-mill).
-            Effect::Mill {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(4),
-            },
-            // Mode 2: drain 2 (each opp loses 2, you gain 2).
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
+            modes: vec![
+                // Mode 0: target player mills 3, then you may return a
+                // land card from your graveyard to your hand.
+                Effect::Seq(vec![
+                    Effect::Mill {
+                        who: target_filtered(SelectionRequirement::Player),
+                        amount: Value::Const(3),
+                    },
+                    Effect::MayDo {
+                        description:
+                            "Return a land card from your graveyard to your hand".into(),
+                        body: Box::new(Effect::Move {
+                            what: Selector::one_of(Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: Zone::Graveyard,
+                                filter: SelectionRequirement::Land,
+                            }),
+                            to: ZoneDest::Hand(PlayerRef::You),
+                        }),
+                    },
+                ]),
+                // Mode 1: destroy target noncreature, nonland permanent
+                // with mana value 2 or less.
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Noncreature
+                            .and(SelectionRequirement::Nonland)
+                            .and(SelectionRequirement::ManaValueAtMost(2)),
+                    ),
+                },
+                // Mode 2: target creature gets -3/-1 until end of turn.
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-3),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+                // Mode 3: each opponent loses 2 life and you gain 2 life.
+                Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(2),
+                },
+            ],
+        },
         ..Default::default()
     }
 }
@@ -9156,8 +9201,13 @@ pub fn pest_spawnchant_b144() -> CardDefinition {
 }
 
 /// Witherbloom Pestlord (b144) — {3}{B}{G} 4/4 Pest Warlock.
-/// "Whenever you sacrifice a creature, you may pay {B}{G}: draw a card."
-/// Approximation: triggered ability drains 1 + draws 1 (no may-cost).
+/// "Whenever you sacrifice a creature, you may pay {B}{G}. If you do,
+/// draw a card."
+///
+/// Fully wired via `Effect::MayPay`: the trigger asks yes/no, deducts
+/// {B}{G} from the controller's floated pool on accept, and only then
+/// draws. (Per the MayPay convention, mana abilities can't be activated
+/// mid-resolution — the cost must come from already-floated mana.)
 pub fn witherbloom_pestlord_b144() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Pestlord (b144)",
@@ -9174,9 +9224,14 @@ pub fn witherbloom_pestlord_b144() -> CardDefinition {
                 EventKind::CreatureSacrificed,
                 crate::card::EventScope::YourControl,
             ),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayPay {
+                description: "Pay {B}{G} to draw a card".into(),
+                mana_cost: cost(&[b(), g()]),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+                else_: None,
             },
         }],
         ..Default::default()

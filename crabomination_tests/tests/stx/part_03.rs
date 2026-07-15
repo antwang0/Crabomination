@@ -769,6 +769,26 @@ fn conjurers_bauble_sac_activation_cantrips() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
 }
 
+/// The printed "Put target card from your graveyard on the bottom of your
+/// library" clause: a graveyard card is bottomed before the draw.
+#[test]
+fn conjurers_bauble_bottoms_a_graveyard_card() {
+    let mut g = two_player_game();
+    // Two library cards so the bottomed card is distinguishable from the top.
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let dead_bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bauble = g.add_card_to_battlefield(0, catalog::conjurers_bauble());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bauble, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Bauble activatable");
+    drain_stack(&mut g);
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == dead_bolt),
+        "graveyard card left the graveyard");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(dead_bolt),
+        "graveyard card bottomed onto the library");
+}
+
 // ── Quartzwood Inkling ─────────────────────────────────────────────────────
 
 // ── Pop Quiz Lecturer ──────────────────────────────────────────────────────

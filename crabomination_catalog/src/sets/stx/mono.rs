@@ -71,15 +71,22 @@ pub fn mascot_exhibition() -> CardDefinition {
 
 // ── Plumb the Forbidden ─────────────────────────────────────────────────────
 
-/// Plumb the Forbidden — {1}{B} Instant. "Sacrifice X creatures. Each
-/// player who controlled a sacrificed creature draws X cards and loses X
-/// life."
+/// Plumb the Forbidden — {1}{B} Instant. "As an additional cost to cast
+/// this spell, you may sacrifice one or more creatures. When you
+/// sacrifice a creature this way, copy this spell. / You draw a card and
+/// you lose 1 life."
 ///
-/// Approximation: caster sacrifices X of their own creatures, draws X
-/// cards, and loses X life. Multi-controller mode (when a creature was
-/// stolen from another player) collapses to "you" — keeps the card
-/// playable as the standard self-sac engine. The X is read off
-/// `Value::XFromCost` via the cast-time `x_value`.
+/// Approximation: modeled as "sacrifice X of your creatures at
+/// resolution, then draw X + 1 cards and lose X + 1 life" (X = the
+/// cast-time `x_value`, read via `Value::XFromCost`; the `+ 1` is the
+/// original spell's own draw/life alongside its X copies). Still missing
+/// vs. the printed card: the sacrifice is a resolution-time effect, not
+/// a cast-time additional cost (the creatures are still on the
+/// battlefield while the spell is on the stack, and removal can't fizzle
+/// the copies), and the copies are not real spell objects — no per-copy
+/// magecraft triggers and no per-copy responses. Faithful support needs
+/// a "sacrifice-as-additional-cost → copy this spell per sacrifice"
+/// primitive.
 pub fn plumb_the_forbidden() -> CardDefinition {
     CardDefinition {
         name: "Plumb the Forbidden",
@@ -92,13 +99,14 @@ pub fn plumb_the_forbidden() -> CardDefinition {
                 filter: SelectionRequirement::Creature
                     .and(SelectionRequirement::ControlledByYou),
             },
+            // X copies + the original each draw 1 / lose 1 → X + 1 total.
             Effect::Draw {
                 who: Selector::You,
-                amount: Value::XFromCost,
+                amount: Value::Sum(vec![Value::XFromCost, Value::Const(1)]),
             },
             Effect::LoseLife {
                 who: Selector::You,
-                amount: Value::XFromCost,
+                amount: Value::Sum(vec![Value::XFromCost, Value::Const(1)]),
             },
         ]),
         ..Default::default()
@@ -215,24 +223,39 @@ pub fn body_of_research() -> CardDefinition {
 
 // ── Show of Confidence ──────────────────────────────────────────────────────
 
-/// Show of Confidence — {1}{W} Instant. "Put N +1/+1 counters on target
-/// creature, where N is the number of times you've cast Show of Confidence
-/// this game, plus one." We ship the counter-by-storm-count approximation:
-/// N = `StormCount + 1` (i.e. one counter for the spell itself plus one
-/// for every other spell cast this turn). Close to the printed card's
-/// late-game scaling without per-cast-name tracking.
+/// Show of Confidence — {1}{W} Instant. "When you cast this spell, copy
+/// it for each other instant or sorcery spell you've cast this turn. You
+/// may choose new targets for the copies. / Put a +1/+1 counter on
+/// target creature. It gains vigilance until end of turn."
+///
+/// Approximation: the copies aren't real spell objects. The original +
+/// copies are collapsed into one resolution that puts N counters on a
+/// single target and grants it vigilance EOT, where
+/// N = `NoncreatureSpellsCastThisTurn(You)` (this spell counts itself,
+/// so N = "other noncreature spells you've cast this turn" + 1 — equal
+/// to the printed total whenever those other spells were all instants
+/// or sorceries). Remaining gaps: N also counts your noncreature
+/// non-instant/sorcery casts, the copies can't pick separate targets,
+/// and no per-copy magecraft triggers fire. Faithful support needs an
+/// on-cast "copy this spell per prior I/S cast" primitive.
 pub fn show_of_confidence() -> CardDefinition {
+    use crate::effect::Duration;
     CardDefinition {
         name: "Show of Confidence",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::AddCounter {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Sum(vec![Value::StormCount, Value::Const(1)]),
-        },
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::NoncreatureSpellsCastThisTurn(PlayerRef::You),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Vigilance,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -298,14 +321,17 @@ pub fn test_of_talents() -> CardDefinition {
 /// gets +1/+0 and gains hexproof until end of turn. • If you chose all
 /// of the above, draw two cards."
 ///
-/// ✅ All four modes are wired via `Effect::ChooseN { picks: [0, 1, 2, 3],
+/// All four modes are wired via `Effect::ChooseN { picks: [0, 1, 2, 3],
 /// modes }`. The auto-decider runs every mode each cast — Scry 2 + 1/1
 /// Pest + +1/+0 hexproof EOT + Draw 2 — collapsing the printed "choose
-/// one or more" into "always do all four", the same shortcut used by the
-/// Commands cycle (Witherbloom / Lorehold / Quandrix / Silverquill /
-/// Prismari). The mode-pick UI that would let the controller toggle
-/// individual modes (and skip the draw-2 bonus when not picking all
-/// three sub-modes) is tracked separately in TODO.md.
+/// one or more" into "always do all four". `Effect::ChooseModesCast`
+/// could give true cast-time mode selection, but it cannot express the
+/// fourth bullet's condition ("if you chose all of the above"): there is
+/// no predicate over the set of chosen modes, so a free pick of mode 3
+/// alone would draw 2 without the gate. Until a chosen-modes predicate
+/// (or a dedicated conditional-bonus mode wrapper) exists, the
+/// always-all-four `ChooseN` collapse stays — it is the only mode set
+/// for which the printed bonus gate is satisfied.
 pub fn multiple_choice() -> CardDefinition {
     use crate::effect::Duration;
     let pest = TokenDefinition {
@@ -358,8 +384,9 @@ pub fn multiple_choice() -> CardDefinition {
                 // Mode 3: "If you chose all of the above, draw two cards."
                 // With `picks: [0, 1, 2, 3]` always firing all four, the
                 // gate is satisfied unconditionally — the draw fires every
-                // resolution. Matches the Commands cycle "best-mode"
-                // approximation.
+                // resolution. See the doc comment for why this stays a
+                // `ChooseN` collapse (no chosen-modes predicate exists to
+                // gate mode 3 under `ChooseModesCast`).
                 Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             ],
         },
@@ -423,32 +450,12 @@ pub fn lash_of_malice() -> CardDefinition {
 
 // ── Big Play ────────────────────────────────────────────────────────────────
 
-/// Big Play — {1}{G} Instant.
-/// "Choose one — / • Target creature you don't control attacks during
-/// its controller's next turn if able. / • Tap target creature, then
-/// put a stun counter on it. / • Creatures you control gain trample
-/// and 'When this creature deals combat damage to a player, draw a
-/// card' until end of turn."
-///
-/// We ship a faithful three-mode `Effect::ChooseMode` of the strongest
-/// available shapes today:
-///
-/// * Mode 0 — Lure / "must attack" trigger: collapsed to **Tap +
-///   Stun** on a target opp creature (engine has no "must attack"
-///   primitive; the practical effect is the same shutdown).
-/// * Mode 1 — Tap + Stun on a target creature (the primary printed
-///   shape; same template Frost Trickster ships).
-/// * Mode 2 — Grant `Trample` to each creature you control EOT (the
-///   draw-on-combat-damage rider is engine-wide ⏳ pending a
-///   `DealsCombatDamageToPlayer` trigger that survives a transient
-///   grant — tracked in TODO.md).
-///
-/// The AutoDecider picks mode 1 (the strongest single-target shutdown).
-/// Scripted deciders can probe other modes via `DecisionAnswer::Mode`.
-/// ✅ for the printed body; the trample-anthem mode is the only true
-/// approximation.
 /// Big Play — {1}{G} Instant. "Target creature gets +2/+2 and gains reach until
 /// end of turn. Put a +1/+1 counter on it."
+///
+/// Fully faithful: pump + reach EOT + a permanent +1/+1 counter, all on
+/// the single target. (An earlier stale doc block describing a modal
+/// "choose one" spell belonged to a different design and was removed.)
 pub fn big_play() -> CardDefinition {
     use crate::card::{CounterType, Keyword};
     use crate::effect::Duration;
@@ -858,8 +865,17 @@ pub fn creative_technique() -> CardDefinition {
 }
 
 /// Transforming Flourish — {2}{R} Instant. Demonstrate. Destroy target artifact
-/// or creature you don't control. (The "its controller impulse-casts the top
-/// nonland card" rider is dropped — no controller-of-target impulse primitive.)
+/// or creature you don't control. "Its controller exiles cards from the top of
+/// their library until they exile a nonland card, then may cast it without
+/// paying its mana cost."
+///
+/// The impulse rider is still dropped: `Effect::ExileTopUntilNonlandMayPlay`
+/// can exile from the target's controller's library (via
+/// `PlayerRef::ControllerOf(Target(0))`), but it stamps the may-play
+/// permission with `player: ctx.controller` — the *caster* would get to cast
+/// the opponent's exiled card, inverting the printed "its controller may cast
+/// it". Needs the impulse primitive to grant the permission to the exiled
+/// card's owner (or a `grant_to` field) before this rider can ship.
 pub fn transforming_flourish() -> CardDefinition {
     CardDefinition {
         name: "Transforming Flourish",

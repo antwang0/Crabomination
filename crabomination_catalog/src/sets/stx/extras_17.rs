@@ -143,11 +143,16 @@ pub fn venerable_warsinger() -> CardDefinition {
 // ── Ardent Dustspeaker ───────────────────────────────────────────────────────
 
 /// Ardent Dustspeaker — {4}{R}, 3/4 Minotaur Shaman.
-/// On attack, exile the top two cards of your library; you may play them this
-/// turn.
+/// "Whenever Ardent Dustspeaker attacks, you may put an instant or sorcery
+/// card from your graveyard on the bottom of your library. If you do, exile
+/// the top two cards of your library. You may play those cards this turn."
 ///
-/// The printed "put an instant or sorcery from your graveyard on the bottom of
-/// your library" enabler is dropped — the impulse draw fires unconditionally.
+/// ✅ Fully faithful: the "put an instant or sorcery from your graveyard on
+/// the bottom of your library" enabler is now wired — an `Effect::If`
+/// (`SelectorExists` over IS cards in your graveyard) gates a `MayDo` whose
+/// body bottoms one IS card (`ZoneDest::Library { pos: Bottom }`) and then
+/// fires the two-card impulse. No graveyard IS card, or declining the
+/// optional cost, means no impulse.
 pub fn ardent_dustspeaker() -> CardDefinition {
     CardDefinition {
         name: "Ardent Dustspeaker",
@@ -159,11 +164,42 @@ pub fn ardent_dustspeaker() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        triggered_abilities: vec![on_attack(Effect::ExileTopAndGrantMayPlay {
-            who: PlayerRef::You,
-            count: Value::Const(2),
-            duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false, pay_own_cost: false,
-            uncast_penalty: None,
+        triggered_abilities: vec![on_attack(Effect::If {
+            cond: Predicate::SelectorExists(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            }),
+            then: Box::new(Effect::MayDo {
+                description:
+                    "Put an instant or sorcery from your graveyard on the bottom of your \
+                     library to exile the top two cards (play them this turn)"
+                        .into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::one_of(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        }),
+                        to: ZoneDest::Library {
+                            who: PlayerRef::You,
+                            pos: crate::effect::LibraryPosition::Bottom,
+                        },
+                    },
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::You,
+                        count: Value::Const(2),
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: false,
+                        pay_own_cost: false,
+                        uncast_penalty: None,
+                    },
+                ])),
+            }),
+            else_: Box::new(Effect::Noop),
         })],
         ..Default::default()
     }

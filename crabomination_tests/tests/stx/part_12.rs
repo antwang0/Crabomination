@@ -1333,8 +1333,12 @@ fn witherbloom_tomeshade_etb_mills_and_drains() {
     assert_eq!(g.players[1].life, opp_life_before - 1);
 }
 
+/// Bloodscribe's printed trigger is a paid optional: "you may pay 1
+/// life. If you do, draw a card." Accepting the `MayPayLife` prompt
+/// pays 1 life and draws.
 #[test]
-fn silverquill_bloodscribe_draws_on_sacrifice() {
+fn silverquill_bloodscribe_pays_one_life_to_draw_on_sacrifice() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::silverquill_bloodscribe());
     let _ = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -1342,18 +1346,50 @@ fn silverquill_bloodscribe_draws_on_sacrifice() {
     g.add_card_to_library(0, catalog::island());
     let hand_before = g.players[0].hand.len();
     let id = g.add_card_to_hand(0, catalog::witherbloom_sacrosanct());
-    let hand_after_spell_added = g.players[0].hand.len();
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
+    // Accept the "pay 1 life to draw a card" prompt.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let life_before = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Sacrosanct castable");
     drain_stack(&mut g);
-    // The bear is sacrificed; Bloodscribe's trigger draws 1.
-    // hand changes: +1 (added Sacrosanct) -1 (cast it) +1 (drawn from trigger) = +1 from baseline.
-    let _ = hand_after_spell_added;
+    // The bear is sacrificed (cast cost); Bloodscribe's trigger pays 1
+    // life and draws 1. Hand: +1 (added Sacrosanct) -1 (cast it) +1
+    // (drawn) = +1 from baseline.
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    // Sacrosanct drained 3 from the opponent (+3), the trigger paid 1
+    // life (-1).
+    assert_eq!(g.players[0].life, life_before + 3 - 1,
+        "gained 3 from Sacrosanct drain, paid 1 for the draw");
+}
+
+/// Declining Bloodscribe's `MayPayLife` prompt (the AutoDecider
+/// default) skips both the life payment and the draw — the printed
+/// "you may" gate.
+#[test]
+fn silverquill_bloodscribe_declines_and_does_not_draw() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::silverquill_bloodscribe());
+    let _ = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_sacrosanct());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Sacrosanct castable");
+    drain_stack(&mut g);
+    // +1 (added) -1 (cast) + 0 (declined draw) = baseline.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "no draw when the life payment is declined");
+    assert_eq!(g.players[0].life, life_before + 3,
+        "only the Sacrosanct drain moved the life total");
 }
 
 #[test]

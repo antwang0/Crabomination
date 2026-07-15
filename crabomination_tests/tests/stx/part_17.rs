@@ -1721,14 +1721,21 @@ fn pest_spawnchant_b144_mints_two_pest_tokens() {
     assert_eq!(bf_after, bf_before + 2);
 }
 
+/// Pestlord's sacrifice trigger is a real "may pay {B}{G}" — accepting
+/// with floated {B}{G} spends the mana and draws.
 #[test]
-fn witherbloom_pestlord_b144_draws_on_sacrifice() {
+fn witherbloom_pestlord_b144_pays_bg_to_draw_on_sacrifice() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::plains());
     let _ = g.add_card_to_battlefield(0, catalog::witherbloom_pestlord_b144());
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(fodder);
     let hand_before = g.players[0].hand.len();
+    // Float the {B}{G} the may-cost needs and accept it.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     // Sacrifice via direct effect.
     g.battlefield.retain(|c| c.id != fodder);
     g.players[0].graveyard.push(
@@ -1740,7 +1747,30 @@ fn witherbloom_pestlord_b144_draws_on_sacrifice() {
     }];
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "paid {{B}}{{G}}, drew 1");
+}
+
+/// Declining the may-cost (the AutoDecider default) draws nothing.
+#[test]
+fn witherbloom_pestlord_b144_declines_may_cost_no_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::plains());
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_pestlord_b144());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(fodder);
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.battlefield.retain(|c| c.id != fodder);
+    g.players[0].graveyard.push(
+        crabomination::card::CardInstance::new(fodder, catalog::grizzly_bears(), 0)
+    );
+    let events = vec![crabomination::game::types::GameEvent::CreatureSacrificed {
+        card_id: fodder, who: 0,
+    }];
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "declined — no draw");
 }
 
 #[test]

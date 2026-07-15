@@ -282,32 +282,36 @@ pub fn show_of_aggression() -> CardDefinition {
 /// end of turn. The flashback cost is equal to its mana cost. / Flashback
 /// {4}{R}"
 ///
-/// Push (modern_decks): approximated as a `Move(all IS cards in your gy
-/// → hand)` re-fill — the engine has no transient per-card grant of the
-/// `Keyword::Flashback`, so the cleanest expression is the
-/// "Past-in-Flames" pattern of bringing the cards back to hand for a
-/// re-cast. The printed Oracle's Flashback cost = mana cost is
-/// preserved (since re-casting from hand pays exactly the mana cost).
+/// ✅ Now faithful to the printed flashback grant: `GrantMayPlay` stamps
+/// a cast-until-end-of-turn permission on every instant/sorcery card in
+/// your graveyard at resolution, with `pay_own_cost: true` (the
+/// flashback cost equals the card's mana cost) and `exile_after: true`
+/// (CR 702.34a — a card cast this way is exiled on resolution). Cards
+/// stay in the graveyard until actually cast via
+/// `GameAction::CastFromZoneWithoutPaying`, so they remain visible to
+/// graveyard-count effects and are NOT returned to hand. The permission
+/// lapses at end of turn, matching "gains flashback until end of turn."
 /// Flashback {4}{R} on Past in Flames itself is honored via
 /// `Keyword::Flashback` — the second cast exiles it on resolve per CR
-/// 702.34a. Slight strict upgrade: cards return to hand (not graveyard)
-/// so they don't need to be IS-only to be cast next turn; in practice
-/// this is identical when the controller commits to the bulk replay
-/// immediately. Closely related to STX's "Flashback" {R} approximation.
+/// 702.34a.
 pub fn past_in_flames() -> CardDefinition {
     CardDefinition {
         name: "Past in Flames",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(4), r()]))],
-        effect: Effect::Move {
+        effect: Effect::GrantMayPlay {
             what: Selector::CardsInZone {
                 who: PlayerRef::You,
                 zone: crate::card::Zone::Graveyard,
                 filter: SelectionRequirement::HasCardType(CardType::Instant)
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
             },
-            to: ZoneDest::Hand(PlayerRef::You),
+            duration: crate::card::MayPlayDuration::EndOfThisTurn,
+            to_owner: false,
+            exile_after: true,
+            pay_own_cost: true,
+            any_color: false,
         },
         alternative_cost: Some(crate::card::AlternativeCost {
             mana_cost: cost(&[generic(4), r()]),
@@ -1482,19 +1486,14 @@ pub fn kasminas_transmutation() -> CardDefinition {
 
 /// Crippling Fear — {2}{B}{B} Sorcery (STA reprint, originally Conflux).
 ///
-/// "All creatures get -3/-3 until end of turn."
+/// "Choose a creature type. Creatures other than creatures of the
+/// chosen type get -3/-3 until end of turn."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): black wrath via mass
-/// negative pump. The printed Oracle includes a "choose a creature
-/// type" rider — "creatures of the chosen type don't get -3/-3" — but
-/// the engine has no choose-creature-type primitive, so the
-/// approximation is the strictly-stronger universal -3/-3 (every
-/// creature gets it, including your own). Functionally this is a
-/// 4-mana wrath that hits everything with toughness ≤ 3.
-///
-/// In practice the player who casts this typically plans around it
-/// (kill everything; raise dead) — the auto-decider has no awareness
-/// of the symmetric downside.
+/// ✅ Fully faithful via `Effect::DiminishCreaturesExceptChosenType`:
+/// the ChooseCreatureType decision is surfaced at resolution and every
+/// creature whose printed subtypes don't include the answered type gets
+/// -3/-3 until end of turn. AutoDecider picks Demon; ScriptedDecider
+/// can pick any type to spare a specific tribe.
 pub fn crippling_fear() -> CardDefinition {
     CardDefinition {
         name: "Crippling Fear",

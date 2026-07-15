@@ -5,7 +5,7 @@
 //! and creature types are correct so the cards play, are blockable, and
 //! feed catalog filtering. Beledros / Tanazir / Shadrix / Galazeth are
 //! fully wired (✅). Velomachus stays 🟡 only because its reveal cap uses
-//! a static `ManaValueAtMost(5)` rather than its live power.
+//! the live power via `ManaValueAtMostSourcePower`.
 
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, Keyword, MayPlayDuration, Selector,
@@ -122,8 +122,9 @@ pub fn beledros_witherbloom() -> CardDefinition {
 
 /// Velomachus Lorehold — {5}{R}{W}, 5/5 Legendary Dragon, Flying /
 /// vigilance / haste. Attack trigger reveals from the top until an IS card
-/// with MV ≤ 5 (printed power) is found, exiles it, and grants a free cast
-/// this turn (`RevealUntilFind` + `GrantMayPlay`).
+/// with MV ≤ 5 (printed power — static, not the current power; see the
+/// inline note) is found, exiles it, and grants a free cast this turn
+/// (`RevealUntilFind` + `GrantMayPlay`).
 pub fn velomachus_lorehold() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::{PlayerRef, RevealMissDest, ZoneDest};
@@ -139,15 +140,14 @@ pub fn velomachus_lorehold() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
-        // Push (modern_decks, batch 74): "Whenever Velomachus attacks,
-        // reveal cards from the top of your library until you reveal an
-        // instant or sorcery card with mana value less than or equal to
-        // Velomachus's power" trigger is **now wired**. Approximation:
-        // the printed "mana value ≤ Velomachus's power" filter uses a
-        // static `ManaValueAtMost(5)` (Velomachus's printed power). A
-        // pumped Velomachus (Light of Promise counters, +1/+0 EOT, etc.)
-        // doesn't widen the cap; a base-power debuff likewise doesn't
-        // narrow it. RevealUntilFind walks the top of library exiling
+        // "Whenever Velomachus attacks, reveal cards from the top of your
+        // library until you reveal an instant or sorcery card with mana
+        // value less than or equal to Velomachus's power" — the cap now
+        // reads the LIVE power (`ManaValueAtMostSourcePower`, concretized
+        // against the source's LKI power by `RevealUntilFind`'s
+        // resolve_source_power pass): a pumped Velomachus widens the cap,
+        // a debuffed one narrows it.
+        // RevealUntilFind walks the top of library exiling
         // misses to the bottom-random pile, lands the matching IS card
         // in exile, then `GrantMayPlay` stamps a may-cast-this-turn
         // permission on the exiled card so the caster can free-cast it
@@ -160,7 +160,7 @@ pub fn velomachus_lorehold() -> CardDefinition {
                     who: PlayerRef::You,
                     find: SelectionRequirement::HasCardType(CardType::Instant)
                         .or(SelectionRequirement::HasCardType(CardType::Sorcery))
-                        .and(SelectionRequirement::ManaValueAtMost(5)),
+                        .and(SelectionRequirement::ManaValueAtMostSourcePower),
                     to: ZoneDest::Exile,
                     cap: crate::card::Value::Const(60),
                     life_per_revealed: 0,

@@ -654,7 +654,7 @@ fn mascot_exhibition_creates_three_distinct_tokens() {
 }
 
 #[test]
-fn plumb_the_forbidden_at_x_two_sacs_two_draws_two_loses_two() {
+fn plumb_the_forbidden_at_x_two_sacs_two_draws_three_loses_three() {
     let mut g = two_player_game();
     let _b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let _b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -682,10 +682,11 @@ fn plumb_the_forbidden_at_x_two_sacs_two_draws_two_loses_two() {
     // Sacrificed 2 creatures.
     assert_eq!(bf_creatures_after, bf_creatures_before - 2,
         "two creatures sacrificed");
-    // Hand: -1 (cast) +2 (draw) = +1 net.
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2);
-    // Life: -2.
-    assert_eq!(g.players[0].life, life_before - 2);
+    // The X copies + the original each draw 1 / lose 1 → X + 1 = 3 total.
+    // Hand: -1 (cast) +3 (draw) = +2 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+    // Life: -3.
+    assert_eq!(g.players[0].life, life_before - 3);
 }
 
 #[test]
@@ -754,8 +755,9 @@ fn body_of_research_creates_fractal_with_counters_from_library() {
 #[test]
 fn show_of_confidence_pumps_with_storm_count() {
     let mut g = two_player_game();
-    // Cast a Lightning Bolt first to bump the storm counter, then Show of
-    // Confidence — the spell should add `storm_count + 1` counters.
+    // Cast a Lightning Bolt first, then Show of Confidence — the spell adds
+    // one counter per noncreature spell you've cast this turn (Show counts
+    // itself, standing in for the printed copy-per-prior-I/S).
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -778,8 +780,12 @@ fn show_of_confidence_pumps_with_storm_count() {
 
     let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     let counters = bear_card.counter_count(CounterType::PlusOnePlusOne);
-    // Storm count = 1 (Bolt) → Show of Confidence adds 1 + 1 = 2 counters.
-    assert_eq!(counters, 2, "Should add storm_count + 1 = 2 counters");
+    // One other noncreature spell (Bolt) + Show itself → 2 counters,
+    // matching the printed "one copy per other I/S you've cast" total.
+    assert_eq!(counters, 2, "Bolt + Show of Confidence = 2 counters");
+    // "It gains vigilance until end of turn."
+    assert!(bear_card.has_keyword(&Keyword::Vigilance),
+        "target gains vigilance until end of turn");
 }
 
 #[test]
@@ -1136,7 +1142,7 @@ fn decisive_denial_counters_noncreature_unless_paid() {
     })
     .expect("Decisive Denial castable");
     drain_stack(&mut g);
-    // Bolt countered (P1 had no extra mana for {2} kicker), P0 unhurt.
+    // Bolt countered (P1 had no extra mana for the {3} escape), P0 unhurt.
     assert_eq!(g.players[0].life, 20, "Bolt should be countered");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
         "Bolt should be in graveyard");
@@ -1838,12 +1844,12 @@ fn decisive_denial_mode_one_fights_creatures() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
 
-    // Target the opponent's creature (defender) — our creature (attacker)
-    // is auto-picked via the `Take(EachPermanent(your creature), 1)` selector.
+    // Both fighters are real targets: slot 0 = our creature (attacker),
+    // slot 1 = the opponent's creature (defender).
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Permanent(opp)),
-        additional_targets: vec![],
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(opp)],
         mode: Some(1),
         x_value: None,
     }).expect("Decisive Denial mode 1 castable");
@@ -2893,6 +2899,39 @@ fn mascot_interception_gains_control_untaps_grants_haste() {
     assert!(bear.has_keyword(&Keyword::Haste), "haste granted EOT");
 }
 
+/// Mascot Interception's printed "costs {3} less to cast if it targets
+/// a token" — a token target makes it castable for just {R}; a
+/// non-token target with only {R} floated is rejected.
+#[test]
+fn mascot_interception_costs_three_less_against_token() {
+    // Token target: {3}{R} − {3} = {R}.
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == opp_bear) {
+        c.is_token = true;
+    }
+    let id = g.add_card_to_hand(0, catalog::mascot_interception());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mascot Interception costs just {R} against a token");
+    drain_stack(&mut g);
+    let bear = g.battlefield.iter().find(|c| c.id == opp_bear).expect("token on bf");
+    assert_eq!(bear.controller, 0, "control of the token transferred");
+
+    // Non-token target: no reduction — {R} alone can't pay {3}{R}.
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mascot_interception());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "full {{3}}{{R}} unaffordable against a non-token");
+}
+
 #[test]
 fn twinscroll_shaman_is_a_double_striking_one_two() {
     let g = catalog::twinscroll_shaman();
@@ -2918,6 +2957,35 @@ fn practical_research_draws_four_then_discards_two() {
 
     // Started with 0 (after casting the spell from hand): +4 draw − 2 discard = 2.
     assert_eq!(g.players[0].hand.len(), 2, "drew 4, discarded 2");
+}
+
+/// Practical Research's printed "unless you discard an instant or
+/// sorcery card" exemption: with an IS card among the drawn four, only
+/// that single card is pitched (DiscardUnlessKind, the Wrench Mind
+/// shape) — the hand keeps 3 instead of 2.
+#[test]
+fn practical_research_keeps_extra_card_when_discarding_instant() {
+    let mut g = two_player_game();
+    g.players[0].hand.clear();
+    // Top 4 of the library: a Bolt among three Islands.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::practical_research());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Practical Research castable");
+    drain_stack(&mut g);
+
+    // Drew 4 (3 Islands + Bolt); discarded only the Bolt.
+    assert_eq!(g.players[0].hand.len(), 3, "drew 4, pitched only the instant");
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "the instant card was the discard"
+    );
 }
 
 #[test]
@@ -3343,6 +3411,17 @@ fn galvanic_iteration_copies_target_instant() {
 
     // Opponent took 3 (original Bolt) + 3 (Galvanic Iteration copy) = 6 damage.
     assert_eq!(g.players[1].life, 20 - 6, "Galvanic Iteration copied the Bolt");
+
+    // Magecraft self-exile rider: casting Iteration is itself an instant
+    // cast, so the card routes to exile (not the graveyard) on resolution.
+    assert!(
+        g.exile.iter().any(|c| c.id == gi),
+        "Galvanic Iteration exiled itself on resolution (Magecraft rider)"
+    );
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == gi),
+        "Galvanic Iteration is not in the graveyard"
+    );
 }
 
 #[test]
@@ -3650,4 +3729,30 @@ fn rip_apart_modes_kill_creature_or_artifact() {
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == stone),
         "Rip Apart mode 1 destroyed the Mind Stone");
+}
+
+// ── Tend the Pests (additional-cost sacrifice → X Pests) ────────────────────
+
+/// The "sacrifice a creature" is a real additional CAST cost
+/// (`AdditionalCastCost::SacrificePermanent`): it is paid while casting and
+/// the sacrificed creature's power becomes the spell's X, read back at
+/// resolution via `Value::XFromCost`.
+#[test]
+fn tend_the_pests_sacrifices_at_cast_and_mints_power_pests() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::tend_the_pests());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tend the Pests castable with a creature to sacrifice");
+    // Cost is paid on cast — the bear is gone before resolution.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "sacrifice paid while casting, not at resolution");
+    drain_stack(&mut g);
+    let pests = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Pest")
+        .count();
+    assert_eq!(pests, 2, "X = sacrificed power (2) Pest tokens minted");
 }

@@ -1235,17 +1235,21 @@ pub fn pyrotechnics() -> CardDefinition {
 
 // ── Stormwild Capridor (real STX {3}{W} Goat) ──────────────────────────────
 
-/// Stormwild Capridor — {2}{W} Creature — Goat Beast, 1/3 (STX 2021).
+/// Stormwild Capridor — {2}{W} Creature — Bird Goat, 1/3 (STX 2021).
 /// "Flying / If noncombat damage would be dealt to this creature, prevent
-/// that damage and put that many +1/+1 counters on this creature."
+/// that damage. Put a +1/+1 counter on this creature for each 1 damage
+/// prevented this way."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Body-only wire. 1/4 Flying
-/// for 4 mana. The noncombat-damage prevention + counter-conversion
-/// rider is omitted (engine has no damage-replacement on non-combat
-/// damage primitive; the combat damage prevention flag covers combat
-/// only). Tracked in TODO.md alongside CR 615 prevention gaps. The
-/// flying body is the headline play pattern for white control / token
-/// decks needing a sturdy stall flier. Tests:
+/// 🟡 Body-only wire ({2}{W} 1/3 Flying). Missing primitive: a CR 615
+/// noncombat-damage prevention *replacement* on a creature that converts
+/// the prevented amount into +1/+1 counters. The engine's existing
+/// prevention hooks (`Keyword::Absorb`, `ProtectionFromCreatures`, the
+/// combat-damage prevention flag) either cap a fixed amount, cover
+/// creature sources only, or apply to combat damage — none intercepts
+/// arbitrary noncombat damage and none feeds the prevented amount into a
+/// counter payload. Until such a replacement primitive exists (tracked in
+/// TODO.md alongside the CR 615 prevention gaps), burn/fight damage kills
+/// this card instead of growing it. Tests:
 /// `stormwild_capridor_is_a_four_mana_one_four_flying_goat_beast`.
 pub fn stormwild_capridor() -> CardDefinition {
     CardDefinition {
@@ -1357,7 +1361,13 @@ pub fn witchs_cauldron() -> CardDefinition {
     }
 }
 
-// ── Solid Footing (real STX {1}{W} aura/pump approximation) ────────────────
+// ── Steady Stance (synthesised Silverquill combat trick) ────────────────────
+//
+// Not an approximation of any printed card: the real STX Solid Footing is
+// an Aura ("Enchant creature you control. Enchanted creature gets +0/+3 and
+// has vigilance.") and is NOT implemented by this entry. Steady Stance is a
+// deliberately synthesised instant-speed variant of the same stat package,
+// fully faithful to its own synthesised text below.
 
 /// Steady Stance — {1}{W} Instant (synthesised STX Silverquill flavor).
 /// "Target creature gets +0/+3 until end of turn and gains vigilance

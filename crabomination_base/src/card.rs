@@ -1715,6 +1715,26 @@ impl SelectionRequirement {
         }
     }
 
+    /// Concretize `ManaValueAtMostSourcePower` against the source's power
+    /// (Velomachus Lorehold's "with mana value less than or equal to this
+    /// creature's power"), so source-less card matchers (library walks)
+    /// evaluate a plain `ManaValueAtMost`. Same shape as `resolve_x`.
+    pub fn resolve_source_power(&self, power: i32) -> Self {
+        match self {
+            Self::ManaValueAtMostSourcePower => Self::ManaValueAtMost(power.max(0) as u32),
+            Self::And(a, b) => Self::And(
+                Box::new(a.resolve_source_power(power)),
+                Box::new(b.resolve_source_power(power)),
+            ),
+            Self::Or(a, b) => Self::Or(
+                Box::new(a.resolve_source_power(power)),
+                Box::new(b.resolve_source_power(power)),
+            ),
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_source_power(power))),
+            other => other.clone(),
+        }
+    }
+
     /// True when the filter requires the candidate to be a *card in an
     /// off-board zone* (graveyard / exile) rather than a battlefield
     /// permanent or player. Such targets have no clickable board entity,

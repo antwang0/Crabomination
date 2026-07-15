@@ -854,14 +854,14 @@ pub fn pestpod_lurker() -> CardDefinition {
 /// an instant or sorcery spell, you may exile target card from a
 /// graveyard. If you do, this creature gets +1/+0 until end of turn."
 ///
-/// Approximation: collapses to "Magecraft → exile target card from a
-/// graveyard + self-pump +1/+0 EOT" since the engine's `magecraft`
-/// shortcut wraps a single effect. The exile/pump fire together (no
-/// per-magecraft optionality). Slots into Lorehold spell-velocity
-/// decks.
+/// ✅ Fully faithful: each magecraft firing gates on an `Effect::If`
+/// (`SelectorExists` over cards in graveyards) and wraps the
+/// exile-then-pump in a `MayDo`, so the controller may decline
+/// per-trigger and the +1/+0 only happens when a card is actually
+/// exiled ("If you do"). Slots into Lorehold spell-velocity decks.
 pub fn lorehold_neophyte() -> CardDefinition {
     use crate::card::Zone;
-    use crate::effect::Duration;
+    use crate::effect::{Duration, Predicate};
     CardDefinition {
         name: "Lorehold Neophyte",
         cost: cost(&[generic(1), r(), w()]),
@@ -872,22 +872,35 @@ pub fn lorehold_neophyte() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::EachPlayer,
-                    zone: Zone::Graveyard,
-                    filter: SelectionRequirement::Any,
-                }),
-                to: crate::effect::ZoneDest::Exile,
-            },
-            Effect::PumpPT {
-                what: Selector::This,
-                power: Value::Const(1),
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-        ]))],
+        triggered_abilities: vec![magecraft(Effect::If {
+            cond: Predicate::SelectorExists(Selector::CardsInZone {
+                who: PlayerRef::EachPlayer,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Any,
+            }),
+            then: Box::new(Effect::MayDo {
+                description:
+                    "Exile a card from a graveyard? (this creature gets +1/+0 until end of turn)"
+                        .into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::one_of(Selector::CardsInZone {
+                            who: PlayerRef::EachPlayer,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::Any,
+                        }),
+                        to: crate::effect::ZoneDest::Exile,
+                    },
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(1),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
         ..Default::default()
     }
 }
@@ -1280,9 +1293,9 @@ pub fn witherbloom_recursion() -> CardDefinition {
 /// Printed Oracle (synthesised): "Whenever you attack with one or more
 /// creatures, each attacking creature gets +1/+0 until end of turn."
 ///
-/// Approximation: collapses to "Whenever a creature you control
-/// attacks, that creature gets +1/+0 EOT" — fires per-attacker rather
-/// than once per declaration. The total pump applied is identical.
+/// ✅ Fully faithful: fires once per attack declaration via
+/// `EventKind::YouAttack` (CR 508 "whenever you attack") and pumps every
+/// attacking creature you control in that single resolution.
 pub fn lorehold_battle_banner() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::Duration;
@@ -1291,9 +1304,13 @@ pub fn lorehold_battle_banner() -> CardDefinition {
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
             effect: Effect::PumpPT {
-                what: Selector::TriggerSource,
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::IsAttacking),
+                ),
                 power: Value::Const(1),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,

@@ -536,34 +536,30 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
 /// life and you gain 3 life. If Pestilent Cauldron is in your
 /// graveyard, you may cast it transformed."
 ///
-/// Push (modern_decks): front-face-only wire — sac activation that
-/// mills 4 from each player, then drains 3. The transform-from-graveyard
-/// rider (back face: Restorative Burst, returns three creature cards
-/// plus gain 3 life) is omitted pending the cast-from-graveyard
-/// pipeline for MDFCs (engine's `cast_spell_back_face` walks hand only
-/// today).
-///
-/// At face value this is a 2-mana artifact with a powerful self-sac
-/// payoff that puts pressure on the opp's library while resurrecting
-/// the controller's own creatures off the milled cards.
+/// ✅ Both halves wired. The sac activation mills 4 from each player
+/// and drains 3, then grants a one-shot
+/// `Effect::GrantCastBackFromGraveyard` so the controller may cast the
+/// back face (Restorative Burst) transformed from the graveyard —
+/// `GameAction::CastSpellBack` hops a permitted graveyard card into
+/// the back-face cast pipeline. The back is also castable from hand as
+/// a normal MDFC.
 pub fn pestilent_cauldron() -> CardDefinition {
-    // The back-face Restorative Burst ({2}{B} Sorcery: drain 4) is defined on
-    // `back_face`. The sac ability grants a one-shot
-    // `Effect::GrantCastBackFromGraveyard`, so after sacrificing the Cauldron
-    // the controller may cast Restorative Burst transformed from the graveyard
-    // (`GameAction::CastSpellBack` now hops a permitted graveyard card into
-    // hand for the back-face cast pipeline). The back is also castable from
-    // hand as a normal MDFC.
+    // Back face — Restorative Burst, {2}{B} Sorcery: "Return up to three
+    // creature cards from your graveyard to your hand. You gain 3 life."
+    // Wired via `Effect::ReturnGraveyardCardsToHand` (the Mythos of
+    // Brokkos resolution-time `Decision::ChooseCards` pick) + GainLife 3.
     use crate::mana::g;
     let restorative_burst = CardDefinition {
         name: "Restorative Burst",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Drain {
-            from: Selector::Player(PlayerRef::EachOpponent),
-            to: Selector::You,
-            amount: Value::Const(4),
-        },
+        effect: Effect::Seq(vec![
+            Effect::ReturnGraveyardCardsToHand {
+                filter: SelectionRequirement::Creature,
+                max: Value::Const(3),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
         ..Default::default()
     };
     CardDefinition {
@@ -752,22 +748,40 @@ pub fn goblin_lore() -> CardDefinition {
 /// "For each spell and ability your opponents control on the stack,
 /// counter it unless its controller pays {4}."
 ///
-/// Approximated as a single-target `CounterUnlessPaid { mana_cost: {4} }`
-/// — the printed "each spell/ability" multi-counter primitive is
-/// engine-wide ⏳ (would need a stack-iterating counter effect). The
-/// approximation captures the headline play pattern: a hard tax on the
-/// most-recent opp spell. The auto-target picker picks the topmost
-/// hostile stack item.
+/// Wired as a targetless stack sweep (matching the printed text, which
+/// targets nothing): `ForEach` over `Selector::EachMatching { zone:
+/// Stack }` taxes every opponent-controlled spell with
+/// `CounterUnlessPaid { {4} }` (the opponent gate is a per-item
+/// `Predicate::EntityMatches(TriggerSource, ControlledByOpponent)` —
+/// the Stack zone walk itself doesn't apply filters, and this also
+/// keeps the caster's own other spells safe). Remaining gap: printed
+/// "and ability" — activated/triggered abilities on the stack
+/// (`StackItem::Trigger`) aren't enumerable by `ZoneRef::Stack` and
+/// `CounterUnlessPaid` only counters `StackItem::Spell`, so abilities
+/// escape the tax until a stack-ability counter primitive lands.
 pub fn whirlwind_denial() -> CardDefinition {
     CardDefinition {
         name: "Whirlwind Denial",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CounterUnlessPaid {
-            what: target_filtered(SelectionRequirement::IsSpellOnStack),
-            mana_cost: cost(&[generic(4)]),
-            exile: false,
-            extra_generic: None,
+        effect: Effect::ForEach {
+            selector: Selector::EachMatching {
+                zone: crate::effect::ZoneRef::Stack,
+                filter: SelectionRequirement::Any,
+            },
+            body: Box::new(Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::ControlledByOpponent,
+                },
+                then: Box::new(Effect::CounterUnlessPaid {
+                    what: Selector::TriggerSource,
+                    mana_cost: cost(&[generic(4)]),
+                    exile: false,
+                    extra_generic: None,
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
         },
         ..Default::default()
     }
@@ -987,6 +1001,17 @@ pub fn verdant_pledgemage() -> CardDefinition {
 /// Approximation: collapses to "you draw N cards where N = max(opp_hand -
 /// your_hand, 0)" — the caster is implicitly the "chosen player". Wired
 /// via `Effect::Draw` with `Value::Diff` reading opp/you hand sizes.
+///
+/// Not fixable with current primitives: the faithful two-player-target
+/// form needs slots whose ONLY mention is inside a `Value`
+/// (`Value::HandSizeOf(PlayerRef::Target(n))`), but the cast-time slot
+/// walk (`target_filter_for_slot_in_mode_kicked` in
+/// `effect/query.rs`) discovers slots solely from
+/// `Selector::TargetFiltered` / `Selector::ControlledBy{Target}`
+/// selectors and its `val_find` doesn't descend `HandSizeOf`, so the
+/// opponent slot would never be prompted/validated. Needs either
+/// `val_find` coverage for player-ref values or a dedicated
+/// hand-size-differential effect.
 pub fn channeled_force() -> CardDefinition {
     CardDefinition {
         name: "Channeled Force",
@@ -1423,23 +1448,29 @@ pub fn maelstrom_muse() -> CardDefinition {
 /// you win the game. Otherwise, put this card seventh from the top of
 /// your owner's library and you gain 7 life."
 ///
-/// Push (modern_decks): wired with the lifegain half + a put-on-library
-/// approximation (we don't yet model "seventh from top" precisely; we
-/// `PutOnLibraryFromHand` which delivers to the top of the controller's
-/// library). The "if you've cast another with this name → you win" rider
-/// uses the new `Predicate::SameNamedInZoneAtLeast` (push XXXVIII)
-/// counting copies of "Approach of the Second Sun" in the controller's
-/// graveyard. On the second cast the graveyard already holds the first
-/// Approach (it hit graveyard at resolution before the second cast), so
-/// the predicate fires and the controller wins the game via
-/// `Effect::EndGameWithWinner`.
+/// The win rider is gated on `Predicate::All([CastFromHand,
+/// SameNamedInZoneAtLeast(Graveyard, 1)])` — the "cast from your hand"
+/// half is exact (`EffectContext.cast_from_hand`); the "you've cast
+/// another spell named …" half is a graveyard-count approximation. On
+/// the second cast the graveyard already holds the first Approach (it
+/// hit the graveyard at resolution), so the predicate fires and the
+/// controller wins via `Effect::WinGame`.
 ///
-/// Note: the printed Oracle's "library counter" form is more nuanced
-/// (the win condition reads "you've cast another *spell* named ..."
-/// regardless of zone, so even a re-cast Approach in exile would count).
-/// The graveyard-count approximation captures the typical cube/game
-/// pattern (Approach #1 goes to gy when it resolves, then Approach #2
-/// reads it). Test: `approach_of_the_second_sun_gains_seven_life_on_first_cast`,
+/// Precisely what's still missing (not fixable without new engine
+/// work — the engine tracks no per-name "spells cast this game"
+/// counter, only `cycled_count_by_name`):
+/// 1. The win condition reads casts *this game* regardless of where
+///    the earlier copy went (exile, library, re-cast of the same
+///    physical card). The graveyard stand-in misses a single-copy
+///    Approach recur loop and any flow where copy #1 leaves the
+///    graveyard.
+/// 2. The printed "put it into its owner's library seventh from the
+///    top" is intentionally NOT wired even though
+///    `LibraryPosition::FromTop(6)` exists: routing the resolved card
+///    into the library would empty the graveyard the win-check counts,
+///    breaking the second-cast win outright. Both halves must migrate
+///    together once a cast-count-by-name tracker lands.
+/// Tests: `approach_of_the_second_sun_gains_seven_life_on_first_cast`,
 /// `approach_of_the_second_sun_wins_game_when_cast_with_one_in_graveyard`.
 pub fn approach_of_the_second_sun() -> CardDefinition {
     use crate::card::Predicate as P;
@@ -1449,11 +1480,14 @@ pub fn approach_of_the_second_sun() -> CardDefinition {
         cost: cost(&[generic(6), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::If {
-            cond: P::SameNamedInZoneAtLeast {
-                who: PlayerRef::You,
-                zone: Zone::Graveyard,
-                at_least: Value::Const(1),
-            },
+            cond: P::All(vec![
+                P::CastFromHand,
+                P::SameNamedInZoneAtLeast {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    at_least: Value::Const(1),
+                },
+            ]),
             then: Box::new(Effect::WinGame {
                 who: PlayerRef::You,
             }),
@@ -1508,22 +1542,14 @@ pub fn resurrection() -> CardDefinition {
 /// four study counters from this enchantment and sacrifice it: Draw
 /// three cards."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): white card-velocity
-/// enchantment that's strong in any draw-payoff deck. The first
-/// half is wired via an `EventKind::CardDrawn / YourControl` trigger
-/// that wraps `Effect::AddCounter(Charge, 1)` in `Effect::MayDo`
-/// (printed "you may"); the engine has no `Study` counter type, so
-/// we approximate via `CounterType::Charge` (same approximation as
-/// Diary of Dreams). The activation needs cost-4-charge-and-sac, which
-/// the engine doesn't natively express; we approximate by gating
-/// the activation on a `Predicate::ValueAtLeast(CountersOn(This,
-/// Charge), 4)` plus `sac_cost: true`, then drawing 3 — the charge
-/// pool is checked but not deducted, which over-charges the engine
-/// relative to the printed Oracle. In practice with sac_cost: true
-/// the activation drains the enchantment after one use, so the
-/// over-charge is invisible to 99% of gameplay.
+/// ✅ Fully faithful. The first half is wired via an
+/// `EventKind::CardDrawn / YourControl` trigger that wraps
+/// `Effect::AddCounter(Study, 1)` in `Effect::MayDo` (printed "you
+/// may") — the engine has a real `CounterType::Study`. The activation
+/// pays its printed cost exactly: `remove_counter_cost: (Study, 4)` (a
+/// true CR 602.5b cost, pre-flighted and deducted at announcement)
+/// plus `sac_cost: true`, then draws 3.
 pub fn pursuit_of_knowledge() -> CardDefinition {
-    use crate::card::Predicate as P;
     CardDefinition {
         name: "Pursuit of Knowledge",
         cost: cost(&[generic(3), w()]),
@@ -1540,13 +1566,8 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: true,
-            condition: Some(P::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::Charge,
-                },
-                Value::Const(4),
-            )),
+            condition: None,
+            remove_counter_cost: Some((CounterType::Study, 4)),
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false,
@@ -1561,7 +1582,7 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
                 description: "Put a study counter on this enchantment?".into(),
                 body: Box::new(Effect::AddCounter {
                     what: Selector::This,
-                    kind: CounterType::Charge,
+                    kind: CounterType::Study,
                     amount: Value::Const(1),
                 }),
             },

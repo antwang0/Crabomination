@@ -754,16 +754,15 @@ fn show_of_aggression_pumps_each_friendly_creature_and_grants_haste() {
 // ── Past in Flames (STA reprint, Innistrad) ────────────────────────────────
 
 #[test]
-fn past_in_flames_returns_instants_and_sorceries_from_graveyard_to_hand() {
+fn past_in_flames_grants_graveyard_flashback_until_end_of_turn() {
     let mut g = two_player_game();
     // Two instants in graveyard.
-    let _bolt1 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    let _bolt2 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    // A non-IS card (creature) in gy — should NOT come back.
-    let _bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bolt1 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // A non-IS card (creature) in gy — gets NO flashback grant.
+    let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::past_in_flames());
     let hand_before = g.players[0].hand.len();
-    let gy_before = g.players[0].graveyard.len();
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
 
@@ -773,17 +772,47 @@ fn past_in_flames_returns_instants_and_sorceries_from_graveyard_to_hand() {
     .expect("Past in Flames castable for {3}{R}");
     drain_stack(&mut g);
 
-    // -1 (cast) + 2 (bolts returned) = +1 vs hand_before.
-    assert_eq!(g.players[0].hand.len(), hand_before + 1);
-    // gy: -2 (bolts left) +1 (Past in Flames went to gy after resolving) = -1.
-    assert_eq!(g.players[0].graveyard.len(), gy_before - 1);
-    // Verify bear stayed in graveyard.
-    let bear_in_zone = g
-        .players[0]
-        .graveyard
-        .iter()
-        .any(|c| c.definition.name == "Grizzly Bears");
-    assert!(bear_in_zone, "Grizzly Bears (non-IS) stays in graveyard");
+    // Nothing returns to hand — the cards stay in the graveyard with a
+    // may-cast permission stamped (flashback, not a hand refill).
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "no hand refill");
+    for bid in [bolt1, bolt2] {
+        let c = g.players[0].graveyard.iter().find(|c| c.id == bid)
+            .expect("bolt stays in graveyard until cast");
+        assert!(c.may_play_until.is_some(), "bolt has a flashback permission");
+    }
+    let bear = g.players[0].graveyard.iter().find(|c| c.id == bear_in_gy).unwrap();
+    assert!(bear.may_play_until.is_none(), "non-IS card gets no grant");
+}
+
+/// A granted card is cast from the graveyard paying its own mana cost
+/// ("The flashback cost is equal to its mana cost") and is exiled on
+/// resolution (CR 702.34a).
+#[test]
+fn past_in_flames_flashback_cast_pays_cost_and_exiles() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::past_in_flames());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Past in Flames castable");
+    drain_stack(&mut g);
+
+    // Casting from the graveyard is NOT free — {R} must be paid.
+    let opp_life = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("flashback Bolt castable from graveyard for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 3, "flashback Bolt resolved");
+    assert!(g.exile.iter().any(|c| c.id == bolt),
+        "flashback card exiled on resolution (CR 702.34a)");
 }
 
 // ── Inspired Idea ──────────────────────────────────────────────────────────

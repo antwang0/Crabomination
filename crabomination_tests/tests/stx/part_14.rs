@@ -3008,3 +3008,30 @@ fn fractal_multiplier_b122_etb_adds_counter_to_target_friendly() {
     let p_after = g.battlefield_find(target).unwrap().power();
     assert_eq!(p_after, p_before + 1);
 }
+
+/// Velomachus's reveal cap reads its LIVE power: with a +2/+2 pump
+/// (power 7), a 6-MV sorcery is now inside the "MV ≤ power" gate.
+#[test]
+fn velomachus_cap_follows_live_power() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let velo = g.add_card_to_battlefield(0, catalog::velomachus_lorehold());
+    g.clear_sickness(velo);
+    // +2/+2 in counters → power 7.
+    g.battlefield_find_mut(velo).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    // Top of library: a 7-MV sorcery — inside the live power-7 cap,
+    // outside the printed-power-5 cap the old wiring used.
+    let big = g.add_card_to_library(0, catalog::moment_of_reckoning()); // {3}{W}{W}{B}{B} = MV 7
+    let _ = big;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: velo,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(
+        g.exile.iter().any(|c| c.id == big && c.may_play_until.is_some()),
+        "7-MV sorcery within the live-power cap was exiled with may-play"
+    );
+}

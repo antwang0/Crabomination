@@ -1291,8 +1291,11 @@ fn quandrix_streamwarden_b182_etb_scrys_and_grows() {
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
+/// "Whenever you cast your first instant or sorcery spell each turn,
+/// draw a card." — the trigger is once-per-turn (CR 603.3d): the first
+/// I/S draws, the second one the same turn does not.
 #[test]
-fn prismari_mage_mentor_b182_magecraft_loots() {
+fn prismari_mage_mentor_b182_draws_on_first_is_only() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     g.add_card_to_battlefield(0, catalog::prismari_mage_mentor_b182());
@@ -1302,10 +1305,23 @@ fn prismari_mage_mentor_b182_magecraft_loots() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
-    }).expect("bolt");
+    }).expect("first bolt");
     drain_stack(&mut g);
-    // -1 (cast) +1 (loot draw) -1 (loot discard) = -1 net.
-    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+    // -1 (cast) +1 (first-I/S draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "first instant of the turn draws a card");
+    // A second instant the same turn does NOT re-trigger.
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_mid = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("second bolt");
+    drain_stack(&mut g);
+    // -1 (cast), no draw — the once-per-turn trigger already fired.
+    assert_eq!(g.players[0].hand.len(), hand_mid - 1,
+        "second instant the same turn draws nothing");
 }
 
 #[test]

@@ -721,6 +721,33 @@ fn quandrix_sparkbender_b202_counters_target_spell() {
     assert_eq!(g.players[0].life, 20, "bolt was countered");
 }
 
+/// The printed "unless its controller pays {1}" escape: with a spare
+/// floated mana, the bolt's controller auto-pays and the spell resolves.
+#[test]
+fn quandrix_sparkbender_b202_spell_survives_when_controller_pays_one() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    // Extra floated mana to pay the {1} escape.
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    g.priority.player_with_priority = 0;
+    let counter = g.add_card_to_hand(0, catalog::quandrix_sparkbender_b202());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("counter");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17, "controller paid the {{1}} escape; bolt resolved");
+}
+
 #[test]
 fn quandrix_vinemage_b202_etb_pumps_friendly() {
     let mut g = two_player_game();

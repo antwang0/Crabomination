@@ -237,9 +237,11 @@ pub fn lorehold_bookbinder() -> CardDefinition {
 /// control. If you control three or more creatures with +1/+1
 /// counters, draw a card."
 ///
-/// The conditional draw rider is omitted as we use the simpler
-/// per-cast counter shape (the printed-form conditional needs more
-/// expression).
+/// ✅ Fully faithful: the counter placement is a per-trigger `MayDo`
+/// ("you may"), and the conditional draw rider is wired via `Effect::If`
+/// with `Predicate::SelectorCountAtLeast` over creatures you control
+/// that carry a +1/+1 counter (checked after the optional counter is
+/// placed, so the trigger's own counter can turn the rider on).
 pub fn quandrix_wavecaster() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavecaster",
@@ -251,14 +253,36 @@ pub fn quandrix_wavecaster() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
-            ),
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::MayDo {
+                description: "Put a +1/+1 counter on target creature you control?".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::WithCounter(
+                                CounterType::PlusOnePlusOne,
+                            )),
+                    ),
+                    n: Value::Const(3),
+                },
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
         ..Default::default()
     }
 }

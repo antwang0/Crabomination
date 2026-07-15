@@ -99,56 +99,48 @@ pub fn quandrix_pledgemage() -> CardDefinition {
 
 // ── Decisive Denial ─────────────────────────────────────────────────────────
 
-/// Decisive Denial — {G}{U} Instant. "Choose one — / • Counter target
-/// noncreature spell unless its controller pays {2}. / • Target creature
-/// you control deals damage equal to its power to target creature you
-/// don't control."
+/// Decisive Denial — {G}{U} Instant. "Choose one — / • Target creature
+/// you control fights target creature you don't control. / • Counter
+/// target noncreature spell unless its controller pays {3}."
 ///
-/// Mode 1 is a Fight resolution; the printed "two target" prompt is
-/// auto-resolved on the defender side, attacker is player-chosen via
-/// `Target(0)`. Multi-target defender prompt remains a future engine
-/// enhancement.
-/// Both modes wired. Mode 1 uses `Effect::Fight` with the target creature
-/// (slot 0) as attacker and an auto-picked opponent creature as defender.
-/// The printed card uses two separate targets for the fight; we collapse
-/// the attacker to the auto-targeted creature (slot 0, filtered to your
-/// creature for mode 1) and the defender to the first opponent creature
-/// found by auto-targeting.
-/// Both modes wired. Mode 1 uses `Effect::Fight` with the attacker as
-/// a creature you control (auto-targeted) and the defender as a creature
-/// an opponent controls (auto-targeted).
+/// Both modes fully wired (engine mode indices keep the historical
+/// order: 0 = counter, 1 = fight). Mode 1 is a true two-target `Effect::Fight`:
+/// slot 0 is the friendly fighter ("target creature you control") and
+/// slot 1 the enemy ("target creature you don't control") — no more
+/// auto-picked attacker. Mode 0 rides `Effect::CounterUnlessPaid` with
+/// the printed {3} escape cost.
 pub fn decisive_denial() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip};
-    let two = ManaCost { symbols: vec![gen_pip(2)] };
+    let three = ManaCost { symbols: vec![gen_pip(3)] };
     CardDefinition {
         name: "Decisive Denial",
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            // Mode 0: counter target noncreature spell unless controller pays {2}.
+            // Mode 0: counter target noncreature spell unless controller pays {3}.
             Effect::CounterUnlessPaid {
                 what: target_filtered(
                     SelectionRequirement::IsSpellOnStack
                         .and(SelectionRequirement::HasCardType(CardType::Creature).negate()),
                 ),
-                mana_cost: two,
+                mana_cost: three,
                 exile: false,
                 extra_generic: None,
             },
-            // Mode 1: fight — target creature you don't control takes
-            // damage from your biggest creature (auto-picked from the
-            // battlefield). Approximation: the printed card has two
-            // separate targets; we collapse the "your creature" half to
-            // auto-selected since the engine only supports one target.
+            // Mode 1: target creature you control (slot 0) fights target
+            // creature you don't control (slot 1) — both printed targets
+            // are real cast-time target slots.
             Effect::Fight {
-                attacker: Selector::EachPermanent(
-                    SelectionRequirement::Creature
+                attacker: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByYou),
-                ),
-                defender: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
-                ),
+                },
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou.negate()),
+                },
             },
         ]),
         ..Default::default()
@@ -157,59 +149,70 @@ pub fn decisive_denial() -> CardDefinition {
 
 // ── Quandrix Command ───────────────────────────────────────────────────────
 
-/// Quandrix Command — {1}{G}{U} Instant. Choose two among 4 modes.
+/// Quandrix Command — {1}{G}{U} Instant. "Choose two —
+/// • Return target creature or planeswalker to its owner's hand.
+/// • Counter target artifact or enchantment spell.
+/// • Put two +1/+1 counters on target creature.
+/// • Target player shuffles up to three target cards from their
+///   graveyard into their library."
 ///
-/// Approximation: AutoDecider picks +1/+1 counters (×2) + mill 2.
-/// "Choose two of four" is collapsed to Seq of the two printed
-/// auto-default modes (matches gameplay outcome when controller
-/// picks counters + mill).
+/// True cast-time "choose two" via `Effect::ChooseModesCast` (min 2,
+/// max 2, no repeats): `GameAction::CastSpellSpree` carries the two
+/// chosen modes, each target-bearing mode consuming its own target
+/// slot; a plain `CastSpell { mode }` runs a single mode (bot path).
+///
+/// Remaining approximation (mode 3 only): the engine's
+/// `ShuffleGraveyardCardsIntoLibrary` primitive supports neither a
+/// player target nor graveyard-card targets, so mode 3 is fixed to
+/// "you" and the affected player picks the up-to-three cards at
+/// resolution instead of the caster targeting a player + cards at
+/// cast time.
 pub fn quandrix_command() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Command",
         cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            },
-            Effect::Mill {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
+            modes: vec![
+                // Mode 0: return target creature or planeswalker to its
+                // owner's hand.
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
+                // Mode 1: counter target artifact or enchantment spell.
+                Effect::CounterSpell {
+                    what: target_filtered(
+                        SelectionRequirement::IsSpellOnStack.and(
+                            SelectionRequirement::HasCardType(CardType::Artifact)
+                                .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+                        ),
+                    ),
+                },
+                // Mode 2: put two +1/+1 counters on target creature.
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                // Mode 3: shuffle up to three cards from your graveyard
+                // into your library (see doc — player/card targeting is
+                // pending engine support).
+                Effect::ShuffleGraveyardCardsIntoLibrary {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Any,
+                    max: Value::Const(3),
+                },
+            ],
+        },
         ..Default::default()
     }
-}
-
-#[allow(dead_code)]
-fn _quandrix_command_alt_modes() {
-    let _ = Effect::ChooseMode(vec![
-            Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-                ),
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-            },
-            Effect::CounterSpell {
-                what: target_filtered(
-                    SelectionRequirement::IsSpellOnStack.and(
-                        SelectionRequirement::Artifact
-                            .or(SelectionRequirement::Enchantment),
-                    ),
-                ),
-            },
-        ]);
 }
 
 // ── Fractal Summoning ──────────────────────────────────────────────────────
@@ -4061,11 +4064,12 @@ pub fn quandrix_triplecaster() -> CardDefinition {
 }
 
 /// Quandrix Snapcaster — {1}{U}, 2/1 Elf Wizard Flash. Synthesised
-/// Oracle: "Flash. When this creature enters, target instant or sorcery
-/// card in your graveyard returns to your hand." A blue-side Snapcaster
-/// approximation: rebuy a spell, no flashback grant.
+/// Oracle: "Flash. When this creature enters, return target instant or
+/// sorcery card from your graveyard to your hand." A blue-side
+/// Snapcaster homage — rebuys the spell to hand (its own design; no
+/// flashback grant is part of this card's text). The graveyard card is
+/// a real target slot (was a resolution-time auto-pick).
 pub fn quandrix_snapcaster() -> CardDefinition {
-    use crate::card::Zone;
     use crate::effect::ZoneDest;
     CardDefinition {
         name: "Quandrix Snapcaster",
@@ -4081,12 +4085,11 @@ pub fn quandrix_snapcaster() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Graveyard,
-                    filter: SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                }),
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                        .and(SelectionRequirement::InYourGraveyard),
+                ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
@@ -8045,10 +8048,15 @@ pub fn quandrix_reflector_b146() -> CardDefinition {
     }
 }
 
-/// Quandrix Field Trip (b146) — {2}{G} Sorcery. Search your library for
-/// a basic land, put it onto the battlefield tapped. Standard "Cultivate
-/// lite". The "Learn" half from the printed Field Trip is omitted —
-/// this is a slim variant.
+/// Quandrix Field Trip (b146) — {2}{G} Sorcery. Synthesised Oracle:
+/// "Search your library for a basic land card, put it onto the
+/// battlefield tapped, then shuffle." Standard "Cultivate lite".
+///
+/// This is a deliberate custom variant, NOT the printed STX Field Trip
+/// (which searches only a basic Forest, puts it in UNTAPPED, and has
+/// "Learn"). The implementation is fully faithful to the variant's own
+/// text above; the Learn half is intentionally absent by design (the
+/// engine does support `Effect::Learn` — it is not an engine gap).
 pub fn quandrix_field_trip_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Field Trip (b146)",
@@ -12416,14 +12424,22 @@ pub fn quandrix_skydiver_b202() -> CardDefinition {
 
 /// Quandrix Sparkbender (b202) — {1}{G} Instant.
 /// Counter target spell unless its controller pays {1}.
+///
+/// Fully wired via `Effect::CounterUnlessPaid` — the spell's controller
+/// escapes the counter by paying the printed {1} (auto-paid from their
+/// floated mana when affordable).
 pub fn quandrix_sparkbender_b202() -> CardDefinition {
+    use crate::mana::generic as gen_pip;
+    let one = ManaCost { symbols: vec![gen_pip(1)] };
     CardDefinition {
         name: "Quandrix Sparkbender (b202)",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        // Approximation: plain counter (no pay-X to escape rider).
-        effect: Effect::CounterSpell {
+        effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: one,
+            exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
