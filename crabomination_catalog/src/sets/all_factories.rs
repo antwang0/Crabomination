@@ -6553,6 +6553,8 @@ static DECKS: &[Factory] = &[
     super::decks::lead_pipe,
     super::decks::karlov_watchdog,
     super::decks::no_witnesses,
+    super::decks::persuasive_interrogators,
+    super::decks::perimeter_enforcer,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
