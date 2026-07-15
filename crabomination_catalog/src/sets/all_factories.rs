@@ -6603,6 +6603,10 @@ static DECKS: &[Factory] = &[
     super::decks::funeral_room_awakening_hall,
     super::decks::painters_studio_defaced_gallery,
     super::decks::terror_of_towashi,
+    super::decks::ticket_booth_tunnel_of_hate,
+    super::decks::restricted_office_lecture_hall,
+    super::decks::peer_past_the_veil,
+    super::decks::the_swarmweaver,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
