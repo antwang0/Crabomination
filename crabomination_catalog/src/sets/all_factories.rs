@@ -6494,6 +6494,9 @@ static DECKS: &[Factory] = &[
     super::decks::kykar_zephyr_awakener,
     super::decks::alesha_who_laughs_at_fate,
     super::decks::garna_bloodfist_of_keld,
+    super::decks::teapot_slinger,
+    super::decks::byway_barterer,
+    super::decks::wicks_patrol,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

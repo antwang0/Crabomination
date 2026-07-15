@@ -329,6 +329,9 @@ pub enum Value {
     /// The greatest mana value among cards in exile (Ulamog, the Defiler's
     /// enters-with-counters count).
     GreatestManaValueInExile,
+    /// The greatest mana value among cards in `who`'s graveyard (Wick's Patrol's
+    /// `-X/-X` where X is the greatest MV in your graveyard). 0 if empty.
+    GreatestManaValueInGraveyard(PlayerRef),
     Const(i32),
     /// Number of entities the selector resolves to.
     CountOf(Box<Selector>),

@@ -72,6 +72,17 @@ impl GameState {
                 .map(|c| c.definition.cost.cmc() as i32)
                 .max()
                 .unwrap_or(0),
+            Value::GreatestManaValueInGraveyard(who) => self
+                .resolve_player(who, ctx)
+                .map(|p| {
+                    self.players[p]
+                        .graveyard
+                        .iter()
+                        .map(|c| c.definition.cost.cmc() as i32)
+                        .max()
+                        .unwrap_or(0)
+                })
+                .unwrap_or(0),
             Value::Const(n) => *n,
             Value::CountOf(s) => self.resolve_selector(s, ctx).len() as i32,
             Value::PartyCount => {
