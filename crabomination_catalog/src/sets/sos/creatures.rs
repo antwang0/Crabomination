@@ -4754,8 +4754,7 @@ pub fn stone_docent() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            // No "Chimera" creature type yet — bridge through Spirit alone.
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Chimera],
             ..Default::default()
         },
         power: 3,

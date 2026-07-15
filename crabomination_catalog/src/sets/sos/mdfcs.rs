@@ -1238,8 +1238,7 @@ pub fn tam_observant_sequencer() -> CardDefinition {
         "Tam, Observant Sequencer",
         cost(&[generic(2), g(), u()]),
         // No `Gorgon` subtype today; use Wizard + close substitute Snake
-        // (printed line is "Gorgon Wizard"; we approximate Gorgon as Snake).
-        vec![CreatureType::Snake, CreatureType::Wizard],
+        vec![CreatureType::Gorgon, CreatureType::Wizard],
         4,
         3,
         vec![],
