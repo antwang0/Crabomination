@@ -765,6 +765,11 @@ pub enum StaticEffect {
     /// damage, it deals twice that much damage instead." (Neriv, Heart of the
     /// Storm.) Combat and noncombat alike; consulted by `scale_damage_to`.
     DoubleDamageFromCreaturesEnteredThisTurn,
+    /// CR 614.2 — "If a creature you control would deal damage to a permanent or
+    /// player, it deals double that damage instead." (Gratuitous Violence.)
+    /// Source-controller-restricted (unlike the global `DoubleDamageDealt`);
+    /// combat and noncombat alike; consulted by `scale_damage_to`.
+    DoubleDamageFromControlledCreatures,
     /// CR 614.5 — "If a source you control would deal *noncombat* damage to an
     /// opponent or a permanent an opponent controls, it deals double that
     /// damage instead." (Solphim, Mayhem Dominus.) Noncombat-only and also

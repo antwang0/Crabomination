@@ -419,6 +419,21 @@ pub fn shipwreck_dowser() -> CardDefinition {
     }
 }
 
+/// Gratuitous Violence — {2}{R}{R}{R} Enchantment. If a creature you control
+/// would deal damage to a permanent or player, it deals double that damage.
+pub fn gratuitous_violence() -> CardDefinition {
+    CardDefinition {
+        name: "Gratuitous Violence",
+        cost: cost(&[generic(2), r(), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control deal double damage.",
+            effect: StaticEffect::DoubleDamageFromControlledCreatures,
+        }],
+        ..Default::default()
+    }
+}
+
 // ── shared token bodies ───────────────────────────────────────────────────────
 
 fn black_zombie_2_2() -> TokenDefinition {

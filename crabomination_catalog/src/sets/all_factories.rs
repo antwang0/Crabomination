@@ -6482,6 +6482,7 @@ static DECKS: &[Factory] = &[
     super::decks::surrak_the_hunt_caller,
     super::decks::gateway_sneak,
     super::decks::shipwreck_dowser,
+    super::decks::gratuitous_violence,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -4162,6 +4162,20 @@ impl GameState {
                 .filter(|sa| matches!(sa.effect, StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn))
                 .count() as u32;
         }
+        // Gratuitous Violence — a creature you control deals double damage to
+        // any permanent or player (CR 614.2), source-controller-restricted.
+        if let Some(src) = source
+            && let Some(sc) = self.battlefield_find(src)
+            && sc.definition.is_creature()
+        {
+            d += self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == sc.controller)
+                .flat_map(|c| &c.definition.static_abilities)
+                .filter(|sa| matches!(sa.effect, StaticEffect::DoubleDamageFromControlledCreatures))
+                .count() as u32;
+        }
         // Valley Flamecaller — a creature you control of a listed type deals +1
         // damage to any target (combat or noncombat alike).
         if let Some(src) = source
@@ -13705,6 +13719,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn
+            | StaticEffect::DoubleDamageFromControlledCreatures
             | StaticEffect::DoubleNoncombatDamageToOpponents
             | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
             | StaticEffect::HalveDamageToYou

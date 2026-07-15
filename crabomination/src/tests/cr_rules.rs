@@ -9209,3 +9209,24 @@ fn cr_702_2_deathtouch_one_damage_is_lethal() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(djinn).is_none(), "5/6 destroyed by 1 deathtouch damage");
 }
+
+/// CR 614.2 — Gratuitous Violence doubles combat damage dealt by a creature its
+/// controller controls (source-restricted, so the opponent's swing is normal).
+#[test]
+fn cr_614_2_gratuitous_violence_doubles_controlled_creature_combat_damage() {
+    g_614_2_helper(0, 1, 16); // your 2/2 attacks: 2 → 4, opponent 20 → 16
+    g_614_2_helper(1, 0, 18); // opponent's 2/2 attacks: undoubled 2, you 20 → 18
+}
+
+fn g_614_2_helper(attacker_seat: usize, defender_seat: usize, expected_life: i32) {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gratuitous_violence());
+    let bear = g.add_card_to_battlefield(attacker_seat, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(defender_seat) }];
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = attacker_seat;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[defender_seat].life, expected_life);
+}

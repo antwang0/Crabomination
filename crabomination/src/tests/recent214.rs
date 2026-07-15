@@ -281,3 +281,16 @@ fn shipwreck_dowser_returns_instant() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "returned the bolt to hand");
     let _ = CreatureType::Merfolk;
 }
+
+/// Gratuitous Violence doubles a controlled creature's damage but not the
+/// opponent's (source-restricted CR 614.2 doubler).
+#[test]
+fn gratuitous_violence_doubles_only_your_creatures() {
+    use crate::game::effects::EntityRef;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gratuitous_violence());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(g.scale_damage_to(Some(mine), EntityRef::Player(1), 2), 4, "your creature doubles");
+    assert_eq!(g.scale_damage_to(Some(theirs), EntityRef::Player(0), 2), 2, "opponent's is normal");
+}
