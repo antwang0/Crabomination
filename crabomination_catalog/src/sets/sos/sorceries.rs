@@ -2154,21 +2154,48 @@ pub fn echocasting_symposium() -> CardDefinition {
 
 // ── Archaic's Agony ─────────────────────────────────────────────────────────
 
-/// Archaic's Agony — {4}{R}, Sorcery. Converge — deals X damage to
-/// target creature, where X is the number of colors of mana spent to
-/// cast this spell. The exile-top-cards rider is omitted (no cast-from-
-/// exile pipeline).
+/// Archaic's Agony — {4}{R}, Sorcery.
+/// "Converge — Archaic's Agony deals X damage to target creature, where
+/// X is the number of colors of mana spent to cast this spell. Exile
+/// cards from the top of your library equal to the excess damage dealt
+/// to that creature this way. You may play those cards until the end of
+/// your next turn."
+///
+/// Fully wired: Converge damage, then exile top-N where N =
+/// `Value::ExcessDamageDealtThisResolution`, and `GrantMayPlay` on the
+/// exiled batch until the end of your next turn with `pay_own_cost`
+/// (a normal play — full costs, real colors). Residual engine gap:
+/// LAND plays through the may-play path aren't supported (same as
+/// Tablet of Discovery), so an exiled land can't be played.
 pub fn archaics_agony() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
+    use crate::effect::ZoneDest;
     use crate::mana::r;
     CardDefinition {
         name: "Archaic's Agony",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::ConvergedValue,
-        },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::ConvergedValue,
+            },
+            Effect::Move {
+                what: Selector::TopOfLibrary {
+                    who: PlayerRef::You,
+                    count: Value::ExcessDamageDealtThisResolution,
+                },
+                to: ZoneDest::Exile,
+            },
+            Effect::GrantMayPlay {
+                what: Selector::LastMoved,
+                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: false,
+            },
+        ]),
         ..Default::default()
     }
 }

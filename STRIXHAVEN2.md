@@ -129,7 +129,10 @@ from-hand activation (`from_hand` + `discard_self_cost` + the
 look-2-split); Zimone's Experiment is the printed SINGLE look at five
 with typed routing (`picked_lands_to_battlefield` — lands enter tapped,
 creatures to hand, any mix of up to two) and a genuinely random bottom
-(`rest_bottom_random`).
+(`rest_bottom_random`); Archaic's Agony's excess-damage exile rider is
+wired (`ExcessDamageDealtThisResolution` → exile top-N → play until the
+end of your next turn at full cost; land plays through may-play remain
+an engine gap).
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost

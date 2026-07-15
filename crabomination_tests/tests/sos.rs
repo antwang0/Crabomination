@@ -16227,3 +16227,44 @@ fn zimones_experiment_routes_land_to_battlefield_and_creature_to_hand() {
     // The three bolts were bottomed (library holds exactly them).
     assert_eq!(g.players[0].library.len(), 3, "rest bottomed");
 }
+
+/// Archaic's Agony's exile rider: excess damage over the target's
+/// toughness exiles that many cards with a play-until-your-next-turn-end
+/// permission at full cost.
+#[test]
+fn archaics_agony_exiles_cards_equal_to_excess_damage() {
+    let mut g = two_player_game();
+    // 2/2 bear takes converge damage from a 4-color cast: 4 damage →
+    // 2 excess over the bear's 2 toughness → 2 cards exiled.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let id = g.add_card_to_hand(0, catalog::archaics_agony());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let exile_before = g.exile.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Archaic's Agony castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear died to converge damage");
+    // Converge 4 colors (R+G+U+W) → 4 damage → 2 excess over toughness 2.
+    let newly_exiled: Vec<_> = g.exile.iter().skip(exile_before)
+        .filter(|c| c.definition.name == "Lightning Bolt").collect();
+    assert_eq!(newly_exiled.len(), 2, "excess damage (4-2=2) exiled that many cards");
+    for c in &newly_exiled {
+        let p = c.may_play_until.expect("play permission granted");
+        assert_eq!(
+            p.duration,
+            crabomination::card::MayPlayDuration::EndOfControllersNextTurn,
+            "playable until the end of your next turn"
+        );
+        assert!(c.granted_alt_cast_cost_eot.is_some(), "a normal play — full cost");
+    }
+}
