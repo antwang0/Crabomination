@@ -13840,7 +13840,8 @@ pub fn silverquill_command() -> CardDefinition {
 ///   choice.
 /// • Create a 2/1 white and black Inkling creature token with flying."
 pub fn umbral_juke() -> CardDefinition {
-    use crate::catalog::sets::sos::inkling_token;
+    // Real STX Inklings are 2/1 (the SOS custom set's are 1/1).
+    use super::shared::stx_inkling_token;
     CardDefinition {
         name: "Umbral Juke",
         cost: cost(&[generic(2), b()]),
@@ -13858,7 +13859,7 @@ pub fn umbral_juke() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: stx_inkling_token(),
             },
         ]),
         ..Default::default()

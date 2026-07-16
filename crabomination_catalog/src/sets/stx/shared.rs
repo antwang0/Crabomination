@@ -37,8 +37,11 @@ pub use crabomination_base::tokens::stx_pest_token;
 /// The Inkling subtype was added to `CreatureType` in the same patch that
 /// added Pest / Fractal. Lesson sub-type is recorded so future Lesson-aware
 /// effects can filter on it.
-pub fn inkling_summoning() -> CardDefinition {
-    let inkling = TokenDefinition {
+/// The canonical STX Inkling token: a 2/1 white and black Inkling
+/// creature token with flying (Inkling Summoning, Umbral Juke, ... —
+/// distinct from the SOS custom set's 1/1 Inkling).
+pub fn stx_inkling_token() -> TokenDefinition {
+    TokenDefinition {
         name: "Inkling".to_string(),
         power: 2,
         toughness: 1,
@@ -52,10 +55,13 @@ pub fn inkling_summoning() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
         static_abilities: vec![],
         ..Default::default()
-    };
+    }
+}
+
+pub fn inkling_summoning() -> CardDefinition {
+    let inkling = stx_inkling_token();
     CardDefinition {
         name: "Inkling Summoning",
         cost: cost(&[generic(2), w(), b()]),

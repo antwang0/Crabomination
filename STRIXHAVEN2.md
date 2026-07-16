@@ -203,3 +203,18 @@ scripts `scripts/audit_strixhaven2.py`, `scripts/list_sos_ok.py`, and
 historical artifacts. A 2026-07-12 audit fixed 15 gameplay bugs and backfilled
 the sos_mode pools (elders Quandrix the Proof + Silverquill the Disputant and
 all other implemented-but-unpooled cards).
+
+## 2026-07-16 fabricated-bodies sweep (real-name STX cards)
+
+All 248 real-named STX cards were verified clause-by-clause against the
+local Scryfall cache (`scripts/.scryfall_cache.json`) and their
+synthesized effect bodies rewritten to the printed design; coupled
+tests (including CR-conformance fixtures and view-label tests that used
+synthesized cards) were rewritten to assert real behavior. A final
+read-only 248-card verification pass found exactly one residual
+mismatch (Umbral Juke's Inkling token was the SOS 1/1 instead of the
+real 2/1 — fixed, with a shared `stx_inkling_token()` helper). Cards
+with narrow doc-named residuals (resolution-time picks, alt-cost
+riders, name-strip riders, "another" exclusions, Commands'
+target-player collapses) state their nuance inline. TODO.md's
+"Fabricated real-name STX cards" item is closed.

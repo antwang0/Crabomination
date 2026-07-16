@@ -5270,3 +5270,25 @@ fn multiple_choice_mode_three_alone_draws_nothing() {
         .count();
     assert_eq!(elementals, 1, "X=3 mints the 4/4 Elemental token");
 }
+
+/// Umbral Juke's token mode mints the REAL STX Inkling — a 2/1 white and
+/// black flyer (not the SOS custom set's 1/1).
+#[test]
+fn umbral_juke_mints_a_two_one_flying_inkling() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::umbral_juke());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("Umbral Juke castable");
+    drain_stack(&mut g);
+    let tok = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Inkling" && c.controller == 0)
+        .expect("Inkling minted");
+    assert_eq!((tok.power(), tok.toughness()), (2, 1), "real STX Inkling is 2/1");
+    assert!(tok.has_keyword(&Keyword::Flying));
+}
