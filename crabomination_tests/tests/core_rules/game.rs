@@ -4986,25 +4986,33 @@ fn learn_ui_player_suspends_and_resumes_via_submit_decision() {
 }
 
 #[test]
-fn closing_statement_exiles_target_and_gains_x_life() {
+fn closing_statement_end_step_discount_applies() {
+    // Real oracle: "This spell costs {2} less to cast during your end
+    // step. Destroy target creature or planeswalker you don't control..."
+    // (The destroy + counter halves are covered in stx/part_25; this
+    // covers the previously untested end-step discount.)
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::closing_statement());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
+    // {3}{W}{B} minus the {2} end-step discount = {1}{W}{B}.
+    g.step = TurnStep::End;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
-        x_value: Some(3),
+        x_value: None,
     })
-    .expect("Closing Statement castable for {3}{W}{W}");
-    let life_before = g.players[0].life;
+    .expect("Closing Statement costs {1}{W}{B} during your end step");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == bear), "Bear exiled");
-    assert!(g.exile.iter().any(|c| c.id == bear), "Bear is in exile zone");
-    assert_eq!(g.players[0].life, life_before + 3, "Gained X = 3 life");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "target destroyed");
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "destroyed to the graveyard (the printed card does not exile)"
+    );
 }
 
 #[test]
@@ -5133,12 +5141,14 @@ fn witherbloom_apprentice_magecraft_drains_one() {
 
 #[test]
 fn pest_summoning_creates_two_pest_tokens() {
-    // Updated: matches the printed Oracle ("create two 1/1 black-and-green
-    // Pest tokens"). The token's death-trigger lifegain rider is still ⏳.
+    // Printed Oracle: {1}{B/G}{B/G} Sorcery — Lesson, "create two 1/1
+    // black and green Pest creature tokens with 'When this token dies,
+    // you gain 1 life.'"
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::pest_summoning());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,

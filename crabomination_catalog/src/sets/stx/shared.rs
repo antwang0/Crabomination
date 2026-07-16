@@ -31,8 +31,8 @@ pub use crabomination_base::tokens::stx_pest_token;
 
 // ── Inkling Summoning (Lesson) ──────────────────────────────────────────────
 
-/// Inkling Summoning — {3}{W}{B} Sorcery — Lesson. "Create a 2/1 white and
-/// black Inkling creature token with flying."
+/// Inkling Summoning — {2}{W}{B} Sorcery — Lesson. Real Oracle: "Create a
+/// 2/1 white and black Inkling creature token with flying."
 ///
 /// The Inkling subtype was added to `CreatureType` in the same patch that
 /// added Pest / Fractal. Lesson sub-type is recorded so future Lesson-aware
@@ -58,7 +58,7 @@ pub fn inkling_summoning() -> CardDefinition {
     };
     CardDefinition {
         name: "Inkling Summoning",
-        cost: cost(&[generic(3), w(), b()]),
+        cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],
@@ -75,10 +75,10 @@ pub fn inkling_summoning() -> CardDefinition {
 
 // ── Tend the Pests ──────────────────────────────────────────────────────────
 
-/// Tend the Pests — {B}{G} Sorcery. "As an additional cost to cast this
-/// spell, sacrifice a creature. Create X 1/1 black and green Pest creature
-/// tokens with 'When this creature dies, you gain 1 life,' where X is the
-/// sacrificed creature's power."
+/// Tend the Pests — {B}{G} Instant. Real Oracle: "As an additional cost to
+/// cast this spell, sacrifice a creature. / Create X 1/1 black and green
+/// Pest creature tokens with 'When this token dies, you gain 1 life,'
+/// where X is the sacrificed creature's power."
 ///
 /// ✅ Fully faithful: the "additional cost" sacrifice now rides
 /// `AdditionalCastCost::SacrificePermanent`, which is paid while casting
@@ -94,7 +94,7 @@ pub fn tend_the_pests() -> CardDefinition {
     CardDefinition {
         name: "Tend the Pests",
         cost: cost(&[b(), g()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             count: 1,
@@ -113,16 +113,17 @@ pub fn tend_the_pests() -> CardDefinition {
 
 // ── Spirit Summoning (Lesson) ──────────────────────────────────────────────
 
-/// Spirit Summoning — {3}{W} Sorcery — Lesson. "Create a 3/2 white
-/// Spirit creature token with lifelink."
+/// Spirit Summoning — {2}{R}{W} Sorcery — Lesson. Real Oracle: "Create a
+/// 3/2 red and white Spirit creature token." (No keywords — the previous
+/// synthesized white-lifelink token was wrong.)
 pub fn spirit_summoning() -> CardDefinition {
     let spirit = TokenDefinition {
         name: "Spirit".to_string(),
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Lifelink],
+        keywords: vec![],
         card_types: vec![CardType::Creature],
-        colors: vec![Color::White],
+        colors: vec![Color::Red, Color::White],
         supertypes: vec![],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],

@@ -433,16 +433,12 @@ pub fn resurgent_belief() -> CardDefinition {
 
 /// Enthusiastic Study — {2}{R} Instant.
 ///
-/// "Target creature gets +2/+2 until end of turn. If you've cast another
-/// spell this turn, that creature gains trample until end of turn."
+/// ✅ Real Oracle: "Target creature gets +3/+1 and gains trample until
+/// end of turn. / Learn."
 ///
-/// Push (modern_decks) NEW: Quandrix / Witherbloom green combat trick.
-/// Wired as `Seq(PumpPT(+2/+2 EOT), If(SpellsCastThisTurnAtLeast(2)) →
-/// GrantKeyword(Trample EOT))` — the trample rider is gated on the
-/// second-spell-this-turn predicate (same gate as Magecraft's
-/// "another instant or sorcery" template; here it counts every spell
-/// type). Single-target shape allows clean auto-targeting on a
-/// friendly attacker.
+/// Wired as `Seq(PumpPT(+3/+1 EOT), GrantKeyword(Trample EOT),
+/// Learn)` — an unconditional trick plus the Lesson-fetch /
+/// discard-to-draw Learn rider.
 pub fn enthusiastic_study() -> CardDefinition {
     CardDefinition {
         name: "Enthusiastic Study",
@@ -451,22 +447,16 @@ pub fn enthusiastic_study() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(2),
-                toughness: Value::Const(2),
+                power: Value::Const(3),
+                toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
-            Effect::If {
-                cond: Predicate::SpellsCastThisTurnAtLeast {
-                    who: PlayerRef::You,
-                    at_least: Value::Const(2),
-                },
-                then: Box::new(Effect::GrantKeyword {
-                    what: Selector::Target(0),
-                    keyword: Keyword::Trample,
-                    duration: Duration::EndOfTurn,
-                }),
-                else_: Box::new(Effect::Noop),
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
             },
+            Effect::Learn { who: PlayerRef::You },
         ]),
         ..Default::default()
     }
@@ -796,39 +786,49 @@ pub fn bone_to_ash() -> CardDefinition {
 
 // ── Ingenious Mastery (STX, STA Mastery cycle) ─────────────────────────────
 
-/// Ingenious Mastery — {X}{2}{U} Sorcery (STX 2021). "You may pay
-/// {1}{U}{U} rather than pay this spell's mana cost. / Choose one — /
-/// • Draw three cards, put two cards from your hand on top of your
-/// library, then an opponent draws a card. / • Put X +1/+1 counters
-/// on target creature you control, where X is the amount of mana
-/// spent to cast this spell."
+/// Ingenious Mastery — {X}{2}{U} Sorcery (STX 2021).
 ///
-/// ✅ Wired as a vanilla `Effect::Draw 3 + PutOnLibraryFromHand 2 +
-/// Draw 1 → Opponent` at the regular {3}{U}{U} cost. The alt-cost
-/// {1}{U}{U} (which switches to the X-counter mode) is engine-wide ⏳
-/// (alt-cost-implies-mode shared with the other Mastery cycle members:
-/// Baleful Mastery ✅, Devastating Mastery ✅, Verdant Mastery ✅,
-/// Igneous Mastery, Ingenious Mastery). Body fully ships the primary
-/// dig + Time-Spiral-Inspired-Idea play pattern.
+/// ✅ Real Oracle: "You may pay {2}{U} rather than pay this spell's
+/// mana cost. / If the {2}{U} cost was paid, you draw three cards,
+/// then an opponent creates two Treasure tokens and they scry 2. If
+/// that cost wasn't paid, you draw X cards."
+///
+/// Base cast draws X (`Value::XFromCost`); the {2}{U} alternative cost
+/// carries an `effect_override` of Draw 3 → the opponent mints two
+/// Treasures and scries 2 (the "an opponent" choice collapses to
+/// `EachOpponent`, exact in 1v1 — same approximation as Tempted by the
+/// Oriq's per-opponent rider).
 pub fn ingenious_mastery() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Ingenious Mastery",
         cost: cost(&[x(), generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-            Effect::PutOnLibraryFromHand {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-            },
-            Effect::Draw {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(1),
-            },
-        ]),
+        // Full price: "If that cost wasn't paid, you draw X cards."
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::XFromCost,
+        },
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), u()]),
+            effect_override: Some(Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::EachOpponent,
+                    count: Value::Const(2),
+                    definition: treasure_token(),
+                },
+                Effect::Scry {
+                    who: PlayerRef::EachOpponent,
+                    amount: Value::Const(2),
+                },
+            ])),
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -1596,27 +1596,22 @@ pub fn valor() -> CardDefinition {
 
 // ── Pigment Storm (STX 2021) ────────────────────────────────────────────────
 
-/// Pigment Storm — {3}{R}{R} Instant (STX 2021).
+/// Pigment Storm — {4}{R} Sorcery (STX 2021).
 ///
-/// "Pigment Storm deals 4 damage to target creature. If that creature
-/// would die this turn, exile it instead."
+/// ✅ Real Oracle: "Pigment Storm deals 5 damage to target creature.
+/// Excess damage is dealt to that creature's controller instead."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Body wires the 4-damage
-/// half. The "if it would die, exile instead" replacement is engine-
-/// wide ⏳ (no per-creature die-replacement primitive — same gap as
-/// Pongify-style "if it would die, exile instead" payoffs). The
-/// headline play pattern (kill a 4-toughness creature for {3}{R} at
-/// instant speed) ships at parity.
+/// Wired via `Effect::DealDamageExcessToController` (the Flame Spill
+/// primitive): 5 damage to any target creature, with anything beyond
+/// lethal spilling onto that creature's controller.
 pub fn pigment_storm() -> CardDefinition {
     CardDefinition {
         name: "Pigment Storm",
-        cost: cost(&[generic(3), r(), r()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-            ),
-            amount: Value::Const(4),
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageExcessToController {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(5),
         },
         ..Default::default()
     }
@@ -1997,18 +1992,18 @@ pub fn witherbloom_mascot() -> CardDefinition {
 
 // ── Spiteful Squad (STX 2021) ───────────────────────────────────────────────
 
-/// Spiteful Squad — {2}{W}{B}, 0/0 Skeleton (STX 2021).
+/// Spiteful Squad — 0/0 Human Warlock (STX 2021).
 ///
-/// "Deathtouch / When this creature dies, target opponent loses 2
-/// life and you gain 2 life."
+/// ✅ Real Oracle: "Deathtouch / This creature enters with two +1/+1
+/// counters on it. / When this creature dies, put its counters on
+/// target creature you control."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Classic Witherbloom drain
-/// payoff on a deathtouch body. Wired via `CreatureDied/SelfSource`
-/// trigger → `Drain 2` (target opp via auto-target). The deathtouch +
-/// 1/1 body means it almost always trades up — and you get the drain
-/// anyway. Test verifies both halves.
+/// The 0/0 printed body comes in as a 2/2 via
+/// `CardDefinition.enters_with_counters` (CR 614.12). The death
+/// trigger rides `Effect::ModularCounters`, which moves the dying
+/// source's last-known +1/+1 counters onto the chosen target — here
+/// filtered to a creature you control per the printed text.
 pub fn spiteful_squad() -> CardDefinition {
-    use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Spiteful Squad",
         cost: cost(&[generic(2), w(), b()]),
@@ -2018,18 +2013,14 @@ pub fn spiteful_squad() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Deathtouch],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::LoseLife {
-                    who: Selector::Player(PR::EachOpponent),
-                    amount: Value::Const(2),
-                },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-            ]),
+            effect: Effect::ModularCounters {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
         }],
         ..Default::default()
     }
@@ -2037,15 +2028,16 @@ pub fn spiteful_squad() -> CardDefinition {
 
 // ── Master Symmetrist (STX 2021) ────────────────────────────────────────────
 
-/// Master Symmetrist — {2}{G}{G}, 4/4 Fractal Wizard (STX 2021).
+/// Master Symmetrist — {2}{G}{G}, 4/4 Rhino Druid (STX 2021).
 ///
-/// "When this creature enters, double the number of +1/+1 counters on
-/// each creature you control."
+/// ✅ Real Oracle: "Reach / Whenever a creature you control with power
+/// equal to its toughness attacks, it gains trample until end of
+/// turn."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Quandrix counter-doubling
-/// fan-out. Wired via `ForEach(EachPermanent(Creature & ControlledByYou))
-/// → AddCounter(target, CountersOn(target, +1/+1))`. Each creature
-/// the controller controls doubles its existing +1/+1 stack.
+/// Wired as an `Attacks/YourControl` trigger filtered by
+/// `ValueEquals(PowerOf(TriggerSource), ToughnessOf(TriggerSource))`
+/// (live power/toughness at trigger time, so pumps and counters
+/// count); the attacker itself (`TriggerSource`) gains trample EOT.
 pub fn master_symmetrist() -> CardDefinition {
     CardDefinition {
         name: "Master Symmetrist",
@@ -2057,20 +2049,18 @@ pub fn master_symmetrist() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
+        keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ForEach {
-                selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                Predicate::ValueEquals(
+                    Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    Value::ToughnessOf(Box::new(Selector::TriggerSource)),
                 ),
-                body: Box::new(Effect::AddCounter {
-                    what: Selector::TriggerSource,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::CountersOn {
-                        what: Box::new(Selector::TriggerSource),
-                        kind: CounterType::PlusOnePlusOne,
-                    },
-                }),
+            ),
+            effect: Effect::GrantKeyword {
+                what: Selector::TriggerSource,
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
             },
         }],
         ..Default::default()
@@ -2130,13 +2120,14 @@ pub fn stinging_cave_crawler() -> CardDefinition {
 
 /// Cogwork Archivist — {6} Artifact Creature — Construct, 4/5 (STX 2021).
 ///
-/// "When this creature enters, target player puts the top four cards
-/// of their library into their graveyard."
+/// ✅ Real Oracle: "Reach / {2}, {T}: Put target card from a graveyard
+/// on the bottom of its owner's library."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A colorless 6-drop with
-/// an ETB mill 4 as a side effect. Useful in self-mill / reanimator
-/// shells (target self) and as a soft mill threat (target opp). The
-/// 4/4 vanilla body is a fine attacker into open boards.
+/// The activation moves one card from any graveyard to the bottom of
+/// its owner's library. "Target card from a graveyard" rides the
+/// engine's resolution-time pick (`Selector::one_of(CardsInZone)`) —
+/// cast-time `Target` only addresses players and permanents (same
+/// approximation as Rise of Extus / Pillardrop Warden).
 pub fn cogwork_archivist() -> CardDefinition {
     CardDefinition {
         name: "Cogwork Archivist",
@@ -2148,12 +2139,22 @@ pub fn cogwork_archivist() -> CardDefinition {
         },
         power: 4,
         toughness: 5,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Mill {
-                who: target_filtered(SelectionRequirement::Player),
-                amount: Value::Const(4),
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::EachPlayer,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Any,
+                }),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
             },
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -2246,8 +2247,8 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
 /// this. Whenever a creature deals combat damage to you, remove a point
 /// counter. Whenever a creature you control deals combat damage to an
 /// opponent, put a point counter; then if it has ten or more, remove them
-/// all and that player loses the game. (Point counters ride `Charge`; the
-/// "damage to you" trigger is scoped to opponents' creatures.)
+/// all and that player loses the game. (The "damage to you" trigger is
+/// scoped to opponents' creatures.)
 pub fn strixhaven_stadium() -> CardDefinition {
     CardDefinition {
         name: "Strixhaven Stadium",
@@ -2263,7 +2264,7 @@ pub fn strixhaven_stadium() -> CardDefinition {
                 },
                 Effect::AddCounter {
                     what: Selector::This,
-                    kind: CounterType::Charge,
+                    kind: CounterType::Point,
                     amount: Value::Const(1),
                 },
             ]),
@@ -2277,7 +2278,7 @@ pub fn strixhaven_stadium() -> CardDefinition {
                 ),
                 effect: Effect::RemoveCounter {
                     what: Selector::This,
-                    kind: CounterType::Charge,
+                    kind: CounterType::Point,
                     amount: Value::Const(1),
                 },
             },
@@ -2289,24 +2290,24 @@ pub fn strixhaven_stadium() -> CardDefinition {
                 effect: Effect::Seq(vec![
                     Effect::AddCounter {
                         what: Selector::This,
-                        kind: CounterType::Charge,
+                        kind: CounterType::Point,
                         amount: Value::Const(1),
                     },
                     Effect::If {
                         cond: Predicate::ValueAtLeast(
                             Value::CountersOn {
                                 what: Box::new(Selector::This),
-                                kind: CounterType::Charge,
+                                kind: CounterType::Point,
                             },
                             Value::Const(10),
                         ),
                         then: Box::new(Effect::Seq(vec![
                             Effect::RemoveCounter {
                                 what: Selector::This,
-                                kind: CounterType::Charge,
+                                kind: CounterType::Point,
                                 amount: Value::CountersOn {
                                     what: Box::new(Selector::This),
-                                    kind: CounterType::Charge,
+                                    kind: CounterType::Point,
                                 },
                             },
                             Effect::LoseGame { who: PlayerRef::Target(0) },

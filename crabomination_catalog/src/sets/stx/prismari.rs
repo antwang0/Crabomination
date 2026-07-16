@@ -8,23 +8,24 @@
 //! lean on the copy-spell primitive and stay ⏳ until that lands.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
-    Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes,
+    TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
     magecraft, magecraft_loot, magecraft_ping_each_opp, magecraft_scry, magecraft_self_pump,
     magecraft_treasure, target_filtered,
 };
-use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, ZoneDest};
+use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, hybrid, r, u, Color};
 
 // ── Prismari Pledgemage ─────────────────────────────────────────────────────
 
-/// Prismari Pledgemage — {U/R}{U/R} 3/3 Orc Wizard with defender. "Magecraft —
-/// Whenever you cast or copy an instant or sorcery spell, this creature gets
-/// +1/+1 until end of turn."
+/// Prismari Pledgemage — {U/R}{U/R} 3/3 Orc Wizard. Real oracle:
+/// "Defender / Magecraft — Whenever you cast or copy an instant or sorcery
+/// spell, this creature can attack this turn as though it didn't have
+/// defender." (`Effect::AttackDespiteDefenderThisTurn`, CR 508.1a.)
 pub fn prismari_pledgemage() -> CardDefinition {
-    use crate::effect::shortcut::magecraft_self_pump;
     CardDefinition {
         name: "Prismari Pledgemage",
         cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
@@ -36,28 +37,23 @@ pub fn prismari_pledgemage() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Defender],
-        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        triggered_abilities: vec![magecraft(Effect::AttackDespiteDefenderThisTurn {
+            what: Selector::This,
+        })],
         ..Default::default()
     }
 }
 
 // ── Prismari Apprentice ─────────────────────────────────────────────────────
 
-/// Prismari Apprentice — {U}{R}, 2/2 Human Wizard.
+/// Prismari Apprentice — {U}{R}, 2/2 Human Shaman. Real oracle:
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// choose one — / • Scry 1. / • Prismari Apprentice gets +1/+0 until
-/// end of turn."
+/// this creature can't be blocked this turn. If that spell has mana
+/// value 5 or greater, put a +1/+1 counter on this creature."
 ///
-/// ✅ Modal magecraft now wired via `Effect::ChooseMode([Scry 1, +1/+0
-/// EOT])`. The engine's CR 700.2b primitive (`pick_trigger_mode` in
-/// `game/stack.rs`) asks the controller for the mode at push-time when
-/// the trigger lands on the stack — so `AutoDecider` picks mode 0
-/// (Scry 1) for the default play pattern, and `ScriptedDecider::new(
-/// [DecisionAnswer::Mode(1)])` exercises the +1/+0 branch in tests.
-/// The mode pick is a `Decision::ChooseMode { source, num_modes: 2 }`,
-/// matching the printed Oracle's "choose one — " wording. Tests:
-/// `prismari_apprentice_scry_one_by_default_on_instant_cast`,
-/// `prismari_apprentice_can_pump_via_scripted_mode_pick`.
+/// The unblockable half is a `GrantKeyword(Unblockable)` until end of
+/// turn; the counter half gates on the triggering spell's mana value
+/// (`Value::ManaValueOf(Selector::TriggerSource)` ≥ 5).
 pub fn prismari_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Prismari Apprentice",
@@ -69,18 +65,26 @@ pub fn prismari_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::ChooseMode(vec![
-            // Mode 0 — Scry 1.
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-            // Mode 1 — Prismari Apprentice gets +1/+0 until end of turn.
-            Effect::PumpPT {
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            // "This creature can't be blocked this turn."
+            Effect::GrantKeyword {
                 what: Selector::This,
-                power: Value::Const(1),
-                toughness: Value::Const(0),
+                keyword: Keyword::Unblockable,
                 duration: Duration::EndOfTurn,
+            },
+            // "If that spell has mana value 5 or greater, put a +1/+1
+            // counter on this creature."
+            Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    Value::Const(5),
+                ),
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
             },
         ]))],
         ..Default::default()
@@ -255,9 +259,14 @@ pub fn prismari_command() -> CardDefinition {
 
 // ── Creative Outburst ──────────────────────────────────────────────────────
 
-/// Creative Outburst — {3}{U}{U}{R}{R} Instant. 5 damage to any target,
-/// then look at the top five of your library, one to hand, rest on bottom.
+/// Creative Outburst — {3}{U}{U}{R}{R} Instant. Real oracle:
+/// "Creative Outburst deals 5 damage to any target. Look at the top five
+/// cards of your library. Put one of them into your hand and the rest on
+/// the bottom of your library in a random order. / {U/R}{U/R}, Discard
+/// this card: Create a Treasure token." (The discard line is a
+/// hand-activated ability — `from_hand` + `discard_self_cost`.)
 pub fn creative_outburst() -> CardDefinition {
+    use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Creative Outburst",
         cost: cost(&[generic(3), u(), u(), r(), r()]),
@@ -272,26 +281,37 @@ pub fn creative_outburst() -> CardDefinition {
                 count: Value::Const(5),
                 rest_to_graveyard: false,
                 pick_filter: None,
-            
+
                 take: None,
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
                 optional: false,
                 picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
+                rest_bottom_random: true,
             },
         ]),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+            from_hand: true,
+            discard_self_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
 
 // ── Elemental Summoning ────────────────────────────────────────────────────
 
-/// Elemental Summoning — {3}{U}{R} Sorcery — Lesson. "Create a 4/4 blue
-/// and red Elemental creature token."
-pub fn elemental_summoning() -> CardDefinition {
-    let elemental = TokenDefinition {
+/// The STX Prismari token — a 4/4 blue and red Elemental creature. Shared
+/// by Elemental Summoning and Elemental Expressionist.
+fn prismari_elemental_token() -> TokenDefinition {
+    TokenDefinition {
         name: "Elemental".into(),
         power: 4,
         toughness: 4,
@@ -305,10 +325,15 @@ pub fn elemental_summoning() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
-    };
+    }
+}
+
+/// Elemental Summoning — {3}{U}{R} Sorcery — Lesson. "Create a 4/4 blue
+/// and red Elemental creature token."
+pub fn elemental_summoning() -> CardDefinition {
     CardDefinition {
         name: "Elemental Summoning",
         cost: cost(&[generic(3), u(), r()]),
@@ -320,7 +345,7 @@ pub fn elemental_summoning() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: elemental,
+            definition: prismari_elemental_token(),
         },
         ..Default::default()
     }
@@ -328,16 +353,21 @@ pub fn elemental_summoning() -> CardDefinition {
 
 // ── Teach by Example ───────────────────────────────────────────────────────
 
-/// Teach by Example — {U/R}{U/R} Instant. "Copy target instant or
-/// sorcery spell. You may choose new targets for the copy."
+/// Teach by Example — {1}{U/R} Instant. Real oracle: "When you next cast
+/// an instant or sorcery spell this turn, copy that spell. You may choose
+/// new targets for the copy." (NOT a targeted Fork — it arms a one-shot
+/// forward watcher, `Effect::OnYourNextInstantSorceryThisTurn`, whose body
+/// copies the watched cast via `Selector::TriggerSource`.)
 pub fn teach_by_example() -> CardDefinition {
     CardDefinition {
         name: "Teach by Example",
-        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        cost: cost(&[generic(1), hybrid(Color::Blue, Color::Red)]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CopySpell {
-            what: target_filtered(SelectionRequirement::IsSpellOnStack),
-            count: Value::Const(1),
+        effect: Effect::OnYourNextInstantSorceryThisTurn {
+            body: Box::new(Effect::CopySpellMayChooseTargets {
+                what: Selector::TriggerSource,
+                count: Value::Const(1),
+            }),
         },
         ..Default::default()
     }
@@ -345,10 +375,11 @@ pub fn teach_by_example() -> CardDefinition {
 
 // ── Symmetry Sage ───────────────────────────────────────────────────────────
 
-/// Symmetry Sage — {U}, 0/2 Human Wizard.
-/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// Symmetry Sage gets +1/+0 and gains flying until end of turn." Single
-/// magecraft `Seq` so the pump and flying grant land as one trigger.
+/// Symmetry Sage — {U}, 0/2 Human Wizard. Real oracle: "Flying /
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// target creature you control has base power 2 until end of turn."
+/// (Printed flying; the magecraft is a targeted `SetBasePower` — layer
+/// 7b, leaving base toughness intact.)
 pub fn symmetry_sage() -> CardDefinition {
     CardDefinition {
         name: "Symmetry Sage",
@@ -359,19 +390,14 @@ pub fn symmetry_sage() -> CardDefinition {
             ..Default::default()
         },
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::PumpPT {
-                what: Selector::This,
-                power: Value::Const(1),
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::This,
-                keyword: Keyword::Flying,
-                duration: Duration::EndOfTurn,
-            },
-        ]))],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![magecraft(Effect::SetBasePower {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        })],
         ..Default::default()
     }
 }
@@ -768,15 +794,31 @@ pub fn prismari_alchemist() -> CardDefinition {
 
 // ── Elemental Expressionist ───────────────────────────────────────────────
 
-/// Elemental Expressionist — {U/R}{U/R}{U/R}{U/R}, 4/4 Human Wizard.
+/// Elemental Expressionist — {3}{U}{R}, 4/4 Orc Wizard. Real oracle:
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// exile target creature an opponent controls, then return it to the
-/// battlefield under its owner's control at the beginning of the next
-/// end step." (Flickerwisp-style delayed return.)
+/// choose target creature you control. Until end of turn, it gains 'If
+/// this creature would leave the battlefield, exile it instead of putting
+/// it anywhere else' and 'When this creature is put into exile, create a
+/// 4/4 blue and red Elemental creature token.' (Each instance of that
+/// ability triggers separately.)"
+///
+/// Modeled as two until-EOT grants on the chosen creature:
+/// * `ExileIfWouldDieThisTurn` — the death half of the leave-replacement
+///   (the graveyard funnel redirects it to exile);
+/// * `GrantTriggeredAbility` of a SelfSource `PermanentLeavesBattlefield`
+///   trigger that mints the Elemental (the death funnel collects granted
+///   SelfSource LTB triggers, so it fires whether the creature dies into
+///   the redirect or otherwise leaves).
+///
+/// ⚠️ Approximation: there is no grantable "would leave the battlefield →
+/// exile instead" replacement primitive covering non-death exits (bounce,
+/// blink, -1/-1 shrink to library, …) — only the death path is redirected
+/// to exile. The token payoff still fires per grant instance (each
+/// magecraft grant pushes its own trigger, so instances stack per oracle).
 pub fn elemental_expressionist() -> CardDefinition {
     CardDefinition {
         name: "Elemental Expressionist",
-        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        cost: cost(&[generic(3), u(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Orc, CreatureType::Wizard],
@@ -785,21 +827,30 @@ pub fn elemental_expressionist() -> CardDefinition {
         power: 4,
         toughness: 4,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Exile {
+            // "If this creature would leave the battlefield, exile it
+            // instead" — death half (graveyard → exile redirect, EOT).
+            Effect::ExileIfWouldDieThisTurn {
                 what: target_filtered(
                     SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                        .and(SelectionRequirement::ControlledByYou),
                 ),
             },
-            Effect::DelayUntil {
-                kind: DelayedTriggerKind::NextEndStep,
-                body: Box::new(Effect::Move {
-                    what: Selector::Target(0),
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                        tapped: false,
+            // "When this creature is put into exile, create a 4/4 blue and
+            // red Elemental creature token" — granted until end of turn.
+            Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::PermanentLeavesBattlefield,
+                        EventScope::SelfSource,
+                    ),
+                    effect: Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: prismari_elemental_token(),
                     },
                 }),
+                duration: Duration::EndOfTurn,
             },
         ]))],
         ..Default::default()

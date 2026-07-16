@@ -2575,16 +2575,17 @@ fn strict_proctor_taxes_an_etb_trigger_unless_paid() {
     let id = g.add_card_to_hand(0, catalog::pest_beekeeper());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
-    // Auto-decider declines the tax payment. The Beekeeper should be
-    // sacrificed (sent to graveyard), and no Pest token should appear.
+    // Auto-decider declines the tax payment. Per the real oracle the
+    // ABILITY is countered (CR 701.5a) — the entering permanent itself
+    // is untouched; only the Pest-mint trigger is suppressed.
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Beekeeper castable");
     drain_stack(&mut g);
-    // Beekeeper got sacrificed by the tax; the Pest token never minted.
-    assert!(g.battlefield_find(id).is_none(),
-        "Beekeeper should be sacrificed when tax is declined");
+    // Beekeeper stays; only its ETB trigger was countered.
+    assert!(g.battlefield_find(id).is_some(),
+        "Beekeeper stays on the battlefield — only the trigger is countered");
     assert!(!g.battlefield.iter().any(|c| c.controller == 0 &&
         c.definition.subtypes.creature_types.contains(&CreatureType::Pest)),
         "no Pest token should mint when ETB trigger was suppressed");

@@ -1084,19 +1084,27 @@ fn professor_onyx_magecraft_drains_two() {
 }
 
 #[test]
-fn professor_onyx_plus_one_drains_two() {
+fn professor_onyx_plus_one_loses_one_and_digs_three() {
+    // Real +1: "You lose 1 life. Look at the top three cards of your
+    // library. Put one of them into your hand and the rest into your
+    // graveyard." (An earlier synthesized +1 drained 2.)
     let mut g = two_player_game();
     let onyx = g.add_card_to_battlefield(0, catalog::professor_onyx());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let p0 = g.players[0].life;
     let p1 = g.players[1].life;
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
     g.perform_action(GameAction::ActivateLoyaltyAbility {
             x_value: None,
         card_id: onyx, ability_index: 0, target: None,
     })
     .expect("Onyx +1 activatable");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, p1 - 2);
-    assert_eq!(g.players[0].life, p0 + 2);
+    assert_eq!(g.players[0].life, p0 - 1, "you lose 1 life");
+    assert_eq!(g.players[1].life, p1, "opponent untouched by the +1");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "one of the top three to hand");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 2, "the other two to the graveyard");
     let pw = g.battlefield_find(onyx).unwrap();
     assert_eq!(pw.counter_count(CounterType::Loyalty), 6, "5 base + 1 from the +1 ability");
 }
@@ -1201,31 +1209,30 @@ fn academic_probation_mode1_target_cant_attack_or_block() {
 }
 
 #[test]
-fn unwilling_ingredient_dies_draws_when_paid() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+fn unwilling_ingredient_exiles_from_graveyard_to_draw_and_lose_one() {
+    // Real oracle: "Menace / {2}{B}, Exile this card from your graveyard:
+    // You draw a card and you lose 1 life." (An earlier synthesized body
+    // had a "dies → may pay {2}{B} to draw" trigger instead.)
     let mut g = two_player_game();
-    let ingredient = g.add_card_to_battlefield(0, catalog::unwilling_ingredient());
-    // Pre-stash {2}{B} for the may-pay draw.
+    let ingredient = g.add_card_to_graveyard(0, catalog::unwilling_ingredient());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.add_card_to_library(0, catalog::grizzly_bears());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    // Kill the 1/1 Pest with a bolt.
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
     let hand_before = g.players[0].hand.len();
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Permanent(ingredient)),
-        additional_targets: vec![], mode: None, x_value: None,
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ingredient, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
     })
-    .expect("Bolt castable for {R}");
+    .expect("{2}{B}, exile from graveyard: draw 1, lose 1");
     drain_stack(&mut g);
-    // The bolt left hand (-1) and the death trigger's paid draw added one
-    // (+1): net hand size unchanged, but a fresh card was drawn.
-    assert_eq!(g.players[0].hand.len(), hand_before,
-        "bolt left hand, paid draw replaced it");
-    assert!(g.players[0].library.is_empty(),
-        "Unwilling Ingredient drew the seeded card after paying {{2}}{{B}}");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+    assert_eq!(g.players[0].life, life_before - 1, "lost 1 life");
+    assert!(g.exile.iter().any(|c| c.id == ingredient),
+        "Unwilling Ingredient exiled itself as the cost");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == ingredient),
+        "no longer in the graveyard");
+    assert!(catalog::unwilling_ingredient().keywords.contains(&Keyword::Menace));
 }
 
 #[test]
@@ -1524,20 +1531,26 @@ fn fracture_destroys_target_artifact() {
 }
 
 #[test]
-fn closing_statement_exiles_creature_and_gains_x_life() {
+fn closing_statement_destroys_and_puts_counter_on_own_creature() {
+    // Real oracle: "Destroy target creature or planeswalker you don't
+    // control. Put a +1/+1 counter on up to one target creature you
+    // control." (An earlier synthesized body exiled and gained X life.)
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::closing_statement());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
-    let life = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: None, x_value: Some(3),
-    }).expect("Closing Statement castable for {X}{W}{W} at X=3");
+        additional_targets: vec![Target::Permanent(mine)], mode: None, x_value: None,
+    }).expect("Closing Statement castable");
     drain_stack(&mut g);
-    assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled");
-    assert_eq!(g.players[0].life, life + 3, "gain X = 3 life");
+    assert!(g.battlefield_find(bear).is_none(), "opposing creature destroyed");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "destroyed, not exiled — it lands in its owner's graveyard");
+    assert_eq!(g.battlefield_find(mine).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "own creature picked up the +1/+1 counter");
 }
 
 #[test]
@@ -1557,19 +1570,27 @@ fn devastating_mastery_destroys_all_nonland_permanents() {
 }
 
 #[test]
-fn quandrix_apprentice_magecraft_pumps_a_creature() {
+fn quandrix_apprentice_magecraft_digs_three_for_a_land() {
+    // "Magecraft — ... look at the top three cards of your library. You may
+    // reveal a land card from among them and put that card into your hand.
+    // Put the rest on the bottom of your library in any order."
     let mut g = two_player_game();
-    let app = g.add_card_to_battlefield(0, catalog::quandrix_apprentice());
+    let _app = g.add_card_to_battlefield(0, catalog::quandrix_apprentice());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let lib_before = g.players[0].library.len();
+    let lands_before = g.players[0].hand.iter()
+        .filter(|c| c.definition.is_land()).count();
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("bolt");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(app).unwrap().power(), 3, "magecraft pumped a creature +1/+1");
-    assert_eq!(g.battlefield_find(app).unwrap().toughness(), 3);
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "one land taken to hand, two bottomed");
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.is_land()).count(),
+        lands_before + 1, "magecraft impulsed a land into hand");
 }
 
 #[test]

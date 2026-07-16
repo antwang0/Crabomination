@@ -7,7 +7,7 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
     EventScope, EventSpec, Keyword, LandType, Predicate, Selector, SelectionRequirement, Subtypes,
-    TriggeredAbility, Value, WardCost, Zone,
+    TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{
     etb, etb_gain_life, magecraft, mint_pests, on_attack, pump_target, target, target_filtered,
@@ -66,7 +66,7 @@ pub fn witherbloom_campus() -> CardDefinition {
     campus_land("Witherbloom Campus", LandType::Swamp, LandType::Forest, Color::Black, Color::Green)
 }
 
-/// Access Tunnel — `{T}: Add {3}`; `{3}, {T}: Target creature with power
+/// Access Tunnel — `{T}: Add {C}.` `{3}, {T}: Target creature with power
 /// 3 or less can't be blocked this turn.`
 pub fn access_tunnel() -> CardDefinition {
     use super::super::tap_add_colorless;
@@ -348,16 +348,15 @@ pub fn arrogant_poet() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![on_attack(Effect::MayDo {
+        triggered_abilities: vec![on_attack(Effect::MayPayLife {
             description: "Pay 2 life: Arrogant Poet gains flying until end of turn.".into(),
-            body: Box::new(Effect::Seq(vec![
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
-                Effect::GrantKeyword {
-                    what: Selector::This,
-                    keyword: Keyword::Flying,
-                    duration: Duration::EndOfTurn,
-                },
-            ])),
+            amount: Value::Const(2),
+            body: Box::new(Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            }),
+            else_: None,
         })],
         ..Default::default()
     }
@@ -440,9 +439,10 @@ pub fn campus_guide() -> CardDefinition {
     }
 }
 
-/// Biblioplex Assistant — {4} 2/1 Gargoyle artifact creature with flying.
-/// ETB: put up to one target instant or sorcery card from your graveyard
-/// on top of your library.
+/// Biblioplex Assistant — {4} 2/1 Gargoyle artifact creature. "Flying \n
+/// When this creature enters, put up to one target instant or sorcery card
+/// from your graveyard on top of your library." The "up to one target" is a
+/// genuinely optional target slot (`ApplyToTargets { min_targets: 0 }`).
 pub fn biblioplex_assistant() -> CardDefinition {
     CardDefinition {
         name: "Biblioplex Assistant",
@@ -452,14 +452,17 @@ pub fn biblioplex_assistant() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::Move {
-            what: Selector::one_of(Selector::CardsInZone {
-                who: PlayerRef::You,
-                zone: Zone::Graveyard,
-                filter: SelectionRequirement::HasCardType(CardType::Instant)
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 0,
+            filter: SelectionRequirement::InYourGraveyard.and(
+                SelectionRequirement::HasCardType(CardType::Instant)
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            ),
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
             }),
-            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
         })],
         ..Default::default()
     }
@@ -636,9 +639,12 @@ pub fn arcane_subtraction() -> CardDefinition {
     }
 }
 
-/// Exhilarating Elocution — {2}{W}{B} Sorcery. Put two +1/+1 counters on
+/// Exhilarating Elocution — {2}{W}{B} Sorcery. "Put two +1/+1 counters on
 /// target creature you control. Other creatures you control get +1/+1
-/// until end of turn.
+/// until end of turn." There is no "other than the target" selection
+/// requirement, so the "other" clause is modeled by compensation: every
+/// creature you control gets +1/+1 EOT, then the target gets -1/-1 EOT —
+/// net P/T is exactly the printed result (target: counters only).
 pub fn exhilarating_elocution() -> CardDefinition {
     CardDefinition {
         name: "Exhilarating Elocution",
@@ -654,12 +660,16 @@ pub fn exhilarating_elocution() -> CardDefinition {
             },
             Effect::PumpPT {
                 what: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: Value::Const(1),
                 toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
                 duration: Duration::EndOfTurn,
             },
         ]),

@@ -17,9 +17,10 @@ use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
 
 // ── Lessons ──────────────────────────────────────────────────────────────────
 
-/// Basic Conjuration — {1}{G}{G} Sorcery — Lesson. Look at the top six
-/// cards of your library, put a creature card from among them into your
-/// hand, the rest on the bottom in a random order, and gain 3 life.
+/// Basic Conjuration — {1}{G}{G} Sorcery — Lesson. "Look at the top six
+/// cards of your library. You may reveal a creature card from among them
+/// and put it into your hand. Put the rest on the bottom of your library
+/// in a random order. You gain 3 life."
 pub fn basic_conjuration() -> CardDefinition {
     CardDefinition {
         name: "Basic Conjuration",
@@ -36,9 +37,9 @@ pub fn basic_conjuration() -> CardDefinition {
                 to_battlefield: false,
                 gain_life_if_pick: None,
                 gain_life_greatest_power_rest: false,
-                optional: false,
+                optional: true,
                 picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
+                rest_bottom_random: true,
             },
             gain_life(3),
         ]),
@@ -201,8 +202,13 @@ pub fn flunk() -> CardDefinition {
     }
 }
 
-/// Double Major — {G}{U} Instant. Copy target creature spell you control.
-/// (A copy of a creature spell becomes a token.)
+/// Double Major — {G}{U} Instant. "Copy target creature spell you control,
+/// except it isn't legendary if the spell is legendary. (A copy of a
+/// creature spell becomes a token.)" The "isn't legendary" rider is not
+/// modeled — `Effect::CopySpell` has no non-legendary flag for stack
+/// copies (only `enters_as_copy.non_legendary` exists, which is a
+/// different mechanism); missing primitive: a `non_legendary` rider on
+/// the spell-copy path.
 pub fn double_major() -> CardDefinition {
     CardDefinition {
         name: "Double Major",
@@ -210,7 +216,9 @@ pub fn double_major() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::CopySpell {
             what: target_filtered(
-                SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::HasCardType(CardType::Creature)),
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::HasCardType(CardType::Creature))
+                    .and(SelectionRequirement::ControlledByYou),
             ),
             count: Value::Const(1),
         },
@@ -275,16 +283,21 @@ pub fn devouring_tendrils() -> CardDefinition {
     }
 }
 
-/// Study Break — {1}{W} Instant. Tap up to two target creatures, then Learn.
+/// Study Break — {1}{W} Instant. "Tap up to two target creatures. Learn."
+/// Both target slots are genuinely optional (`ApplyToTargets {
+/// min_targets: 0 }`), so the spell can be cast with zero, one, or two
+/// targets and always learns.
 pub fn study_break() -> CardDefinition {
     CardDefinition {
         name: "Study Break",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
-            Effect::Tap {
-                what: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
             },
             Effect::Learn { who: PlayerRef::You },
         ]),
@@ -446,21 +459,26 @@ pub fn culmination_of_studies() -> CardDefinition {
     }
 }
 
-/// Semester's End — {3}{W} Instant. Exile target creature or planeswalker you
-/// control; at the next end step return it under its owner's control with an
-/// extra +1/+1 (creature) or loyalty (planeswalker) counter. (Printed as "any
-/// number of targets"; modeled single-target — no variable-target primitive.)
+/// Semester's End — {3}{W} Instant. "Exile any number of target creatures
+/// and/or planeswalkers you control. At the beginning of the next end step,
+/// return each of them to the battlefield under its owner's control. Each of
+/// them enters with an additional +1/+1 counter on it if it's a creature and
+/// an additional loyalty counter on it if it's a planeswalker." "Any number
+/// of targets" is wired via `ApplyToTargets { max_targets: 16, min_targets:
+/// 0 }` (16 is the engine-wide slot cap); the body runs once per supplied
+/// target.
 pub fn semesters_end() -> CardDefinition {
     CardDefinition {
         name: "Semester's End",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ExileReturnNextEndStep {
-            what: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker)
-                    .and(SelectionRequirement::ControlledByYou),
-            ),
+        effect: Effect::ApplyToTargets {
+            max_targets: 16,
+            min_targets: 0,
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Planeswalker)
+                .and(SelectionRequirement::ControlledByYou),
+            effect: Box::new(Effect::ExileReturnNextEndStep { what: Selector::Target(0) }),
         },
         ..Default::default()
     }
@@ -752,8 +770,11 @@ pub fn gnarled_professor() -> CardDefinition {
     }
 }
 
-/// Dream Strix — {2}{U} 3/2 Bird Illusion with flying. When it becomes the
-/// target of a spell, sacrifice it. When it dies, Learn.
+/// Dream Strix — {2}{U} 3/2 Bird Illusion with flying. "When this creature
+/// becomes the target of a spell, sacrifice it. When this creature dies,
+/// learn." Approximation: `EventKind::BecameTarget` fires for spells AND
+/// activated abilities (no spell-only targeting event), so an ability
+/// targeting it also triggers the sacrifice.
 pub fn dream_strix() -> CardDefinition {
     CardDefinition {
         name: "Dream Strix",
@@ -769,7 +790,7 @@ pub fn dream_strix() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
-                effect: Effect::Move { what: Selector::This, to: ZoneDest::Graveyard },
+                effect: Effect::SacrificeSource,
             },
             on_dies(Effect::Learn { who: PlayerRef::You }),
         ],
@@ -793,9 +814,15 @@ pub fn retriever_phoenix() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            // ETB Learn (the "if you cast it" gate collapses — token/blink
-            // recursion isn't a path for this card).
-            effect: Effect::Learn { who: PlayerRef::You },
+            // "When this creature enters, if you cast it, learn." The
+            // SourceWasCast gate matters here: returning via the
+            // graveyard-instead-of-learn replacement is a non-cast entry
+            // and must NOT learn again.
+            effect: Effect::If {
+                cond: Predicate::SourceWasCast,
+                then: Box::new(Effect::Learn { who: PlayerRef::You }),
+                else_: Box::new(Effect::Noop),
+            },
         }],
         static_abilities: vec![StaticAbility {
             description: "While in your graveyard, you may return this instead of learning.",
@@ -975,10 +1002,14 @@ pub fn rootha_mercurial_artist() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             return_self_cost: true,
             effect: Effect::CopySpellMayChooseTargets {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack.and(
-                    SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                )),
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(
+                            SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        )
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
                 count: Value::Const(1),
             },
             ..Default::default()
@@ -989,9 +1020,15 @@ pub fn rootha_mercurial_artist() -> CardDefinition {
 
 // ── More spells ──────────────────────────────────────────────────────────────
 
-/// Deadly Brew — {B}{G} Sorcery. Each player sacrifices a creature or
+/// Deadly Brew — {B}{G} Sorcery. "Each player sacrifices a creature or
 /// planeswalker of their choice. If you sacrificed a permanent this way, you
-/// may return a permanent card from your graveyard to your hand.
+/// may return **another** permanent card from your graveyard to your hand."
+/// The "another" exclusion is not modeled — there is no selection
+/// requirement excluding the card sacrificed this resolution (missing
+/// primitive: `NotSacrificedThisResolution`-style filter), so the pick may
+/// currently return the just-sacrificed card. The "of your choice" pick is
+/// also the engine-wide `Selector::take` approximation (first matching card
+/// in graveyard order), not a prompted choice.
 pub fn deadly_brew() -> CardDefinition {
     CardDefinition {
         name: "Deadly Brew",
@@ -1148,13 +1185,12 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
     }
 }
 
-/// The Biblioplex — Land. `{T}: Add {2}.` `{2}, {T}: Look at the top card of
+/// The Biblioplex — Land. `{T}: Add {C}.` `{2}, {T}: Look at the top card of
 /// your library; if it's an instant or sorcery, you may put it into your hand,
 /// otherwise you may bin it. Activate only with exactly 0 or 7 cards in hand.`
 pub fn the_biblioplex() -> CardDefinition {
     CardDefinition {
         name: "The Biblioplex",
-        supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Land],
         activated_abilities: vec![
             ActivatedAbility {

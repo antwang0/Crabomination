@@ -218,17 +218,19 @@ pub fn vineglimmer_snarl() -> CardDefinition {
 /// the battlefield, then shuffle. A deck can have any number of cards
 /// named Dragon's Approach."
 ///
-/// ✅ Both halves wired. The 3 damage half uses
-/// `target_filtered(Creature ∨ Planeswalker ∨ Player)`. The "4+ in gy
-/// → tutor a Dragon" rider rides on the new
-/// `Predicate::SameNamedInZoneAtLeast { who: You, zone: Graveyard,
-/// at_least: 4 }` primitive — the engine reads the resolving spell's
-/// printed name from `EffectContext.source` (stamped by
-/// `for_spell_with_source`) and counts matches in the controller's
-/// graveyard. On hit, `Effect::Search` walks the library for a
-/// creature card with the Dragon subtype and drops it onto the
-/// battlefield untapped. The shuffle is handled implicitly by
-/// `Effect::Search` (every successful search auto-shuffles).
+/// ✅ Real Oracle: "Dragon's Approach deals 3 damage to each opponent.
+/// You may exile Dragon's Approach and four cards named Dragon's
+/// Approach from your graveyard. If you do, search your library for a
+/// Dragon creature card, put it onto the battlefield, then shuffle. /
+/// A deck can have any number of cards named Dragon's Approach."
+///
+/// Clause 1 is a plain `DealDamage(3 → EachOpponent)` (no target).
+/// Clause 2 is a `MayDo` gated on `Predicate::SameNamedInZoneAtLeast
+/// { who: You, zone: Graveyard, at_least: 4 }`; accepting exiles four
+/// graveyard copies (`Take(CardsInZone(gy, HasName("Dragon's
+/// Approach")), 4)`), exiles the resolving copy itself
+/// (`ExileResolvingSpell`), and `Effect::Search`es a Dragon creature
+/// card onto the battlefield (search auto-shuffles).
 pub fn dragons_approach() -> CardDefinition {
     CardDefinition {
         name: "Dragon's Approach",
@@ -236,11 +238,7 @@ pub fn dragons_approach() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker)
-                        .or(SelectionRequirement::Player),
-                ),
+                to: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(3),
             },
             Effect::If {
@@ -249,14 +247,36 @@ pub fn dragons_approach() -> CardDefinition {
                     zone: crate::card::Zone::Graveyard,
                     at_least: Value::Const(4),
                 },
-                then: Box::new(Effect::Search {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
+                then: Box::new(Effect::MayDo {
+                    description: "Exile this and four cards named Dragon's Approach \
+                                  from your graveyard to search for a Dragon?"
+                        .into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::Take {
+                                inner: Box::new(Selector::CardsInZone {
+                                    who: PlayerRef::You,
+                                    zone: crate::card::Zone::Graveyard,
+                                    filter: SelectionRequirement::HasName(
+                                        "Dragon's Approach".into(),
+                                    ),
+                                }),
+                                count: Box::new(Value::Const(4)),
+                            },
+                            to: ZoneDest::Exile,
+                        },
+                        Effect::ExileResolvingSpell,
+                        Effect::Search {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::Creature.and(
+                                SelectionRequirement::HasCreatureType(CreatureType::Dragon),
+                            ),
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: false,
+                            },
+                        },
+                    ])),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -375,12 +395,10 @@ pub fn cram_session() -> CardDefinition {
 // ── Soothsayer Adept ────────────────────────────────────────────────────────
 
 /// Soothsayer Adept — {1}{U} Creature — Merfolk Wizard, 1/3.
-/// "{2}{U}: Surveil 1."
+/// ✅ Real Oracle: "{1}{U}, {T}: Draw a card, then discard a card."
 ///
-/// Cheap interaction body for Quandrix/Prismari decks: a 2/2 for two
-/// mana plus an activated Surveil 1 for filtering. The activated
-/// ability dumps the top card to graveyard or keeps it on top via
-/// the engine's `Effect::Surveil`.
+/// Loot-on-a-stick for Quandrix/Prismari decks: tap plus {1}{U} to
+/// draw a card, then discard a card (`Seq(Draw 1, Discard 1)`).
 pub fn soothsayer_adept() -> CardDefinition {
     CardDefinition {
         name: "Soothsayer Adept",
@@ -393,24 +411,19 @@ pub fn soothsayer_adept() -> CardDefinition {
         power: 1,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: false,
-            mana_cost: cost(&[generic(2), u()]),
-            effect: Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()
@@ -1168,39 +1181,45 @@ pub fn manifold_key() -> CardDefinition {
 
 // ── Leyline Invocation (STX — Quandrix rare) ───────────────────────────────
 
-/// Leyline Invocation — {5}{G} Instant. "Target creature you
-/// control gets +X/+X and gains trample until end of turn, where X is
-/// the number of lands you control."
+/// Leyline Invocation — {5}{G} Sorcery.
+/// ✅ Real Oracle: "Create a 0/0 green and blue Fractal creature
+/// token. Put X +1/+1 counters on it, where X is the number of lands
+/// you control."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Quandrix finisher pump
-/// spell. Wired as `Seq(PumpPT(+X/+X with X = lands you control),
-/// GrantKeyword(Trample, EOT))` on a target friendly creature. The
-/// `Value::CountOf(EachPermanent(Land & ControlledByYou))` reader
-/// evaluates fresh at resolution so the buff scales with the live
-/// land count at the moment of cast. With six lands in play this
-/// turns a 2/2 into an 8/8 trampler — a one-shot lethal threat in
-/// Quandrix counter-based shells.
+/// Wired as `Seq(CreateToken(0/0 G/U Fractal), AddCounter(+1/+1 × X
+/// on LastCreatedToken))` with X = `CountOf(EachPermanent(Land &
+/// ControlledByYou))`, evaluated fresh at resolution so the Fractal
+/// scales with the live land count.
 pub fn leyline_invocation() -> CardDefinition {
+    use crate::card::TokenDefinition;
     let lands_you_control = Value::CountOf(Box::new(Selector::EachPermanent(
         SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
     )));
     CardDefinition {
         name: "Leyline Invocation",
         cost: cost(&[generic(5), g()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                power: lands_you_control.clone(),
-                toughness: lands_you_control,
-                duration: Duration::EndOfTurn,
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Fractal".to_string(),
+                    colors: vec![Color::Green, Color::Blue],
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Fractal],
+                        ..Default::default()
+                    },
+                    power: 0,
+                    toughness: 0,
+                    ..Default::default()
+                },
             },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Trample,
-                duration: Duration::EndOfTurn,
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: lands_you_control,
             },
         ]),
         ..Default::default()
@@ -1344,15 +1363,15 @@ pub fn fire_prophecy() -> CardDefinition {
 
 // ── Divide by Zero (STX — Quandrix uncommon) ───────────────────────────────
 
-/// Divide by Zero — {2}{U} Instant. "Return target spell or nonland
-/// permanent to its owner's hand. Learn."
+/// Divide by Zero — {2}{U} Instant.
+/// ✅ Real Oracle: "Return target spell or permanent with mana value 1
+/// or greater to its owner's hand. Learn."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Quandrix's signature
-/// bounce + Learn instant. Wired via `Seq(Move(target spell-on-stack
-/// OR nonland permanent → owner's hand), Learn)`.
-/// The target filter is `(IsSpellOnStack) ∨ (Permanent & Nonland)`,
-/// so the spell can hit either a spell on the stack or a nonland
-/// permanent on the battlefield — matching the printed flexibility.
+/// Quandrix's signature bounce + Learn instant. Wired via
+/// `Seq(Move(target → owner's hand), Learn)` with target filter
+/// `(IsSpellOnStack ∨ Permanent) ∧ ManaValueAtLeast(1)` — hits spells
+/// on the stack or any permanent (lands included) whose mana value is
+/// 1+, matching the printed wording.
 pub fn divide_by_zero() -> CardDefinition {
     CardDefinition {
         name: "Divide by Zero",
@@ -1361,9 +1380,9 @@ pub fn divide_by_zero() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::IsSpellOnStack.or(
-                        SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-                    ),
+                    SelectionRequirement::IsSpellOnStack
+                        .or(SelectionRequirement::Permanent)
+                        .and(SelectionRequirement::ManaValueAtLeast(1)),
                 ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
@@ -1382,19 +1401,17 @@ pub fn divide_by_zero() -> CardDefinition {
 
 /// Maelstrom Muse — {1}{U}{U/R}{R} 2/4 Djinn Wizard with Flying.
 ///
-/// Real Oracle: "Magecraft — Whenever you cast or copy an instant or
-/// sorcery spell, draw a card, then discard a card. If five or more
-/// mana was spent to cast that spell, draw two cards instead, then
-/// discard a card."
+/// Real Oracle: "Flying / Whenever this creature attacks, the next
+/// instant or sorcery spell you cast this turn costs {X} less to
+/// cast, where X is this creature's power as this ability resolves."
 ///
-/// Wired via `shortcut::opus_trigger` — the small body draws 1 + discards
-/// 1 (looting); the big body (≥5 mana spent) draws 2 + discards 1
-/// (digging). The AutoDecider's `Decision::Discard` answers with the
-/// first hand card, which is fine for the bot harness — a real client
-/// can surface the prompt. Test:
-/// `maelstrom_muse_opus_loots_on_small_cast_digs_on_big`.
+/// Wired as an `Attacks/SelfSource` trigger running
+/// `GrantNextInstantOrSorceryDiscountThisTurn { amount:
+/// PowerOf(TriggerSource) }` — the discount primitive evaluates its
+/// `Value` at resolution, so X tracks the Muse's live power (pumps
+/// and counters included) as the ability resolves.
 pub fn maelstrom_muse() -> CardDefinition {
-    use crate::effect::shortcut::opus_trigger;
+    use crate::effect::shortcut::on_attack;
     CardDefinition {
         name: "Maelstrom Muse",
         cost: cost(&[generic(1), u(), hybrid(Color::Blue, Color::Red), r()]),
@@ -1406,31 +1423,10 @@ pub fn maelstrom_muse() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![opus_trigger(
-            // Small body: draw 1, discard 1.
-            Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-            ]),
-            // Big body (≥5 mana): draw 2, discard 1.
-            Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-            ]),
+        triggered_abilities: vec![on_attack(
+            Effect::GrantNextInstantOrSorceryDiscountThisTurn {
+                amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+            },
         )],
         ..Default::default()
     }
@@ -1724,17 +1720,16 @@ pub fn saw_it_coming() -> CardDefinition {
 
 // ── Dueling Coach (STX uncommon) ────────────────────────────────────────────
 
-/// Dueling Coach — {3}{W} Creature — Human Cleric (1/2). "When this
-/// creature enters, put a +1/+1 counter on target creature you control. /
-/// {2}{W}: Put a +1/+1 counter on each creature you control with a +1/+1
-/// counter on it."
+/// Dueling Coach — {3}{W} Creature — Human Monk (2/2).
+/// ✅ Real Oracle: "When this creature enters, put a +1/+1 counter on
+/// target creature. / {4}{W}, {T}: Put a +1/+1 counter on each
+/// creature you control with a +1/+1 counter on it."
 ///
 /// Counter-snowball synergy creature. ETB target uses
-/// `target_filtered(Creature & ControlledByYou)`; the activated ability
-/// fans counters out via `ForEach(EachPermanent(Creature &
-/// ControlledByYou & WithCounter(+1/+1)))` + `AddCounter(TriggerSource,
-/// +1/+1)` — same shape as Growth Curve's doubler but applied
-/// per-creature.
+/// `target_filtered(Creature)` (any creature, per the printed text);
+/// the activated ability fans counters out via
+/// `ForEach(EachPermanent(Creature & ControlledByYou &
+/// WithCounter(+1/+1)))` + `AddCounter(TriggerSource, +1/+1)`.
 pub fn dueling_coach() -> CardDefinition {
     use crate::card::{
         ActivatedAbility, CounterType as CT, EventKind, EventScope, EventSpec, TriggeredAbility,
@@ -1758,13 +1753,16 @@ pub fn dueling_coach() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        // {4}{W}, {T}: put a +1/+1 counter on each creature you control.
+        // {4}{W}, {T}: put a +1/+1 counter on each creature you control
+        // with a +1/+1 counter on it.
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), w()]),
             tap_cost: true,
             effect: Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithCounter(CT::PlusOnePlusOne)),
                 ),
                 body: Box::new(Effect::AddCounter {
                     what: Selector::TriggerSource,

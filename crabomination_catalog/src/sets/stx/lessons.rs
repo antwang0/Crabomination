@@ -37,33 +37,25 @@ use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 // ── Square Up ───────────────────────────────────────────────────────────────
 
-/// Square Up — {1}{G/U} Instant (Prismari).
+/// Square Up — {G/U} Instant (Quandrix).
 ///
-/// "Until end of turn, target creature has base power and toughness 0/4.
-/// Draw a card."
+/// "Target creature has base power and toughness 4/4 until end of turn."
 ///
-/// Wired via the new `Effect::SetBasePT` primitive (layer-7b
-/// continuous effect that overrides the creature's base P/T). Counters
-/// and +N/+M still stack on top per CR 613.7c-f — so a +1/+1 counter
-/// on a Square-Upped creature makes it 1/5, not 1/1. The cantrip half
-/// fires regardless of whether a creature target was provided.
+/// Wired via the `Effect::SetBasePT` primitive (layer-7b continuous
+/// effect that overrides the creature's base P/T). Counters and +N/+M
+/// still stack on top per CR 613.7c-f — so a +1/+1 counter on a
+/// Square-Upped creature makes it 5/5.
 pub fn square_up() -> CardDefinition {
     CardDefinition {
         name: "Square Up",
-        cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::SetBasePT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(0),
-                toughness: Value::Const(4),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::SetBasePT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(4),
+            toughness: Value::Const(4),
+            duration: Duration::EndOfTurn,
+        },
         ..Default::default()
     }
 }
@@ -103,54 +95,52 @@ pub fn brilliant_plan() -> CardDefinition {
 
 // ── Fortifying Draught ──────────────────────────────────────────────────────
 
-/// Fortifying Draught — {G} Sorcery — Lesson.
+/// Fortifying Draught — {2}{G} Instant (Witherbloom).
 ///
-/// "Target creature gets +1/+4 until end of turn."
+/// "You gain 2 life. Target creature gets +X/+X until end of turn,
+/// where X is the amount of life you gained this turn."
 ///
-/// Defensive combat trick Lesson — keeps a Silverquill / Lorehold body
-/// alive through a big swing. Wired as a single `Effect::PumpPT`
-/// against a `Creature` target. The body shape is identical to
-/// `Charge Through` (+1/+1 + trample) and other Strixhaven pump
-/// spells; only the magnitudes differ.
+/// The lifegain resolves first, so X counts the 2 life from this spell
+/// plus any life gained earlier in the turn — wired via
+/// `Value::LifeGainedThisTurn(You)` (backed by
+/// `Player.life_gained_this_turn`, CR 119.3).
 pub fn fortifying_draught() -> CardDefinition {
     CardDefinition {
         name: "Fortifying Draught",
-        cost: cost(&[g()]),
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![SpellSubtype::Lesson],
-            ..Default::default()
-        },
-        effect: Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(1),
-            toughness: Value::Const(4),
-            duration: Duration::EndOfTurn,
-        },
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::LifeGainedThisTurn(PlayerRef::You),
+                toughness: Value::LifeGainedThisTurn(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         ..Default::default()
     }
 }
 
 // ── Guiding Voice ───────────────────────────────────────────────────────────
 
-/// Guiding Voice — {W} Sorcery — Lesson.
+/// Guiding Voice — {W} Sorcery.
 ///
-/// "Put a +1/+1 counter on target creature. Learn."
+/// "Put a +1/+1 counter on target creature.
+/// Learn."
 ///
-/// Cheap +1/+1 counter on a creature plus Learn via `Effect::Learn`.
-/// A great early magecraft enabler that also leaves a body bigger.
-/// Wired as the
-/// canonical AddCounter + Learn `Seq` template used by Hunt for
-/// Specimens / Pest Summoning.
+/// A Learn card, NOT a Lesson (its printed type line is plain
+/// "Sorcery") — so it carries no `SpellSubtype::Lesson` tag. Wired as
+/// the canonical AddCounter + `Effect::Learn` `Seq` template used by
+/// Hunt for Specimens / Pest Summoning.
 pub fn guiding_voice() -> CardDefinition {
     CardDefinition {
         name: "Guiding Voice",
         cost: cost(&[w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![SpellSubtype::Lesson],
-            ..Default::default()
-        },
         effect: Effect::Seq(vec![
             Effect::AddCounter {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -166,40 +156,48 @@ pub fn guiding_voice() -> CardDefinition {
 
 // ── Expanded Anatomy ────────────────────────────────────────────────────────
 
-/// Expanded Anatomy — {3} Sorcery — Lesson.
+/// Expanded Anatomy — {2}{W} Sorcery — Lesson.
 ///
-/// "Put two +1/+1 counters on target creature."
+/// "Put two +1/+1 counters on target creature. It gains vigilance
+/// until end of turn."
 ///
-/// Green's body-Lesson. Wired as a single `AddCounter` of amount `2`
-/// for `PlusOnePlusOne` against a `Creature` target. No Learn rider
-/// (Expanded Anatomy is itself a Lesson, not a Learn enabler). Cleanest
-/// way to use it: cast on a creature you already own to push it to a
-/// real threat (a 2/2 → 4/4, a 3/3 → 5/5). Also a fine target for
-/// Magecraft riders (Karok Wrangler-style payoffs).
+/// White's body-Lesson. `AddCounter(2)` plus a `GrantKeyword` of
+/// Vigilance (EOT) on the same target slot. No Learn rider (Expanded
+/// Anatomy is itself a Lesson, not a Learn enabler).
 pub fn expanded_anatomy() -> CardDefinition {
     CardDefinition {
         name: "Expanded Anatomy",
-        cost: cost(&[generic(3)]),
+        cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],
             ..Default::default()
         },
-        effect: Effect::AddCounter {
-            what: target_filtered(SelectionRequirement::Creature),
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(2),
-        },
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Vigilance,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         ..Default::default()
     }
 }
 
 // ── Mercurial Transformation ────────────────────────────────────────────────
 
-/// Mercurial Transformation — {1}{U} Sorcery.
+/// Mercurial Transformation — {1}{U} Sorcery — Lesson.
 ///
-/// "Until end of turn, target nonland permanent loses all abilities and
-/// becomes your choice of a blue Frog 1/1 or a blue Octopus 4/4."
+/// "Until end of turn, target nonland permanent loses all abilities
+/// and becomes your choice of a blue Frog creature with base power and
+/// toughness 1/1 or a blue Octopus creature with base power and
+/// toughness 4/4."
+///
 /// `ChooseMode` over `ResetCreature` (layer 4/6/7b — sets the creature
 /// type + base P/T and strips abilities) + `BecomeColor` (layer 5 → blue).
 pub fn mercurial_transformation() -> CardDefinition {
@@ -224,6 +222,10 @@ pub fn mercurial_transformation() -> CardDefinition {
         name: "Mercurial Transformation",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::ChooseMode(vec![
             frog_or_octopus(CreatureType::Frog, 1, 1),
             frog_or_octopus(CreatureType::Octopus, 4, 4),

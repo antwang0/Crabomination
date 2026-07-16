@@ -2590,18 +2590,20 @@ mod tests {
 
     #[test]
     fn permanent_view_includes_static_ability_labels() {
-        // Tenured Inkcaster has a printed static "Other Inkling
-        // creatures you control get +2/+2." — the view should surface
-        // that description string in `static_ability_labels`.
+        // Top of the Class has printed statics ("Prepared creatures you
+        // control get +1/+1 / have flying") — the view should surface the
+        // description strings in `static_ability_labels`. (The old fixture,
+        // Tenured Inkcaster, lost its synthesized anthem when its body was
+        // rewritten to the real oracle.)
         let mut state = two_player_game();
-        let id = state.add_card_to_battlefield(0, catalog::tenured_inkcaster());
+        let id = state.add_card_to_battlefield(0, catalog::top_of_the_class());
         let view = project(&state, 0);
         let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
         assert!(!perm.static_ability_labels.is_empty(),
-            "Tenured Inkcaster has a printed static — view must surface it");
+            "Top of the Class has printed statics — view must surface them");
         assert!(
-            perm.static_ability_labels.iter().any(|s| s.contains("Inkling")),
-            "static_ability_labels should mention Inkling: {:?}",
+            perm.static_ability_labels.iter().any(|s| s.contains("Prepared")),
+            "static_ability_labels should mention Prepared: {:?}",
             perm.static_ability_labels,
         );
     }
@@ -3124,18 +3126,20 @@ mod tests {
 
     #[test]
     fn trigger_event_label_covers_another_attacks() {
-        // Sparring Regimen's "whenever a creature you control attacks"
-        // trigger is scoped `AnotherOfYours` on `EventKind::Attacks`.
-        // The view should surface this as "Another attacks: …" so the
-        // client tooltip renders the printed Oracle nicely. Push this
-        // run: lock the label so future label refactors can't drop it.
+        // Slaughter Singer's "whenever another creature you control
+        // attacks" trigger is scoped `AnotherOfYours` on
+        // `EventKind::Attacks`. The view should surface this as
+        // "Another attacks: …" so the client tooltip renders nicely.
+        // (The old fixture, Sparring Regimen, lost its synthesized
+        // Attacks trigger when rewritten to the real "whenever you
+        // attack" oracle.)
         let mut state = two_player_game();
-        let id = state.add_card_to_battlefield(0, catalog::sparring_regimen());
+        let id = state.add_card_to_battlefield(0, catalog::slaughter_singer());
         let view = project(&state, 0);
         let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
         assert!(
             perm.triggered_ability_labels.iter().any(|s| s.starts_with("Another attacks")),
-            "expected 'Another attacks' label for Sparring Regimen's Attacks/AnotherOfYours trigger; got {:?}",
+            "expected 'Another attacks' label for Slaughter Singer's Attacks/AnotherOfYours trigger; got {:?}",
             perm.triggered_ability_labels,
         );
     }

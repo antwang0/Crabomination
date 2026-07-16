@@ -131,29 +131,46 @@ fn daring_diversion_deals_four_to_a_single_target() {
 
 // ── Pilgrim of the Ages ────────────────────────────────────────────────────
 
+/// Printed oracle: "When this creature enters, you may search your
+/// library for a basic Plains card, reveal it, put it into your hand,
+/// then shuffle. / {6}: Return this card from your graveyard to your
+/// hand."
 #[test]
 fn pilgrim_of_the_ages_sac_searches_for_basic_land() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    let pilgrim = g.add_card_to_battlefield(0, catalog::pilgrim_of_the_ages());
-    let forest_id = g.add_card_to_library(0, catalog::forest());
+    let plains_id = g.add_card_to_library(0, catalog::plains());
+    let pilgrim = g.add_card_to_hand(0, catalog::pilgrim_of_the_ages());
+    g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest_id))]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(plains_id))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: pilgrim, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pilgrim castable for {2}{W}");
+    drain_stack(&mut g);
+    // Pilgrim stays on the battlefield; the ETB tutors a basic Plains.
+    assert!(g.battlefield.iter().any(|c| c.id == pilgrim), "pilgrim on battlefield");
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == plains_id),
+        "basic Plains tutored to hand"
+    );
+}
+
+#[test]
+fn pilgrim_of_the_ages_six_mana_returns_it_from_graveyard() {
+    let mut g = two_player_game();
+    let pilgrim = g.add_card_to_graveyard(0, catalog::pilgrim_of_the_ages());
+    g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
         card_id: pilgrim,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None }).expect("Pilgrim activation");
+        target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("Pilgrim {6} graveyard activation");
     drain_stack(&mut g);
-    // Pilgrim sacrificed (not on battlefield).
-    assert!(!g.battlefield.iter().any(|c| c.id == pilgrim), "pilgrim sacrificed");
-    // Basic land tutored to hand.
-    assert!(
-        g.players[0]
-            .hand
-            .iter()
-            .any(|c| c.id == forest_id),
-        "forest tutored to hand"
-    );
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == pilgrim),
+        "pilgrim left the graveyard");
+    assert!(g.players[0].hand.iter().any(|c| c.id == pilgrim),
+        "pilgrim returned to hand");
 }
 
 // ── Strixhaven Spawner ─────────────────────────────────────────────────────
@@ -1576,11 +1593,14 @@ fn quandrix_doubling_tutor_creates_two_fractals_with_counters() {
 
 // ── Push (modern_decks): NEW STX cards ─────────────────────────────────────
 
+/// Printed oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, target creature gets +1/+0 until end of turn."
 #[test]
 fn silverquill_apprentice_magecraft_lands_counter_on_friendly() {
     let mut g = two_player_game();
-    let _app = g.add_card_to_battlefield(0, catalog::silverquill_apprentice());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Only the apprentice on the battlefield, so the magecraft
+    // auto-target must pick it.
+    let app = g.add_card_to_battlefield(0, catalog::silverquill_apprentice());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
@@ -1588,9 +1608,15 @@ fn silverquill_apprentice_magecraft_lands_counter_on_friendly() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Bolt castable");
     drain_stack(&mut g);
-    let bear_perm = g.battlefield.iter().find(|c| c.id == bear).expect("bear alive");
-    assert!(bear_perm.counter_count(CounterType::PlusOnePlusOne) >= 1,
-        "bear gained +1/+1 counter from magecraft");
+    // The printed trigger is a +1/+0 pump EOT, not a counter.
+    let cp = g.compute_battlefield().iter()
+        .find(|c| c.id == app).cloned()
+        .expect("apprentice on bf");
+    assert_eq!(cp.power, 3, "apprentice pumped +1/+0 EOT (2 → 3)");
+    assert_eq!(cp.toughness, 2, "toughness unchanged");
+    let app_perm = g.battlefield.iter().find(|c| c.id == app).expect("apprentice alive");
+    assert_eq!(app_perm.counter_count(CounterType::PlusOnePlusOne), 0,
+        "the pump is temporary, not a +1/+1 counter");
 }
 
 #[test]
@@ -2096,48 +2122,65 @@ fn conspiracy_theorist_activation_rejected_with_cards_in_hand() {
         "Conspiracy Theorist should not have been tapped");
 }
 
+/// Printed oracle, first ability: "Whenever this creature attacks, you
+/// may pay {1} and discard a card. If you do, draw a card." Discarding
+/// a LAND this way does not trip the second (nonland-only) exile
+/// trigger.
 #[test]
 fn conspiracy_theorist_activation_succeeds_with_empty_hand() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
     g.clear_sickness(ct);
-    // P0's hand must be empty for the activation gate to pass.
-    assert!(g.players[0].hand.is_empty());
-    let bolt_id = g.add_card_to_library(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    let hand_island = g.add_card_to_hand(0, catalog::island());
+    let lib_card = g.add_card_to_library(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add_colorless(1);
+    // Accept MayPay {1}, accept the discard, and (greedily) accept any
+    // further prompt — the land discard must not offer an exile.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
 
-    let exile_before = g.exile.len();
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: ct,
-        ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
-    .expect("Conspiracy Theorist activates when hand is empty");
+    g.step = crabomination::game::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::Attack {
+        attacker: ct,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }])).expect("Conspiracy Theorist attacks");
     drain_stack(&mut g);
-    // Top of library should now be in exile with a may-play permission.
-    assert_eq!(g.exile.len(), exile_before + 1,
-        "exile should hold the exiled top card");
-    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
-        .expect("the bolt should be in exile");
-    assert!(exiled.may_play_until.is_some(),
-        "exiled card should have may_play permission");
+
+    // Island discarded, card drawn.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == hand_island),
+        "the island was discarded to the graveyard");
+    assert!(g.players[0].hand.iter().any(|c| c.id == lib_card),
+        "a card was drawn for the discard");
+    // A land discard never trips the nonland exile trigger.
+    assert!(g.exile.iter().all(|c| c.id != hand_island),
+        "discarded LAND must not be exiled by the nonland trigger");
 }
 
+/// Printed oracle, both abilities chained: attacking and paying {1} +
+/// discarding a NONLAND card draws a card, then the discard trigger
+/// lets you exile the discarded card from your graveyard and cast it
+/// this turn.
 #[test]
 fn conspiracy_theorist_attack_with_discard_exiles_top_and_grants_may_play() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
     g.clear_sickness(ct);
-    // Put a discard target in hand.
-    let _hand_discard = g.add_card_to_hand(0, catalog::lightning_bolt());
-    let bolt_id = g.add_card_to_library(0, catalog::lightning_bolt());
-    // Scripted decider: opt into the MayDo, so discard happens and the
-    // top card gets exiled with may-play.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    // Fire the attack trigger via a direct dispatch — we can't easily
-    // step combat in this test harness. Use perform_action to declare
-    // an attacker.
+    // Put a nonland discard target in hand and a draw in the library.
+    let hand_bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let lib_card = g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(1);
+    // Scripted decider: accept MayPay {1}, accept the discard, then
+    // accept exiling the discarded nonland card from the graveyard.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
     let exile_before = g.exile.len();
     g.step = crabomination::game::TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::Attack {
@@ -2145,37 +2188,63 @@ fn conspiracy_theorist_attack_with_discard_exiles_top_and_grants_may_play() {
         target: crabomination::game::types::AttackTarget::Player(1),
     }])).expect("Conspiracy Theorist attacks");
     drain_stack(&mut g);
-    // The top card should now be in exile.
+    // A card was drawn for the discard.
+    assert!(g.players[0].hand.iter().any(|c| c.id == lib_card),
+        "drew a card for the pay-and-discard");
+    // The DISCARDED card (not the top of the library) is in exile with
+    // a may-play permission.
     assert_eq!(g.exile.len(), exile_before + 1);
-    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
-        .expect("the bolt should be in exile");
+    let exiled = g.exile.iter().find(|c| c.id == hand_bolt)
+        .expect("the discarded bolt should be in exile");
     assert!(exiled.may_play_until.is_some(),
         "exiled card should have may_play permission");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == hand_bolt),
+        "the discarded card left the graveyard");
 }
 
 /// Regression: `ExileTopAndGrantMayPlay` must exile the *top* of the
 /// library (index 0), not the bottom. With two distinct cards stacked —
-/// Lightning Bolt on top, Island on the bottom — Conspiracy Theorist's
-/// exile-top should grab the Bolt and leave the Island in the library.
+/// Lightning Bolt on top, Island on the bottom — the exile-top effect
+/// should grab the Bolt and leave the Island in the library.
+/// (Conspiracy Theorist's real oracle no longer uses this effect, so a
+/// synthetic instant carries the engine coverage.)
 #[test]
 fn exile_top_and_grant_may_play_takes_the_top_card_not_the_bottom() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::card::{CardDefinition, CardType, Effect, MayPlayDuration, Value};
+    use crabomination::effect::PlayerRef;
+    use crabomination::mana::cost;
+
+    let exile_top = CardDefinition {
+        name: "Exile Top Test",
+        cost: cost(&[crabomination::mana::r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            duration: MayPlayDuration::EndOfThisTurn,
+            pay_any_color: false,
+            pay_own_cost: false,
+            uncast_penalty: None,
+        },
+        ..Default::default()
+    };
+
     let mut g = two_player_game();
-    let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
-    g.clear_sickness(ct);
-    let _hand_discard = g.add_card_to_hand(0, catalog::lightning_bolt());
     // First-added card sits at index 0 (the top); second is bottomed.
     let top_bolt = g.add_card_to_library(0, catalog::lightning_bolt());
     let bottom_island = g.add_card_to_library(0, catalog::island());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    g.step = crabomination::game::TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::Attack {
-        attacker: ct,
-        target: crabomination::game::types::AttackTarget::Player(1),
-    }])).expect("Conspiracy Theorist attacks");
+    let id = g.add_card_to_hand(0, exile_top);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Exile Top Test castable for {R}");
     drain_stack(&mut g);
+
     assert!(g.exile.iter().any(|c| c.id == top_bolt),
         "the top card (Bolt) should be exiled");
+    let exiled = g.exile.iter().find(|c| c.id == top_bolt).unwrap();
+    assert!(exiled.may_play_until.is_some(),
+        "exiled top card should carry a may-play permission");
     assert!(g.players[0].library.iter().any(|c| c.id == bottom_island),
         "the bottom card (Island) should remain in the library");
     assert!(!g.exile.iter().any(|c| c.id == bottom_island),

@@ -885,7 +885,8 @@ pub fn codie_vociferous_codex() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Construct],
+            // 2023 oracle type line: "… — Book Construct".
+            creature_types: vec![CreatureType::Book, CreatureType::Construct],
             ..Default::default()
         },
         power: 1,
@@ -922,13 +923,18 @@ pub fn codie_vociferous_codex() -> CardDefinition {
 
 /// Ecological Appreciation — {X}{2}{G} Sorcery. Search library + graveyard
 /// for up to four creature cards with different names, MV ≤ X; an opponent
-/// shuffles two away, the rest enter the battlefield.
+/// shuffles two away, the rest enter the battlefield. "Exile Ecological
+/// Appreciation" — the spell exiles itself on resolution instead of going
+/// to the graveyard.
 pub fn ecological_appreciation() -> CardDefinition {
     CardDefinition {
         name: "Ecological Appreciation",
         cost: cost(&[x(), generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::SearchSplitWithOpponent { count: 4 },
+        effect: Effect::Seq(vec![
+            Effect::SearchSplitWithOpponent { count: 4 },
+            Effect::ExileResolvingSpell,
+        ]),
         ..Default::default()
     }
 }

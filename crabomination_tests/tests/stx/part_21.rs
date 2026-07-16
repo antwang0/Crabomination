@@ -1166,8 +1166,11 @@ fn clever_lumimancer_magecraft_pumps_on_is_cast() {
 
 #[test]
 fn prowess_pumps_on_noncreature_cast() {
+    // Prowess engine check. Fixture: Monastery Swiftspear (1/2 prowess).
+    // (Spectacle Mage's real oracle has a cost-reduction static, not
+    // prowess, so it can no longer serve as the fixture.)
     let mut g = two_player_game();
-    let mage_id = g.add_card_to_battlefield(0, catalog::spectacle_mage());
+    let mage_id = g.add_card_to_battlefield(0, catalog::monastery_swiftspear());
     g.clear_sickness(mage_id);
     let bolt_id = g.add_card_to_hand(0, catalog::lightning_bolt());
     let opp_creature = g.add_card_to_battlefield(1, catalog::serra_angel());
@@ -1182,7 +1185,7 @@ fn prowess_pumps_on_noncreature_cast() {
     }).unwrap();
     drain_stack(&mut g);
     let mage = g.battlefield.iter().find(|c| c.id == mage_id).unwrap();
-    assert_eq!(mage.power(), 3, "Prowess should pump +1/+1, making 2→3 power");
+    assert_eq!(mage.power(), 2, "Prowess should pump +1/+1, making 1→2 power");
     assert_eq!(mage.toughness(), 3, "Prowess should pump +1/+1, making 2→3 toughness");
 }
 
@@ -1299,20 +1302,26 @@ fn tangletrap_destroys_artifact() {
 // ── Sparring Regimen attack trigger ───────────────────────────────────────
 
 #[test]
-fn sparring_regimen_etb_creates_spirit_token() {
+fn sparring_regimen_etb_learns() {
+    // Real oracle: "When this enchantment enters, learn." With no Lesson
+    // sideboard configured, Effect::Learn resolves as a draw — the cast
+    // (-1) plus the learn-draw (+1) leaves hand size unchanged.
     let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::sparring_regimen());
-    g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("castable");
+    .expect("castable for {2}{W}");
     drain_stack(&mut g);
 
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"));
+    assert!(g.battlefield_find(id).is_some(), "Sparring Regimen on the battlefield");
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "ETB learn drew a card, replacing the cast Regimen");
 }
 
 #[test]
@@ -1342,12 +1351,13 @@ fn sparring_regimen_attack_trigger_adds_counter() {
 
 #[test]
 fn storm_kiln_artist_magecraft_creates_treasure_and_deals_damage() {
+    // Real oracle: magecraft only creates a Treasure (no damage rider);
+    // the artist also gets +1/+0 for each artifact you control.
     let mut g = two_player_game();
-    let _ska = g.add_card_to_battlefield(0, catalog::storm_kiln_artist());
+    let ska = g.add_card_to_battlefield(0, catalog::storm_kiln_artist());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     let p1_life = g.players[1].life;
-    let _bf_before = g.battlefield.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
@@ -1359,11 +1369,15 @@ fn storm_kiln_artist_magecraft_creates_treasure_and_deals_damage() {
     .expect("bolt castable");
     drain_stack(&mut g);
 
-    // P1 lost 3 (bolt) + 1 (magecraft) = 4.
-    assert_eq!(g.players[1].life, p1_life - 4);
+    // P1 lost only the bolt's 3 — magecraft mints a Treasure, no damage.
+    assert_eq!(g.players[1].life, p1_life - 3);
     // Treasure token should be on the battlefield.
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
         "should have created a Treasure token");
+    // "+1/+0 for each artifact you control" — the new Treasure pumps him 2→3.
+    let c = g.computed_permanent(ska).unwrap();
+    assert_eq!(c.power, 3, "2 base + 1 for the Treasure artifact");
+    assert_eq!(c.toughness, 2);
 }
 
 // ── Decisive Denial mode 1 (fight) ────────────────────────────────────────

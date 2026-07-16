@@ -1527,14 +1527,16 @@ fn prismari_treasure_spawner_b155_mints_treasure_on_etb() {
 
 #[test]
 fn cr_506_5_attacks_trigger_fires_per_attacker_in_batch() {
-    // CR 506.5 / Sparring Regimen pattern: when multiple attackers are
-    // declared in one batch, the "whenever you attack" trigger (scoped
-    // YourControl on EventKind::Attacks) fires once per attacker. Each
-    // attacker should pick up its own +1/+1 counter.
+    // CR 506.5: when multiple attackers are declared in one batch, each
+    // per-attacker "whenever this creature attacks" trigger fires for
+    // its own attacker. Fixture: two Quandrix Reckoners ("Whenever this
+    // creature attacks, put a +1/+1 counter on it") — each attacker
+    // should pick up its own +1/+1 counter. (Sparring Regimen no longer
+    // works as the fixture: its real oracle is "whenever you attack",
+    // which fires once per combat with a single target.)
     let mut g = two_player_game();
-    let _regimen = g.add_card_to_battlefield(0, catalog::sparring_regimen());
-    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear1 = g.add_card_to_battlefield(0, catalog::quandrix_reckoner());
+    let bear2 = g.add_card_to_battlefield(0, catalog::quandrix_reckoner());
     g.clear_sickness(bear1);
     g.clear_sickness(bear2);
     g.step = TurnStep::DeclareAttackers;

@@ -22,14 +22,16 @@ use crate::mana::{Color, cost, g, generic, hybrid, u, x, ManaCost};
 
 // ── Quandrix Apprentice ─────────────────────────────────────────────────────
 
-/// Quandrix Apprentice — {G}{U}, 2/2 Elf Druid.
-/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// target creature you control gets +1/+1 until end of turn."
+/// Quandrix Apprentice — {G}{U}, 2/2 Human Wizard.
 ///
-/// Same shape as Eager First-Year (the Silverquill apprentice), just
-/// gated to a creature you control rather than any creature. Wired via
-/// the new `effect::shortcut::magecraft` helper plus
-/// `Predicate::EntityMatches` on the cast.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// look at the top three cards of your library. You may reveal a land
+/// card from among them and put that card into your hand. Put the rest
+/// on the bottom of your library in any order."
+///
+/// Wired via `effect::shortcut::magecraft` around `LookPickToHand` with
+/// a `Land` pick filter and `optional: true` (the printed "you may
+/// reveal"). Non-picked cards go to the bottom of the library.
 pub fn quandrix_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Apprentice",
@@ -41,13 +43,18 @@ pub fn quandrix_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::PumpPT {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            power: Value::Const(1),
-            toughness: Value::Const(1),
-            duration: Duration::EndOfTurn,
+        triggered_abilities: vec![magecraft(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Land),
+            take: None,
+            to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
+            optional: true,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
         })],
         ..Default::default()
     }
@@ -55,44 +62,29 @@ pub fn quandrix_apprentice() -> CardDefinition {
 
 // ── Quandrix Pledgemage ─────────────────────────────────────────────────────
 
-/// Quandrix Pledgemage — {1}{G/U}{G/U}, 2/2 Fractal Wizard. "{1}{G}{U}: Put
-/// a +1/+1 counter on Quandrix Pledgemage."
+/// Quandrix Pledgemage — {1}{G/U}{G/U}, 2/2 Merfolk Druid.
 ///
-/// Pure activated +1/+1 counter pump. The Fractal subtype is already in
-/// the engine (added with the SOS Fractal package), so the body and
-/// counter accrual are faithful to the printed card.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// put a +1/+1 counter on this creature."
+///
+/// Pure magecraft self-grower — the canonical `magecraft(AddCounter on
+/// This)` shape shared with Dragonsguard Elite.
 pub fn quandrix_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pledgemage",
         cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: false,
-            mana_cost: cost(&[generic(1), g(), u()]),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
-            ..Default::default()
-        }],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         ..Default::default()
     }
 }
@@ -161,12 +153,11 @@ pub fn decisive_denial() -> CardDefinition {
 /// chosen modes, each target-bearing mode consuming its own target
 /// slot; a plain `CastSpell { mode }` runs a single mode (bot path).
 ///
-/// Mode 3's "target player" is a real player slot
-/// (`ShuffleGraveyardCardsIntoLibrary`'s `who` ref is surfaced for
-/// cast-time validation). Residual nuance: the printed three CARDS are
-/// cast-time targets; here they're picked at resolution — no
-/// rules-visible difference for graveyard objects (no hexproof/ward in
-/// that zone).
+/// Residual nuances on mode 3: the printed "target player" is
+/// approximated as the caster (`PlayerRef::You` — no player target
+/// slot), and the printed three CARDS are cast-time targets while here
+/// they're picked at resolution — no rules-visible difference for
+/// graveyard objects (no hexproof/ward in that zone).
 pub fn quandrix_command() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Command",
@@ -644,11 +635,13 @@ pub fn quandrix_scrycharmer() -> CardDefinition {
 
 // ── Dragonsguard Elite ─────────────────────────────────────────────────────
 
-/// Dragonsguard Elite — {1}{G}, 2/2 Human Druid. Magecraft: put a +1/+1
-/// counter on this creature. `{3}{G}: This creature gets +X/+X until
-/// end of turn, where X is its power.`
+/// Dragonsguard Elite — {1}{G}, 2/2 Human Druid.
+///
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// put a +1/+1 counter on this creature.
+/// {4}{G}{G}: Double the number of +1/+1 counters on this creature."
 pub fn dragonsguard_elite() -> CardDefinition {
-    use crate::effect::{ActivatedAbility, Duration};
+    use crate::effect::ActivatedAbility;
     CardDefinition {
         name: "Dragonsguard Elite",
         cost: cost(&[generic(1), g()]),
@@ -663,12 +656,10 @@ pub fn dragonsguard_elite() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
-            mana_cost: cost(&[generic(3), g()]),
-            effect: Effect::PumpPT {
+            mana_cost: cost(&[generic(4), g(), g()]),
+            effect: Effect::DoubleCountersOnEach {
                 what: Selector::This,
-                power: Value::PowerOf(Box::new(Selector::This)),
-                toughness: Value::PowerOf(Box::new(Selector::This)),
-                duration: Duration::EndOfTurn,
+                kind: CounterType::PlusOnePlusOne,
             },
             once_per_turn: false,
             sorcery_speed: false,
@@ -784,8 +775,11 @@ pub fn quandrix_multibinding() -> CardDefinition {
 
 // ── Eureka Moment ──────────────────────────────────────────────────────────
 
-/// Eureka Moment — {2}{G}{U} Instant. Draw two cards. You may put a land
-/// from your hand onto the battlefield tapped.
+/// Eureka Moment — {2}{G}{U} Instant.
+///
+/// "Draw two cards. You may put a land card from your hand onto the
+/// battlefield." (The land enters untapped — the printed card has no
+/// "tapped" rider.)
 pub fn eureka_moment() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;
@@ -799,7 +793,7 @@ pub fn eureka_moment() -> CardDefinition {
                 amount: Value::Const(2),
             },
             Effect::MayDo {
-                description: "Put a land from your hand onto the battlefield tapped".to_string(),
+                description: "Put a land card from your hand onto the battlefield".to_string(),
                 body: Box::new(Effect::Move {
                     what: Selector::one_of(Selector::CardsInZone {
                         who: PlayerRef::You,
@@ -808,7 +802,7 @@ pub fn eureka_moment() -> CardDefinition {
                     }),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
-                        tapped: true,
+                        tapped: false,
                     },
                 }),
             },

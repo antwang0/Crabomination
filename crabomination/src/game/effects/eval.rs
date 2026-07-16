@@ -2356,6 +2356,30 @@ impl GameState {
                                 && other.definition.cost.cmc() > cand_mv
                         })
                     }
+                    // Power sibling of the MV variant above — "the greatest
+                    // power among [filter] they control" (Professor Onyx −3).
+                    // Ties pass permissively; battlefield-only.
+                    R::HasGreatestPowerAmongControlled(inner) => {
+                        let Some(cand) = self.battlefield_find(*cid) else {
+                            return false;
+                        };
+                        if !self.evaluate_requirement_static(inner, target, controller, source) {
+                            return false;
+                        }
+                        let cand_pow = cand.power();
+                        let cand_ctrl = cand.controller;
+                        !self.battlefield.iter().any(|other| {
+                            other.controller == cand_ctrl
+                                && other.id != *cid
+                                && self.evaluate_requirement_static(
+                                    inner,
+                                    &Target::Permanent(other.id),
+                                    controller,
+                                    source,
+                                )
+                                && other.power() > cand_pow
+                        })
+                    }
                     R::HasName(name) => card.definition.name == name.as_str(),
                     R::ManaValueAtMostControlledCount(inner) => {
                         let count = self
@@ -2599,6 +2623,7 @@ impl GameState {
             // battlefield in the static variant; library searches don't
             // surface this filter).
             R::HasGreatestManaValueAmongControlled(_) => false,
+            R::HasGreatestPowerAmongControlled(_) => false,
             // Name match works in any zone — used by Grandeur
             // activations that walk a hand for a same-named card.
             R::HasName(name) => card.definition.name == name.as_str(),

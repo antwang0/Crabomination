@@ -14171,12 +14171,16 @@ fn beledros_witherbloom_mass_untap_fails_low_life() {
 // ── Lorehold Apprentice magecraft damage ──────────────────────────────────
 
 #[test]
-fn lorehold_apprentice_magecraft_gains_life_and_deals_damage() {
+fn lorehold_apprentice_magecraft_grants_spirits_a_tap_ping() {
+    // Real oracle: "Magecraft — ... until end of turn, Spirit creatures
+    // you control gain '{T}: This creature deals 1 damage to each
+    // opponent.'"
     let mut g = two_player_game();
     let _app = g.add_card_to_battlefield(0, catalog::lorehold_apprentice());
+    let spirit = g.add_card_to_battlefield(0, catalog::spirit_mascot()); // Spirit Ox
+    g.clear_sickness(spirit);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
-    let p0_life = g.players[0].life;
     let p1_life = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
@@ -14188,11 +14192,17 @@ fn lorehold_apprentice_magecraft_gains_life_and_deals_damage() {
     })
     .expect("bolt castable");
     drain_stack(&mut g);
-
-    // P0 gained 1 life from magecraft.
-    assert_eq!(g.players[0].life, p0_life + 1);
-    // P1 took 3 (bolt) + 1 (magecraft) = 4 damage.
-    assert_eq!(g.players[1].life, p1_life - 4);
+    // Bolt alone: 3 damage. Now the Spirit's granted "{T}: 1 to each
+    // opponent" ability (index after its printed abilities) fires.
+    assert_eq!(g.players[1].life, p1_life - 3, "only the bolt so far");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spirit, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("granted tap-ping activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 4, "granted ping dealt 1 to the opponent");
+    assert!(g.battlefield_find(spirit).unwrap().tapped, "tap paid");
 }
 
 // ── New cube creature tests ───────────────────────────────────────────────

@@ -262,19 +262,26 @@ pub fn show_of_confidence() -> CardDefinition {
 
 // ── Bury in Books ───────────────────────────────────────────────────────────
 
-/// Bury in Books — {4}{U} Sorcery. "Put target creature on top of its
-/// owner's library." A clean library-position bounce — same shape as
-/// Hinder/Spell Crumple but for permanents.
+/// Bury in Books — {4}{U} Instant. "This spell costs {2} less to cast if
+/// it targets an attacking creature. / Put target creature into its
+/// owner's library second from the top."
+///
+/// The attack discount rides `self_cost_reduction_if_target` (generic-only
+/// reduction, evaluated against the chosen target at cast time); the
+/// placement is `LibraryPosition::FromTop(1)` — second from the top, with
+/// the CR 401.7 "fewer than N cards → bottom" fallback handled by the
+/// engine.
 pub fn bury_in_books() -> CardDefinition {
     CardDefinition {
         name: "Bury in Books",
         cost: cost(&[generic(4), u()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_target: Some((SelectionRequirement::IsAttacking, 2)),
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Library {
                 who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                pos: LibraryPosition::Top,
+                pos: LibraryPosition::FromTop(1),
             },
         },
         ..Default::default()
@@ -285,17 +292,20 @@ pub fn bury_in_books() -> CardDefinition {
 
 /// Test of Talents — {1}{U} Instant. "Counter target instant or sorcery
 /// spell. Search its controller's graveyard, hand, and library for any
-/// number of cards with the same name as that spell, exile them, then
-/// that player shuffles."
+/// number of cards with the same name as that spell and exile them.
+/// That player shuffles, then draws a card for each card exiled from
+/// their hand this way."
 ///
 /// ✅ The Cancel-shaped counter-target-IS body fully ships the printed
 /// primary effect — a hard counter on any IS spell. The follow-up
-/// search-and-exile-by-name rider is engine-wide: no
-/// `SelectionRequirement::HasName` primitive yet and no "search all
-/// three zones" multi-zone search yet. The rider only matters when the
-/// countered spell has 2+ copies across the opp's zones, which is rare
-/// outside dedicated combo decks; the counter half is the headline
-/// effect and plays correctly. Tracked in TODO.md.
+/// search-and-exile-by-name rider (and its "draws a card for each card
+/// exiled from their hand this way" compensation) is engine-wide
+/// blocked: no "same name as the countered spell" selection primitive
+/// and no "search all three zones" multi-zone search yet. The rider
+/// only matters when the countered spell has 2+ copies across the
+/// opponent's zones, which is rare outside dedicated combo decks; the
+/// counter half is the headline effect and plays correctly. Tracked in
+/// TODO.md.
 pub fn test_of_talents() -> CardDefinition {
     CardDefinition {
         name: "Test of Talents",
@@ -316,81 +326,85 @@ pub fn test_of_talents() -> CardDefinition {
 
 // ── Multiple Choice ─────────────────────────────────────────────────────────
 
-/// Multiple Choice — {1}{U}{U} Sorcery. "Choose one or more —
-/// • Scry 2. • Create a 1/1 blue Pest creature token. • Target creature
-/// gets +1/+0 and gains hexproof until end of turn. • If you chose all
-/// of the above, draw two cards."
+/// Multiple Choice — {X}{U} Sorcery.
+/// "If X is 1, scry 1, then draw a card.
+/// If X is 2, you may choose a player. They return a creature they
+/// control to its owner's hand.
+/// If X is 3, create a 4/4 blue and red Elemental creature token.
+/// If X is 4 or more, do all of the above."
 ///
-/// True cast-time "choose one or more" via `Effect::ChooseModesCast
-/// { min: 1, max: 4 }`; the fourth bullet's "if you chose all of the
-/// above" gate is `Predicate::ChoseModesAtLeast(4)` over the cast's
-/// chosen-mode set — picking mode 3 alone draws nothing, picking all
-/// four draws two. A plain `CastSpell { mode }` single-mode fallback
-/// carries one mode, so the gate correctly fails there too.
+/// Each branch gates on the cast-time X (`Value::XFromCost`): the
+/// "X is N" checks are `ValueEquals(X, N)`, and "X is 4 or more"
+/// re-enables every branch via `Any([.., ValueAtLeast(X, 4)])`.
+/// Approximation in the X=2 branch: the printed text lets the caster
+/// choose any player, who then picks their own creature to bounce.
+/// There is no "chosen player picks" decision primitive, so the caster
+/// directly picks the bounced creature (any creature on the
+/// battlefield) inside a MayDo — same set of reachable outcomes minus
+/// the bounced creature's controller making the pick.
 pub fn multiple_choice() -> CardDefinition {
-    use crate::effect::Duration;
-    let pest = TokenDefinition {
-        name: "Pest".to_string(),
-        power: 1,
-        toughness: 1,
+    use crate::effect::Predicate;
+    let x_is = |n: i32| Predicate::Any(vec![
+        Predicate::ValueEquals(Value::XFromCost, Value::Const(n)),
+        Predicate::ValueAtLeast(Value::XFromCost, Value::Const(4)),
+    ]);
+    let elemental = TokenDefinition {
+        name: "Elemental".to_string(),
+        power: 4,
+        toughness: 4,
         keywords: vec![],
         card_types: vec![CardType::Creature],
-        colors: vec![Color::Blue],
+        colors: vec![Color::Blue, Color::Red],
         supertypes: vec![],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Pest],
+            creature_types: vec![CreatureType::Elemental],
             ..Default::default()
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
         static_abilities: vec![],
         ..Default::default()
     };
     CardDefinition {
         name: "Multiple Choice",
-        cost: cost(&[generic(1), u(), u()]),
+        cost: cost(&[crate::mana::x(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseModesCast {
-            min: 1,
-            max: 4,
-            allow_repeats: false,
-            modes: vec![
-                // Mode 0: Scry 2.
-                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-                // Mode 1: 1/1 blue Pest token.
-                Effect::CreateToken {
+        effect: Effect::Seq(vec![
+            // "If X is 1, scry 1, then draw a card."
+            Effect::If {
+                cond: x_is(1),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+            // "If X is 2, you may choose a player. They return a creature
+            // they control to its owner's hand."
+            Effect::If {
+                cond: x_is(2),
+                then: Box::new(Effect::MayDo {
+                    description: "Choose a player to return a creature they control to its owner's hand?".into(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::one_of(Selector::EachPermanent(
+                            SelectionRequirement::Creature,
+                        )),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            // "If X is 3, create a 4/4 blue and red Elemental creature token."
+            Effect::If {
+                cond: x_is(3),
+                then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: pest,
-                },
-                // Mode 2: target creature +1/+0 and hexproof EOT.
-                Effect::Seq(vec![
-                    Effect::PumpPT {
-                        what: target_filtered(SelectionRequirement::Creature),
-                        power: Value::Const(1),
-                        toughness: Value::Const(0),
-                        duration: Duration::EndOfTurn,
-                    },
-                    Effect::GrantKeyword {
-                        what: Selector::Target(0),
-                        keyword: Keyword::Hexproof,
-                        duration: Duration::EndOfTurn,
-                    },
-                ]),
-                // Mode 3: "If you chose all of the above, draw two cards."
-                // The gate reads the cast's chosen-mode set: only a
-                // four-mode pick satisfies it.
-                Effect::If {
-                    cond: crate::effect::Predicate::ChoseModesAtLeast(4),
-                    then: Box::new(Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(2),
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
-            ],
-        },
+                    definition: elemental,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -418,30 +432,21 @@ pub fn quick_study() -> CardDefinition {
 
 // ── Lash of Malice ──────────────────────────────────────────────────────────
 
-/// Lash of Malice — {B} Instant.
-/// "Target creature gets -2/-2 until end of turn. / Flashback {3}{B}."
+/// Lash of Malice — {B} Instant. "Target creature gets +2/-2 until end
+/// of turn."
 ///
-/// ✅ Wired (push XXXV — new card factory). Negative `Effect::PumpPT`
-/// with `power = -2, toughness = -2, duration = EndOfTurn` against a
-/// `Creature` target. Flashback {3}{B} via `Keyword::Flashback` — the
-/// graveyard cast routes through the engine's existing
-/// `cast_flashback` path and emits the same body. Cheapest creature
-/// removal in the school and a perfect Magecraft enabler.
+/// One pip, one clause: a +2/-2 `Effect::PumpPT` on a creature target.
+/// (An earlier revision shipped a synthesized -2/-2 body with a
+/// Flashback {3}{B} rider the printed card never had; both are gone.)
 pub fn lash_of_malice() -> CardDefinition {
-    use crate::card::Keyword;
     use crate::effect::Duration;
-    use crate::mana::{ManaCost, ManaSymbol};
-    let flashback_cost = ManaCost {
-        symbols: vec![ManaSymbol::Generic(3), ManaSymbol::Colored(Color::Black)],
-    };
     CardDefinition {
         name: "Lash of Malice",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
-        keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(-2),
+            power: Value::Const(2),
             toughness: Value::Const(-2),
             duration: Duration::EndOfTurn,
         },
@@ -510,12 +515,13 @@ pub fn professor_of_symbology() -> CardDefinition {
     }
 }
 
-/// Academic Probation — {1}{W} Sorcery (Lesson).
 /// Academic Probation — {1}{W} Sorcery — Lesson. "Choose one —
-/// • Choose a nonland card name. Opponents can't cast spells with the chosen
-///   name until your next turn. (`NameOpponentCastLock`.)
-/// • Choose target nonland permanent. Until your next turn, it can't attack or
-///   block. (Grant CantAttack + CantBlock for `UntilYourNextUntap`.)"
+/// • Choose a nonland card name. Opponents can't cast spells with the
+///   chosen name until your next turn. (`NameOpponentCastLock`.)
+/// • Choose target nonland permanent. Until your next turn, it can't
+///   attack or block, and its activated abilities can't be activated.
+///   (Grant CantAttack + CantBlock + CantActivateAbilities for
+///   `UntilYourNextUntap`.)"
 pub fn academic_probation() -> CardDefinition {
     use crate::card::Keyword;
     use crate::effect::Duration;
@@ -538,6 +544,12 @@ pub fn academic_probation() -> CardDefinition {
                 Effect::GrantKeyword {
                     what: Selector::Target(0),
                     keyword: Keyword::CantBlock,
+                    duration: Duration::UntilYourNextUntap,
+                },
+                // "…and its activated abilities can't be activated."
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::CantActivateAbilities,
                     duration: Duration::UntilYourNextUntap,
                 },
             ]),
@@ -609,9 +621,17 @@ pub fn rush_of_knowledge() -> CardDefinition {
     }
 }
 
-/// Unwilling Ingredient — {B} Creature — Pest. 1/1.
-/// "When this creature dies, you may pay {2}{B}. If you do, draw a card."
+/// Unwilling Ingredient — {B} Creature — Frog. 1/1. "Menace / {2}{B},
+/// Exile this card from your graveyard: You draw a card and you lose
+/// 1 life."
+///
+/// The graveyard ability is an `ActivatedAbility` with `from_graveyard`
+/// + `exile_self_cost` — activatable only while the card sits in its
+/// owner's graveyard, exiling it as part of the cost, then draw 1 /
+/// lose 1. (An earlier revision shipped a synthesized "dies → may pay
+/// {2}{B} to draw" trigger the printed card never had.)
 pub fn unwilling_ingredient() -> CardDefinition {
+    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Unwilling Ingredient",
         cost: cost(&[b()]),
@@ -622,20 +642,16 @@ pub fn unwilling_ingredient() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            // "When Unwilling Ingredient dies, you may pay {2}{B}. If you
-            // do, draw a card." Modeled with MayPay so the draw is gated
-            // on actually paying the {2}{B} (was previously a free MayDo).
-            effect: Effect::MayPay {
-                description: "Pay {2}{B} to draw a card".into(),
-                mana_cost: cost(&[generic(2), b()]),
-                body: Box::new(Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                }),
-                else_: None,
-            },
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -664,9 +680,10 @@ pub fn tangletrap() -> CardDefinition {
 
 // ── Introduction to Prophecy ───────────────────────────────────────────────
 
-/// Introduction to Prophecy — {3} Sorcery. "Scry 2, then draw a card."
+/// Introduction to Prophecy — {3} Sorcery — Lesson. "Scry 2, then draw
+/// a card."
 ///
-/// Straightforward scry-then-draw spell. No Lesson subtype on this one.
+/// Straightforward scry-then-draw Lesson (learnable via `Effect::Learn`).
 pub fn introduction_to_prophecy() -> CardDefinition {
     CardDefinition {
         name: "Introduction to Prophecy",
@@ -693,10 +710,12 @@ pub fn introduction_to_prophecy() -> CardDefinition {
 // ── Introduction to Annihilation ───────────────────────────────────────────
 
 /// Introduction to Annihilation — {5} Sorcery — Lesson. "Exile target
-/// nonland permanent."
+/// nonland permanent. Its controller draws a card."
 ///
-/// Colorless Lesson removal spell. The Lesson subtype allows future
-/// Learn mechanics to tutor for it.
+/// Colorless Lesson removal spell. The compensation draw resolves after
+/// the exile, reading the exiled permanent's controller off the
+/// target-slot LKI (same `ControllerOf(Target(0))` pattern as
+/// Transforming Flourish's rider).
 pub fn introduction_to_annihilation() -> CardDefinition {
     CardDefinition {
         name: "Introduction to Annihilation",
@@ -706,9 +725,18 @@ pub fn introduction_to_annihilation() -> CardDefinition {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
             ..Default::default()
         },
-        effect: Effect::Exile {
-            what: target_filtered(SelectionRequirement::Nonland),
-        },
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::Nonland),
+            },
+            // "Its controller draws a card."
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(
+                    Selector::Target(0),
+                ))),
+                amount: Value::Const(1),
+            },
+        ]),
         ..Default::default()
     }
 }

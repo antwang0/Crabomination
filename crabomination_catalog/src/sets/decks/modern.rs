@@ -49281,7 +49281,7 @@ pub fn ral_monsoon_mage() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 1,
                 // "Until your next turn" cost break approximated for the turn.
-                effect: Effect::GrantNextInstantOrSorceryDiscountThisTurn { amount: 1 },
+                effect: Effect::GrantNextInstantOrSorceryDiscountThisTurn { amount: Value::Const(1) },
                 ..Default::default()
             },
             LoyaltyAbility {

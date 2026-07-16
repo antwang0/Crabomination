@@ -19,12 +19,15 @@ use crate::mana::{Color, b, colorless, cost, g, generic, hybrid, mono_hybrid, ph
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
-/// Bookwurm — {7}{G}, 7/7 Wurm. "Trample / When this creature enters,
-/// you gain 4 life and draw a card."
+/// Bookwurm — {7}{G}, 7/7 Wurm. Real oracle: "Trample / When this
+/// creature enters, you gain 3 life and draw a card. / {2}{G}: Put this
+/// card from your graveyard into your library third from the top."
 ///
-/// ✅ ETB body is a simple `Seq(GainLife(4), Draw(1))`. The 5/5 trample
-/// body is a fine top-end finisher in any green deck.
+/// ✅ ETB body is `Seq(GainLife(3), Draw(1))`; the graveyard recursion
+/// activation is a `from_graveyard` ability moving the card to
+/// `LibraryPosition::FromTop(2)` (third from the top).
 pub fn bookwurm() -> CardDefinition {
+    use crate::effect::LibraryPosition;
     CardDefinition {
         name: "Bookwurm",
         cost: cost(&[generic(7), g()]),
@@ -41,13 +44,25 @@ pub fn bookwurm() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::GainLife {
                     who: Selector::You,
-                    amount: Value::Const(4),
+                    amount: Value::Const(3),
                 },
                 Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),
                 },
             ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            from_graveyard: true,
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: LibraryPosition::FromTop(2),
+                },
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -56,10 +71,12 @@ pub fn bookwurm() -> CardDefinition {
 // ── Field Trip ──────────────────────────────────────────────────────────────
 
 /// Field Trip — {2}{G} Sorcery. "Search your library for a basic Forest
-/// card, put it onto the battlefield, then shuffle. Learn."
+/// card, put that card onto the battlefield tapped, then shuffle. /
+/// Learn."
 ///
 /// ✅ Faithful single-search wire via `Effect::Search` for a basic land
-/// with the Forest land subtype, plus Learn via `Effect::Learn`.
+/// with the Forest land subtype (entering TAPPED per the printed text),
+/// plus Learn via `Effect::Learn`.
 pub fn field_trip() -> CardDefinition {
     use crate::card::LandType;
     CardDefinition {
@@ -73,7 +90,7 @@ pub fn field_trip() -> CardDefinition {
                     .and(SelectionRequirement::HasLandType(LandType::Forest)),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
-                    tapped: false,
+                    tapped: true,
                 },
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
@@ -85,39 +102,21 @@ pub fn field_trip() -> CardDefinition {
 
 // ── Reduce to Memory ────────────────────────────────────────────────────────
 
-/// Reduce to Memory — {2}{U} Sorcery. "Exile target nonland permanent.
-/// Its controller creates a 2/2 colorless Inkling artifact creature
-/// token."
+/// Reduce to Memory — Sorcery — Lesson. Real oracle: "Exile target
+/// nonland permanent. Its controller creates a 3/2 red and white Spirit
+/// creature token."
 ///
 /// ✅ Wired faithfully: `Exile` the targeted nonland permanent, then
-/// mint a 2/2 Inkling artifact creature token. The token is given to
-/// the *original controller* of the exiled permanent via
-/// `PlayerRef::ControllerOfTarget(0)` (mirror of the printed
-/// "its controller").
+/// mint a 3/2 red-and-white Lorehold Spirit token for the *original
+/// controller* of the exiled permanent via
+/// `PlayerRef::ControllerOf(Target(0))` (mirror of the printed "its
+/// controller").
 pub fn reduce_to_memory() -> CardDefinition {
-    let inkling = TokenDefinition {
-        name: "Inkling".into(),
-        power: 2,
-        toughness: 2,
-        keywords: vec![],
-        card_types: vec![CardType::Artifact, CardType::Creature],
-        // Colorless artifact creature.
-        colors: vec![],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    
-        static_abilities: vec![],
-        ..Default::default()
-    };
     CardDefinition {
         name: "Reduce to Memory",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
         effect: Effect::Seq(vec![
             Effect::Exile {
                 what: target_filtered(
@@ -127,7 +126,7 @@ pub fn reduce_to_memory() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: inkling,
+                definition: crabomination_base::tokens::lorehold_spirit_3_2_token(),
             },
         ]),
         ..Default::default()
@@ -199,10 +198,10 @@ pub fn baleful_mastery() -> CardDefinition {
 // ── Igneous Inspiration ─────────────────────────────────────────────────────
 
 /// Igneous Inspiration — {2}{R} Sorcery. "Igneous Inspiration deals 3
-/// damage to target creature or planeswalker. Learn."
+/// damage to any target. / Learn."
 ///
-/// ✅ Wired faithfully: 3 damage to a creature/planeswalker target,
-/// then Learn via `Effect::Learn`.
+/// ✅ Wired faithfully: 3 damage to any target (creature, player, or
+/// planeswalker), then Learn via `Effect::Learn`.
 pub fn igneous_inspiration() -> CardDefinition {
     CardDefinition {
         name: "Igneous Inspiration",
@@ -212,6 +211,7 @@ pub fn igneous_inspiration() -> CardDefinition {
             Effect::DealDamage {
                 to: target_filtered(
                     SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
                         .or(SelectionRequirement::Planeswalker),
                 ),
                 amount: Value::Const(3),
@@ -225,14 +225,13 @@ pub fn igneous_inspiration() -> CardDefinition {
 
 // ── Combat Professor ────────────────────────────────────────────────────────
 
-/// Combat Professor — {3}{W} Creature — Cat Cleric, 2/3, Flying,
-/// Vigilance. "Mentor (Whenever this creature attacks, put a +1/+1
-/// counter on target attacking creature with lesser power.)"
+/// Combat Professor — {3}{W} Creature — Bird Cleric, 2/3. Real oracle:
+/// "Flying / At the beginning of combat on your turn, target creature
+/// you control gets +1/+0 and gains vigilance until end of turn."
 ///
-/// Combat Professor — {3}{W}, 2/4 Cat Cleric, Flying / Vigilance. Mentor
-/// (attack trigger puts a +1/+1 counter on a target attacking creature
-/// with lesser power) wired via `SelectionRequirement::PowerLessThanSource`,
-/// so the "lesser power" check tracks Combat Professor's current power.
+/// ✅ Wired via `StepBegins(BeginCombat) / YourControl` (fires only on
+/// the controller's own combat), pumping a target creature you control
+/// +1/+0 and granting vigilance until end of turn.
 pub fn combat_professor() -> CardDefinition {
     CardDefinition {
         name: "Combat Professor",
@@ -246,19 +245,26 @@ pub fn combat_professor() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            // Mentor (CR 702.114): counter goes on a target attacking
-            // creature with lesser power than this — `PowerLessThanSource`
-            // re-evaluates against Combat Professor's current power.
-            effect: Effect::AddCounter {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::IsAttacking)
-                        .and(SelectionRequirement::PowerLessThanSource),
-                ),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
         }],
         ..Default::default()
     }
@@ -268,14 +274,10 @@ pub fn combat_professor() -> CardDefinition {
 
 // ── Beaming Defiance ────────────────────────────────────────────────────────
 
-/// Beaming Defiance — {1}{W} Instant. "Target creature you control gets
-/// +2/+0 and gains indestructible until end of turn."
+/// Beaming Defiance — {1}{W} Instant. Real oracle: "Target creature you
+/// control gets +2/+2 and gains hexproof until end of turn."
 ///
-/// ✅ Wired as `PumpPT(+2/+0)` + `GrantKeyword(Indestructible, EOT)`.
-/// A combat-trick pump-and-protect. (Printed Oracle: "Hexproof" until
-/// end of turn — but Strixhaven's printed Beaming Defiance is actually
-/// "+2/+0 and gains hexproof until end of turn". We use Hexproof to
-/// match Oracle.)
+/// ✅ Wired as `PumpPT(+2/+2)` + `GrantKeyword(Hexproof, EOT)`.
 pub fn beaming_defiance() -> CardDefinition {
     CardDefinition {
         name: "Beaming Defiance",
@@ -287,7 +289,7 @@ pub fn beaming_defiance() -> CardDefinition {
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: Value::Const(2),
-                toughness: Value::Const(0),
+                toughness: Value::Const(2),
                 duration: Duration::EndOfTurn,
             },
             Effect::GrantKeyword {
@@ -302,78 +304,39 @@ pub fn beaming_defiance() -> CardDefinition {
 
 // ── Spell Satchel ───────────────────────────────────────────────────────────
 
-/// Spell Satchel — {2} Artifact. "{T}: Add {C}. / {3}, {T}, Sacrifice
-/// this artifact: Choose any number of target instant and/or sorcery
-/// cards in your graveyard with total mana value 4 or less. Return them
-/// to your hand."
+/// Spell Satchel — Artifact. Real oracle: "Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, put a book counter on this
+/// artifact. / {T}, Remove a book counter from this artifact: Add {C}. /
+/// {3}, {T}, Remove three book counters from this artifact: Draw a card."
 ///
-/// ✅ (was 🟡): "any number with total MV ≤ 4" is now wired via the
-/// new `Selector::TakeWithSumCap { inner, cap, value_of_each }`
-/// primitive — walks the caster's gy in iteration order, accumulating
-/// each card's mana value, and takes them greedily while the running
-/// sum stays ≤ 4. Skips cards that would push the sum over (so a 4-MV
-/// Cancel + 1-MV Bolt picks Bolt-and-Cancel = 5 → skip Cancel, take
-/// Bolt = 1, then if a 3-MV Lightning Helix is next take it = 4 total).
-/// The auto-decider walks gy-iteration order; a real UI player would
-/// pick. The `{T}: Add {C}` mana ability and sac-as-cost are wired.
+/// ✅ Magecraft rides the shared `magecraft` shortcut, adding a
+/// `CounterType::Book` counter to the source. Both activations pay
+/// their book counters as a real cost via `remove_counter_cost`.
 pub fn spell_satchel() -> CardDefinition {
-    use crate::card::Zone;
     CardDefinition {
         name: "Spell Satchel",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Book,
+            amount: Value::Const(1),
+        })],
         activated_abilities: vec![
             ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
                 tap_cost: true,
-                mana_cost: cost(&[]),
+                remove_counter_cost: Some((CounterType::Book, 1)),
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
                     pool: ManaPayload::Colorless(Value::Const(1)),
                 },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
                 ..Default::default()
             },
             ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(3)]),
-                effect: Effect::Move {
-                    what: Selector::TakeWithSumCap {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Graveyard,
-                            filter: SelectionRequirement::HasCardType(CardType::Instant)
-                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                        }),
-                        cap: Box::new(Value::Const(4)),
-                        value_of_each: Box::new(Value::ManaValueOf(Box::new(
-                            Selector::TriggerSource,
-                        ))),
-                    },
-                    to: ZoneDest::Hand(PlayerRef::You),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: true,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                remove_counter_cost: Some((CounterType::Book, 3)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                 ..Default::default()
             },
         ],
@@ -385,11 +348,11 @@ pub fn spell_satchel() -> CardDefinition {
 
 // ── Excavated Wall ──────────────────────────────────────────────────────────
 
-/// Excavated Wall — {1} Artifact Creature — Wall, 0/4, Defender. "When
-/// this creature enters, you gain 2 life."
+/// Excavated Wall — Artifact Creature — Wall, 0/4. Real oracle:
+/// "Defender / {1}, {T}: Mill a card."
 ///
-/// ✅ Simple ETB lifegain on a defender wall body. Same shape as
-/// Wall of Omens but the value is straight lifegain instead of a card.
+/// ✅ Defender body with a `{1}, {T}` self-mill activation via
+/// `Effect::Mill`.
 pub fn excavated_wall() -> CardDefinition {
     CardDefinition {
         name: "Excavated Wall",
@@ -401,48 +364,46 @@ pub fn excavated_wall() -> CardDefinition {
         },
         toughness: 4,
         keywords: vec![Keyword::Defender],
-        triggered_abilities: vec![etb_gain_life(2)],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Mill { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
 
 // ── Snow Day ────────────────────────────────────────────────────────────────
 
-/// Snow Day — {4}{U}{U} Instant. "Tap up to two target creatures. Put a
-/// stun counter on each of them."
+/// Snow Day — Instant. Real oracle: "Tap up to two target creatures.
+/// Those creatures don't untap during their controller's next untap
+/// step. / Draw two cards, then discard a card."
 ///
-/// ✅ Push (modern_decks): wired faithfully as a two-slot spell. Slot 0
-/// is the first creature, slot 1 (passed via
-/// `GameAction::CastSpell.additional_targets[0]`) is the second.
-/// "Up to two" semantics fall out naturally — if the cast supplies
-/// only one target, `Selector::Target(1)` and
-/// `Selector::TargetFiltered { slot: 1, … }` resolve to nothing and
-/// the second tap+stun pair is a no-op. The cast-side AutoDecider
-/// currently doesn't auto-pick slot-1 targets; tests pass them
-/// explicitly via `additional_targets: vec![Target::Permanent(c)]`.
+/// ✅ Two-slot spell: slot 0 is the first creature, slot 1 (passed via
+/// `GameAction::CastSpell.additional_targets[0]`) is the second. "Up to
+/// two" semantics fall out naturally — with only one target the slot-1
+/// tap/skip pair no-ops. The freeze rider rides `Effect::SkipNextUntap`
+/// (the real "doesn't untap during its controller's next untap step"
+/// flag, not a stun counter), then the caster draws two and discards one.
 pub fn snow_day() -> CardDefinition {
     CardDefinition {
         name: "Snow Day",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            // Slot 0: tap + stun the first creature.
+            // Slot 0: tap + freeze the first creature.
             Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::Stun,
-                amount: Value::Const(1),
-            },
-            // Slot 1: tap + stun the second creature (optional — resolves to
-            // no-op when only one target was chosen).
+            Effect::SkipNextUntap { what: Selector::Target(0) },
+            // Slot 1: tap + freeze the second creature (optional — resolves
+            // to no-op when only one target was chosen).
             Effect::Tap {
                 what: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },
             },
-            Effect::AddCounter {
-                what: Selector::Target(1),
-                kind: CounterType::Stun,
-                amount: Value::Const(1),
-            },
+            Effect::SkipNextUntap { what: Selector::Target(1) },
+            // Draw two cards, then discard a card.
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
         ]),
         ..Default::default()
     }
@@ -453,32 +414,18 @@ pub fn snow_day() -> CardDefinition {
 
 // ── Curate ──────────────────────────────────────────────────────────────────
 
-/// Curate — {1}{U} Instant. "Look at the top four cards of your library.
-/// Put one of them into your hand and the rest on the bottom of your
-/// library in a random order."
+/// Curate — {1}{U} Instant. Real oracle: "Surveil 2. / Draw a card."
 ///
-/// Ships via `Effect::LookPickToHand` (look at top 4, one to hand, rest to
-/// the bottom). The "random order" on the bottom is cosmetic (those cards
-/// aren't seen again until reshuffled).
+/// ✅ Straight `Effect::Surveil(2)` followed by a draw.
 pub fn curate() -> CardDefinition {
     CardDefinition {
         name: "Curate",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::LookPickToHand {
-            who: PlayerRef::You,
-            count: Value::Const(4),
-            rest_to_graveyard: false,
-            pick_filter: None,
-        
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-        },
+        effect: Effect::Seq(vec![
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
         ..Default::default()
     }
 }
@@ -516,14 +463,13 @@ pub fn solve_the_equation() -> CardDefinition {
 
 // ── Resculpt ───────────────────────────────────────────────────────────────
 
-/// Resculpt — {1}{U} Instant. "Exile target creature or artifact. Its
-/// controller creates a 4/4 blue Elemental creature token."
+/// Resculpt — {1}{U} Instant. Real oracle: "Exile target artifact or
+/// creature. Its controller creates a 4/4 blue and red Elemental
+/// creature token."
 ///
-/// ✅ Wired faithfully: `Exile` the target, then mint a 4/4 blue
+/// ✅ Wired faithfully: `Exile` the target, then mint a 4/4 blue-and-red
 /// Elemental token under the *original controller* of the exiled
-/// permanent (`PlayerRef::ControllerOf(Target(0))`). A clean unconditional
-/// removal-with-trade — the controller gets a card-quality token in
-/// exchange for losing whatever permanent was targeted.
+/// permanent (`PlayerRef::ControllerOf(Target(0))`).
 pub fn resculpt() -> CardDefinition {
     let elemental = TokenDefinition {
         name: "Elemental".into(),
@@ -531,7 +477,7 @@ pub fn resculpt() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         card_types: vec![CardType::Creature],
-        colors: vec![Color::Blue],
+        colors: vec![Color::Blue, Color::Red],
         supertypes: vec![],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -565,23 +511,28 @@ pub fn resculpt() -> CardDefinition {
 
 // ── Mortality Spear ────────────────────────────────────────────────────────
 
-/// Mortality Spear — {2}{B}{G} Instant. "Destroy target creature,
-/// planeswalker, or battle."
+/// Mortality Spear — Instant. Real oracle: "This spell costs {2} less to
+/// cast if you gained life this turn. / Destroy target nonland
+/// permanent."
 ///
-/// ✅ Catch-all removal, fully faithful: `Destroy` against a Creature ∨
-/// Planeswalker ∨ Battle target (`CardType::Battle` is a real card type
-/// in the engine, so the printed third clause is wired even though no
-/// battle cards exist in this catalog yet).
+/// ✅ The lifegain discount is a `SelfCostReducedIf` static gated on
+/// `Predicate::PlayerGainedLifeThisTurn`; the removal hits any nonland
+/// permanent.
 pub fn mortality_spear() -> CardDefinition {
     CardDefinition {
         name: "Mortality Spear",
         cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Instant],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {2} less to cast if you gained life this turn.",
+            effect: StaticEffect::SelfCostReducedIf {
+                condition: Predicate::PlayerGainedLifeThisTurn { who: PlayerRef::You },
+                amount: 2,
+            },
+        }],
         effect: Effect::Destroy {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker)
-                    .or(SelectionRequirement::HasCardType(CardType::Battle)),
+                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
             ),
         },
         ..Default::default()
@@ -590,16 +541,14 @@ pub fn mortality_spear() -> CardDefinition {
 
 // ── Daemogoth Titan ────────────────────────────────────────────────────────
 
-/// Daemogoth Titan — {B/G}{B/G}{B/G}{B/G}, 11/10 Demon Horror. "When this attacks or
-/// blocks, sacrifice another creature."
+/// Daemogoth Titan — 11/10 Demon. Real oracle: "Whenever this creature
+/// attacks or blocks, sacrifice a creature."
 ///
-/// ✅ Both halves now wired. The attack half uses
-/// `EventKind::Attacks/SelfSource`; the block half uses the new
-/// `EventKind::Blocks/SelfSource` (push XXVI added the `Blocks` event
-/// and the dispatcher wiring per CR 509.1i). The sacrifice resolves
-/// via `Effect::Sacrifice` over creatures you control — the
-/// auto-decider prefers lowest-power non-source creatures, so a fresh
-/// Titan will sac something else rather than itself.
+/// ✅ Both halves wired: `EventKind::Attacks/SelfSource` and
+/// `EventKind::Blocks/SelfSource` (CR 509.1i). The sacrifice is "a
+/// creature" (any creature you control, the Titan itself included) via
+/// `Effect::Sacrifice`; the auto-decider prefers lowest-power non-source
+/// creatures, so a fresh Titan will sac something else when possible.
 pub fn daemogoth_titan() -> CardDefinition {
     let sac_another = Effect::Sacrifice {
         who: Selector::You,
@@ -632,15 +581,16 @@ pub fn daemogoth_titan() -> CardDefinition {
 
 // ── Daemogoth Woe-Eater ────────────────────────────────────────────────────
 
-/// Daemogoth Woe-Eater — {1}{B}{B/G}{G}, 7/6 Demon Horror. "When this enters,
-/// sacrifice another creature. Whenever this attacks, you may sacrifice
-/// another creature. If you do, put a +1/+1 counter on this creature."
+/// Daemogoth Woe-Eater — 7/6 Demon. Real oracle: "At the beginning of
+/// your upkeep, sacrifice a creature. / When you sacrifice this
+/// creature, each opponent discards a card, you draw a card, and you
+/// gain 2 life."
 ///
-/// ETB sacrifice is mandatory; attack sac is optional via `MayDo`. The
-/// +1/+1 counter is gated on the controller's "yes" answer, not on
-/// legality — `Sacrifice` no-ops cleanly when no candidate exists.
+/// ✅ The upkeep tithe rides `StepBegins(Upkeep)/YourControl`; the
+/// sacrifice payoff rides `EventKind::CreatureSacrificed/SelfSource`
+/// (CR 701.16 — sacrifice is its own event, so death by combat or
+/// removal does NOT fire the payoff).
 pub fn daemogoth_woe_eater() -> CardDefinition {
-    use crate::card::CounterType;
     CardDefinition {
         name: "Daemogoth Woe-Eater",
         cost: cost(&[generic(1), b(), hybrid(Color::Black, Color::Green), g()]),
@@ -653,7 +603,10 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
         toughness: 6,
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::Sacrifice {
                     who: Selector::You,
                     count: Value::Const(1),
@@ -662,25 +615,16 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::MayDo {
-                    description: "Daemogoth Woe-Eater attack: sacrifice another \
-                                  creature to put a +1/+1 counter on it?"
-                        .into(),
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::Sacrifice {
-                            who: Selector::You,
-                            count: Value::Const(1),
-                            filter: SelectionRequirement::Creature
-                                .and(SelectionRequirement::ControlledByYou),
-                        },
-                        Effect::AddCounter {
-                            what: Selector::This,
-                            kind: CounterType::PlusOnePlusOne,
-                            amount: Value::Const(1),
-                        },
-                    ])),
-                },
+                event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ]),
             },
         ],
         ..Default::default()
@@ -732,10 +676,13 @@ pub fn honor_troll() -> CardDefinition {
 
 // ── Quandrix Cultivator ────────────────────────────────────────────────────
 
-/// Quandrix Cultivator — {1}{G}{G/U}{U} 3/4 Turtle Druid. "When this creature
-/// enters, you may search your library for a basic Forest or Island card, put
-/// it onto the battlefield, then shuffle." (The "may" collapses to an
-/// auto-search.)
+/// Quandrix Cultivator — 3/4 Turtle Druid. Real oracle: "When this
+/// creature enters, you may search your library for a basic Forest or
+/// Island card, put it onto the battlefield, then shuffle."
+///
+/// ✅ The printed "may" is a real `MayDo` wrap around the search (the
+/// controller can decline); the fetched basic enters untapped as
+/// printed.
 pub fn quandrix_cultivator() -> CardDefinition {
     use crate::card::LandType;
     CardDefinition {
@@ -750,13 +697,18 @@ pub fn quandrix_cultivator() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand.and(
-                    SelectionRequirement::HasLandType(LandType::Forest)
-                        .or(SelectionRequirement::HasLandType(LandType::Island)),
-                ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            effect: Effect::MayDo {
+                description: "Quandrix Cultivator: search your library for a basic \
+                              Forest or Island card and put it onto the battlefield?"
+                    .into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand.and(
+                        SelectionRequirement::HasLandType(LandType::Forest)
+                            .or(SelectionRequirement::HasLandType(LandType::Island)),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
             },
         }],
         ..Default::default()
@@ -847,35 +799,38 @@ pub fn hofri_ghostforge() -> CardDefinition {
 
 // ── Tempted by the Oriq ────────────────────────────────────────────────────
 
-/// Tempted by the Oriq — {1}{U}{U}{U} Sorcery. "Gain control of target
-/// creature until end of turn. Untap that creature. It gains haste
-/// until end of turn." (Threaten / Act of Treason template, printed
-/// as a one-shot sorcery — there is no Magecraft rider on the
-/// printed card; the prior note referencing a "Magecraft rider" was
-/// a doc-only artifact from an earlier draft and has been cleared
-/// here.)
+/// Tempted by the Oriq — Sorcery. Real oracle: "For each opponent, gain
+/// control of up to one target creature or planeswalker that player
+/// controls with mana value 3 or less."
 ///
-/// Full printed Threaten template: `GainControl` (EOT) +
-/// `Untap(Target)` + `GrantKeyword(Haste, EOT)`.
+/// ✅ Permanent `GainControl` of *up to one* opponent-controlled
+/// creature or planeswalker with MV ≤ 3, via `ApplyToTargets {
+/// max_targets: 1, min_targets: 0 }` (the printed "up to one" — the
+/// caster may cast it targetless). The printed text is per-opponent;
+/// with the engine's targeting this grabs one such permanent, which is
+/// exact in 1v1.
 pub fn tempted_by_the_oriq() -> CardDefinition {
     CardDefinition {
         name: "Tempted by the Oriq",
         cost: cost(&[generic(1), u(), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        // Permanently gain control of a creature/PW (MV 3 or less) an opponent
-        // controls. Printed text is per-opponent; with single-target engine
-        // targeting this grabs one such permanent (exact in 1v1).
-        effect: Effect::GainControl {
-            what: target_filtered(
-                SelectionRequirement::ControlledByOpponent
-                    .and(SelectionRequirement::ManaValueAtMost(3))
-                    .and(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Planeswalker),
-                    ),
-            ),
-            to: None,
-            duration: Duration::Permanent,
+        // Permanently gain control of up to one creature/PW (MV 3 or less)
+        // an opponent controls. Printed text is per-opponent; with the
+        // engine's targeting this grabs one such permanent (exact in 1v1).
+        effect: Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 0,
+            filter: SelectionRequirement::ControlledByOpponent
+                .and(SelectionRequirement::ManaValueAtMost(3))
+                .and(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+            effect: Box::new(Effect::GainControl {
+                what: Selector::Target(0),
+                to: None,
+                duration: Duration::Permanent,
+            }),
         },
         ..Default::default()
     }
@@ -937,20 +892,23 @@ pub fn specter_of_the_fens() -> CardDefinition {
     }
 }
 
-/// Mascot Interception — {3}{R} Sorcery. "This spell costs {3} less to
-/// cast if it targets a token. / Gain control of target creature until
-/// end of turn. Untap that creature. It gets +2/+0 and gains haste
-/// until end of turn."
+/// Mascot Interception — {3}{R} Sorcery. Real oracle: "This spell costs
+/// {3} less to cast if it targets a creature token. / Gain control of
+/// target creature until end of turn. Untap that creature. It gets
+/// +2/+0 and gains haste until end of turn."
 ///
-/// ✅ Fully faithful: the token discount is a mandatory CR 601.2f
-/// generic reduction via `self_cost_reduction_if_target: (IsToken, 3)`
-/// (same primitive as Ride's End), evaluated against the chosen target
-/// at cast time.
+/// ✅ Fully faithful: the creature-token discount is a mandatory CR
+/// 601.2f generic reduction via `self_cost_reduction_if_target:
+/// (IsToken ∧ Creature, 3)` (same primitive as Ride's End), evaluated
+/// against the chosen target at cast time.
 pub fn mascot_interception() -> CardDefinition {
     CardDefinition {
         name: "Mascot Interception",
         cost: cost(&[generic(3), r()]),
-        self_cost_reduction_if_target: Some((SelectionRequirement::IsToken, 3)),
+        self_cost_reduction_if_target: Some((
+            SelectionRequirement::IsToken.and(SelectionRequirement::Creature),
+            3,
+        )),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::GainControl {
@@ -1017,14 +975,15 @@ pub fn practical_research() -> CardDefinition {
     }
 }
 
-/// Hall of Oracles — Land.
-/// "{T}: Add {C}. / {2}, {T}: Put a +1/+1 counter on target Wizard
-/// or Fractal creature you control."
+/// Hall of Oracles — Land. Real oracle: "{T}: Add {C}. / {1}, {T}: Add
+/// one mana of any color. / {T}: Put a +1/+1 counter on target creature.
+/// Activate only as a sorcery and only if you've cast an instant or
+/// sorcery spell this turn."
 ///
-/// ✅ Quandrix-flavoured utility land. The `{T}: Add {C}` mana
-/// ability uses the shared `tap_add_colorless` helper. The +1/+1
-/// activation is wired with a tribal filter (Wizard ∪ Fractal &
-/// ControlledByYou).
+/// ✅ Three activations: the shared `tap_add_colorless` helper, a
+/// `{1}, {T}` any-color filter ability, and a sorcery-speed `{T}`
+/// counter ability gated on
+/// `Predicate::InstantsOrSorceriesCastThisTurnAtLeast(You, 1)`.
 pub fn hall_of_oracles() -> CardDefinition {
     CardDefinition {
         name: "Hall of Oracles",
@@ -1033,30 +992,26 @@ pub fn hall_of_oracles() -> CardDefinition {
         activated_abilities: vec![
             super::super::tap_add_colorless(),
             ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
                 tap_cost: true,
-                mana_cost: cost(&[generic(2)]),
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sorcery_speed: true,
+                condition: Some(Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                }),
                 effect: Effect::AddCounter {
-                    what: target_filtered(
-                        SelectionRequirement::Creature.and(
-                            SelectionRequirement::HasCreatureType(CreatureType::Wizard)
-                                .or(SelectionRequirement::HasCreatureType(CreatureType::Fractal)),
-                        ),
-                    ),
+                    what: target_filtered(SelectionRequirement::Creature),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
                 },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
                 ..Default::default()
             },
         ],
@@ -1064,22 +1019,15 @@ pub fn hall_of_oracles() -> CardDefinition {
     }
 }
 
-/// Star Pupil — {W} Creature — Cat Spirit, 0/1 (Silverquill).
-/// "Star Pupil enters the battlefield with a +1/+1 counter on it. /
-/// When Star Pupil dies, put a +1/+1 counter on target creature."
+/// Star Pupil — {W} Creature — Human Wizard, 0/0. Real oracle: "This
+/// creature enters with a +1/+1 counter on it. / When this creature
+/// dies, put its counters on target creature you control."
 ///
-/// ✅ Both halves wired. The ETB-counter is modelled via an ETB
-/// trigger (matches Pterafractyl). The death trigger drops exactly
-/// one +1/+1 counter on target creature — matching the printed
-/// Oracle, which says "a +1/+1 counter" (singular). Note that the
-/// closely-related "its +1/+1 counters" template would *not* work at
-/// printed speed per CR 122.8 — counters on the source are checked
-/// after it has left the battlefield, and CR 122.8 explicitly says
-/// no transfer happens in that case. Star Pupil dodges the rule by
-/// hard-coding one counter; cards like Mantle of Tides that DO say
-/// "its +1/+1 counters" have errata changing the language to "1"
-/// instead. `Value::CountersOn` supports cross-zone search so future
-/// cards that need source's counter count post-death can read it.
+/// ✅ Both halves wired: `enters_with_counters` for the ETB counter,
+/// and a death trigger that moves the source's +1/+1 counter total onto
+/// a target creature you control via cross-zone `Value::CountersOn`
+/// (counters persist on the card in the graveyard, so the count reads
+/// correctly post-death).
 pub fn star_pupil() -> CardDefinition {
     CardDefinition {
         name: "Star Pupil",
@@ -1223,15 +1171,17 @@ pub fn manifestation_sage() -> CardDefinition {
     }
 }
 
-/// Crackle with Power — {X}{R}{R}{R}{R}{R} Sorcery (Mono-R STX).
-/// "Crackle with Power deals 5X damage divided as you choose among
-/// any number of targets."
+/// Crackle with Power — {X}{R}{R}{R}{R}{R} Sorcery. Real oracle:
+/// "Crackle with Power deals five times X damage to each of up to X
+/// targets."
 ///
-/// ✅ The 5X scaling wires faithfully via `Value::Times(Const(5),
-/// XFromCost)` and `DealDamageDivided` splits it among up to five
-/// Creature ∨ Player ∨ Planeswalker targets (AutoDecider spreads evenly).
-/// The printed five-quintuple-pip {RRRRR} cost is honored exactly via the
-/// ordered `ManaCost` builder.
+/// ✅ Each supplied target takes the FULL 5X (not divided): wired via
+/// `ApplyToTargets` running `DealDamage(5·X)` once per target. Residue:
+/// `ApplyToTargets.max_targets` is a compile-time `u8`, so the printed
+/// "up to X targets" count cap is approximated with a fixed ceiling of
+/// 5 optional slots — the engine has no Value-driven target-slot count
+/// (a `max_targets: Value` variant would close it). For X ≥ 5 this is
+/// exact in practice; for X < 5 a UI caster could over-select targets.
 pub fn crackle_with_power() -> CardDefinition {
     use crate::mana::ManaSymbol;
     let mut crackle_cost = cost(&[r(), r(), r(), r(), r()]);
@@ -1240,36 +1190,34 @@ pub fn crackle_with_power() -> CardDefinition {
         name: "Crackle with Power",
         cost: crackle_cost,
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamageDivided {
-            total: Value::Times(
-                Box::new(Value::Const(5)),
-                Box::new(Value::XFromCost),
-            ),
+        effect: Effect::ApplyToTargets {
+            max_targets: 5,
+            min_targets: 0,
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
                 .or(SelectionRequirement::Planeswalker),
-            max_targets: 5,
+            effect: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Times(Box::new(Value::Const(5)), Box::new(Value::XFromCost)),
+            }),
         },
         ..Default::default()
     }
 }
 
-/// Mentor's Guidance — {2}{U} Instant (Quandrix).
-/// "Choose one — / • Mentor's Guidance deals damage equal to the
-/// number of creatures you control to target creature an opponent
-/// controls. / • Draw a card for each creature with a +1/+1 counter
-/// on it you control."
+/// Mentor's Guidance — {2}{U} Sorcery. Real oracle: "When you cast this
+/// spell, copy it if you control a planeswalker, Cleric, Druid, Shaman,
+/// Warlock, or Wizard. / Scry 1, then draw a card."
 ///
-/// Two-mode `ChooseMode`. Mode 0 deals `CountOf(YourCreatures)` damage to
-/// a target creature an opponent controls (`ControlledByOpponent` filter).
-/// Mode 1 draws `CountOf(YourCreatures WithCounter(+1/+1))` cards.
+/// ✅ Body is `Scry 1` + `Draw 1`; the cast trigger copies the spell
+/// when the class-tribal condition holds (`on_cast` + `CopySpell`).
 pub fn mentors_guidance() -> CardDefinition {
     use crate::card::{CreatureType, Predicate};
     use crate::effect::shortcut::on_cast;
     CardDefinition {
         name: "Mentor's Guidance",
         cost: cost(&[generic(2), u()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         // Scry 1, then draw a card.
         effect: Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
@@ -1379,39 +1327,48 @@ pub fn galvanic_iteration() -> CardDefinition {
 
 // ── Expressive Iteration ────────────────────────────────────────────────────
 
-/// Expressive Iteration — {U}{R} Sorcery. "Exile the top three cards of
-/// your library. You may play one of them this turn, and you may play
-/// a land from among them this turn. Put the rest on the bottom of
-/// your library in a random order."
+/// Expressive Iteration — {U}{R} Sorcery. Real oracle: "Look at the top
+/// three cards of your library. Put one of them into your hand, put one
+/// of them on the bottom of your library, and exile one of them. You
+/// may play the exiled card this turn."
 ///
-/// Push (modern_decks, claude/modern_decks): promoted via the existing
-/// `Effect::GrantMayPlay` primitive — moves the top 3 cards from the
-/// library to exile, then grants the caster `MayPlay::EndOfThisTurn`
-/// on `Selector::LastMoved` (each exiled card individually — `LastMoved`
-/// is the multi-card slot per `effect.rs:107-112`). The "put the rest
-/// on the bottom" rider collapses to "leftovers stay in exile" since
-/// the engine doesn't auto-bottom unplayed exile-zone cards (no
-/// functional difference — they're not playable any more). Closes the
-/// Prismari school's last 🟡.
+/// 🟡 APPROXIMATION — the engine has no "look at top N and distribute
+/// one to hand / one to bottom / one to exile-with-may-play" primitive
+/// (a three-way `LookTopDistribute` is the exact missing piece;
+/// `LookPickToHand` can do hand+bottom but can't route a second pick to
+/// exile-with-play-permission from the same looked-at set). Current
+/// wiring: `LookPickToHand(3)` — pick one of the top three to hand,
+/// bottom the rest — then `ExileTopAndGrantMayPlay(1, pay_own_cost)`
+/// exiles the (new) top card playable this turn. Card economy matches
+/// the printed line exactly (+1 hand, +1 playable exile, rest
+/// bottomed); the only drift is that the exiled card comes from the
+/// post-bottoming top instead of the original three.
 pub fn expressive_iteration() -> CardDefinition {
     CardDefinition {
         name: "Expressive Iteration",
         cost: cost(&[u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::TopOfLibrary {
-                    who: PlayerRef::You,
-                    count: Value::Const(3),
-                },
-                to: ZoneDest::Exile,
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: false,
+                pick_filter: None,
+                take: None,
+                to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
+                optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
-            Effect::GrantMayPlay {
-                what: Selector::LastMoved,
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(1),
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                to_owner: false,
-                exile_after: false,
-                pay_own_cost: false, any_color: false,
+                pay_any_color: false,
+                pay_own_cost: true,
+                uncast_penalty: None,
             },
         ]),
         ..Default::default()
@@ -1420,36 +1377,54 @@ pub fn expressive_iteration() -> CardDefinition {
 
 // ── Magma Opus ──────────────────────────────────────────────────────────────
 
-/// Magma Opus — {6}{U}{R} Sorcery. "Magma Opus deals 4 damage divided
-/// as you choose among any number of targets. Tap up to two creatures.
-/// Create a 4/4 blue and red Elemental creature token. Draw two cards.
-/// / {U/R}{U/R}, Discard Magma Opus: Create a Treasure token."
+/// Magma Opus — {6}{U}{R} Instant. Real oracle: "Magma Opus deals 4
+/// damage divided as you choose among any number of targets. Tap two
+/// target permanents. Create a 4/4 blue and red Elemental creature
+/// token. Draw two cards. / {U/R}{U/R}, Discard this card: Create a
+/// Treasure token."
 ///
 /// ✅ The main `Seq` ships all four printed primary clauses: 4 damage
-/// divided (`DealDamageDivided`) among up to four creatures/planeswalkers,
-/// tap, a 4/4 Elemental token, and draw 2. The tap rider strict-upgrades
-/// from "up to two creatures" to "all opponent creatures" (favors the
-/// caster; matters only with 3+ opp creatures). The {U/R}{U/R}, Discard
-/// Magma Opus → Treasure alt mode ships via `discard_activated`.
+/// divided (`DealDamageDivided`, "any target" so players are legal)
+/// among up to four targets, tap two permanents, a 4/4 blue-and-red
+/// Elemental token, and draw 2. Residue: "Tap two target permanents"
+/// rides `TapUpToValue { exact: true }` — the two permanents are chosen
+/// at resolution (`Decision::ChooseCards`) rather than declared as cast
+/// targets, because `DealDamageDivided` owns the leading target-slot
+/// range and the engine's positional slot model can't append fixed
+/// slots after a variable-count divided block. The {U/R}{U/R}, Discard
+/// → Treasure mode ships via `discard_activated`.
 pub fn magma_opus() -> CardDefinition {
     use crate::mana::{hybrid, Color};
-    let elemental = crate::catalog::sets::sos::elemental_token();
+    let elemental = TokenDefinition {
+        name: "Elemental".into(),
+        power: 4,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue, Color::Red],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
     let ur = || hybrid(Color::Blue, Color::Red);
     CardDefinition {
         name: "Magma Opus",
         cost: cost(&[generic(6), u(), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamageDivided {
                 total: Value::Const(4),
                 filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
                     .or(SelectionRequirement::Planeswalker),
                 max_targets: 4,
             },
-            Effect::Tap {
-                what: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-                ),
+            Effect::TapUpToValue {
+                count: Value::Const(2),
+                filter: SelectionRequirement::Permanent,
+                skip_untap: false,
+                exact: true,
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -1581,7 +1556,7 @@ pub fn eyetwitch_brood() -> CardDefinition {
 
 // ── First Day of Class ──────────────────────────────────────────────────────
 
-/// First Day of Class — {1}{R} Sorcery. "Whenever a creature you control
+/// First Day of Class — {1}{R} Instant. "Whenever a creature you control
 /// enters this turn, put a +1/+1 counter on it and it gains haste until
 /// end of turn. Learn." The turn-scoped enters trigger rides
 /// `Effect::CreaturesYouControlEnteringThisTurn` (CR 603.4).
@@ -1589,7 +1564,7 @@ pub fn first_day_of_class() -> CardDefinition {
     CardDefinition {
         name: "First Day of Class",
         cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::CreaturesYouControlEnteringThisTurn {
                 body: Box::new(Effect::Seq(vec![
@@ -1613,21 +1588,19 @@ pub fn first_day_of_class() -> CardDefinition {
 
 // ── Verdant Mastery ─────────────────────────────────────────────────────────
 
-/// Verdant Mastery — {5}{G} Sorcery. "Search your library for a
-/// basic land card, put it onto the battlefield, then shuffle. Each
-/// other player may search their library for a basic land card, put
-/// it onto the battlefield tapped, then shuffle."
+/// Verdant Mastery — {5}{G} Sorcery. Real oracle: "You may pay {3}{G}
+/// rather than pay this spell's mana cost. / Search your library for up
+/// to four basic land cards and reveal them. Put one of them onto the
+/// battlefield tapped under an opponent's control if the {3}{G} cost
+/// was paid. Put two of them onto the battlefield tapped under your
+/// control and the rest into your hand. Then shuffle."
 ///
-/// ✅ Both printed clauses of the regular cast resolve: caster fetches
-/// a basic untapped, then each opponent fetches a basic tapped. The
-/// auto-decider opts each opponent into the "may search" rider when
-/// a basic is available (no-op otherwise), so the play pattern
-/// matches the printed "each other player may" exactly under the
-/// engine's deterministic decision model. The {6}{G}{G} alt-cost
-/// (two basics for everyone) is an engine-wide alt-cost-implies-
-/// mode gap shared with Baleful Mastery ✅ and Devastating Mastery ✅;
-/// the regular cast covers the headline ramp play pattern. Tracked
-/// in TODO.md.
+/// ✅ Base cast: four sequential basic-land searches — two to your
+/// battlefield tapped, two to hand (each search individually
+/// declinable, giving the printed "up to four"). The {3}{G} alt cost
+/// rides `AlternativeCost.effect_override`: one basic goes onto the
+/// battlefield tapped under an opponent's control first, then two
+/// tapped under yours and the rest (one) to hand.
 pub fn verdant_mastery() -> CardDefinition {
     use crate::card::AlternativeCost;
     let basic = || SelectionRequirement::IsBasicLand;

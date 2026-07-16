@@ -9401,12 +9401,14 @@ impl GameState {
         for snap in self.died_card_snapshots.values() {
             for ta in &snap.definition.triggered_abilities {
                 // SelfSource `DealtDamage` (Enrage on lethal damage) and
-                // `PermanentSacrificed` ("when you sacrifice this") both fire
-                // from LKI — the source has left the battlefield by dispatch.
+                // `PermanentSacrificed`/`CreatureSacrificed` ("when you
+                // sacrifice this") all fire from LKI — the source has left
+                // the battlefield by dispatch.
                 let lki_self = matches!(
                     ta.event.kind,
                     crate::effect::EventKind::DealtDamage
                         | crate::effect::EventKind::PermanentSacrificed
+                        | crate::effect::EventKind::CreatureSacrificed
                 ) && ta.event.scope == crate::effect::EventScope::SelfSource;
                 // "When enchanted creature dies" on a leaving Aura (Minion's
                 // Return) — the snapshot is the orphaned Aura, scope keys on

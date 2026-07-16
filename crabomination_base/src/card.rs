@@ -61,8 +61,9 @@ pub enum CreatureType {
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
     Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought,
     Ooze, Plant, Saproling,
-    // Strixhaven-era subtypes.
-    Inkling, Pest, Fractal,
+    // Strixhaven-era subtypes. (Book is Codie, Vociferous Codex's
+    // 2023-oracle creature type.)
+    Inkling, Pest, Fractal, Book,
     // Phyrexia: All Will Be One.
     Mite,
     Orc, Warlock, Bard, Sorcerer, Pilot,
@@ -378,6 +379,11 @@ pub enum CounterType {
     /// `Value::DistinctManaValuesInExileWithCounter` (Kianne's Fractal) and
     /// returned via `Effect::ReturnFromExileWithCounter` (Imbraham).
     Study,
+    /// Book counters (Spell Satchel's magecraft stockpile).
+    Book,
+    /// Point counter — Strixhaven Stadium's combat-damage score. Ten or
+    /// more on the Stadium ends the game for the damaged opponent.
+    Point,
     /// Hone counter — Strixhaven cast-from-exile timer (Uvilda, Dean of
     /// Perfection). An instant/sorcery exiled with hone counters ticks one off
     /// each of the owner's upkeeps; when the last is removed it becomes
@@ -1646,6 +1652,14 @@ pub enum SelectionRequirement {
     /// auto-target heuristic). Battlefield-only — the predicate
     /// returns false for entities outside the battlefield.
     HasGreatestManaValueAmongControlled(Box<SelectionRequirement>),
+    /// The power sibling of `HasGreatestManaValueAmongControlled`:
+    /// "a creature with the greatest power among [filter] that player
+    /// controls" — the candidate must (a) match `inner` and (b) have
+    /// power ≥ every other matching permanent under the same
+    /// controller. Ties pass permissively; battlefield-only. Professor
+    /// Onyx's −3 ("each opponent sacrifices a creature with the
+    /// greatest power among creatures that player controls").
+    HasGreatestPowerAmongControlled(Box<SelectionRequirement>),
     /// True when the candidate's `definition.name` exactly matches.
     /// Used by Grandeur-style activations that require discarding
     /// another card with the source's printed name (Page, Loose Leaf).

@@ -1620,8 +1620,9 @@ fn witherbloom_mire_b151_drains_three_and_draws() {
 fn witherbloom_pestmaster_b151_magecraft_pumps_each_pest() {
     let mut g = two_player_game();
     let _pm = g.add_card_to_battlefield(0, catalog::witherbloom_pestmaster_b151());
-    // Add Pest tokens via Pest Summoning's body (or just add Eyetwitch).
-    let pest = g.add_card_to_battlefield(0, catalog::eyetwitch());
+    // Add a Pest body (Eyetwitch Brood — Eyetwitch itself is now an
+    // Eye Bat per its Duskmourn type-line errata, no longer a Pest).
+    let pest = g.add_card_to_battlefield(0, catalog::eyetwitch_brood());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
@@ -1629,7 +1630,7 @@ fn witherbloom_pestmaster_b151_magecraft_pumps_each_pest() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Bolt castable");
     drain_stack(&mut g);
-    let c = g.battlefield_find(pest).expect("Eyetwitch still alive");
+    let c = g.battlefield_find(pest).expect("Pest still alive");
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
 }
 

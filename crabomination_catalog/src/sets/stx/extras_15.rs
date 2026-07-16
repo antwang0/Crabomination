@@ -220,8 +220,10 @@ pub fn go_blank() -> CardDefinition {
     }
 }
 
-/// Secret Rendezvous — {1}{W}{W} Sorcery. You and target opponent each draw
-/// three cards.
+/// Secret Rendezvous — {1}{W}{W} Sorcery. "You and target opponent each
+/// draw three cards." (No player-is-an-opponent target filter exists in
+/// the engine yet, so the target slot accepts any player; the printed
+/// text restricts it to an opponent.)
 pub fn secret_rendezvous() -> CardDefinition {
     CardDefinition {
         name: "Secret Rendezvous",
@@ -292,8 +294,11 @@ pub fn kelpie_guide() -> CardDefinition {
     }
 }
 
-/// Explosive Welcome — {7}{R} Instant. Deals 5 damage to any target and 3
-/// damage to any other target. Add {R}{R}{R}.
+/// Explosive Welcome — {7}{R} Instant. "Explosive Welcome deals 5 damage
+/// to any target and 3 damage to any other target. Add {R}{R}{R}."
+/// (Slot 1's "other" restriction — must differ from slot 0 — isn't
+/// expressible in the target-filter language yet; both slots are
+/// otherwise unrestricted, matching "any target".)
 pub fn explosive_welcome() -> CardDefinition {
     CardDefinition {
         name: "Explosive Welcome",

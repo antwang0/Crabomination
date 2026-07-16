@@ -1146,6 +1146,8 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Luck => "Luck",
         CounterType::Quest => "Quest",
         CounterType::Study => "Study",
+        CounterType::Book => "Book",
+        CounterType::Point => "Point",
         CounterType::Hone => "Hone",
         CounterType::Burden => "Burden",
         CounterType::Fate => "Fate",

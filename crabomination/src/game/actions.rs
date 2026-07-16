@@ -1127,17 +1127,18 @@ pub(crate) fn creature_dies_triggers_suppressed(state: &crate::game::GameState) 
 
 /// Strict Proctor ETB-trigger tax — CR 614 replacement effect.
 ///
-/// "If a permanent entering the battlefield causes a triggered ability of
-/// a permanent to trigger, that ability's controller sacrifices the
-/// permanent unless they pay {amount}." Read at ETB-trigger dispatch time
-/// for each `StaticEffect::EtbTriggerTax` in play.
+/// Strict Proctor — "Whenever a permanent entering causes a triggered
+/// ability to trigger, counter that ability unless its controller pays
+/// {amount}." Read at ETB-trigger dispatch time for each
+/// `StaticEffect::EtbTriggerTax` in play.
 ///
 /// Returns `true` if the trigger should fire (controller paid or no tax in
-/// play), `false` if it should be suppressed (controller declined or
-/// couldn't pay). On `false`, the trigger source has been sacrificed.
+/// play), `false` if it should be countered (controller declined or
+/// couldn't pay). Countering the ability has no other consequence — the
+/// trigger simply never fires (CR 701.5a).
 ///
-/// `trigger_source` is the permanent whose ability is triggering — that's
-/// the permanent that gets sacrificed if the controller doesn't pay.
+/// `trigger_source` is the permanent whose ability is triggering (used to
+/// aim the pay-or-counter decision at something visible).
 pub(crate) fn apply_etb_trigger_tax(
     state: &mut crate::game::GameState,
     trigger_source: crate::card::CardId,
@@ -1149,9 +1150,9 @@ pub(crate) fn apply_etb_trigger_tax(
 
     // Sum tax amounts from every Strict Proctor on the battlefield.
     // Each Strict Proctor demands its own payment per the printed
-    // "sacrifices the permanent unless they pay {2}" wording — but
-    // applied as a single rolled-up amount via additive tax (matching
-    // the existing engine's handling of stacking-tax effects).
+    // "counter that ability unless its controller pays {2}" wording —
+    // but applied as a single rolled-up amount via additive tax
+    // (matching the existing engine's handling of stacking-tax effects).
     let total_tax: u32 = state
         .battlefield
         .iter()
@@ -1177,16 +1178,11 @@ pub(crate) fn apply_etb_trigger_tax(
         if state.players[trigger_controller].mana_pool.pay(&cost).is_ok() {
             return true;
         }
-        // Couldn't actually afford the tax — fall through and sacrifice.
+        // Couldn't actually afford the tax — fall through and counter.
     }
-    // Sacrifice the trigger source through the sacrifice funnel (CR 701.16
-    // — fires sacrifice/dies events). Only if it's still on the battlefield
-    // (it may have already left between push and resolution).
-    if state.battlefield.iter().any(|c| c.id == trigger_source) {
-        let mut evs = Vec::new();
-        state.sacrifice_one(trigger_source, trigger_controller, &mut evs);
-        state.dispatch_triggers_for_events(&evs);
-    }
+    // Counter the triggered ability (CR 701.5a): it never fires, and
+    // nothing else happens — the printed card counters the ability, it
+    // does NOT touch the trigger's source permanent.
     false
 }
 

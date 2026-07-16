@@ -61,29 +61,32 @@ fn karok_wrangler_magecraft_adds_counter_to_target() {
         "Karok Wrangler magecraft added a +1/+1 counter");
 }
 
+/// Soothsayer Adept — "{1}{U}, {T}: Draw a card, then discard a card."
+/// Looting: hand size is net unchanged, library shrinks by one, and the
+/// discarded card lands in the graveyard.
 #[test]
-fn soothsayer_adept_activates_surveil_one() {
+fn soothsayer_adept_loots_draw_then_discard() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::plains());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // discard fodder
     let initial_lib = g.players[0].library.len();
+    let initial_hand = g.players[0].hand.len();
     let id = g.add_card_to_battlefield(0, catalog::soothsayer_adept());
+    g.clear_sickness(id);
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Surveil 1 activates");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("loot ability activates for {1}{U}, {T}");
     drain_stack(&mut g);
 
-    // Surveil 1 either leaves card on top or sends it to graveyard.
-    // The AutoDecider for Surveil may decide either way; either way the
-    // top card was inspected.
-    let after_lib = g.players[0].library.len();
-    let after_gy = g.players[0].graveyard.len();
-    assert!(
-        after_lib == initial_lib || (after_lib == initial_lib - 1 && after_gy >= 1),
-        "Surveil 1 either kept or graveyarded the top card (lib {} → {}, gy: {})",
-        initial_lib, after_lib, after_gy
-    );
+    // Draw 1 then discard 1: hand net unchanged (relative to pre-activation
+    // hand + the fodder), library -1, graveyard +1.
+    assert_eq!(g.players[0].hand.len(), initial_hand, "draw 1 then discard 1 → hand size unchanged");
+    assert_eq!(g.players[0].library.len(), initial_lib - 1, "one card drawn");
+    assert_eq!(g.players[0].graveyard.len(), 1, "one card discarded");
+    let adept = g.battlefield_find(id).expect("adept still on battlefield");
+    assert!(adept.tapped, "tap is part of the activation cost");
 }
 
 #[test]
@@ -532,7 +535,10 @@ fn containment_breach_destroys_cheap_enchantment_and_makes_pest() {
 //    Tenured Inkcaster, Symmathematics ──────────────────────────────────
 
 #[test]
-fn silverquill_pledgemage_magecraft_pumps_self_eot() {
+fn silverquill_pledgemage_magecraft_grants_flying_or_lifelink_eot() {
+    // Real oracle: "Magecraft — Whenever you cast or copy an instant or
+    // sorcery spell, this creature gains your choice of flying or
+    // lifelink until end of turn." (No self-pump — that was a drift.)
     let mut g = two_player_game();
     let pledge = g.add_card_to_battlefield(0, catalog::silverquill_pledgemage());
     g.clear_sickness(pledge);
@@ -540,15 +546,18 @@ fn silverquill_pledgemage_magecraft_pumps_self_eot() {
     g.players[0].mana_pool.add(Color::Red, 1);
     let p_before = g.battlefield_find(pledge).unwrap().power();
     let t_before = g.battlefield_find(pledge).unwrap().toughness();
+    assert!(!g.battlefield_find(pledge).unwrap().has_keyword(&Keyword::Flying),
+        "no printed flying");
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bolt castable for {R}");
     drain_stack(&mut g);
-    let p_after = g.battlefield_find(pledge).unwrap().power();
-    let t_after = g.battlefield_find(pledge).unwrap().toughness();
-    assert_eq!(p_after, p_before + 1, "Pledgemage power +1 from magecraft");
-    assert_eq!(t_after, t_before + 1, "Pledgemage toughness +1 from magecraft");
+    let after = g.battlefield_find(pledge).unwrap();
+    assert!(after.has_keyword(&Keyword::Flying) || after.has_keyword(&Keyword::Lifelink),
+        "magecraft grants the chosen keyword (flying or lifelink) until end of turn");
+    assert_eq!(after.power(), p_before, "no power change — keyword grant only");
+    assert_eq!(after.toughness(), t_before, "no toughness change — keyword grant only");
 }
 
 #[test]
@@ -640,39 +649,28 @@ fn promising_duskmage_no_draw_without_a_counter() {
 }
 
 #[test]
-fn tenured_inkcaster_buffs_friendly_inklings_by_two_two() {
-    // Mint an Inkling token via Inkling Summoning, then drop Tenured
-    // Inkcaster, and check the Inkling went from 2/1 → 4/3.
+fn tenured_inkcaster_etb_puts_counter_on_target_creature() {
+    // Real oracle: "When this creature enters, put a +1/+1 counter on
+    // target creature." (An earlier synthesized "other Inklings get
+    // +2/+2" anthem is gone.)
     let mut g = two_player_game();
-    // Cast Inkling Summoning to mint a 2/1 W/B Inkling with flying.
-    let summon = g.add_card_to_hand(0, catalog::inkling_summoning());
-    g.players[0].mana_pool.add(Color::White, 1);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tic = g.add_card_to_hand(0, catalog::tenured_inkcaster());
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::CastSpell {
-        card_id: summon, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: tic, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Inkling Summoning castable for {3}{W}{B}");
+    .expect("Tenured Inkcaster castable for {4}{B}");
     drain_stack(&mut g);
-    // Find the Inkling token (last-created token).
-    let inkling = g.battlefield.iter()
-        .find(|c| c.controller == 0 &&
-            c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Inkling))
-        .map(|c| c.id)
-        .expect("Inkling token should exist");
-    let before = g.compute_battlefield().into_iter()
-        .find(|c| c.id == inkling)
-        .expect("Inkling on battlefield");
-    assert_eq!(before.power, 2, "Base Inkling power is 2");
-    assert_eq!(before.toughness, 1, "Base Inkling toughness is 1");
-
-    // Now drop Tenured Inkcaster.
-    let _tic = g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
+    let bear_card = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "ETB puts a +1/+1 counter on the targeted creature");
     let after = g.compute_battlefield().into_iter()
-        .find(|c| c.id == inkling)
-        .expect("Inkling on battlefield post-Inkcaster");
-    assert_eq!(after.power, 4, "Inkling +2/+2 from Tenured Inkcaster: 4 power");
-    assert_eq!(after.toughness, 3, "Inkling +2/+2 from Tenured Inkcaster: 3 toughness");
+        .find(|c| c.id == bear).expect("bear computed");
+    assert_eq!((after.power, after.toughness), (3, 3),
+        "counter makes the 2/2 bear a 3/3 — no anthem on top");
 }
 
 #[test]
@@ -709,36 +707,35 @@ fn tenured_inkcaster_does_not_buff_opponent_inklings() {
 }
 
 #[test]
-fn tenured_inkcaster_anthem_expires_when_inkcaster_leaves_play() {
-    // Drop Inkcaster + an Inkling → Inkling is +2/+2. Destroy Inkcaster,
-    // Inkling reverts to printed 2/1.
+fn tenured_inkcaster_countered_attacker_drains_each_opponent() {
+    // Real oracle: "Whenever a creature you control with a +1/+1 counter
+    // on it attacks, each opponent loses 1 life and you gain 1 life."
+    // A counterless attacker does NOT trigger it.
+    use crabomination::game::{Attack, AttackTarget, TurnStep};
     let mut g = two_player_game();
-    let summon = g.add_card_to_hand(0, catalog::inkling_summoning());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: summon, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Inkling Summoning castable");
+    let _tic = g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
+    let countered = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(countered);
+    g.clear_sickness(plain);
+    g.battlefield_find_mut(countered).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+
+    let my_life = g.players[0].life;
+    let opp_life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: countered, target: AttackTarget::Player(1) },
+        Attack { attacker: plain, target: AttackTarget::Player(1) },
+    ]))
+    .expect("both bears attack");
     drain_stack(&mut g);
-    let inkling = g.battlefield.iter()
-        .find(|c| c.controller == 0 &&
-            c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Inkling))
-        .map(|c| c.id)
-        .expect("Inkling token");
-    let tic = g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
-    {
-        let buffed = g.compute_battlefield().into_iter()
-            .find(|c| c.id == inkling).expect("Inkling");
-        assert_eq!(buffed.power, 4, "Buffed Inkling = 4 power");
-    }
-    // Now exile/destroy Inkcaster.
-    g.remove_from_battlefield_to_graveyard_raw(tic);
-    let after = g.compute_battlefield().into_iter()
-        .find(|c| c.id == inkling).expect("Inkling");
-    assert_eq!(after.power, 2,
-        "After Inkcaster leaves, Inkling reverts to printed 2 power");
+
+    // Exactly ONE drain: only the countered attacker fires the trigger.
+    assert_eq!(g.players[1].life, opp_life - 1,
+        "each opponent loses 1 life — once, for the countered attacker only");
+    assert_eq!(g.players[0].life, my_life + 1,
+        "you gain 1 life — once, for the countered attacker only");
 }
 
 #[test]
@@ -930,18 +927,20 @@ fn introduction_to_prophecy_scries_three_and_draws_one() {
         "Library decremented by one for the draw");
 }
 
-/// Spirit Summoning mints a 3/2 white Spirit with lifelink.
+/// Spirit Summoning — real Oracle: "Create a 3/2 red and white Spirit
+/// creature token." (No lifelink — the old synthesized token was wrong.)
 #[test]
-fn spirit_summoning_creates_a_three_two_lifelink_spirit() {
+fn spirit_summoning_creates_a_three_two_red_white_spirit() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::spirit_summoning());
+    g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Spirit Summoning castable for {3}{W}");
+    .expect("Spirit Summoning castable for {2}{R}{W}");
     drain_stack(&mut g);
 
     let spirit = g.battlefield.iter()
@@ -949,8 +948,10 @@ fn spirit_summoning_creates_a_three_two_lifelink_spirit() {
         .expect("Spirit token should be on the battlefield");
     assert_eq!(spirit.power(), 3, "Spirit token is a 3/2");
     assert_eq!(spirit.toughness(), 2, "Spirit token is a 3/2");
-    assert!(spirit.has_keyword(&Keyword::Lifelink),
-        "Spirit token has lifelink");
+    assert!(!spirit.has_keyword(&Keyword::Lifelink),
+        "STX Spirit token has no keywords (printed vanilla 3/2)");
+    assert_eq!(spirit.definition.color_indicator, vec![Color::Red, Color::White],
+        "Spirit token is red and white");
     assert_eq!(spirit.controller, 0,
         "Spirit token controlled by casting player");
 }
@@ -989,64 +990,39 @@ fn necrotic_fumes_sacrifices_one_and_exiles_target() {
         "Target should be in exile (Necrotic Fumes exiles rather than destroys)");
 }
 
-/// Combat Professor's Mentor approximation (`PowerAtMost(1)`) correctly
-/// matches the printed Mentor for a base-power-2 source: "lesser power"
-/// = power < 2 = PowerAtMost(1). Lock this in.
+/// Combat Professor — real oracle: "Flying / At the beginning of combat
+/// on your turn, target creature you control gets +1/+0 and gains
+/// vigilance until end of turn."
 #[test]
-fn combat_professor_mentor_buffs_a_smaller_attacker() {
-    use crabomination::game::types::{Attack, AttackTarget};
+fn combat_professor_begin_combat_pumps_and_grants_vigilance() {
     let mut g = two_player_game();
     let prof = g.add_card_to_battlefield(0, catalog::combat_professor());
-    let smaller = g.add_card_to_battlefield(0, catalog::memnite()); // 1/1 — strictly lesser power than Combat Professor's 2
-
     g.clear_sickness(prof);
-    g.clear_sickness(smaller);
-    g.step = TurnStep::DeclareAttackers;
 
-    g.perform_action(GameAction::DeclareAttackers(vec![
-        Attack { attacker: prof, target: AttackTarget::Player(1) },
-        Attack { attacker: smaller, target: AttackTarget::Player(1) },
-    ]))
-    .expect("DeclareAttackers");
+    // Only one creature — the trigger's "target creature you control"
+    // auto-picks the Professor itself.
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
 
-    let smaller_card = g.battlefield_find(smaller).unwrap();
-    assert_eq!(
-        smaller_card.counter_count(CounterType::PlusOnePlusOne), 1,
-        "1/1 attacker (lesser power than Combat Professor's 2) gains a +1/+1 counter via Mentor"
-    );
+    let p = g.computed_permanent(prof).unwrap();
+    assert_eq!(p.power, 2 + 1, "+1/+0 until end of turn");
+    assert_eq!(p.toughness, 3, "toughness unchanged");
+    let card = g.battlefield_find(prof).unwrap();
+    assert!(card.has_keyword(&Keyword::Vigilance),
+        "target gains vigilance until end of turn");
+    assert!(card.has_keyword(&Keyword::Flying), "printed flying");
 }
 
+/// Square Up — "Target creature has base power and toughness 4/4 until
+/// end of turn." We verify the SetBasePT layer-7b effect.
 #[test]
-fn combat_professor_mentor_skips_equal_power_attacker() {
-    use crabomination::game::types::{Attack, AttackTarget};
-    let mut g = two_player_game();
-    let prof = g.add_card_to_battlefield(0, catalog::combat_professor()); // 2 power
-    let equal = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 — not lesser
-    g.clear_sickness(prof);
-    g.clear_sickness(equal);
-    g.step = crabomination::game::types::TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![
-        Attack { attacker: prof, target: AttackTarget::Player(1) },
-        Attack { attacker: equal, target: AttackTarget::Player(1) },
-    ])).expect("attack");
-    drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(equal).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
-        "equal-power attacker is not a legal Mentor target (PowerLessThanSource)");
-}
-
-/// Square Up sets the target creature's base power and toughness to 0/4
-/// for the turn, and the caster draws a card. We verify both the
-/// SetBasePT layer-7b effect and the cantrip.
-#[test]
-fn square_up_sets_target_creature_to_zero_four_and_draws() {
+fn square_up_sets_target_creature_base_pt_to_four_four() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 base
-    g.add_card_to_library(0, catalog::island()); // for the draw
 
     let id = g.add_card_to_hand(0, catalog::square_up());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1); // {G/U} hybrid
 
     let hand_before = g.players[0].hand.len();
 
@@ -1055,20 +1031,20 @@ fn square_up_sets_target_creature_to_zero_four_and_draws() {
         additional_targets: vec![],
         mode: None, x_value: None,
     })
-    .expect("Square Up castable for {U}{R}");
+    .expect("Square Up castable for {G/U}");
     drain_stack(&mut g);
 
     let computed = g.computed_permanent(bear).expect("Bear still present");
-    assert_eq!(computed.power, 0, "Base power set to 0");
+    assert_eq!(computed.power, 4, "Base power set to 4");
     assert_eq!(computed.toughness, 4, "Base toughness set to 4");
-    // Hand: -1 (cast) +1 (draw) = 0 net.
-    assert_eq!(g.players[0].hand.len(), hand_before,
-        "Hand size unchanged (cast -1 + cantrip +1)");
+    // No cantrip on the real card — hand only lost the cast spell.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1,
+        "Square Up has no draw rider");
 }
 
 /// +1/+1 counters STACK on top of Square Up's base-P/T override per
 /// CR 613.7b/c/f. A 2/2 bear with a +1/+1 counter, after Square Up,
-/// should be 1/5 — base 0/4 + 1 counter delta.
+/// should be 5/5 — base 4/4 + 1 counter delta.
 #[test]
 fn square_up_layers_under_plus_one_counters() {
     use crabomination::card::CounterType;
@@ -1077,8 +1053,7 @@ fn square_up_layers_under_plus_one_counters() {
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
 
     let id = g.add_card_to_hand(0, catalog::square_up());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1); // {G/U} hybrid — blue side
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
@@ -1089,71 +1064,40 @@ fn square_up_layers_under_plus_one_counters() {
     drain_stack(&mut g);
 
     let computed = g.computed_permanent(bear).expect("Bear still present");
-    // 0 base power + 1 from counter = 1; 4 base toughness + 1 from counter = 5.
-    assert_eq!(computed.power, 1, "0 + counter = 1");
+    // 4 base power + 1 from counter = 5; same for toughness.
+    assert_eq!(computed.power, 5, "4 + counter = 5");
     assert_eq!(computed.toughness, 5, "4 + counter = 5");
 }
 
-// ── CR 700.2b modal triggers ────────────────────────────────────────────────
+// ── Prismari Apprentice — MV-gated counter ──────────────────────────────────
 
-/// Prismari Apprentice's Magecraft trigger is modal (Scry 1 / +1/+0 EOT).
-/// Per CR 700.2b, the controller picks the mode as part of putting the
-/// triggered ability on the stack. The `AutoDecider` picks the leftmost
-/// printed mode (Scry 1) by default — verify the trigger fires + scries
-/// without bumping the source.
+/// Real oracle: "Magecraft — … this creature can't be blocked this turn.
+/// If that spell has mana value 5 or greater, put a +1/+1 counter on this
+/// creature." Creative Outburst (MV 7) clears the gate → counter lands.
 #[test]
-fn prismari_apprentice_modal_magecraft_scrys_by_default() {
+fn prismari_apprentice_gets_counter_on_mana_value_five_plus_spell() {
     let mut g = two_player_game();
     let app = g.add_card_to_battlefield(0, catalog::prismari_apprentice());
     g.clear_sickness(app);
-    // Seed library so scry has something to look at.
-    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
-    let lib_before = g.players[0].library.len();
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-
-    let pre_power = g.battlefield.iter().find(|c| c.id == app).unwrap().power();
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Bolt castable for {R}");
-    drain_stack(&mut g);
-
-    // Library unchanged (Scry doesn't draw); source not bumped.
-    assert_eq!(g.players[0].library.len(), lib_before,
-        "Scry 1 (mode 0) should not change library size");
-    let a = g.battlefield.iter().find(|c| c.id == app).unwrap();
-    assert_eq!(a.power(), pre_power,
-        "Mode 0 (Scry) should not pump Apprentice (would imply mode 1 picked)");
-}
-
-/// Same source as above, but inject a `ScriptedDecider` that returns
-/// `DecisionAnswer::Mode(1)` — the +1/+0 EOT branch — exercising the
-/// engine's CR 700.2b modal trigger mode pick at push-time.
-#[test]
-fn prismari_apprentice_modal_magecraft_pumps_via_scripted_mode_pick() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-    let mut g = two_player_game();
-    let app = g.add_card_to_battlefield(0, catalog::prismari_apprentice());
-    g.clear_sickness(app);
-    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-
-    // Pick mode 1 (the +1/+0 branch) when the modal-trigger decision lands.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    // Seed library for Creative Outburst's dig.
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let big = g.add_card_to_hand(0, catalog::creative_outburst());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: big, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Bolt castable for {R}");
+    .expect("Creative Outburst castable");
     drain_stack(&mut g);
 
     let a = g.battlefield.iter().find(|c| c.id == app).unwrap();
-    assert_eq!(a.power(), 3,
-        "Apprentice should be 3/2 after picking mode 1 (Magecraft +1/+0 EOT)");
-    assert_eq!(a.toughness(), 2);
+    assert!(a.has_keyword(&Keyword::Unblockable),
+        "Magecraft always makes Apprentice unblockable this turn");
+    assert_eq!(a.counter_count(CounterType::PlusOnePlusOne), 1,
+        "MV-7 spell puts a +1/+1 counter on Apprentice");
+    assert_eq!(a.power(), 3, "2/2 + counter → 3/3");
 }
 
 /// Confront the Past mode 2 deals damage equal to the target PW's
@@ -1299,14 +1243,15 @@ fn flow_state_draws_one_normally_and_two_when_graveyard_has_is_pair() {
         "Upgrade path: -1 cast + 2 draws = +1 net");
 }
 
-/// Snow Day (doc-promoted) — taps target creature and applies a stun
-/// counter. CR 122.1d: a permanent with a stun counter doesn't untap
-/// during its controller's next untap step; instead, one stun is
-/// removed. We verify the immediate-state shape (tapped + stun
-/// counter applied).
+/// Snow Day (doc-promoted) — real oracle: "Tap up to two target
+/// creatures. Those creatures don't untap during their controller's
+/// next untap step. / Draw two cards, then discard a card." The freeze
+/// is the `skip_next_untap` flag (the printed wording predates stun
+/// counters).
 #[test]
-fn snow_day_doc_promoted_taps_and_stuns_target_creature() {
+fn snow_day_doc_promoted_taps_and_freezes_target_creature() {
     let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::snow_day());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
@@ -1316,13 +1261,13 @@ fn snow_day_doc_promoted_taps_and_stuns_target_creature() {
         card_id: id, target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Snow Day castable for {U}{R}");
+    }).expect("Snow Day castable");
     drain_stack(&mut g);
 
     let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert!(b.tapped, "Snow Day should tap the target");
-    assert_eq!(b.counter_count(CounterType::Stun), 1,
-        "Snow Day should apply 1 stun counter");
+    assert!(b.skip_next_untap,
+        "target won't untap during its controller's next untap step");
 }
 
 /// Curate (doc-promoted) — Scry 3 + Draw 1 approximation. With the
@@ -1449,52 +1394,45 @@ fn killian_does_not_reduce_non_creature_targeting_spell() {
     );
 }
 
-// ── Multiple Choice — ChooseN-all-four promotion ─────────────────────────────
+// ── Multiple Choice — "X is 4 or more" runs every bullet ─────────────────────
 
-/// Multiple Choice's promoted ChooseN body runs all four modes in one
-/// resolution: Scry 2 + 1/1 Pest token + +1/+0 hexproof EOT on target +
-/// Draw 2. Verify the play pattern end-to-end.
+/// Real oracle: "If X is 1, scry 1, then draw a card. / If X is 2, you may
+/// choose a player. They return a creature they control to its owner's hand.
+/// / If X is 3, create a 4/4 blue and red Elemental creature token. / If X
+/// is 4 or more, do all of the above." Cast at X=4 with no creatures in
+/// play: the scry+draw and the Elemental both happen (the bounce is vacuous).
 #[test]
 fn multiple_choice_fires_all_four_modes() {
     let mut g = two_player_game();
-    // Seed library so Scry 2 + Draw 2 don't deck.
-    for _ in 0..10 { g.add_card_to_library(0, catalog::island()); }
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.clear_sickness(bear);
+    // Seed library so scry 1 + draw 1 don't deck.
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
 
     let mc = g.add_card_to_hand(0, catalog::multiple_choice());
-    g.players[0].mana_pool.add(Color::Blue, 2);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
     let hand_before = g.players[0].hand.len();
 
-    // "Choose one or more" — pick ALL FOUR modes at cast time. Mode 2's
-    // pump targets the bear (its instance is the only target-bearing one).
-    g.perform_action(GameAction::CastSpellSpree {
+    g.perform_action(GameAction::CastSpell {
         card_id: mc,
-        spree_modes: vec![0, 1, 2, 3],
-        target: Some(Target::Permanent(bear)),
+        target: None,
         additional_targets: vec![],
-        x_value: None,
+        mode: None,
+        x_value: Some(4),
     })
-    .expect("Multiple Choice castable for {1}{U}{U}");
+    .expect("Multiple Choice castable for {X=4}{U}");
     drain_stack(&mut g);
 
-    // Mode 1: 1/1 Pest token should be on battlefield.
-    let pests: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.name == "Pest")
+    // X=3 bullet: a 4/4 blue-and-red Elemental token.
+    let elementals: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Elemental")
         .collect();
-    assert_eq!(pests.len(), 1, "Multiple Choice mints exactly one Pest token");
+    assert_eq!(elementals.len(), 1, "X≥4 mints exactly one Elemental token");
+    assert_eq!(elementals[0].power(), 4, "Elemental is a 4/4");
+    assert_eq!(elementals[0].toughness(), 4);
 
-    // Mode 2: bear got +1/+0 EOT and hexproof.
-    let bear_card = g.battlefield_find(bear).unwrap();
-    assert_eq!(bear_card.power(), 3, "Bear should be 3/2 from +1/+0");
-    assert_eq!(bear_card.toughness(), 2);
-    assert!(bear_card.has_keyword(&Keyword::Hexproof),
-        "Bear should have hexproof EOT");
-
-    // Mode 3: draw 2. Net hand = -1 (cast) +2 (draw) = +1.
-    assert_eq!(g.players[0].hand.len(), hand_before + 1,
-        "Multiple Choice's all-modes draw-2 rider should fire");
+    // X=1 bullet: scry 1, then draw. Net hand = -1 (cast) +1 (draw) = 0.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "X≥4 also runs the scry-1-draw-1 bullet");
 }
 
 /// Killian only reduces spells *you* cast — an opponent's Killian shouldn't
@@ -1617,87 +1555,77 @@ fn other_than_source_strict_filter_excludes_lone_source_target() {
     );
 }
 
-/// Shadrix Silverquill's attack trigger fires (via the new ChooseN
-/// auto-pick of modes 1+2): a +1/+1 counter on a target friendly
-/// creature, and two Inkling tokens minted under the controller.
+/// Shadrix Silverquill — real Oracle: "At the beginning of combat on
+/// your turn, you may choose two. Each mode must target a different
+/// player." Default picks: mode 1 (draw a card and lose 1 life — on
+/// the controller) + mode 0 (target player creates a 2/1 white and
+/// black Inkling token with flying — the auto-picker aims the player
+/// slot at the opponent), matching the printed different-players
+/// constraint.
 #[test]
-fn shadrix_silverquill_attack_pumps_target_creature_and_mints_inklings() {
-    use crabomination::game::types::AttackTarget;
+fn shadrix_silverquill_begin_combat_draw_lose_life_and_opp_inkling() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    let shadrix = g.add_card_to_battlefield(0, catalog::shadrix_silverquill());
-    g.clear_sickness(shadrix);
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.clear_sickness(bear);
+    // Accept the printed "you may" (AutoDecider declines).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let _shadrix = g.add_card_to_battlefield(0, catalog::shadrix_silverquill());
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
     let inklings_before = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Inkling))
         .count();
 
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: shadrix,
-        target: AttackTarget::Player(1),
-    }]))
-    .expect("Shadrix can attack");
+    // Beginning of combat on P0's turn.
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
 
-    // Mode 1: target friendly creature now has a +1/+1 counter.
-    let bear_card = g.battlefield_find(bear).expect("bear on bf");
-    assert_eq!(
-        bear_card.counter_count(CounterType::PlusOnePlusOne),
-        1,
-        "Bear should have a +1/+1 counter from Shadrix mode 1"
-    );
+    // Mode 1: the controller draws a card and loses 1 life.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Shadrix mode 1: controller draws a card");
+    assert_eq!(g.players[0].life, life_before - 1,
+        "Shadrix mode 1: controller loses 1 life");
 
-    // Mode 2: two Inkling tokens added on P0's side.
-    let inklings_after = g.battlefield.iter()
+    // Mode 0: target player — auto-aimed at the OPPONENT (the "different
+    // player" line) — creates one 2/1 Inkling flier.
+    let inklings: Vec<_> = g.battlefield.iter()
         .filter(|c| c.is_token
-            && c.controller == 0
             && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Inkling))
-        .count();
-    assert_eq!(
-        inklings_after - inklings_before, 2,
-        "Shadrix mode 2 should mint two Inkling tokens for the controller"
-    );
+        .collect();
+    assert_eq!(inklings.len() - inklings_before, 1,
+        "Shadrix mode 0 should mint one Inkling token");
+    let ink = inklings.last().unwrap();
+    assert_eq!(ink.controller, 1,
+        "the Inkling is created under the targeted (opposing) player");
+    assert_eq!((ink.power(), ink.toughness()), (2, 1),
+        "STX Inkling token is a 2/1");
 }
 
-/// Shadrix's trigger is SelfSource — opponent attacking should NOT
-/// fire Shadrix's choose-two.
+/// Shadrix's trigger is "at the beginning of combat on YOUR turn" —
+/// it must not fire during an opponent's combat.
 #[test]
-fn shadrix_silverquill_attack_does_not_trigger_on_opp_attack() {
-    use crabomination::game::types::AttackTarget;
+fn shadrix_silverquill_does_not_trigger_on_opponents_combat() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let _shadrix = g.add_card_to_battlefield(0, catalog::shadrix_silverquill());
-    // Opp creature attacks.
-    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.clear_sickness(opp_bear);
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.clear_sickness(bear);
-    let inklings_before = g.battlefield.iter()
-        .filter(|c| c.is_token).count();
-    let bear_counters_before = g.battlefield_find(bear).unwrap()
-        .counter_count(CounterType::PlusOnePlusOne);
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+    let inklings_before = g.battlefield.iter().filter(|c| c.is_token).count();
 
-    // P1's turn — opp's bear attacks. (Active player is P0 by default in
-    // two_player_game; switch.)
+    // P1's combat begins — Shadrix (controlled by P0) stays silent.
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: opp_bear,
-        target: AttackTarget::Player(0),
-    }]))
-    .expect("Opp bear can attack");
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
 
-    let inklings_after = g.battlefield.iter()
-        .filter(|c| c.is_token).count();
-    assert_eq!(inklings_after, inklings_before,
-        "Shadrix should not trigger off opponent's attack");
-    assert_eq!(
-        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
-        bear_counters_before,
-        "No counter added when opp attacks"
-    );
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(),
+        inklings_before,
+        "Shadrix should not trigger on the opponent's combat");
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "No draw on the opponent's combat");
 }
 
 // ── Push XXXV: Practiced Offense mode pick + new Lash of Malice + Big Play ──
@@ -2025,27 +1953,59 @@ fn brilliant_plan_scrys_three_and_draws_three() {
     assert_eq!(g.players[0].library.len(), lib_before - 3);
 }
 
-/// Fortifying Draught: Lesson, +1/+4 EOT to target creature.
+/// Fortifying Draught: "You gain 2 life. Target creature gets +X/+X
+/// until end of turn, where X is the amount of life you gained this
+/// turn." The gain resolves first, so X ≥ 2.
 #[test]
-fn fortifying_draught_pumps_target_creature() {
+fn fortifying_draught_gains_two_and_pumps_by_life_gained_this_turn() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
 
+    let life_before = g.players[0].life;
     let id = g.add_card_to_hand(0, catalog::fortifying_draught());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Fortifying Draught castable for {2}{W}");
+    }).expect("Fortifying Draught castable for {2}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 2, "you gain 2 life");
+    let comp = g.computed_permanent(bear).unwrap();
+    // X = 2 (only this spell's lifegain this turn) → 2/2 + 2 = 4/4.
+    assert_eq!(comp.power, 4, "bear at 2+2=4 power");
+    assert_eq!(comp.toughness, 4, "bear at 2+2=4 toughness");
+}
+
+/// Life gained earlier in the turn also counts toward Fortifying
+/// Draught's X (CR 119.3 — total gained this turn, not just this spell).
+#[test]
+fn fortifying_draught_counts_prior_lifegain_this_turn() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Simulate 3 life gained earlier this turn.
+    g.players[0].life_gained_this_turn = 3;
+
+    let id = g.add_card_to_hand(0, catalog::fortifying_draught());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Fortifying Draught castable");
     drain_stack(&mut g);
 
     let comp = g.computed_permanent(bear).unwrap();
-    assert_eq!(comp.power, 3, "bear at 2+1=3 power");
-    assert_eq!(comp.toughness, 6, "bear at 2+4=6 toughness");
+    // X = 3 (earlier) + 2 (this spell) = 5 → 2/2 + 5 = 7/7.
+    assert_eq!(comp.power, 7, "bear at 2+5=7 power");
+    assert_eq!(comp.toughness, 7, "bear at 2+5=7 toughness");
 }
 
 /// Guiding Voice: +1/+1 counter on target creature + Learn (Draw 1).
@@ -2431,7 +2391,7 @@ fn dragons_approach_deals_three_to_a_player() {
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Player(1)),
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
@@ -2446,13 +2406,15 @@ fn dragons_approach_deals_three_to_a_player() {
     );
 }
 
-/// Dragon's Approach deals 3 damage to a creature. A 3-toughness
-/// bear dies to SBA after taking 3 marked damage.
+/// Dragon's Approach is untargeted and only burns opponents ("deals 3
+/// damage to each opponent") — creatures are never hit.
 #[test]
-fn dragons_approach_kills_grizzly_bears() {
+fn dragons_approach_burns_each_opponent_not_creatures() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(bear);
+    let opp_life_before = g.players[1].life;
+    let own_life_before = g.players[0].life;
 
     let id = g.add_card_to_hand(0, catalog::dragons_approach());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
@@ -2460,18 +2422,20 @@ fn dragons_approach_kills_grizzly_bears() {
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Permanent(bear)),
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Dragon's Approach castable for {B}");
+    .expect("Dragon's Approach casts with no target");
     drain_stack(&mut g);
 
     let _ = g.check_state_based_actions();
+    assert_eq!(g.players[1].life, opp_life_before - 3, "each opponent takes 3");
+    assert_eq!(g.players[0].life, own_life_before, "caster takes nothing");
     assert!(
-        g.battlefield_find(bear).is_none(),
-        "Bear with 2 toughness dies to 3 damage"
+        g.battlefield_find(bear).is_some(),
+        "creatures are untouched — the spell only burns opponents"
     );
 }
 
@@ -2755,21 +2719,31 @@ fn dragons_approach_tutors_dragon_with_four_in_graveyard() {
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
 
-    // Scripted decider picks the Dragon during the tutor.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(dragon_id))]));
+    // Scripted decider: accept the "you may exile…" offer, then pick the
+    // Dragon during the tutor.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(dragon_id)),
+    ]));
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Player(1)),
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Dragon's Approach castable for {B}");
+    .expect("Dragon's Approach casts with no target");
     drain_stack(&mut g);
 
     let on_bf = g.battlefield.iter().any(|c| c.id == dragon_id && c.controller == 0);
     assert!(on_bf, "The chosen Dragon should be on the battlefield after Dragon's Approach tutored it");
+    // The four graveyard copies (and the resolving copy) are exiled as
+    // part of the rider's cost — none remain in the graveyard.
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.definition.name == "Dragon's Approach"),
+        "all Dragon's Approach copies left the graveyard (exiled)"
+    );
 }
 
 /// Pure-vanilla cast — graveyard tally is below 4 → no tutor offered.
@@ -2799,16 +2773,16 @@ fn dragons_approach_does_not_offer_tutor_without_four_named_in_graveyard() {
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Player(1)),
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Dragon's Approach castable for {B}");
+    .expect("Dragon's Approach casts with no target");
     drain_stack(&mut g);
 
     // Damage half always fires.
-    assert_eq!(g.players[1].life, life_before - 3, "3 damage to player still resolves");
+    assert_eq!(g.players[1].life, life_before - 3, "3 damage to each opponent still resolves");
     // Dragon stays in library (no tutor).
     let on_bf = g.battlefield.iter().any(|c| c.id == dragon_id);
     assert!(!on_bf, "Tutor rider should not fire with three copies in graveyard");
@@ -2818,15 +2792,15 @@ fn dragons_approach_does_not_offer_tutor_without_four_named_in_graveyard() {
 
 // ── Push (modern_decks): New STX additions + SOS promotions ─────────────────
 
-/// Expanded Anatomy is a Lesson that lands two +1/+1 counters on a
-/// target creature for {3}{G}.
+/// Expanded Anatomy ({2}{W} Lesson): "Put two +1/+1 counters on target
+/// creature. It gains vigilance until end of turn."
 #[test]
-fn expanded_anatomy_lands_two_counters_on_target_creature() {
+fn expanded_anatomy_lands_two_counters_and_grants_vigilance() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::expanded_anatomy());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -2835,7 +2809,7 @@ fn expanded_anatomy_lands_two_counters_on_target_creature() {
         mode: None,
         x_value: None,
     })
-    .expect("Expanded Anatomy castable for {3}{G}");
+    .expect("Expanded Anatomy castable for {2}{W}");
     drain_stack(&mut g);
 
     let card = g.battlefield.iter().find(|c| c.id == bear).expect("Bear alive");
@@ -2846,6 +2820,9 @@ fn expanded_anatomy_lands_two_counters_on_target_creature() {
     );
     assert_eq!(card.power(), 4, "Bear becomes 4/4");
     assert_eq!(card.toughness(), 4);
+    let computed = g.computed_permanent(bear).expect("Bear computed");
+    assert!(computed.keywords.contains(&Keyword::Vigilance),
+        "Bear gains vigilance until end of turn");
 }
 
 /// Selfless Glyphweaver's sac activation grants Indestructible (EOT)
@@ -3416,149 +3393,136 @@ fn brush_off_alt_cost_counters_instant_on_stack() {
 
 // ── Reconstruct History (NEW, modern_decks push) ────────────────────────────
 
-/// Reconstruct History — {1}{R}{W} sorcery, Lorehold. Choose two or more
-/// modes — return target artifact/instant/Spirit/sorcery card from your
-/// graveyard to your hand. The auto-decider's first viable pair of modes
-/// (artifact + instant) returns those two cards to hand.
+/// Reconstruct History — {2}{R}{W} sorcery. Real oracle: "Return up to one
+/// target artifact card, up to one target enchantment card, up to one target
+/// instant card, up to one target sorcery card, and up to one target
+/// planeswalker card from your graveyard to your hand. / Exile Reconstruct
+/// History." Target slots are ordered (artifact/enchantment/instant/sorcery/
+/// planeswalker); the trailing planeswalker slot is declined ("up to one").
 #[test]
 fn reconstruct_history_returns_two_cards_from_graveyard_to_hand() {
     let mut g = two_player_game();
-    // Seed gy with one artifact (Mind Stone), one instant (Lightning Bolt),
-    // and one sorcery (Day of Judgment). All four printed modes have at
-    // least one matching card.
+    // Seed gy with one card per matched slot 0-3 (no planeswalker).
     let stone = g.add_card_to_graveyard(0, catalog::mind_stone());
+    let anthem = g.add_card_to_graveyard(0, catalog::glorious_anthem());
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    let _doj = g.add_card_to_graveyard(0, catalog::day_of_judgment());
+    let doj = g.add_card_to_graveyard(0, catalog::day_of_judgment());
     let id = g.add_card_to_hand(0, catalog::reconstruct_history());
-    let gy_before = g.players[0].graveyard.len();
     let hand_before = g.players[0].hand.len();
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: None,
-        additional_targets: vec![],
+        target: Some(Target::Permanent(stone)),
+        additional_targets: vec![
+            Target::Permanent(anthem),
+            Target::Permanent(bolt),
+            Target::Permanent(doj),
+        ],
         mode: None,
         x_value: None,
     })
-    .expect("Reconstruct History castable for {1}{R}{W}");
+    .expect("Reconstruct History castable for {2}{R}{W}");
     drain_stack(&mut g);
 
-    // Hand: -1 (cast spell, moved to stack then gy) + 2 (two gy cards
-    // returned to hand) = +1 net relative to hand_before.
+    // Hand: -1 (cast spell) + 4 (returned gy cards) = +3 net.
     assert_eq!(
         g.players[0].hand.len(),
-        hand_before + 1,
-        "two gy cards returned to hand"
+        hand_before + 3,
+        "four gy cards returned to hand"
     );
-    // Graveyard: -2 (two cards moved to hand) + 1 (Reconstruct History
-    // itself enters gy on resolve) = -1 net.
-    assert_eq!(
-        g.players[0].graveyard.len(),
-        gy_before - 1,
-        "two cards returned, Reconstruct History added"
-    );
-    // The two returned cards should now be in hand.
-    let in_hand: Vec<_> = g.players[0]
-        .hand
-        .iter()
-        .map(|c| c.id)
-        .collect();
-    let returned_either = in_hand.contains(&stone) || in_hand.contains(&bolt);
-    assert!(
-        returned_either,
-        "at least one of the matched gy cards should be in hand"
-    );
+    for (card, what) in [(stone, "artifact"), (anthem, "enchantment"),
+                         (bolt, "instant"), (doj, "sorcery")] {
+        assert!(g.players[0].hand.iter().any(|c| c.id == card),
+            "the targeted {what} card is back in hand");
+    }
+    // "Exile Reconstruct History." — it does NOT go to the graveyard.
+    assert!(g.exile.iter().any(|c| c.id == id),
+        "Reconstruct History exiles itself on resolution");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Reconstruct History is not in the graveyard");
 }
 
 // ── Lorehold Excavation (NEW, modern_decks push) ────────────────────────────
 
-/// Lorehold Excavation {2}{R}{W}, {T}: exile a target gy card; if it was a
-/// creature card, mint an X/X flying Spirit. Non-creature exile mints nothing.
+/// Lorehold Excavation — real oracle activated half: "{5}, Exile a creature
+/// card from your graveyard: Create a tapped 3/2 red and white Spirit
+/// creature token." The exile is a COST (creature cards only); with no
+/// creature card in the graveyard the activation is rejected.
 #[test]
 fn lorehold_excavation_exile_creature_mints_spirit_token_non_creature_does_not() {
-    use crabomination::card::Keyword;
-
     fn setup() -> (GameState, CardId) {
         let mut g = two_player_game();
         let excavation = g.add_card_to_battlefield(0, catalog::lorehold_excavation());
-        g.clear_sickness(excavation);
-        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == excavation) {
-            c.tapped = false;
-            c.summoning_sick = false;
-        }
-        g.players[0].mana_pool.add(Color::Red, 1);
-        g.players[0].mana_pool.add(Color::White, 1);
-        g.players[0].mana_pool.add_colorless(2);
+        g.players[0].mana_pool.add_colorless(5);
         (g, excavation)
     }
 
-    // Creature target → mints a 2/2 flying Spirit (X = bear's power).
+    // Creature card in gy → cost payable → mints a tapped 3/2 Spirit.
     let (mut g, excavation) = setup();
     let bear_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: excavation, ability_index: 2,
-        target: Some(Target::Permanent(bear_gy)), additional_targets: Vec::new(), x_value: None }).expect("Lorehold Excavation gy-exile activates for {2}{R}{W}, {T}");
+        card_id: excavation, ability_index: 0,
+        target: None, additional_targets: Vec::new(), x_value: None })
+    .expect("Lorehold Excavation activates for {5} + exile a creature card");
     drain_stack(&mut g);
-    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear_gy));
+    assert!(g.exile.iter().any(|c| c.id == bear_gy),
+        "the creature card was exiled from the graveyard as the cost");
     let spirits: Vec<_> = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0)
         .collect();
-    assert_eq!(spirits.len(), 1, "one bonus Spirit token minted");
-    assert_eq!(spirits[0].power(), 2, "Spirit token power = bear's power (2)");
+    assert_eq!(spirits.len(), 1, "one Spirit token minted");
+    assert_eq!(spirits[0].power(), 3, "Spirit token is a 3/2");
     assert_eq!(spirits[0].toughness(), 2);
-    assert!(spirits[0].has_keyword(&Keyword::Flying));
+    assert!(spirits[0].tapped, "the Spirit token enters tapped");
 
-    // Non-creature target (sorcery) → no Spirit token.
+    // Only a non-creature card (sorcery) in gy → cost unpayable → rejected.
     let (mut g, excavation) = setup();
-    let doj = g.add_card_to_graveyard(0, catalog::day_of_judgment());
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: excavation, ability_index: 2,
-        target: Some(Target::Permanent(doj)), additional_targets: Vec::new(), x_value: None }).expect("Lorehold Excavation gy-exile activates");
-    drain_stack(&mut g);
-    let spirits = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0)
-        .count();
-    assert_eq!(spirits, 0, "no bonus Spirit token when target gy card is a non-creature");
+    let _doj = g.add_card_to_graveyard(0, catalog::day_of_judgment());
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: excavation, ability_index: 0,
+        target: None, additional_targets: Vec::new(), x_value: None });
+    assert!(res.is_err(),
+        "activation rejected without a creature card to exile; got {res:?}");
+    assert_eq!(g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit")
+        .count(), 0, "no Spirit token when the exile cost can't be paid");
 }
 
-/// Lorehold Excavation: when the exiled creature is bigger (e.g. Serra
-/// Angel, 4/4), the bonus Spirit token mints as X/X = 4/4 — proving
-/// the new `Value::PowerOf` evaluator correctly reads the gy card's
-/// printed power.
+/// Lorehold Excavation — real oracle triggered half: "At the beginning of
+/// your end step, mill a card. If a land card was milled this way, you gain
+/// 1 life. Otherwise, this enchantment deals 1 damage to each opponent."
 #[test]
-fn lorehold_excavation_token_scales_with_creature_power() {
-    let mut g = two_player_game();
-    let excavation = g.add_card_to_battlefield(0, catalog::lorehold_excavation());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == excavation) {
-        c.tapped = false;
-        c.summoning_sick = false;
-    }
-    // Serra Angel is 4/4 — the bonus Spirit token should mint at 4/4.
-    let angel_gy = g.add_card_to_graveyard(0, catalog::serra_angel());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: excavation,
-        ability_index: 2,
-        target: Some(Target::Permanent(angel_gy)), additional_targets: Vec::new(), x_value: None })
-    .expect("Lorehold Excavation gy-exile activates");
-    drain_stack(&mut g);
+fn lorehold_excavation_end_step_mill_gains_life_on_land_pings_otherwise() {
+    use crabomination::game::TurnStep;
 
-    let spirits: Vec<_> = g
-        .battlefield
-        .iter()
-        .filter(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0)
-        .collect();
-    assert_eq!(spirits.len(), 1, "one bonus Spirit token minted");
-    assert_eq!(
-        spirits[0].power(),
-        4,
-        "Spirit token power = Serra Angel's power (4)"
-    );
-    assert_eq!(spirits[0].toughness(), 4);
+    // Land on top → mill it, gain 1 life, no damage.
+    let mut g = two_player_game();
+    let _exc = g.add_card_to_battlefield(0, catalog::lorehold_excavation());
+    g.add_card_to_library(0, catalog::island());
+    let (life0, opp0) = (g.players[0].life, g.players[1].life);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Island"),
+        "the top card was milled");
+    assert_eq!(g.players[0].life, life0 + 1, "land milled → you gain 1 life");
+    assert_eq!(g.players[1].life, opp0, "land milled → no damage to opponents");
+
+    // Nonland on top → mill it, 1 damage to each opponent, no life gain.
+    let mut g = two_player_game();
+    let _exc = g.add_card_to_battlefield(0, catalog::lorehold_excavation());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let (life0, opp0) = (g.players[0].life, g.players[1].life);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the top card was milled");
+    assert_eq!(g.players[0].life, life0, "nonland milled → no life gain");
+    assert_eq!(g.players[1].life, opp0 - 1,
+        "nonland milled → 1 damage to each opponent");
 }
 
 // ── Diamond cycle (STA reprints) ────────────────────────────────────────────
@@ -4152,7 +4116,7 @@ fn eureka_moment_draws_two_cards() {
 
 #[test]
 fn eureka_moment_optional_land_drop_with_scripted_decider() {
-    // ScriptedDecider opts into the land-drop; the land goes to bf tapped.
+    // ScriptedDecider opts into the land-drop; the land goes to bf untapped.
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     for _ in 0..5 {
@@ -4190,19 +4154,35 @@ fn eureka_moment_optional_land_drop_with_scripted_decider() {
     assert_eq!(
         lands_after,
         lands_before + 1,
-        "MayDo land-drop landed the Forest tapped"
+        "MayDo land-drop put the Forest onto the battlefield"
     );
 }
 
 #[test]
-fn teach_by_example_copies_target_instant() {
-    // P0 stack: Lightning Bolt at P1, then Teach by Example targeting the
-    // Bolt. The copy resolves first and the original Bolt resolves second
-    // — both deal 3 damage to P1.
+fn teach_by_example_copies_your_next_instant_this_turn() {
+    // Real oracle: "When you next cast an instant or sorcery spell this
+    // turn, copy that spell. You may choose new targets for the copy."
+    // Teach resolves FIRST (targetless, forward-looking), then the next
+    // Bolt cast is copied — both Bolt and its copy hit P1 for 3.
     let mut g = two_player_game();
+    let p1_life_before = g.players[1].life;
+
+    let teach = g.add_card_to_hand(0, catalog::teach_by_example());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: teach,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Teach by Example castable for {1}{U/R}");
+    drain_stack(&mut g);
+
+    // Now the next instant this turn gets copied.
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
-    let p1_life_before = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(1)),
@@ -4211,38 +4191,30 @@ fn teach_by_example_copies_target_instant() {
         x_value: None,
     })
     .expect("Bolt castable");
+    drain_stack(&mut g);
 
-    // Bolt is now on the stack as the topmost StackItem.
-    let bolt_stack_id = g
-        .stack
-        .iter()
-        .find_map(|s| match s {
-            StackItem::Spell { card, .. } if card.definition.name == "Lightning Bolt" => {
-                Some(card.id)
-            }
-            _ => None,
-        })
-        .expect("Bolt on stack");
+    assert_eq!(
+        g.players[1].life,
+        p1_life_before - 6,
+        "P1 took 6 damage (Bolt + Teach by Example's copy)"
+    );
 
-    let teach = g.add_card_to_hand(0, catalog::teach_by_example());
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    // The watcher is one-shot: a second Bolt is NOT copied.
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
-        card_id: teach,
-        target: Some(Target::Permanent(bolt_stack_id)),
+        card_id: bolt2,
+        target: Some(Target::Player(1)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Teach by Example castable");
+    .expect("second Bolt castable");
     drain_stack(&mut g);
-
-    // Both Bolt + its copy deal 3 → P1 takes 6 total.
     assert_eq!(
         g.players[1].life,
-        p1_life_before - 6,
-        "P1 took 6 damage (Bolt + copy)"
+        p1_life_before - 9,
+        "second Bolt deals only 3 — the copy watcher was consumed"
     );
 }
 
@@ -4308,35 +4280,40 @@ fn manifold_key_untaps_target_artifact() {
 }
 
 #[test]
-fn leyline_invocation_pumps_by_lands_you_control() {
-    // P0 has 5 lands; cast Leyline Invocation on the bear → +5/+5 + trample EOT.
+fn leyline_invocation_creates_fractal_with_counter_per_land() {
+    // "Create a 0/0 green and blue Fractal creature token. Put X +1/+1
+    // counters on it, where X is the number of lands you control."
+    // P0 has 5 lands → the Fractal enters as a 0/0 with five +1/+1 counters.
     let mut g = two_player_game();
     for _ in 0..5 {
         let _land = g.add_card_to_battlefield(0, catalog::forest());
     }
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.clear_sickness(bear);
     let id = g.add_card_to_hand(0, catalog::leyline_invocation());
-    g.players[0].mana_pool.add(Color::Green, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Permanent(bear)),
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Leyline Invocation castable for {3}{G}{G}");
+    .expect("Leyline Invocation castable for {5}{G}");
     drain_stack(&mut g);
 
-    let bear_on_bf = g.battlefield.iter().find(|c| c.id == bear).expect("bear");
+    let fractal = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Fractal" && c.controller == 0)
+        .expect("a Fractal token was created");
     assert_eq!(
-        bear_on_bf.power(),
-        2 + 5,
-        "bear is 7/7 (base 2/2 + 5 lands)"
+        fractal.counter_count(CounterType::PlusOnePlusOne),
+        5,
+        "one +1/+1 counter per land you control"
     );
-    assert_eq!(bear_on_bf.toughness(), 2 + 5);
-    assert!(bear_on_bf.has_keyword(&crabomination::card::Keyword::Trample));
+    let comp = g.computed_permanent(fractal.id).expect("fractal computed");
+    assert_eq!(comp.power, 5, "0/0 base + 5 counters");
+    assert_eq!(comp.toughness, 5);
 }
 
 #[test]
@@ -4777,37 +4754,59 @@ fn adventurous_impulse_finds_a_creature_in_top_three() {
 
 // ── Maelstrom Muse ─────────────────────────────────────────────────────────
 
-/// Opus magecraft on Maelstrom Muse: cast a small instant → loot 1.
-/// (Hand stays unchanged after cast: draw 1, discard 1.)
+/// "Whenever this creature attacks, the next instant or sorcery spell
+/// you cast this turn costs {X} less to cast, where X is this
+/// creature's power as this ability resolves." Base power 2 → a one-shot
+/// {2} discount is banked when the Muse attacks.
 #[test]
-fn maelstrom_muse_opus_loots_on_small_cast() {
+fn maelstrom_muse_attack_banks_discount_equal_to_power() {
+    use crabomination::game::types::{Attack, AttackTarget};
     let mut g = two_player_game();
     let muse = g.add_card_to_battlefield(0, catalog::maelstrom_muse());
     g.clear_sickness(muse);
-    // Seed library for the draw.
-    g.add_card_to_library(0, catalog::island());
-    // Seed a discard target.
-    g.add_card_to_hand(0, catalog::grizzly_bears());
-    // Cast a 1-mana instant: should loot 1.
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    let hand_before = g.players[0].hand.len(); // includes bear + bolt
-    let lib_before = g.players[0].library.len();
+    g.step = TurnStep::DeclareAttackers;
 
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Bolt castable");
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: muse,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("DeclareAttackers");
     drain_stack(&mut g);
 
-    // Bolt left hand (-1). Magecraft draws 1 (+1), discards 1 (-1).
-    // Net: hand_before - 1 (bolt cast) + 0 (draw - discard cancel out).
-    assert_eq!(g.players[0].hand.len(), hand_before - 1);
-    assert_eq!(g.players[0].library.len(), lib_before - 1);
+    assert_eq!(
+        g.players[0].pending_is_discounts,
+        vec![(2, 0)],
+        "attack trigger banks a {{2}} discount (Muse's power) for the next I/S spell"
+    );
+}
+
+/// X reads live power at resolution: with a +1/+1 counter on the Muse
+/// (2/4 base → 3/5) the banked discount is {3}, not the printed 2.
+#[test]
+fn maelstrom_muse_discount_tracks_live_power_at_resolution() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let muse = g.add_card_to_battlefield(0, catalog::maelstrom_muse());
+    g.clear_sickness(muse);
+    g.battlefield
+        .iter_mut()
+        .find(|c| c.id == muse)
+        .unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    g.step = TurnStep::DeclareAttackers;
+
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: muse,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("DeclareAttackers");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[0].pending_is_discounts,
+        vec![(3, 0)],
+        "discount reads the Muse's power as the ability resolves (2 + 1 counter)"
+    );
 }
 
 // ── Eladamri's Call ─────────────────────────────────────────────────────────
@@ -5239,8 +5238,9 @@ fn pestilent_cauldron_back_castable_from_graveyard_after_sacrifice() {
     );
 }
 
-/// Multiple Choice's fourth bullet is gated on choosing ALL of the above:
-/// picking only mode 3 draws nothing.
+/// Real oracle: "If X is 3, create a 4/4 blue and red Elemental creature
+/// token." — the X=3 bullet alone mints the token but never draws (the
+/// scry-1-draw-1 bullet only fires at X=1 or X≥4).
 #[test]
 fn multiple_choice_mode_three_alone_draws_nothing() {
     let mut g = two_player_game();
@@ -5248,25 +5248,25 @@ fn multiple_choice_mode_three_alone_draws_nothing() {
         g.add_card_to_library(0, catalog::island());
     }
     let mc = g.add_card_to_hand(0, catalog::multiple_choice());
-    g.players[0].mana_pool.add(Color::Blue, 2);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
     let hand_before = g.players[0].hand.len();
-    g.perform_action(GameAction::CastSpellSpree {
+    g.perform_action(GameAction::CastSpell {
         card_id: mc,
-        spree_modes: vec![3],
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        mode: None,
+        x_value: Some(3),
     })
-    .expect("single-mode pick castable");
+    .expect("Multiple Choice castable for {X=3}{U}");
     drain_stack(&mut g);
     assert_eq!(
         g.players[0].hand.len(),
         hand_before - 1,
-        "\"if you chose all of the above\" fails — no draw, only the cast card left hand"
+        "X=3 does not draw — only the cast card left hand"
     );
-    assert!(
-        !g.battlefield.iter().any(|c| c.definition.name == "Pest"),
-        "unchosen modes don't run"
-    );
+    let elementals = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Elemental")
+        .count();
+    assert_eq!(elementals, 1, "X=3 mints the 4/4 Elemental token");
 }

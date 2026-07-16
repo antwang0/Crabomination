@@ -62,7 +62,9 @@ pub fn spirited_companion() -> CardDefinition {
 
 // ── Eyetwitch ───────────────────────────────────────────────────────────────
 
-/// Eyetwitch — {B}, 1/1 Pest. "When Eyetwitch dies, learn." Set: Strixhaven.
+/// Eyetwitch — {B}, 1/1 Eye Bat. "Flying / When this creature dies,
+/// learn." (Type line errata'd from Pest to Eye Bat when Duskmourn
+/// introduced the Eye type — Scryfall's current Oracle.)
 ///
 /// Learn via `Effect::Learn` — reveal a Lesson into hand or discard-to-draw.
 pub fn eyetwitch() -> CardDefinition {
@@ -71,11 +73,12 @@ pub fn eyetwitch() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Pest],
+            creature_types: vec![CreatureType::Eye, CreatureType::Bat],
             ..Default::default()
         },
         power: 1,
         toughness: 1,
+        keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             // Learn (CR 701.45): reveal a Lesson from your sideboard into
@@ -91,27 +94,51 @@ pub fn eyetwitch() -> CardDefinition {
 
 // ── Closing Statement ───────────────────────────────────────────────────────
 
-/// Closing Statement — {3}{W}{B} Sorcery. "Exile target nonland permanent.
-/// You gain X life."
+/// Closing Statement — {3}{W}{B} Instant. "This spell costs {2} less to
+/// cast during your end step. / Destroy target creature or planeswalker
+/// you don't control. Put a +1/+1 counter on up to one target creature
+/// you control."
 ///
-/// X is read off the spell's cast-time `x_value`, threaded into the
-/// resolution context as `Value::XFromCost`. The exile half is unconditional
-/// (X doesn't gate the exile in the printed Oracle either — it just sets
-/// the lifegain).
+/// The discount is `SelfCostReducedIf` gated on "it's your turn AND the
+/// end step". Slot 0 is the mandatory removal target; slot 1 is the
+/// optional friendly-creature counter target (a no-op when not chosen).
+/// (An earlier revision shipped a synthesized "exile + gain X" body the
+/// printed card never had.)
 pub fn closing_statement() -> CardDefinition {
+    use crate::game::TurnStep;
     CardDefinition {
         name: "Closing Statement",
         cost: cost(&[generic(3), w(), b()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {2} less to cast during your end step.",
+            effect: StaticEffect::SelfCostReducedIf {
+                condition: Predicate::All(vec![
+                    Predicate::IsTurnOf(PlayerRef::You),
+                    Predicate::CurrentStepIs(TurnStep::End),
+                ]),
+                amount: 2,
+            },
+        }],
         effect: Effect::Seq(vec![
-            Effect::Exile {
+            // "Destroy target creature or planeswalker you don't control."
+            Effect::Destroy {
                 what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker)
+                        .and(SelectionRequirement::ControlledByOpponent),
                 ),
             },
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::XFromCost,
+            // "Put a +1/+1 counter on up to one target creature you
+            // control." (Slot 1 — optional.)
+            Effect::AddCounter {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
             },
         ]),
         ..Default::default()
@@ -120,13 +147,14 @@ pub fn closing_statement() -> CardDefinition {
 
 // ── Vanishing Verse ─────────────────────────────────────────────────────────
 
-/// Vanishing Verse — {W}{B} Instant. "Exile target nonland, monocolored
+/// Vanishing Verse — {W}{B} Instant. "Exile target monocolored
 /// permanent."
 ///
-/// ✅ Now wired faithfully via the new `SelectionRequirement::Monocolored`
-/// predicate (distinct_colors == 1). Multicolored and colorless
-/// permanents fail the target filter cleanly, matching the printed
-/// Oracle text.
+/// ✅ Wired via `SelectionRequirement::Monocolored` (distinct_colors ==
+/// 1). Multicolored and colorless permanents fail the target filter
+/// cleanly. Note the printed Oracle has no "nonland" clause — a
+/// monocolored land (color-indicator or animated) is a legal target, so
+/// the filter is just Permanent ∧ Monocolored.
 pub fn vanishing_verse() -> CardDefinition {
     CardDefinition {
         name: "Vanishing Verse",
@@ -135,7 +163,6 @@ pub fn vanishing_verse() -> CardDefinition {
         effect: Effect::Exile {
             what: target_filtered(
                 SelectionRequirement::Permanent
-                    .and(SelectionRequirement::Nonland)
                     .and(SelectionRequirement::Monocolored),
             ),
         },
@@ -182,16 +209,25 @@ pub fn killian_ink_duelist() -> CardDefinition {
 
 // ── Devastating Mastery ─────────────────────────────────────────────────────
 
-/// Devastating Mastery — {2}{W}{W}{W}{W} Sorcery. "Destroy all nonland permanents."
+/// Devastating Mastery — {2}{W}{W}{W}{W} Sorcery.
+/// "You may pay {2}{W}{W} rather than pay this spell's mana cost.
+/// If the {2}{W}{W} cost was paid, an opponent chooses up to two nonland
+/// permanents they control and returns them to their owner's hand.
+/// Destroy all nonland permanents."
 ///
 /// ✅ The destroy-each-nonland-permanent body fully matches the printed
-/// Oracle's primary clause; this is "Wrath of God for everything that
-/// isn't a land". The alt cost {7}{W}{W} (cast for {3} more to return up
-/// to two nonland permanent cards from a graveyard) is an engine-wide
-/// "alt-cost-implies-mode" gap (also missing from Verdant Mastery and
-/// Baleful Mastery's alt-paths). Tracked in TODO.md; the printed primary
-/// effect is unaffected so the card plays correctly when cast for
-/// regular mana.
+/// primary clause. The {2}{W}{W} alternative cost itself is expressible
+/// (`CardDefinition.alternative_cost` + `effect_override` would carry
+/// the rider conditionally), but the rider's body is BLOCKED: there is
+/// no "an opponent chooses up to N permanents they control and returns
+/// them to their owner's hand" effect — every existing chooser
+/// primitive (`Selector::one_of`, `Move`) asks the effect's controller,
+/// and inverting the incentive (the caster picking which opponent
+/// permanents get saved) would be wrong. Needs an opponent-side
+/// choose-own-permanents-to-hand primitive (the bounce mirror of
+/// `Effect::Sacrifice`'s owner-chooses behavior). Until then only the
+/// full-cost cast is wired, which plays the printed primary effect
+/// correctly.
 pub fn devastating_mastery() -> CardDefinition {
     CardDefinition {
         name: "Devastating Mastery",
@@ -258,15 +294,21 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
 
 // ── Mavinda, Students' Advocate ─────────────────────────────────────────────
 
-/// Mavinda, Students' Advocate — {2}{W}, 2/3 Legendary Human Cleric,
-/// Flying + Vigilance.
+/// Mavinda, Students' Advocate — {2}{W}, 2/3 Legendary Bird Advisor,
+/// Flying. "{0}: You may cast target instant or sorcery card from your
+/// graveyard this turn. If that spell doesn't target a creature you
+/// control, it costs {8} more to cast this way. If that spell would be
+/// put into your graveyard, exile it instead. Activate only once each
+/// turn."
 ///
-/// Once each turn, cast an instant/sorcery from your graveyard by paying
-/// {2} more rather than its mana cost; exile it if it would hit the
-/// graveyard. Modeled as a once-per-turn {2} ability that moves the card
-/// to exile and grants a pay-own-cost, exile-after may-play — so the total
-/// is the spell's cost + {2}, matching the printed surcharge. (The "targets
-/// only a single creature" sub-filter is approximated to all IS cards.)
+/// Approximation: the printed ability is {0} with a conditional {8}
+/// surcharge on the granted cast when it doesn't target your creature.
+/// The engine's `GrantMayPlay` permission has no per-cast conditional
+/// surcharge hook (needs a "costs {N} more unless the cast targets
+/// [filter]" rider on may-play permissions), so this ships as a
+/// once-per-turn {2} activation that exiles the graveyard IS card and
+/// grants a pay-own-cost, exile-after may-play — a flat {2} surcharge
+/// standing in for the printed {0}/{8} split.
 pub fn mavinda_students_advocate() -> CardDefinition {
     let target_is_in_your_gy = crate::effect::shortcut::target_filtered(
         SelectionRequirement::HasCardType(CardType::Instant)
@@ -342,8 +384,9 @@ pub fn eager_first_year() -> CardDefinition {
 
 // ── Hunt for Specimens ──────────────────────────────────────────────────────
 
-/// Hunt for Specimens — {1}{B} Sorcery. "Create a 1/1 black Pest creature
-/// token with 'When this creature dies, you gain 1 life.' Then learn."
+/// Hunt for Specimens — {1}{B} Sorcery. "Create a 1/1 black and green
+/// Pest creature token with 'When this token dies, you gain 1 life.'
+/// Learn."
 ///
 /// Both halves wired faithfully. The spawned Pest token carries the
 /// printed death-trigger lifegain via `TokenDefinition.triggered_abilities`
@@ -370,28 +413,40 @@ pub fn hunt_for_specimens() -> CardDefinition {
 
 // ── Silverquill Pledgemage ──────────────────────────────────────────────────
 
-/// Silverquill Pledgemage — {1}{W/B}{W/B}, 3/1 Inkling Druid. Flying.
+/// Silverquill Pledgemage — {1}{W/B}{W/B}, 3/1 Vampire Cleric.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// this creature gets +1/+1 until end of turn."
+/// this creature gains your choice of flying or lifelink until end of
+/// turn."
 ///
-/// Uses the `magecraft_self_pump(1, 1)` helper (push XXVII) — the
-/// magecraft trigger pumps the source itself +1/+1 EOT. The Inkling
-/// subtype was added in the Strixhaven era; this card's flying ties
-/// it into the Silverquill tribal pool that Tenured Inkcaster
-/// powers up via the new Inkling anthem.
+/// The magecraft trigger resolves a `ChooseMode` between two EOT
+/// keyword grants on the source — flying (mode 0, the AutoDecider
+/// default) or lifelink (mode 1). (An earlier revision shipped a
+/// synthesized Inkling Druid with a +1/+1 self-pump the printed card
+/// never had.)
 pub fn silverquill_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Pledgemage",
         cost: cost(&[generic(1), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling, CreatureType::Druid],
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
             ..Default::default()
         },
         power: 3,
         toughness: 1,
         keywords: vec![],
-        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        triggered_abilities: vec![magecraft(Effect::ChooseMode(vec![
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
         ..Default::default()
     }
 }
@@ -428,10 +483,9 @@ pub fn archmage_emeritus() -> CardDefinition {
 
 // ── Promising Duskmage ──────────────────────────────────────────────────────
 
-/// Promising Duskmage — {2}{B}, 2/2 Inkling Wizard. Flying.
-/// Promising Duskmage — {2}{B} 2/3 Human Warlock. "When this creature dies, if
-/// it had a +1/+1 counter on it, draw a card." (Reads the dying card's
-/// counters via last-known information.)
+/// Promising Duskmage — {2}{B}, 2/3 Human Warlock. "When this creature
+/// dies, if it had a +1/+1 counter on it, draw a card." (Reads the
+/// dying card's counters via last-known information.)
 pub fn promising_duskmage() -> CardDefinition {
     use crate::card::{CounterType, EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
     CardDefinition {
@@ -464,22 +518,19 @@ pub fn promising_duskmage() -> CardDefinition {
 
 // ── Tenured Inkcaster ───────────────────────────────────────────────────────
 
-/// Tenured Inkcaster — {4}{B}, 2/2 Vampire Warlock. "Other Inkling
-/// creatures you control get +2/+2."
+/// Tenured Inkcaster — {4}{B}, 2/2 Vampire Warlock.
+/// "When this creature enters, put a +1/+1 counter on target creature.
+/// Whenever a creature you control with a +1/+1 counter on it attacks,
+/// each opponent loses 1 life and you gain 1 life."
 ///
-/// Tribal anthem on the Inkling creature type. Push (modern_decks)
-/// consolidation: wired via a regular `StaticEffect::PumpPT` with
-/// `Selector::EachPermanent(Creature ∧ HasCreatureType(Inkling) ∧
-/// ControlledByYou ∧ OtherThanSource)` — same shape as Hofri / Quintorius
-/// since the `OtherThanSource` target-validation half now works. The
-/// `OtherThanSource` half is technically vacuous here (Inkcaster is a
-/// Vampire, not an Inkling, so the CreatureType filter already
-/// excludes the source), but it's kept for consistency with the
-/// printed "Other" wording. The +2/+2 makes a 2/1 Inkling token
-/// attack as a 4/3 flier, a huge Silverquill payoff.
+/// ETB: a targeted +1/+1 counter (any creature). Attack trigger:
+/// `Attacks / YourControl` filtered on the attacker carrying a +1/+1
+/// counter (`EntityMatches(TriggerSource, WithCounter)` — the Felisa
+/// pattern); each opponent loses 1, you gain 1 (a single gain
+/// regardless of opponent count, per the printed wording). (An earlier
+/// revision shipped a synthesized "Other Inklings get +2/+2" anthem the
+/// printed card never had.)
 pub fn tenured_inkcaster() -> CardDefinition {
-    use crate::card::{SelectionRequirement, StaticAbility};
-    use crate::effect::{Selector, StaticEffect};
     CardDefinition {
         name: "Tenured Inkcaster",
         cost: cost(&[generic(4), b()]),
@@ -490,19 +541,37 @@ pub fn tenured_inkcaster() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        static_abilities: vec![StaticAbility {
-            description: "Other Inkling creatures you control get +2/+2.",
-            effect: StaticEffect::PumpPT {
-                applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
-                ),
-                power: 2,
-                toughness: 2,
+        triggered_abilities: vec![
+            // "When this creature enters, put a +1/+1 counter on target
+            // creature."
+            etb(Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            // "Whenever a creature you control with a +1/+1 counter on
+            // it attacks, each opponent loses 1 life and you gain 1
+            // life."
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::WithCounter(
+                            CounterType::PlusOnePlusOne,
+                        ),
+                    }),
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(1),
+                    },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ]),
             },
-        }],
+        ],
         ..Default::default()
     }
 }
@@ -13766,8 +13835,10 @@ pub fn silverquill_command() -> CardDefinition {
 
 // ── Umbral Juke ────────────────────────────────────────────────────────────
 
-/// Umbral Juke — {2}{B} Instant. Choose one: opponent sacs creature/PW
-/// or create 2/1 Inkling with flying.
+/// Umbral Juke — {2}{B} Instant. "Choose one —
+/// • Target player sacrifices a creature or planeswalker of their
+///   choice.
+/// • Create a 2/1 white and black Inkling creature token with flying."
 pub fn umbral_juke() -> CardDefinition {
     use crate::catalog::sets::sos::inkling_token;
     CardDefinition {
@@ -13775,8 +13846,11 @@ pub fn umbral_juke() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
+            // "Target player sacrifices a creature or planeswalker of
+            // their choice." — any player is a legal target, not just
+            // opponents.
             Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::Player),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature
                     .or(SelectionRequirement::Planeswalker),
@@ -13846,9 +13920,15 @@ pub fn fracture() -> CardDefinition {
 
 // ── Humiliate ──────────────────────────────────────────────────────────────
 
-/// Humiliate — {W}{B} Sorcery. "Target opponent reveals their hand. You choose
-/// a nonland card from it. That player discards it. You gain 2 life." (The
-/// caster auto-picks the discarded card.)
+/// Humiliate — {W}{B} Sorcery. "Target opponent reveals their hand. You
+/// choose a nonland card from it. That player discards that card. Put a
+/// +1/+1 counter on a creature you control."
+///
+/// `DiscardChosen` against the targeted opponent (the caster picks the
+/// nonland card), then a +1/+1 counter on a creature you control of
+/// your choice (not a target — chosen at resolution via
+/// `Selector::one_of`; a no-op with no creatures). (An earlier revision
+/// shipped "You gain 2 life" in place of the printed counter.)
 pub fn humiliate() -> CardDefinition {
     CardDefinition {
         name: "Humiliate",
@@ -13856,11 +13936,19 @@ pub fn humiliate() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            // "Put a +1/+1 counter on a creature you control."
+            Effect::AddCounter {
+                what: Selector::one_of(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -13868,7 +13956,9 @@ pub fn humiliate() -> CardDefinition {
 
 // ── Clever Lumimancer ──────────────────────────────────────────────────────
 
-/// Clever Lumimancer — {W}, 0/1 Human Wizard. Magecraft: +2/+0 EOT.
+/// Clever Lumimancer — {W}, 0/1 Human Wizard. "Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, this creature gets +2/+2
+/// until end of turn."
 pub fn clever_lumimancer() -> CardDefinition {
     use crate::effect::shortcut::magecraft_self_pump;
     CardDefinition {
@@ -13880,18 +13970,17 @@ pub fn clever_lumimancer() -> CardDefinition {
             ..Default::default()
         },
         toughness: 1,
-        triggered_abilities: vec![magecraft_self_pump(2, 0)],
+        triggered_abilities: vec![magecraft_self_pump(2, 2)],
         ..Default::default()
     }
 }
 
 // ── Silverquill Apprentice ────────────────────────────────────────────────
 
-/// Silverquill Apprentice — {W}{B}, 2/2 Human Wizard.
+/// Silverquill Apprentice — {W}{B}, 2/2 Human Warlock.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// put a +1/+1 counter on target creature you control."
+/// target creature gets +1/+0 until end of turn."
 pub fn silverquill_apprentice() -> CardDefinition {
-    use crate::card::CounterType;
     CardDefinition {
         name: "Silverquill Apprentice",
         cost: cost(&[w(), b()]),
@@ -13902,12 +13991,11 @@ pub fn silverquill_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(1),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
         })],
         ..Default::default()
     }
@@ -13915,9 +14003,9 @@ pub fn silverquill_apprentice() -> CardDefinition {
 
 // ── Shadewing Laureate ────────────────────────────────────────────────────
 
-/// Shadewing Laureate — {W}{W/B}{B}, 2/2 Bird Warlock. Flying.
-/// "Whenever another creature you control with flying dies, put a +1/+1
-/// counter on Shadewing Laureate."
+/// Shadewing Laureate — {W}{W/B}{B}, 2/2 Human Warlock. "Flying /
+/// Whenever another creature you control with flying dies, put a +1/+1
+/// counter on target creature you control."
 pub fn shadewing_laureate() -> CardDefinition {
     CardDefinition {
         name: "Shadewing Laureate",
@@ -13936,8 +14024,13 @@ pub fn shadewing_laureate() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasKeyword(Keyword::Flying),
                 }),
+            // "…put a +1/+1 counter on target creature you control" —
+            // any of your creatures, not just the Laureate itself.
             effect: Effect::AddCounter {
-                what: Selector::This,
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },

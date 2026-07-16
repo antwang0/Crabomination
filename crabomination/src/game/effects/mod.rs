@@ -8262,9 +8262,12 @@ impl GameState {
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { amount } => {
                 // Stamp the discount with the controller's current IS tally so
                 // it applies only to the *next* instant/sorcery they cast.
+                // `amount` is evaluated now (Maelstrom Muse reads the source's
+                // power as the ability resolves).
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 let p = ctx.controller;
                 let granted_at = self.players[p].instants_or_sorceries_cast_this_turn;
-                self.players[p].pending_is_discounts.push((*amount, granted_at));
+                self.players[p].pending_is_discounts.push((amt, granted_at));
                 Ok(())
             }
 

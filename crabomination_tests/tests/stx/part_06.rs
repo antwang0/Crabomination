@@ -203,24 +203,28 @@ fn heroic_defiance_pumps_and_grants_hexproof_and_indestructible() {
 }
 
 #[test]
-fn tome_shredder_etb_makes_opp_discard() {
+fn tome_shredder_exiles_instant_from_graveyard_to_grow() {
+    // Real oracle: "Haste / {T}, Exile an instant or sorcery card from
+    // your graveyard: Put a +1/+1 counter on this creature."
     let mut g = two_player_game();
-    let _ = g.add_card_to_hand(1, catalog::lightning_bolt());
-    let _ = g.add_card_to_hand(1, catalog::island());
-    let id = g.add_card_to_hand(0, catalog::tome_shredder());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    let opp_hand_before = g.players[1].hand.len();
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(crabomination::game::types::Target::Player(1)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Tome Shredder castable");
+    let id = g.add_card_to_battlefield(0, catalog::tome_shredder());
+    g.clear_sickness(id);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::island()); // land — not a legal exile fodder
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("{T}, exile an instant/sorcery from graveyard: +1/+1 counter");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].hand.len(), opp_hand_before - 1, "Opp discards 1");
-    // Opp graveyard should have the bolt (nonland chosen by auto-decider).
-    let in_gy = g.players[1].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt");
-    assert!(in_gy, "Discarded card lands in graveyard");
+    let c = g.battlefield_find(id).expect("Tome Shredder on battlefield");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Tome Shredder picked up a +1/+1 counter");
+    assert!(c.tapped, "tap cost paid");
+    assert!(g.exile.iter().any(|c| c.id == bolt),
+        "the instant was exiled from the graveyard as the cost");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "bolt left the graveyard");
+    assert!(catalog::tome_shredder().keywords.contains(&Keyword::Haste));
 }
 
 #[test]

@@ -5,17 +5,22 @@ use crabomination::mana::Color;
 use super::*;
 
 
-/// Dueling Coach's activation puts a +1/+1 counter on each of the
-/// controller's creatures with a +1/+1 counter (including itself if it
-/// has one — Mr Coach is 1/2 with no counters by default, so it's only
-/// gated to creatures that already have a counter).
+/// Dueling Coach — "{4}{W}, {T}: Put a +1/+1 counter on each creature
+/// you control with a +1/+1 counter on it." Only creatures that already
+/// carry a +1/+1 counter grow; counterless creatures are skipped.
 #[test]
 fn dueling_coach_activation_counters_each_creature_you_control() {
     let mut g = two_player_game();
     let coach = g.add_card_to_battlefield(0, catalog::dueling_coach());
     g.clear_sickness(coach);
-    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let seeded = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bare = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Seed one bear with a counter; the other stays clean.
+    g.battlefield
+        .iter_mut()
+        .find(|c| c.id == seeded)
+        .unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(4);
 
@@ -26,11 +31,16 @@ fn dueling_coach_activation_counters_each_creature_you_control() {
     .expect("Dueling Coach activation works for {4}{W},{T}");
     drain_stack(&mut g);
 
-    // Every creature you control — both bears and the coach — gets a counter.
-    let bear1_c = g.battlefield.iter().find(|c| c.id == bear1).unwrap();
-    let bear2_c = g.battlefield.iter().find(|c| c.id == bear2).unwrap();
-    assert_eq!(bear1_c.counter_count(CounterType::PlusOnePlusOne), 1);
-    assert_eq!(bear2_c.counter_count(CounterType::PlusOnePlusOne), 1);
+    let seeded_c = g.battlefield.iter().find(|c| c.id == seeded).unwrap();
+    let bare_c = g.battlefield.iter().find(|c| c.id == bare).unwrap();
+    assert_eq!(
+        seeded_c.counter_count(CounterType::PlusOnePlusOne), 2,
+        "creature with a +1/+1 counter gets another"
+    );
+    assert_eq!(
+        bare_c.counter_count(CounterType::PlusOnePlusOne), 0,
+        "counterless creature is not affected"
+    );
 }
 
 /// Shaile, Dean of Radiance — "{T}: Put a +1/+1 counter on each creature that
@@ -377,7 +387,8 @@ fn witherbloom_pest_eater_grows_when_another_pest_dies() {
     let mut g = two_player_game();
     let eater = g.add_card_to_battlefield(0, catalog::witherbloom_pest_eater());
     g.clear_sickness(eater);
-    let pest = g.add_card_to_battlefield(0, catalog::eyetwitch());
+    // Eyetwitch is a Bird per its real oracle — use an actual Pest.
+    let pest = g.add_card_to_battlefield(0, catalog::pestpod_lurker());
     g.clear_sickness(pest);
 
     let p_before = g.battlefield_find(eater).unwrap().power();
@@ -895,17 +906,21 @@ fn resurgent_belief_returns_each_enchantment_from_graveyard() {
 
 // ── Academic Dispute ───────────────────────────────────────────────────────
 
-/// Academic Dispute now reads "Target creature gets +2/+0 and gains
-/// reach until end of turn" (the printed STX oracle, not the prior
-/// Fight body the engine had approximated). This test pins the
-/// current effect — the bear gets +2/+0 and reach EOT.
+/// Academic Dispute's printed STX oracle: "Target creature blocks this
+/// turn if able. You may have it gain reach until end of turn. /
+/// Learn." The must-block rider is unconditional; the reach grant is a
+/// `MayDo` (declined by the AutoDecider, accepted here via a scripted
+/// `Bool(true)`).
 #[test]
 fn academic_dispute_pumps_friendly_and_grants_reach() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(friendly);
     let id = g.add_card_to_hand(0, catalog::academic_dispute());
     g.players[0].mana_pool.add(Color::Red, 1);
+    // Opt into "you may have it gain reach until end of turn".
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -917,20 +932,21 @@ fn academic_dispute_pumps_friendly_and_grants_reach() {
     .expect("Academic Dispute castable for {R}");
     drain_stack(&mut g);
 
-    // Bear is still alive (no fight); gained Reach EOT.
+    // Bear is still alive (no fight); must block this turn and gained
+    // Reach EOT via the accepted MayDo.
     let bear = g.battlefield_find(friendly).expect("bear still alive");
-    assert!(bear.has_keyword(&Keyword::Reach), "Academic Dispute grants Reach EOT");
+    assert!(bear.has_keyword(&Keyword::MustBlock), "Academic Dispute forces the creature to block");
+    assert!(bear.has_keyword(&Keyword::Reach), "Academic Dispute grants Reach EOT when accepted");
 }
 
 // ── Enthusiastic Study ─────────────────────────────────────────────────────
 
+/// "Target creature gets +3/+1 and gains trample until end of turn. /
+/// Learn." The pump and trample are unconditional.
 #[test]
-fn enthusiastic_study_pumps_target_creature_and_grants_trample_after_second_spell() {
-    // After casting Enthusiastic Study as the second spell of the turn,
-    // the +2/+2 lands AND the trample rider fires.
+fn enthusiastic_study_pumps_three_one_and_grants_trample() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.players[0].spells_cast_this_turn = 1; // Pretend we already cast something
     let id = g.add_card_to_hand(0, catalog::enthusiastic_study());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
@@ -942,26 +958,29 @@ fn enthusiastic_study_pumps_target_creature_and_grants_trample_after_second_spel
         mode: None,
         x_value: None,
     })
-    .expect("Enthusiastic Study castable for {1}{G}");
+    .expect("Enthusiastic Study castable for {2}{R}");
     drain_stack(&mut g);
 
     let cv = g.computed_permanent(bear).expect("bear computed");
-    assert_eq!(cv.power, 4, "bear pumped to 4/4 (+2/+2)");
-    assert_eq!(cv.toughness, 4, "bear pumped to 4/4 (+2/+2)");
+    assert_eq!(cv.power, 5, "bear pumped to 5/3 (+3/+1)");
+    assert_eq!(cv.toughness, 3, "bear pumped to 5/3 (+3/+1)");
     assert!(
         cv.keywords.contains(&Keyword::Trample),
-        "trample granted (second spell this turn)"
+        "trample is granted unconditionally"
     );
 }
 
+/// The Learn rider fires even as the first spell of the turn — the
+/// AutoDecider's Learn fallback draws a card.
 #[test]
-fn enthusiastic_study_skips_trample_on_first_spell_this_turn() {
+fn enthusiastic_study_learns_on_resolution() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    // spells_cast_this_turn = 0 — Enthusiastic Study is the first spell.
+    g.add_card_to_library(0, catalog::island()); // for the Learn draw fallback
     let id = g.add_card_to_hand(0, catalog::enthusiastic_study());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
+    let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -970,15 +989,14 @@ fn enthusiastic_study_skips_trample_on_first_spell_this_turn() {
         mode: None,
         x_value: None,
     })
-    .expect("Enthusiastic Study castable for {1}{G}");
+    .expect("Enthusiastic Study castable for {2}{R}");
     drain_stack(&mut g);
 
     let cv = g.computed_permanent(bear).expect("bear computed");
-    assert_eq!(cv.power, 4, "bear still pumped to 4/4 (+2/+2)");
-    assert!(
-        !cv.keywords.contains(&Keyword::Trample),
-        "no trample on the first spell of the turn"
-    );
+    assert_eq!(cv.power, 5, "+3/+1 lands regardless of prior spells");
+    assert!(cv.keywords.contains(&Keyword::Trample), "trample always granted");
+    // -1 (cast) +1 (Learn → draw fallback) = hand size unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "Learn drew a card");
 }
 
 // ── Forked Bolt (STA reprint) ──────────────────────────────────────────────
@@ -1371,36 +1389,77 @@ fn bone_to_ash_counters_creature_spell_and_cantrips() {
 
 // ── Ingenious Mastery (STX) ────────────────────────────────────────────────
 
+/// Printed oracle: "You may pay {2}{U} rather than pay this spell's
+/// mana cost. / If the {2}{U} cost was paid, you draw three cards, then
+/// an opponent creates two Treasure tokens and they scry 2. If that
+/// cost wasn't paid, you draw X cards."
 #[test]
 fn ingenious_mastery_draws_three_stacks_two_and_opp_draws() {
+    // Alternative {2}{U} cost: draw 3, opp mints two Treasures + scry 2.
     let mut g = two_player_game();
     for _ in 0..6 {
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_library(1, catalog::island());
     }
     let id = g.add_card_to_hand(0, catalog::ingenious_mastery());
-    g.players[0].mana_pool.add(Color::Blue, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
     let p0_hand_before = g.players[0].hand.len();
     let p1_hand_before = g.players[1].hand.len();
 
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Ingenious Mastery castable for {3}{U}{U}");
+    .expect("Ingenious Mastery castable for its {2}{U} alternative cost");
     drain_stack(&mut g);
 
-    // P0 played Ingenious Mastery (-1), drew 3, stacked 2 → net +0
+    // P0 played Ingenious Mastery (-1), drew 3 → net +2.
     assert_eq!(
         g.players[0].hand.len(),
-        p0_hand_before,
-        "P0 hand: -1 cast + 3 draw - 2 stack = +0"
+        p0_hand_before + 2,
+        "P0 hand: -1 cast + 3 draw = +2"
     );
-    // P1 drew a card.
+    // The opponent doesn't draw — they get two Treasures and scry 2.
     assert_eq!(
         g.players[1].hand.len(),
-        p1_hand_before + 1,
-        "opp drew a card from Ingenious Mastery"
+        p1_hand_before,
+        "opp draws nothing from Ingenious Mastery"
+    );
+    let opp_treasures = g.battlefield.iter()
+        .filter(|c| c.controller == 1 && c.definition.name == "Treasure")
+        .count();
+    assert_eq!(opp_treasures, 2, "opp created two Treasure tokens");
+}
+
+#[test]
+fn ingenious_mastery_full_cost_draws_x() {
+    // Full {X}{2}{U} cost: "If that cost wasn't paid, you draw X cards."
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::ingenious_mastery());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4); // {2} + X=2
+    let p0_hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None,
+        x_value: Some(2),
+    })
+    .expect("Ingenious Mastery castable for {2}{U} with X=2");
+    drain_stack(&mut g);
+
+    // -1 cast + X=2 drawn → net +1; no Treasures minted.
+    assert_eq!(
+        g.players[0].hand.len(),
+        p0_hand_before + 1,
+        "P0 hand: -1 cast + 2 draw (X=2) = +1"
+    );
+    assert!(
+        !g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+        "full-cost cast mints no Treasures"
     );
 }
 
@@ -2584,51 +2643,68 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
 
 // ── Spiteful Squad ──────────────────────────────────────────────────────────
 
+/// Printed oracle: "Deathtouch / This creature enters with two +1/+1
+/// counters on it. / When this creature dies, put its counters on
+/// target creature you control."
 #[test]
 fn spiteful_squad_dies_drains_two() {
     let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::spiteful_squad());
-    let p0_life_before = g.players[0].life;
-    let p1_life_before = g.players[1].life;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::spiteful_squad());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spiteful Squad castable for {2}{W}{B}");
+    drain_stack(&mut g);
 
-    let card = g.battlefield_find_mut(id).expect("squad on bf");
-    card.damage = 99;
+    // 0/0 printed body enters as a 2/2 via two +1/+1 counters.
+    let squad = g.battlefield_find(id).expect("squad on bf");
+    assert_eq!(squad.counter_count(CounterType::PlusOnePlusOne), 2,
+        "enters with two +1/+1 counters");
+
+    // Kill it — the death trigger moves its counters onto a creature
+    // you control (auto-target picks the lone bear).
+    g.battlefield_find_mut(id).expect("squad on bf").damage = 99;
     let _ = g.check_state_based_actions();
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].life, p0_life_before + 2);
-    assert_eq!(g.players[1].life, p1_life_before - 2);
+    assert!(g.battlefield_find(id).is_none(), "squad died");
+    let bear_card = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2,
+        "squad's two +1/+1 counters moved onto the bear");
 }
 
 // ── Master Symmetrist ───────────────────────────────────────────────────────
 
+/// Printed oracle: "Reach / Whenever a creature you control with power
+/// equal to its toughness attacks, it gains trample until end of turn."
 #[test]
 fn master_symmetrist_doubles_counters_on_friendlies() {
     let mut g = two_player_game();
-    // Friendly creature with a +1/+1 counter on it.
+    let _symm = g.add_card_to_battlefield(0, catalog::master_symmetrist());
+    // A square attacker (2/2 bear) and a non-square one (1/3).
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let card = g.battlefield_find_mut(bear).expect("bear on bf");
-    card.add_counters(CounterType::PlusOnePlusOne, 2);
+    let crawler = g.add_card_to_battlefield(0, catalog::stinging_cave_crawler());
+    g.clear_sickness(bear);
+    g.clear_sickness(crawler);
 
-    let id = g.add_card_to_hand(0, catalog::master_symmetrist());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Master Symmetrist castable");
+    g.active_player_idx = 0;
+    g.step = crabomination::game::types::TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+        Attack { attacker: crawler, target: AttackTarget::Player(1) },
+    ])).expect("declare attackers");
     drain_stack(&mut g);
 
-    let bear_card = g.battlefield_find(bear).expect("bear still alive");
-    assert_eq!(
-        bear_card.counter_count(CounterType::PlusOnePlusOne),
-        4,
-        "2 counters doubled to 4"
-    );
+    let bear_card = g.battlefield_find(bear).expect("bear on bf");
+    assert!(bear_card.has_keyword(&Keyword::Trample),
+        "square (2/2) attacker gains trample EOT");
+    let crawler_card = g.battlefield_find(crawler).expect("crawler on bf");
+    assert!(!crawler_card.has_keyword(&Keyword::Trample),
+        "non-square (1/3) attacker gains nothing");
 }
 
 // ── Stinging Cave Crawler ───────────────────────────────────────────────────
@@ -2656,32 +2732,34 @@ fn stinging_cave_crawler_etb_scrys_two() {
 
 // ── Cogwork Archivist ───────────────────────────────────────────────────────
 
+/// Printed oracle: "Reach / {2}, {T}: Put target card from a graveyard
+/// on the bottom of its owner's library."
 #[test]
 fn cogwork_archivist_etb_mills_four_from_target_opponent() {
     let mut g = two_player_game();
-    for _ in 0..8 { g.add_card_to_library(1, catalog::island()); }
-    let opp_gy_before = g.players[1].graveyard.len();
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
+    let dead_bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
     let opp_lib_before = g.players[1].library.len();
-    let self_lib_before = g.players[0].library.len();
 
-    let id = g.add_card_to_hand(0, catalog::cogwork_archivist());
-    g.players[0].mana_pool.add_colorless(6);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
+    let id = g.add_card_to_battlefield(0, catalog::cogwork_archivist());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0,
+        target: None, additional_targets: Vec::new(), x_value: None,
     })
-    .expect("Archivist castable for {6}");
+    .expect("Archivist activation for {2}, {T}");
     drain_stack(&mut g);
 
-    // Auto-target picks the opponent (mill is a hostile player-side effect).
-    assert_eq!(g.players[1].library.len(), opp_lib_before - 4, "opponent milled 4");
-    assert_eq!(g.players[1].graveyard.len(), opp_gy_before + 4,
-        "opponent's graveyard gained 4");
-    assert_eq!(g.players[0].library.len(), self_lib_before,
-        "controller's own library untouched");
+    // The graveyard card went to the BOTTOM of its owner's library.
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == dead_bolt),
+        "bolt left the opponent's graveyard");
+    assert_eq!(g.players[1].library.len(), opp_lib_before + 1,
+        "opponent's library gained the card");
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(dead_bolt),
+        "bolt sits at the bottom of its owner's library");
+    assert!(g.battlefield_find(id).expect("archivist on bf").tapped,
+        "archivist tapped to activate");
 }
 
 #[test]
@@ -2763,14 +2841,14 @@ fn strixhaven_stadium_mana_ability_adds_point_counter() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added one colorless");
     let s = g.battlefield_find(stadium).unwrap();
-    assert_eq!(s.counter_count(CounterType::Charge), 1, "point counter added");
+    assert_eq!(s.counter_count(CounterType::Point), 1, "point counter added");
 }
 
 #[test]
 fn strixhaven_stadium_combat_damage_swings_point_counters() {
     let mut g = two_player_game();
     let stadium = g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
-    g.battlefield_find_mut(stadium).unwrap().add_counters(CounterType::Charge, 2);
+    g.battlefield_find_mut(stadium).unwrap().add_counters(CounterType::Point, 2);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     g.active_player_idx = 0;
@@ -2783,14 +2861,14 @@ fn strixhaven_stadium_combat_damage_swings_point_counters() {
     g.resolve_combat().expect("combat resolves");
     drain_stack(&mut g);
     let s = g.battlefield_find(stadium).unwrap();
-    assert_eq!(s.counter_count(CounterType::Charge), 3, "hit an opponent → +1 point");
+    assert_eq!(s.counter_count(CounterType::Point), 3, "hit an opponent → +1 point");
 }
 
 #[test]
 fn strixhaven_stadium_ten_points_makes_the_player_lose() {
     let mut g = two_player_game();
     let stadium = g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
-    g.battlefield_find_mut(stadium).unwrap().add_counters(CounterType::Charge, 9);
+    g.battlefield_find_mut(stadium).unwrap().add_counters(CounterType::Point, 9);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     g.active_player_idx = 0;
@@ -2804,7 +2882,7 @@ fn strixhaven_stadium_ten_points_makes_the_player_lose() {
     drain_stack(&mut g);
     assert!(g.players[1].eliminated, "tenth point → that player loses");
     assert_eq!(
-        g.battlefield_find(stadium).unwrap().counter_count(CounterType::Charge),
+        g.battlefield_find(stadium).unwrap().counter_count(CounterType::Point),
         0,
         "all point counters removed"
     );
@@ -2893,10 +2971,13 @@ fn lurking_deadeye_etb_minus_two_target_creature() {
 
 // ── Aether Helix (modern_decks push) ────────────────────────────────────────
 
+/// Printed oracle: "Return target permanent to its owner's hand.
+/// Return target permanent card from your graveyard to your hand."
 #[test]
 fn aether_helix_bounces_nonland_and_burns_opp() {
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dead_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::aether_helix());
 
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
@@ -2917,8 +2998,13 @@ fn aether_helix_bounces_nonland_and_burns_opp() {
     assert!(!bear_on_bf, "Bear bounced off battlefield");
     let bear_in_hand = g.players[1].hand.iter().any(|c| c.id == opp_bear);
     assert!(bear_in_hand, "Bear in opp's hand");
-    // Opp lost 2 life from the burn.
-    assert_eq!(g.players[1].life, life_before - 2);
+    // The permanent card in your graveyard returned to your hand.
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead_bear),
+        "graveyard bear returned to your hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == dead_bear),
+        "graveyard bear left the graveyard");
+    // No damage clause on the printed card — opp's life is unchanged.
+    assert_eq!(g.players[1].life, life_before, "no burn on the printed card");
 }
 
 // ── Reflective Golem (modern_decks push) ────────────────────────────────────
@@ -2948,26 +3034,34 @@ fn tempest_caller_etb_taps_opponent_creatures() {
 
 // ── Pillardrop Warden (modern_decks push) ──────────────────────────────────
 
+/// Printed oracle: "Reach / {2}, {T}, Sacrifice this creature: Return
+/// target instant or sorcery card from your graveyard to your hand.
+/// Activate only as a sorcery."
 #[test]
 fn pillardrop_warden_etb_may_pay_returns_creature_card() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
+    let dead_bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // A creature card in the graveyard must NOT be a legal pick.
     let dead_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::pillardrop_warden());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    g.players[0].mana_pool.add_colorless(5); // 3 base + 2 for MayPay
+    let id = g.add_card_to_battlefield(0, catalog::pillardrop_warden());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add_colorless(2);
 
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Pillardrop Warden castable");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0,
+        target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("Pillardrop Warden activation for {2}, {T}, Sacrifice");
     drain_stack(&mut g);
 
-    // Bear came back to hand.
-    let bear_in_hand = g.players[0].hand.iter().any(|c| c.id == dead_bear);
-    assert!(bear_in_hand, "Bear returned to hand via MayPay");
+    // Warden sacrificed itself as part of the cost.
+    assert!(g.battlefield_find(id).is_none(), "warden sacrificed");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "warden in the graveyard");
+    // The instant came back to hand; the creature card stayed put.
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead_bolt),
+        "Bolt returned to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == dead_bear),
+        "creature card is not a legal pick and stays in the graveyard");
 }
 
 // ── Devourer of Memory (modern_decks push) ─────────────────────────────────
@@ -3402,10 +3496,14 @@ fn elemental_summoning_mints_a_four_four_elemental() {
 
 // ── Humiliate (modern_decks push) ───────────────────────────────────────
 
+/// Printed oracle: "Target opponent reveals their hand. You choose a
+/// nonland card from it. That player discards that card. Put a +1/+1
+/// counter on a creature you control."
 #[test]
 fn humiliate_strips_opp_nonland_and_gains_two_life() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::humiliate());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -3414,12 +3512,18 @@ fn humiliate_strips_opp_nonland_and_gains_two_life() {
     let life_p1_before = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
     }).expect("Humiliate castable for {W}{B}");
     drain_stack(&mut g);
 
     assert!(!g.players[1].hand.iter().any(|c| c.id == bolt), "Bolt discarded from opp's hand");
-    assert_eq!(g.players[0].life, life_p0_before + 2, "you gain 2 life");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt in opp's graveyard");
+    // The printed rider is a +1/+1 counter, not lifegain.
+    let bear_card = g.battlefield_find(bear).expect("bear on bf");
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "a creature you control gets a +1/+1 counter");
+    assert_eq!(g.players[0].life, life_p0_before, "no lifegain on the printed card");
     assert_eq!(g.players[1].life, life_p1_before, "opponent's life is unchanged");
 }
 

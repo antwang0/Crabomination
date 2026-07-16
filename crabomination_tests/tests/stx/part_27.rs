@@ -31,6 +31,12 @@ fn basic_conjuration_takes_a_creature_and_gains_life() {
         "a creature card went to hand",
     );
     assert_eq!(g.players[0].life, life + 3, "gain 3 life");
+    // "Put the rest on the bottom of your library in a random order."
+    assert_eq!(g.players[0].library.len(), 3, "rest bottomed, not binned");
+    assert!(
+        g.players[0].library.iter().all(|c| c.definition.name == "Island"),
+        "only the unpicked filler remains in the library",
+    );
 }
 
 #[test]
@@ -525,6 +531,22 @@ fn study_break_taps_two_then_learns() {
 }
 
 #[test]
+fn study_break_zero_targets_still_learns() {
+    // "Tap UP TO two target creatures. Learn." — castable with no targets;
+    // Learn with no Lesson sideboard falls back to drawing a card.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::study_break());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable with zero targets");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "learned (drew) even with no targets");
+}
+
+#[test]
 fn golden_ratio_draws_per_distinct_power() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
@@ -887,6 +909,30 @@ fn retriever_phoenix_returns_from_graveyard_instead_of_learning() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(phoenix).is_some(), "Phoenix returned to battlefield");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == phoenix), "left the graveyard");
+    // "When this creature enters, IF YOU CAST IT, learn." — the replacement
+    // return is not a cast, so the Phoenix's own ETB must NOT learn (which
+    // would draw the Island with no Lesson sideboard configured).
+    assert!(
+        g.players[0].library.iter().any(|c| c.definition.name == "Island"),
+        "non-cast re-entry doesn't learn/draw",
+    );
+    assert!(g.players[0].hand.is_empty(), "no card drawn from the gated ETB");
+}
+
+#[test]
+fn retriever_phoenix_learns_when_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let phoenix = g.add_card_to_hand(0, catalog::retriever_phoenix());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: phoenix, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(phoenix).is_some(), "Phoenix resolved");
+    // Cast entry → the ETB learn fires (Learn with no Lesson sideboard = draw 1).
+    assert_eq!(g.players[0].hand.len(), 1, "learned (drew) because it was cast");
 }
 
 #[test]

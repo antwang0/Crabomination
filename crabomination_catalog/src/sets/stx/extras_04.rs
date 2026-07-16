@@ -241,20 +241,22 @@ pub fn possibility_storm() -> CardDefinition {
     }
 }
 
-// ── Pilgrim of the Ages (synthesised STX-flavor archetype anchor) ─────────
+// ── Pilgrim of the Ages (STX Lorehold common) ──────────────────────────────
 
-/// Pilgrim of the Ages — {2}{W}, 2/1 Spirit (synthesised STX colorless
-/// utility creature). "{2}, Sacrifice this creature: Search your
-/// library for a basic land card, reveal it, put it into your hand,
-/// then shuffle."
+/// Pilgrim of the Ages — {2}{W}, 2/1 Spirit.
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Colorless ramp on a body —
-/// useful in any deck that wants color-fixing without committing to
-/// a color. Wired via `sac_cost: true` activated ability + `Effect::
-/// Search` for a basic land. Tests:
-/// `pilgrim_of_the_ages_is_a_three_mana_one_one_spirit`,
-/// `pilgrim_of_the_ages_sac_searches_for_basic_land`.
+/// ✅ Real Oracle: "When this creature enters, you may search your
+/// library for a basic Plains card, reveal it, put it into your hand,
+/// then shuffle. / {6}: Return this card from your graveyard to your
+/// hand."
+///
+/// The ETB search is a plain `Effect::Search` for a basic Plains (the
+/// printed "you may" is honored by the search decision — the
+/// controller can answer `Search(None)` to fail to find). The {6}
+/// recursion is a `from_graveyard` activated ability returning the
+/// card to hand.
 pub fn pilgrim_of_the_ages() -> CardDefinition {
+    use crate::card::LandType;
     CardDefinition {
         name: "Pilgrim of the Ages",
         cost: cost(&[generic(2), w()]),
@@ -265,26 +267,22 @@ pub fn pilgrim_of_the_ages() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: false,
-            mana_cost: cost(&[generic(2)]),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
                 who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand,
+                filter: SelectionRequirement::IsBasicLand
+                    .and(SelectionRequirement::HasLandType(LandType::Plains)),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: true,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6)]),
+            from_graveyard: true,
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
             ..Default::default()
         }],
         ..Default::default()

@@ -115,18 +115,16 @@ pub fn lurking_deadeye() -> CardDefinition {
 // ── Aether Helix (STX 2021 Prismari rare sorcery) ───────────────────────────
 
 /// Aether Helix — {3}{G}{U} Sorcery (STX 2021 rare).
-/// "Return up to two target nonland permanents to their owners' hands.
-/// Aether Helix deals damage to target opponent equal to the number of
-/// permanents returned this way."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Prismari bounce + burn combo.
-/// Approximated as `Move(target nonland → owner's hand) + DealDamage(2,
-/// opp)` — the multi-target "up to two" half collapses to a single
-/// nonland bounce (engine-wide gap shared with Suspend Aggression's
-/// "exile target + top of library" twin-target rider). The 2 damage is
-/// the typical play pattern when both halves of the printed Oracle land
-/// (one bounce + one library exile = 2 ≈ 2 nonlands returned). Tests:
-/// `aether_helix_bounces_nonland_and_burns_opp`.
+/// ✅ Real Oracle: "Return target permanent to its owner's hand.
+/// Return target permanent card from your graveyard to your hand."
+///
+/// Clause 1 bounces any target permanent (lands included) to its
+/// owner's hand. Clause 2's "target permanent card from your
+/// graveyard" rides the engine's resolution-time pick
+/// (`Selector::one_of(CardsInZone)`) — cast-time `Target` only
+/// addresses players and permanents (same approximation as Rise of
+/// Extus / Pillardrop Warden).
 pub fn aether_helix() -> CardDefinition {
     CardDefinition {
         name: "Aether Helix",
@@ -134,12 +132,16 @@ pub fn aether_helix() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Nonland),
+                what: target_filtered(SelectionRequirement::Permanent),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
-            Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(2),
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Permanent,
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),
         ..Default::default()
@@ -149,17 +151,22 @@ pub fn aether_helix() -> CardDefinition {
 // ── Reflective Golem (STX 2021 uncommon artifact) ───────────────────────────
 
 /// Reflective Golem — {3}, 2/3 Artifact Creature — Golem (STX 2021 uncommon).
-/// "As this creature enters, choose a creature type. / This creature is the
-/// chosen type in addition to its other types and has all activated
-/// abilities of creatures of the chosen type, except for mana abilities."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Body-only wire — a 1/1 Golem
-/// artifact creature at 2 mana. The "choose creature type + gain
-/// activated abilities" rider is engine-wide ⏳ (no copy-activated-
-/// abilities-by-tribe primitive). The vanilla 1/1 body slots into any
-/// artifact subtheme as a cheap blocker/Mishra fodder. Tests:
-/// `reflective_golem_is_a_two_mana_one_one_artifact_creature_golem`.
+/// ✅ Real Oracle: "Whenever you cast an instant or sorcery spell that
+/// targets only this creature, you may pay {2}. If you do, copy that
+/// spell. You may choose new targets for the copy."
+///
+/// Wired as a `SpellCast/YourControl` trigger filtered on
+/// `cast_is_instant_or_sorcery ∧ CastSpellTargetsMatch(¬OtherThanSource)`
+/// — i.e. the just-cast spell's chosen target is this Golem itself. On
+/// trigger, `MayPay {2}` runs `CopySpellMayChooseTargets` against the
+/// triggering spell. Residual approximation: the filter checks the
+/// spell's primary target slot is the Golem ("targets only" — a spell
+/// that also targets something else in an additional slot would still
+/// qualify; no such multi-slot self-targeting spell exists in the
+/// catalog today).
 pub fn reflective_golem() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
     CardDefinition {
         name: "Reflective Golem",
         cost: cost(&[generic(3)]),
@@ -170,6 +177,25 @@ pub fn reflective_golem() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    cast_is_instant_or_sorcery(),
+                    Predicate::CastSpellTargetsMatch(
+                        SelectionRequirement::OtherThanSource.negate(),
+                    ),
+                ]),
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {2} to copy the spell targeting Reflective Golem?".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::CopySpellMayChooseTargets {
+                    what: Selector::TriggerSource,
+                    count: Value::Const(1),
+                }),
+                else_: None,
+            },
+        }],
         ..Default::default()
     }
 }
@@ -214,19 +240,20 @@ pub fn tempest_caller() -> CardDefinition {
 
 // ── Pillardrop Warden (STX 2021 Lorehold uncommon creature) ────────────────
 
-/// Pillardrop Warden — {3}{R}, 1/5 Spirit Soldier (STX 2021 uncommon).
-/// "Flying / When this creature enters, you may pay {2}. If you do, return
-/// target creature card from your graveyard to your hand."
+/// Pillardrop Warden — {3}{R}, 1/5 Spirit Dwarf (STX 2021 uncommon).
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A four-mana flyer that
-/// optionally cantrips a creature back to hand for {2}. Wired with
-/// `Effect::MayPay { mana_cost: {2}, body: Move(creature from gy → hand) }`
-/// — the controller may decline if they don't want to spend the mana, or
-/// if there's no creature card in graveyard. The auto-decider declines
-/// by default. Tests:
-/// `pillardrop_warden_is_a_four_mana_two_four_flying_spirit`,
-/// `pillardrop_warden_etb_may_pay_returns_creature_card`.
+/// ✅ Real Oracle: "Reach / {2}, {T}, Sacrifice this creature: Return
+/// target instant or sorcery card from your graveyard to your hand.
+/// Activate only as a sorcery."
+///
+/// Wired as a sorcery-speed activated ability with tap + sacrifice in
+/// the cost. "Target instant or sorcery card from your graveyard"
+/// rides the engine's resolution-time pick
+/// (`Selector::one_of(CardsInZone)`) — cast-time `Target` only
+/// addresses players and permanents (same approximation as Rise of
+/// Extus / Cogwork Archivist).
 pub fn pillardrop_warden() -> CardDefinition {
+    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Pillardrop Warden",
         cost: cost(&[generic(3), r()]),
@@ -238,22 +265,21 @@ pub fn pillardrop_warden() -> CardDefinition {
         power: 1,
         toughness: 5,
         keywords: vec![Keyword::Reach],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::MayPay {
-                description: "Pay {2} to return target creature card from your graveyard to your hand."
-                    .into(),
-                mana_cost: cost(&[generic(2)]),
-                body: Box::new(Effect::Move {
-                    what: Selector::one_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::Creature,
-                    }),
-                    to: ZoneDest::Hand(PlayerRef::You),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                 }),
-                else_: None,
+                to: ZoneDest::Hand(PlayerRef::You),
             },
+            ..Default::default()
         }],
         ..Default::default()
     }

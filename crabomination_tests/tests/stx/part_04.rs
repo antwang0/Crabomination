@@ -1785,18 +1785,19 @@ fn quandrix_geologist_can_tap_for_g_or_u() {
 fn silverquill_chastiser_drains_on_other_inkling_etb() {
     // The CR 603.4 intervening-'if' fix for AnotherOfYours ETB triggers
     // (push: modern_decks current revision) honors the Inkling filter,
-    // so casting Pledgemage (Inkling) fires the drain exactly once.
+    // so casting Silverquill Sentinel (an Inkling with no other ETB
+    // effects) fires the drain exactly once. (Silverquill Pledgemage is
+    // no longer an Inkling — its oracle type line is Vampire Cleric.)
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::silverquill_chastiser());
     let life_before_us = g.players[0].life;
     let life_before_opp = g.players[1].life;
-    let sp = g.add_card_to_hand(0, catalog::silverquill_pledgemage());
+    let sp = g.add_card_to_hand(0, catalog::silverquill_sentinel());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: sp, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Pledgemage castable");
+    }).expect("Sentinel castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before_us + 1, "drain fires once → +1 life");
     assert_eq!(g.players[1].life, life_before_opp - 1, "opp -1 life");
@@ -2699,7 +2700,10 @@ fn quandrix_botanist_pumps_target_fractal_on_cast() {
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::quandrix_botanist());
-    let fractal = g.add_card_to_battlefield(0, catalog::quandrix_pledgemage());
+    // Quandrix Sapsprout is a Fractal with its own magecraft self-counter
+    // (Quandrix Pledgemage is a Merfolk Druid on the real card, so it no
+    // longer qualifies as "target Fractal").
+    let fractal = g.add_card_to_battlefield(0, catalog::quandrix_sapsprout());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
@@ -2711,11 +2715,11 @@ fn quandrix_botanist_pumps_target_fractal_on_cast() {
     })
     .expect("Bolt cast");
     drain_stack(&mut g);
-    let bc = g.battlefield_find(fractal).expect("Pledgemage on bf");
+    let bc = g.battlefield_find(fractal).expect("Sapsprout on bf");
     assert_eq!(
         bc.counter_count(CounterType::PlusOnePlusOne),
-        1,
-        "Botanist magecraft put +1/+1 on the Fractal"
+        2,
+        "Botanist magecraft put +1/+1 on the Fractal (plus its own magecraft counter)"
     );
 }
 

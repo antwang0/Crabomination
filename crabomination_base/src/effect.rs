@@ -3883,9 +3883,12 @@ pub enum Effect {
     /// isn't attacking a player.
     Myriad,
     /// "The next instant or sorcery spell you cast this turn costs {amount}
-    /// less to cast" (Thundertrap Trainer). Pushes a one-shot discount onto
-    /// `Player.pending_is_discounts` that lapses after the next such spell.
-    GrantNextInstantOrSorceryDiscountThisTurn { amount: u32 },
+    /// less to cast" (Thundertrap Trainer, Maelstrom Muse). `amount` is
+    /// evaluated at resolution, so `Value::PowerOf(TriggerSource)` reads the
+    /// source's power as the ability resolves. Pushes a one-shot discount
+    /// onto `Player.pending_is_discounts` that lapses after the next such
+    /// spell.
+    GrantNextInstantOrSorceryDiscountThisTurn { amount: Value },
     /// Support N (CR 701.32): "Put a +1/+1 counter on each of up to N target
     /// creatures." Each of slots `0..max_targets` is an optional creature
     /// target (filtered by `filter`); every supplied target gains one +1/+1

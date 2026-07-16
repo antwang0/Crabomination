@@ -15,21 +15,19 @@ use crate::mana::{b, cost, g, generic, r, u, w};
 
 // ── Strict Proctor ──────────────────────────────────────────────────────────
 
-/// Strict Proctor — {1}{W}, 1/3 Spirit Cleric. Flying. Real Oracle: "If
-/// a permanent entering the battlefield causes a triggered ability of
-/// a permanent to trigger, that ability's controller sacrifices the
-/// permanent unless they pay {2}."
+/// Strict Proctor — {1}{W}, 1/3 Spirit Cleric. Flying. "Whenever a
+/// permanent entering causes a triggered ability to trigger, counter
+/// that ability unless its controller pays {2}."
 ///
-/// Now wired via the new `StaticEffect::EtbTriggerTax { amount: 2 }`
-/// primitive (push modern_decks batch 58). At ETB trigger push-time —
-/// both the self-source path in `fire_self_etb_triggers` and the unified
-/// dispatcher in `dispatch_triggers_for_events` — the trigger's
-/// controller is asked yes/no whether to pay {2}. On yes + affordable:
-/// pay the tax, fire the trigger normally. On no/unaffordable: sacrifice
-/// the trigger's source (the permanent whose ability is triggering) and
-/// the trigger does not fire. AutoDecider opts in to paying when the
-/// controller has enough mana floated; otherwise it declines. CR 614
-/// replacement-effect framing.
+/// Wired via `StaticEffect::EtbTriggerTax { amount: 2 }`. At ETB trigger
+/// push-time — both the self-source path in `fire_self_etb_triggers` and
+/// the unified dispatcher in `dispatch_triggers_for_events` — the
+/// trigger's controller is asked yes/no whether to pay {2}. On yes +
+/// affordable: pay the tax, fire the trigger normally. On
+/// no/unaffordable: the ability is countered (CR 701.5a) — it never
+/// fires and the entering permanent is untouched. AutoDecider opts in
+/// to paying when the controller has enough mana floated; otherwise it
+/// declines.
 pub fn strict_proctor() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -45,7 +43,7 @@ pub fn strict_proctor() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
-            description: "If a permanent entering the battlefield causes a triggered ability of a permanent to trigger, that ability's controller sacrifices the permanent unless they pay {2}.",
+            description: "Whenever a permanent entering causes a triggered ability to trigger, counter that ability unless its controller pays {2}.",
             effect: StaticEffect::EtbTriggerTax { amount: 2 },
         }],
         ..Default::default()
@@ -78,17 +76,18 @@ pub fn sedgemoor_witch() -> CardDefinition {
 
 // ── Spectacle Mage ──────────────────────────────────────────────────────────
 
-/// Spectacle Mage — {1}{U}{R}, 2/2 Human Wizard. Prowess. Real Oracle:
-/// "Prowess (Whenever you cast a noncreature spell, this creature gets
-/// +1/+1 until end of turn.)"
+/// Spectacle Mage — {1}{U}{R}, 2/2 Bird Shaman. "Flying / Instant and
+/// sorcery spells you cast with mana value 5 or greater cost {1} less
+/// to cast."
 ///
-/// The {U/R}{U/R} cost uses real `ManaSymbol::Hybrid(Blue, Red)` pips,
-/// each payable with either blue or red. The Prowess keyword is
-/// functionally wired via the `effect::shortcut::prowess()` helper —
-/// fires on every non-creature spell you cast, pumping the source
-/// +1/+1 EOT.
+/// The discount is a `StaticEffect::CostReduction` whose filter is
+/// (Instant ∨ Sorcery) ∧ ManaValueAtLeast(5) — evaluated against your
+/// own spells at cast time; generic pips only per CR 601.2f/117.7c.
+/// (An earlier revision shipped a synthesized Prowess trigger the
+/// printed card never had.)
 pub fn spectacle_mage() -> CardDefinition {
-    use crate::effect::shortcut::prowess;
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Spectacle Mage",
         cost: cost(&[generic(1), u(), r()]),
@@ -100,34 +99,60 @@ pub fn spectacle_mage() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![prowess()],
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast with mana value 5 or greater cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                    .and(SelectionRequirement::ManaValueAtLeast(5)),
+                amount: 1,
+            },
+        }],
         ..Default::default()
     }
 }
 
 // ── Mage Hunters' Onslaught ────────────────────────────────────────────────
 
-/// Mage Hunters' Onslaught — {2}{B}{B}, Sorcery. Real Oracle: "Destroy
-/// target creature. Then if a creature died this turn, draw a card."
+/// Mage Hunters' Onslaught — {2}{B}{B}, Sorcery. "Destroy target
+/// creature or planeswalker. / Whenever a creature blocks this turn,
+/// its controller loses 1 life."
 ///
-/// We ship the unconditional version (`Destroy + Draw 1`) — the
-/// engine's "creature died this turn" tally exists
-/// (`Player.creatures_died_this_turn`) but the `Predicate::Creatures
-/// DiedThisTurnAtLeast(0)` is trivially true after the destroy fires
-/// anyway, so the gate is a no-op for this particular spell. Keeping
-/// the unconditional shape avoids a needless gate.
+/// The removal half targets creature-or-planeswalker. The floating
+/// "whenever a creature blocks this turn" half is modeled with
+/// `Effect::GrantTriggeredAbility` over every creature on the
+/// battlefield: each gains a `Blocks/SelfSource` trigger (EOT) whose
+/// effect makes its own controller lose 1 life. Approximation: a
+/// creature that enters the battlefield *after* this resolves and then
+/// blocks this turn won't carry the granted trigger (needs a true
+/// floating/delayed "whenever … this turn" event watcher).
 pub fn mage_hunters_onslaught() -> CardDefinition {
+    use crate::effect::Duration;
     CardDefinition {
         name: "Mage Hunters' Onslaught",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                ),
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            // "Whenever a creature blocks this turn, its controller
+            // loses 1 life."
+            Effect::GrantTriggeredAbility {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                    effect: Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::ControllerOf(Box::new(
+                            Selector::This,
+                        ))),
+                        amount: Value::Const(1),
+                    },
+                }),
+                duration: Duration::EndOfTurn,
             },
         ]),
         ..Default::default()
@@ -178,18 +203,18 @@ pub fn heroic_defiance() -> CardDefinition {
 
 // ── Tome Shredder (batch 20+) ──────────────────────────────────────────────
 
-/// Tome Shredder — {2}{R}, 2/2 Human Warlock.
+/// Tome Shredder — {2}{R}, 2/2 Wolf. "Haste / {T}, Exile an instant or
+/// sorcery card from your graveyard: Put a +1/+1 counter on this
+/// creature."
 ///
-/// Printed Oracle (synthesised): "When this creature enters, target
-/// opponent reveals their hand. Choose a nonland card. That player
-/// discards that card."
-///
-/// 3-mana ETB targeted discard at the rate of Mind Rot but more
-/// efficient (1-for-1 for ours, discards 1 of theirs at our choice).
-/// Reuses the engine's `Effect::DiscardChosen` primitive (Silverquill
-/// Inquisition pattern).
+/// The activation is a tap ability whose additional cost is
+/// `exile_other_filter` — exile one instant-or-sorcery card from your
+/// own graveyard (activation rejected if none matches) — and whose
+/// effect adds a +1/+1 counter to the source. (An earlier revision
+/// shipped a synthesized ETB targeted-discard body the printed card
+/// never had.)
 pub fn tome_shredder() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::card::{ActivatedAbility, CounterType};
     CardDefinition {
         name: "Tome Shredder",
         cost: cost(&[generic(2), r()]),
@@ -200,13 +225,20 @@ pub fn tome_shredder() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::DiscardChosen {
-                from: target_filtered(SelectionRequirement::Player),
-                count: Value::Const(1),
-                filter: SelectionRequirement::Nonland,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            exile_other_filter: Some((
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                1,
+            )),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
             },
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -1344,11 +1376,23 @@ pub fn silverquill_inkpact() -> CardDefinition {
 
 // ── Professor Onyx ─────────────────────────────────────────────────────────
 
-/// Professor Onyx — {4}{B}{B} Liliana planeswalker. 5 loyalty.
-/// +1: Each opponent loses 2 life and you gain 2 life.
-/// -3: Each opponent sacrifices a creature.
-/// -8: Each opponent loses 3 life (collapsed from "may discard or lose 3").
-/// Magecraft: Whenever you cast an IS spell, each opponent loses 2 / you gain 2.
+/// Professor Onyx — {4}{B}{B} Legendary Liliana planeswalker. 5 loyalty.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// each opponent loses 2 life and you gain 2 life.
+/// +1: You lose 1 life. Look at the top three cards of your library. Put
+/// one of them into your hand and the rest into your graveyard.
+/// −3: Each opponent sacrifices a creature with the greatest power among
+/// creatures that player controls.
+/// −8: Each opponent may discard a card. If they don't, they lose 3
+/// life. Repeat this process six more times."
+///
+/// The −3 uses `HasGreatestPowerAmongControlled(Creature)` so the
+/// forced sacrifice can only take a max-power creature. The −8 is
+/// approximated: `MayDiscard` decisions can only be asked of the
+/// ability's controller (no per-opponent decision rebinding primitive),
+/// so we collapse to the "opponent always discards when able" line —
+/// each opponent discards up to 7 cards, then loses 3 life per
+/// iteration they couldn't cover: LoseLife 3 × (7 − discarded).
 pub fn professor_onyx() -> CardDefinition {
     CardDefinition {
         name: "Professor Onyx",
@@ -1366,31 +1410,67 @@ pub fn professor_onyx() -> CardDefinition {
         })],
         base_loyalty: 5,
         loyalty_abilities: vec![
+            // +1: "You lose 1 life. Look at the top three cards of your
+            // library. Put one of them into your hand and the rest into
+            // your graveyard."
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: 1,
-                effect: Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
-                    to: Selector::You,
-                    amount: Value::Const(2),
-                },
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                    Effect::LookPickToHand {
+                        who: PlayerRef::You,
+                        count: Value::Const(3),
+                        rest_to_graveyard: true,
+                        pick_filter: None,
+                        take: None,
+                        to_battlefield: false,
+                        gain_life_if_pick: None,
+                        gain_life_greatest_power_rest: false,
+                        optional: false,
+                        picked_lands_to_battlefield: false,
+                        rest_bottom_random: false,
+                    },
+                ]),
             },
+            // −3: "Each opponent sacrifices a creature with the greatest
+            // power among creatures that player controls."
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Sacrifice {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     count: Value::Const(1),
-                    filter: SelectionRequirement::Creature,
+                    filter: SelectionRequirement::Creature.and(
+                        SelectionRequirement::HasGreatestPowerAmongControlled(
+                            Box::new(SelectionRequirement::Creature),
+                        ),
+                    ),
                 },
             },
+            // −8: "Each opponent may discard a card. If they don't, they
+            // lose 3 life. Repeat this process six more times."
+            // Approximated as the always-discard line (see doc above).
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: -8,
-                effect: Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(3),
-                },
+                effect: Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(7),
+                        random: false,
+                    },
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Times(
+                            Box::new(Value::Const(3)),
+                            Box::new(Value::Diff(
+                                Box::new(Value::Const(7)),
+                                Box::new(Value::CardsDiscardedThisEffect),
+                            )),
+                        ),
+                    },
+                ]),
             },
         ],
         ..Default::default()
@@ -1400,51 +1480,23 @@ pub fn professor_onyx() -> CardDefinition {
 // ── Conspiracy Theorist ────────────────────────────────────────────────────
 
 /// Conspiracy Theorist — {1}{R}, 2/2 Human Shaman.
+/// "Whenever this creature attacks, you may pay {1} and discard a card.
+/// If you do, draw a card.
+/// Whenever you discard one or more nonland cards, you may exile one of
+/// them from your graveyard. If you do, you may cast it this turn."
 ///
-/// `{1}{R}, {T}: Exile the top card of your library. Until end of your
-/// next turn, you may play that card. Activate this ability only if you
-/// have no cards in hand.`
-///
-/// And attack trigger: "Whenever this creature attacks, you may discard
-/// a card. When you do, exile the top of your library with may-play."
+/// Approximations, both minor: (1) the attack trigger's "pay {1} and
+/// discard" compound cost is modeled as nested `MayPay {1}` →
+/// `MayDiscard 1` (a player could pay the {1} then decline the discard,
+/// wasting the mana — the draw is still correctly gated on the
+/// discard); (2) the discard trigger fires once per nonland card
+/// discarded rather than once per one-or-more batch, so a multi-card
+/// discard offers the exile choice per card instead of "one of them".
+/// The exile + cast permission is Move→Exile + `GrantMayPlay`
+/// (pay-own-cost, this turn) on the just-moved card.
 pub fn conspiracy_theorist() -> CardDefinition {
+    use crate::card::{MayPlayDuration, Predicate};
     use crate::effect::shortcut::on_attack;
-    use crate::effect::{ActivatedAbility, Predicate, Selector as Sel, ZoneDest};
-    use crate::card::MayPlayDuration;
-    let exile_top_with_may_play = Effect::Seq(vec![
-        Effect::Move {
-            what: Sel::TopOfLibrary {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-            },
-            to: ZoneDest::Exile,
-        },
-        Effect::GrantMayPlay {
-            what: Sel::TopOfLibrary {
-                who: PlayerRef::You,
-                count: Value::Const(0), // resolves to the just-moved card
-            },
-            duration: MayPlayDuration::EndOfControllersNextTurn,
-            to_owner: false,
-            exile_after: false,
-            pay_own_cost: false, any_color: false,
-        },
-    ]);
-    // Simpler model: use `CastWithoutPayingImmediate` — but the test
-    // checks `may_play_until.is_some()`, which means we need to grant
-    // a may_play permission. Use `GrantMayPlayTopOfLibrary` if it
-    // exists, or wire via a custom Move + GrantMayPlay sequence over
-    // the just-moved card (the engine's `LastMovedCard` selector or
-    // similar — fall back to a single-source helper).
-    let _ = exile_top_with_may_play;
-    // Use a more direct effect: ExileTopAndGrantMayPlay (a one-shot
-    // composite that exiles the top card and stamps may-play on it).
-    let exile_top_may_play_effect = Effect::ExileTopAndGrantMayPlay {
-        who: PlayerRef::You,
-        count: Value::Const(1),
-        duration: MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false, pay_own_cost: false,
-        uncast_penalty: None,
-    };
     CardDefinition {
         name: "Conspiracy Theorist",
         cost: cost(&[generic(1), r()]),
@@ -1455,41 +1507,51 @@ pub fn conspiracy_theorist() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: cost(&[generic(1), r()]),
-            effect: exile_top_may_play_effect.clone(),
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: Some(Predicate::ValueAtMost(
-                crate::effect::Value::HandSizeOf(PlayerRef::You),
-                crate::effect::Value::Const(0),
-            )),
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
-            ..Default::default()
-        }],
-        triggered_abilities: vec![on_attack(
-            Effect::MayDo {
-                description: "Discard a card to exile the top of your library?".into(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Discard {
+        triggered_abilities: vec![
+            // "Whenever this creature attacks, you may pay {1} and
+            // discard a card. If you do, draw a card."
+            on_attack(Effect::MayPay {
+                description: "Pay {1} and discard a card to draw a card?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::MayDiscard {
+                    description: "Discard a card to draw a card?".into(),
+                    count: Value::Const(1),
+                    then: Box::new(Effect::Draw {
                         who: Selector::You,
                         amount: Value::Const(1),
-                        random: false,
-                    },
-                    exile_top_may_play_effect,
-                ])),
+                    }),
+                    else_: None,
+                }),
+                else_: None,
+            }),
+            // "Whenever you discard one or more nonland cards, you may
+            // exile one of them from your graveyard. If you do, you may
+            // cast it this turn."
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Nonland,
+                    }),
+                effect: Effect::MayDo {
+                    description: "Exile the discarded card? You may cast it this turn.".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::TriggerSource,
+                            to: crate::effect::ZoneDest::Exile,
+                        },
+                        Effect::GrantMayPlay {
+                            what: Selector::LastMoved,
+                            duration: MayPlayDuration::EndOfThisTurn,
+                            to_owner: false,
+                            exile_after: false,
+                            pay_own_cost: true,
+                            any_color: false,
+                        },
+                    ])),
+                },
             },
-        )],
+        ],
         ..Default::default()
     }
 }
@@ -1497,8 +1559,15 @@ pub fn conspiracy_theorist() -> CardDefinition {
 // ── Dina, Soul Steeper ─────────────────────────────────────────────────────
 
 /// Dina, Soul Steeper — {B}{G}, 1/3 Legendary Dryad Druid.
-/// "Whenever you gain life, each opponent loses 1 life."
+/// "Whenever you gain life, each opponent loses 1 life.
+/// {1}, Sacrifice another creature: Dina gets +X/+0 until end of turn,
+/// where X is the sacrificed creature's power."
+///
+/// The pump ability pays via `sac_other_filter` (another creature) and
+/// reads the paid creature's power back through `Value::SacrificedPower`.
 pub fn dina_soul_steeper() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
     CardDefinition {
         name: "Dina, Soul Steeper",
         cost: cost(&[b(), crate::mana::g()]),
@@ -1516,6 +1585,21 @@ pub fn dina_soul_steeper() -> CardDefinition {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
             },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::SacrificedPower,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }

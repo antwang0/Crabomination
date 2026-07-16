@@ -392,6 +392,31 @@ fn arcane_subtraction_shrinks_power() {
     assert_eq!(g.battlefield_find(bear).unwrap().power(), -2, "2 base power -4 = -2");
 }
 
+#[test]
+fn exhilarating_elocution_counters_target_and_pumps_only_others() {
+    let mut g = two_player_game();
+    let star = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::exhilarating_elocution());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(star)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let star_c = g.battlefield_find(star).unwrap();
+    assert_eq!(star_c.counter_count(CounterType::PlusOnePlusOne), 2, "two +1/+1 counters");
+    assert_eq!(
+        (star_c.power(), star_c.toughness()),
+        (4, 4),
+        "target gets ONLY the counters — the 'other creatures' pump excludes it",
+    );
+    let other_c = g.battlefield_find(other).unwrap();
+    assert_eq!((other_c.power(), other_c.toughness()), (3, 3), "other creature +1/+1 EOT");
+}
+
 /// CR 702.21 — Ward {2} on Waterfall Aerialist counters an opponent's
 /// spell when the caster can't pay the ward cost.
 #[test]
@@ -663,4 +688,43 @@ fn explosive_welcome_hits_two_targets_and_adds_mana() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both bears die");
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "adds three red mana");
+}
+
+#[test]
+fn thrilling_discovery_gains_life_and_optionally_loots_two_for_three() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let d1 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let d2 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::thrilling_discovery());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let life = g.players[0].life;
+    // Accept "you may discard two cards", then pick the two bears.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Discard(vec![d1, d2]),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained 2 life");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.id == d1 || c.id == d2).count(), 2,
+        "discarded both bears (Thrilling Discovery itself also in the bin)");
+    assert_eq!(g.players[0].hand.len(), 3, "drew three cards");
+}
+
+#[test]
+fn oggyar_battle_seer_has_haste_and_taps_to_scry() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_battlefield(0, catalog::oggyar_battle_seer());
+    assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::Haste));
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("{T}: Scry 1 activatable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "scry ability taps Oggyar");
 }

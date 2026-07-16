@@ -33,23 +33,24 @@ pub use crabomination_base::tokens::lorehold_spirit_token;
 
 // ── Lorehold Apprentice ─────────────────────────────────────────────────────
 
-/// Lorehold Apprentice — {R}{W}, 2/2 Human Cleric.
+/// Lorehold Apprentice — {1}{R}, 2/2 Human Cleric.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// you gain 1 life and Lorehold Apprentice deals 1 damage to each
-/// opponent."
+/// until end of turn, Spirit creatures you control gain '{T}: This
+/// creature deals 1 damage to each opponent.'"
 ///
-/// Both halves of the magecraft rider wired: a `Seq` body of
-/// `GainLife(1) + DealDamage(1)` against `target_filtered(Creature ∨
-/// Player ∨ Planeswalker)`. The auto-target picker on triggers will
-/// aim the 1 damage at any legal target (defaults to "an opponent"
-/// for friendly-source pings); see `auto_target_for_effect_avoiding`
-/// in the trigger registration path.
-/// The "1 damage to any target" is collapsed to "each opponent" since
-/// auto-targeting on triggered abilities picks each-opponent cleanly.
+/// Wired via `Effect::GainActivatedAbility` fanned over
+/// `Selector::EachPermanent(Spirit creature you control)`.
+/// KNOWN APPROXIMATION: `Effect::GainActivatedAbility` anchors the
+/// grant to the permanent (cleared when it leaves the battlefield) and
+/// has no `Duration` parameter, so the printed "until end of turn"
+/// expiry is not modelled — the tap ability persists past cleanup.
+/// Missing primitive: a duration-carrying activated-ability grant
+/// (the activated-ability sibling of `Effect::GrantTriggeredAbility
+/// { duration }`).
 pub fn lorehold_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice",
-        cost: cost(&[r(), w()]),
+        cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -57,37 +58,32 @@ pub fn lorehold_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(1),
-            },
-        ]))],
+        triggered_abilities: vec![magecraft(Effect::GainActivatedAbility {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            ability: Box::new(ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            }),
+        })],
         ..Default::default()
     }
 }
 
 // ── Lorehold Pledgemage ─────────────────────────────────────────────────────
 
-/// Lorehold Pledgemage — {1}{R/W}{R/W}, 2/2 Spirit Cleric. "Reach. {2}{R}{W},
-/// Exile a card from your graveyard: This creature gets +1/+1 until end
-/// of turn."
-///
-/// Activated `{2}{R}{W}, Exile a card from your graveyard: +1/+1 EOT`
-/// wired via the new `ActivatedAbility.exile_other_filter` cost primitive
-/// — picks the lowest-CMC card in the activator's graveyard (excluding
-/// the source). The +1/+1 EOT applies to `Selector::This`.
+/// Lorehold Pledgemage — {1}{R/W}{R/W}, 2/2 Kor Shaman.
+/// "First strike
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// this creature gets +1/+0 until end of turn."
 pub fn lorehold_pledgemage() -> CardDefinition {
-    use crate::card::ActivatedAbility;
-    use crate::effect::Duration;
     CardDefinition {
         name: "Lorehold Pledgemage",
         cost: cost(&[generic(1), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]),
@@ -99,44 +95,17 @@ pub fn lorehold_pledgemage() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: false,
-            mana_cost: cost(&[generic(2), r(), w()]),
-            effect: Effect::PumpPT {
-                what: Selector::This,
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            // "Exile a card from your graveyard" — any card (count 1).
-            exile_other_filter: Some((SelectionRequirement::Any, 1)),
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
-            ..Default::default()
-        }],
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
 }
 
 // ── Pillardrop Rescuer ──────────────────────────────────────────────────────
 
-/// Pillardrop Rescuer — {4}{W}, 2/2 Spirit Cleric. "Flying. When
-/// Pillardrop Rescuer enters the battlefield, return target instant or
-/// sorcery card from your graveyard to your hand."
-///
-/// Same shape as Zealous Lorecaster ({5}{R}, 4/4 Giant): ETB returns one
-/// IS card from your graveyard. Wired with the standard ETB +
-/// `Effect::Move` against a `target_filtered` GY card. The 3/3 flying
-/// body for {3}{R}{W} is a respectable Lorehold floor.
+/// Pillardrop Rescuer — {4}{W}, 2/2 Spirit Cleric.
+/// "Flying
+/// When this creature enters, return target creature card with mana
+/// value 3 or less from your graveyard to your hand."
 pub fn pillardrop_rescuer() -> CardDefinition {
     CardDefinition {
         name: "Pillardrop Rescuer",
@@ -153,8 +122,9 @@ pub fn pillardrop_rescuer() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    SelectionRequirement::HasCardType(CardType::Creature)
+                        .and(SelectionRequirement::ManaValueAtMost(3))
+                        .and(SelectionRequirement::InYourGraveyard),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
@@ -165,44 +135,37 @@ pub fn pillardrop_rescuer() -> CardDefinition {
 
 // ── Heated Debate ───────────────────────────────────────────────────────────
 
-/// Heated Debate — {2}{R} Instant. Damage can't be prevented this turn,
-/// then deal 4 damage to target creature. (CR 615.12 — the prevention
-/// lock is applied first so it covers this spell's own damage.)
+/// Heated Debate — {2}{R} Instant.
+/// "This spell can't be countered. (This includes by the ward ability.)
+/// Heated Debate deals 4 damage to target creature or planeswalker."
 pub fn heated_debate() -> CardDefinition {
     CardDefinition {
         name: "Heated Debate",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::DamageCantBePreventedThisTurn,
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::Const(4),
-            },
-        ]),
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(4),
+        },
         ..Default::default()
     }
 }
 
 // ── Sparring Regimen ────────────────────────────────────────────────────────
 
-/// Sparring Regimen — {2}{W} Enchantment. "When this enchantment
-/// enters, create a 2/2 red and white Spirit creature token. / Whenever
-/// you attack, put a +1/+1 counter on each attacking creature you
-/// control."
+/// Sparring Regimen — {2}{W} Enchantment.
+/// "When this enchantment enters, learn. (You may reveal a Lesson card
+/// you own from outside the game and put it into your hand, or discard
+/// a card to draw a card.)
+/// Whenever you attack, put a +1/+1 counter on target attacking
+/// creature and untap it."
 ///
-/// **Both halves wired.** ETB creates the 2/2 R/W Spirit token via the
-/// shared `lorehold_spirit_token()` helper. The "whenever you attack"
-/// trigger is modelled as a per-attacker `Attacks / AnotherOfYours`
-/// trigger that puts a +1/+1 counter on `Selector::TriggerSource` (the
-/// attacker). Since `AnotherOfYours` excludes the enchantment itself
-/// (which never attacks) and fires once per declared attacker you
-/// control, the net effect matches the printed batch trigger: every
-/// attacking creature you control gains a +1/+1 counter when the
-/// combat-step attacker is declared.
-/// The attack trigger fires once per creature declared as attacker (via
-/// `Attacks` + `YourControl`). Each firing puts a +1/+1 counter on the
-/// trigger source (that specific attacker).
+/// The attack half uses `EventKind::YouAttack` (CR 508 — fires once
+/// per combat, not once per attacker) and targets one attacking
+/// creature: +1/+1 counter, then untap.
 pub fn sparring_regimen() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -212,19 +175,18 @@ pub fn sparring_regimen() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: lorehold_spirit_token(),
-                },
+                effect: Effect::Learn { who: PlayerRef::You },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
-                effect: Effect::AddCounter {
-                    what: Selector::TriggerSource,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
+                event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(SelectionRequirement::IsAttacking),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Untap { what: Selector::Target(0), up_to: None },
+                ]),
             },
         ],
         ..Default::default()
@@ -233,18 +195,10 @@ pub fn sparring_regimen() -> CardDefinition {
 
 // ── Storm-Kiln Artist ───────────────────────────────────────────────────────
 
-/// Storm-Kiln Artist — {3}{R}, 2/2 Human Wizard. "Magecraft — Whenever
-/// you cast or copy an instant or sorcery spell, Storm-Kiln Artist deals
-/// 1 damage to any target. Then create a Treasure token."
-///
-/// Faithfully wired: the magecraft trigger ships a `Seq` body of
-/// `DealDamage(to: target_filtered(Creature ∨ Player ∨ Planeswalker),
-/// amount: 1)` + `CreateToken(treasure_token())`. The auto-target
-/// picker on triggered abilities aims a friendly source's ping at the
-/// best legal target (defaults to "an opponent" when no creature target
-/// is preferable). Now that the dispatcher threads `event_subject`
-/// through `StackItem::Trigger.trigger_source` (push XVIII bugfix), the
-/// Treasure half resolves correctly via `PlayerRef::You`.
+/// Storm-Kiln Artist — {3}{R}, 2/2 Dwarf Shaman.
+/// "This creature gets +1/+0 for each artifact you control.
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// create a Treasure token."
 pub fn storm_kiln_artist() -> CardDefinition {
     use crate::game::effects::treasure_token;
     CardDefinition {
@@ -257,21 +211,19 @@ pub fn storm_kiln_artist() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(1),
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+0 for each artifact you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: SelectionRequirement::Artifact,
+                per_power: 1,
+                per_toughness: 0,
             },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: treasure_token(),
-            },
-        ]))],
+        }],
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: treasure_token(),
+        })],
         ..Default::default()
     }
 }
@@ -279,73 +231,51 @@ pub fn storm_kiln_artist() -> CardDefinition {
 // ── Reconstruct History ─────────────────────────────────────────────────────
 
 /// Reconstruct History — {2}{R}{W} Sorcery (Lorehold).
-/// "Choose two or more —
-///   • Return target artifact card from your graveyard to your hand.
-///   • Return target instant card from your graveyard to your hand.
-///   • Return target Spirit card from your graveyard to your hand.
-///   • Return target sorcery card from your graveyard to your hand."
+/// "Return up to one target artifact card, up to one target enchantment
+/// card, up to one target instant card, up to one target sorcery card,
+/// and up to one target planeswalker card from your graveyard to your
+/// hand.
+/// Exile Reconstruct History."
 ///
-/// Wired via `Effect::ChooseN { picks: [2, 3, 4], modes }` — the four
-/// printed modes each pull a `target_filtered` graveyard card of the
-/// matching type back to hand. The auto-decider walks the picks
-/// list, so if 2-mode pick is viable it picks the first two modes
-/// with matching cards in the controller's graveyard.
+/// Wired via `Effect::OptionalTargets { min: 0 }` over five distinct
+/// target slots (artifact / enchantment / instant / sorcery /
+/// planeswalker, each restricted to your graveyard); the "Exile
+/// Reconstruct History" rider is `exile_on_resolve`.
 pub fn reconstruct_history() -> CardDefinition {
+    let gy_slot = |slot: u8, card_type: CardType| Selector::TargetFiltered {
+        slot,
+        filter: SelectionRequirement::HasCardType(card_type)
+            .and(SelectionRequirement::InYourGraveyard),
+    };
     CardDefinition {
         name: "Reconstruct History",
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            // Auto-pick: modes 0 (artifact) + 1 (instant). The engine's
-            // `Effect::ChooseN` runs every index listed in `picks`, so
-            // the auto-decider always recurs the first-and-second mode.
-            // Each mode auto-picks the first matching card in the
-            // controller's graveyard via `Selector::one_of(CardsInZone(...))`
-            // — this approximates the printed "target X card" since
-            // the engine has no multi-target prompt for sorceries
-            // (tracked in TODO.md). For deck-builds where the player
-            // wants to recur a Spirit creature card (mode 2) or a
-            // sorcery (mode 3), the picks vec can be re-mapped via a
-            // future mode-pick UI.
-            picks: vec![0, 1],
-            modes: vec![
-                // Mode 0: return an artifact card from your gy → hand.
+        exile_on_resolve: true,
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
                 Effect::Move {
-                    what: Selector::one_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: SelectionRequirement::HasCardType(CardType::Artifact),
-                    }),
+                    what: gy_slot(0, CardType::Artifact),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-                // Mode 1: return an instant card from your gy → hand.
                 Effect::Move {
-                    what: Selector::one_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: SelectionRequirement::HasCardType(CardType::Instant),
-                    }),
+                    what: gy_slot(1, CardType::Enchantment),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-                // Mode 2: return a Spirit creature card from your gy → hand.
                 Effect::Move {
-                    what: Selector::one_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: SelectionRequirement::HasCreatureType(CreatureType::Spirit),
-                    }),
+                    what: gy_slot(2, CardType::Instant),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-                // Mode 3: return a sorcery card from your gy → hand.
                 Effect::Move {
-                    what: Selector::one_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: SelectionRequirement::HasCardType(CardType::Sorcery),
-                    }),
+                    what: gy_slot(3, CardType::Sorcery),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-            ],
+                Effect::Move {
+                    what: gy_slot(4, CardType::Planeswalker),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ])),
         },
         ..Default::default()
     }
@@ -353,109 +283,61 @@ pub fn reconstruct_history() -> CardDefinition {
 
 // ── Lorehold Excavation ─────────────────────────────────────────────────────
 
-/// Lorehold Excavation — Land (Lorehold).
-/// "{T}: Add {R} or {W}.
-/// {2}{R}{W}, {T}: Exile target card from a graveyard. If a creature
-/// card was exiled this way, create an X/X red and white Spirit
-/// creature token with flying, where X is that card's power."
+/// Lorehold Excavation — {1}{R/W} Enchantment.
+/// "At the beginning of your end step, mill a card. If a land card was
+/// milled this way, you gain 1 life. Otherwise, this enchantment deals
+/// 1 damage to each opponent. (To mill a card, put the top card of your
+/// library into your graveyard.)
+/// {5}, Exile a creature card from your graveyard: Create a tapped 3/2
+/// red and white Spirit creature token."
 ///
-/// Two `{T}: Add {R/W}` mana abilities + a `{2}{R}{W}, {T}` ability that
-/// exiles a target graveyard card; if it was a creature, mint a 0/0 R/W
-/// flying Spirit and stack +1/+1 counters equal to the exiled card's
-/// power (`Value::PowerOf(Target)`, read from the graveyard before the
-/// exile-Move resolves) — X/X where X is that creature's power.
+/// End-step half via `Effect::MillThenBranchByType` (land → gain 1
+/// life; creature/noncreature → 1 damage to each opponent). The
+/// activated half uses the `exile_other_filter` cost primitive and
+/// mints the shared 3/2 R/W Spirit, tapped via a follow-up
+/// `Effect::Tap { LastCreatedToken }`.
 pub fn lorehold_excavation() -> CardDefinition {
-    use crate::card::{ActivatedAbility, CounterType};
-    use super::super::tap_add;
-    // 0/0 R/W Spirit Flying token base. The "X = its power" sizing is
-    // applied immediately after creation via `AddCounter` on the
-    // `LastCreatedToken` selector with `Value::PowerOf(Target)`. The
-    // engine's `PowerOf` evaluator now reads the target's printed power
-    // even when the target is in graveyard (the typical evaluation
-    // point for this rider — the gy card is still present at token-
-    // creation time, since the exile-Move runs after the bonus
-    // branch). For a typical 2-power creature in gy → 2/2 Spirit; for
-    // a 5/5 → 5/5 Spirit; for 0-power gy creature → 0/0 dies to SBA.
-    let spirit_flying = TokenDefinition {
-        name: "Spirit".into(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![Keyword::Flying],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Red, Color::White],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    
-        static_abilities: vec![],
-        ..Default::default()
+    use crate::card::ActivatedAbility;
+    use crate::game::types::TurnStep;
+    let ping_each_opp = || Effect::DealDamage {
+        to: Selector::Player(PlayerRef::EachOpponent),
+        amount: Value::Const(1),
     };
     CardDefinition {
         name: "Lorehold Excavation",
-        card_types: vec![CardType::Land],
-        activated_abilities: vec![
-            tap_add(Color::Red),
-            tap_add(Color::White),
-            ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
-                tap_cost: true,
-                mana_cost: cost(&[generic(2), r(), w()]),
-                effect: Effect::Seq(vec![
-                    // Bonus token first (token mints reading the target
-                    // before the move resolves — the `EntityMatches`
-                    // predicate walks the target's card definition).
-                    Effect::If {
-                        cond: crate::card::Predicate::EntityMatches {
-                            what: Selector::Target(0),
-                            filter: SelectionRequirement::HasCardType(CardType::Creature),
-                        },
-                        then: Box::new(Effect::Seq(vec![
-                            Effect::CreateToken {
-                                who: PlayerRef::You,
-                                count: Value::Const(1),
-                                definition: spirit_flying,
-                            },
-                            // Size the token to X/X where X is the
-                            // gy card's printed power. Reads
-                            // `PowerOf(Target(0))` against the target
-                            // (still in graveyard at this point — the
-                            // exile-Move below hasn't run yet). The
-                            // engine's `Value::PowerOf` evaluator was
-                            // extended to walk graveyards / exile /
-                            // hand for cards not on the battlefield
-                            // (push: modern_decks).
-                            Effect::AddCounter {
-                                what: Selector::LastCreatedToken,
-                                kind: CounterType::PlusOnePlusOne,
-                                amount: Value::PowerOf(Box::new(Selector::Target(0))),
-                            },
-                        ])),
-                        else_: Box::new(Effect::Noop),
-                    },
-                    // Then exile the target gy card.
-                    Effect::Move {
-                        what: target_filtered(SelectionRequirement::Any),
-                        to: ZoneDest::Exile,
-                    },
-                ]),
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
-                ..Default::default()
+        cost: cost(&[generic(1), hybrid(Color::Red, Color::White)]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::MillThenBranchByType {
+                land: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+                creature: Box::new(ping_each_opp()),
+                noncreature: Box::new(ping_each_opp()),
             },
-        ],
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            // "Exile a creature card from your graveyard" (cost).
+            exile_other_filter: Some((
+                SelectionRequirement::HasCardType(CardType::Creature),
+                1,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::lorehold_spirit_3_2_token(),
+                },
+                Effect::Tap { what: Selector::LastCreatedToken },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -12616,31 +12498,36 @@ pub fn lorehold_spectralward_b164() -> CardDefinition {
 
 // ── Academic Dispute ───────────────────────────────────────────────────────
 
-/// Academic Dispute — {R} Instant. "Target creature gets +2/+0 and gains
-/// reach until end of turn. It must be blocked this turn if able."
-/// (Must-be-blocked rider via `Keyword::MustBeBlocked`, CR 509.1c.)
+/// Academic Dispute — {R} Instant.
+/// "Target creature blocks this turn if able. You may have it gain
+/// reach until end of turn.
+/// Learn. (You may reveal a Lesson card you own from outside the game
+/// and put it into your hand, or discard a card to draw a card.)"
+///
+/// "Blocks this turn if able" via `Keyword::MustBlock` (CR 509.1c)
+/// granted EOT; the optional reach rider is an `Effect::MayDo`
+/// (AutoDecider declines; script `DecisionAnswer::Bool(true)` to
+/// accept); then `Effect::Learn`.
 pub fn academic_dispute() -> CardDefinition {
     CardDefinition {
         name: "Academic Dispute",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::PumpPT {
+            Effect::GrantKeyword {
                 what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(2),
-                toughness: Value::Const(0),
+                keyword: Keyword::MustBlock,
                 duration: Duration::EndOfTurn,
             },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Reach,
-                duration: Duration::EndOfTurn,
+            Effect::MayDo {
+                description: "have it gain reach until end of turn".into(),
+                body: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Reach,
+                    duration: Duration::EndOfTurn,
+                }),
             },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::MustBeBlocked,
-                duration: Duration::EndOfTurn,
-            },
+            Effect::Learn { who: PlayerRef::You },
         ]),
         ..Default::default()
     }
@@ -14154,13 +14041,18 @@ pub fn lorehold_vanguard_b174() -> CardDefinition {
     }
 }
 
-/// Returned Pastcaller — {3}{R}{R/W}{W}, 4/2 Spirit Cleric. Flying.
-/// ETB: "Return target instant or sorcery card from your graveyard to
-/// your hand." Same shape as Pillardrop Rescuer.
+/// Returned Pastcaller — {3}{R/W}{R/W}, 4/2 Spirit Cleric.
+/// "Flying
+/// When this creature enters, return target Spirit, instant, or
+/// sorcery card from your graveyard to your hand."
 pub fn returned_pastcaller() -> CardDefinition {
     CardDefinition {
         name: "Returned Pastcaller",
-        cost: cost(&[generic(3), r(), hybrid(Color::Red, Color::White), w()]),
+        cost: cost(&[
+            generic(3),
+            hybrid(Color::Red, Color::White),
+            hybrid(Color::Red, Color::White),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -14173,8 +14065,10 @@ pub fn returned_pastcaller() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                        .or(SelectionRequirement::HasCardType(CardType::Instant))
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                        .and(SelectionRequirement::InYourGraveyard),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },

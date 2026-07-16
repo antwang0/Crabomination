@@ -15,11 +15,11 @@ use crate::effect::shortcut::{
     on_attack_gain_life, on_other_dies, on_other_dies_mint_token, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{cost, b, g, generic, hybrid, Color, ManaCost};
+use crate::mana::{cost, b, g, generic, Color, ManaCost};
 
 // ── Witherbloom Apprentice ──────────────────────────────────────────────────
 
-/// Witherbloom Apprentice — {B}{G}, 2/2 Human Warlock. "Magecraft —
+/// Witherbloom Apprentice — {B}{G}, 2/2 Human Druid. "Magecraft —
 /// Whenever you cast or copy an instant or sorcery spell, each opponent
 /// loses 1 life and you gain 1 life."
 pub fn witherbloom_apprentice() -> CardDefinition {
@@ -40,14 +40,15 @@ pub fn witherbloom_apprentice() -> CardDefinition {
 
 // ── Pest Summoning (Lesson) ─────────────────────────────────────────────────
 
-/// Pest Summoning — {1}{B/G}{B/G} Sorcery — Lesson. Creates two 1/1 black
-/// and green Pest tokens, each with "When this creature dies, you gain 1
-/// life" (baked into `stx_pest_token()` via `TokenDefinition.triggered_abilities`).
+/// Pest Summoning — {2}{B}{G} Sorcery — Lesson. "Create two 1/1 black and
+/// green Pest creature tokens with 'When this token dies, you gain 1
+/// life.'" (Death trigger baked into `stx_pest_token()` via
+/// `TokenDefinition.triggered_abilities`.)
 pub fn pest_summoning() -> CardDefinition {
     let pest = stx_pest_token();
     CardDefinition {
         name: "Pest Summoning",
-        cost: cost(&[generic(1), hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
+        cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Sorcery],
         // Lesson is a sorcery sub-type. Add to the spell subtype list so
         // future Lesson-based mechanics (Mascot Exhibition, "search your
@@ -247,18 +248,24 @@ pub fn witherbloom_vinemaster() -> CardDefinition {
 // ── Witherbloom Command ─────────────────────────────────────────────────
 
 /// Witherbloom Command — {B}{G} Sorcery. "Choose two —
-/// • Target player mills three cards, then you may return a land card
-///   from your graveyard to your hand.
+/// • Target player mills three cards, then you return a land card from
+///   your graveyard to your hand.
 /// • Destroy target noncreature, nonland permanent with mana value 2
 ///   or less.
 /// • Target creature gets -3/-1 until end of turn.
-/// • Each opponent loses 2 life and you gain 2 life."
+/// • Target opponent loses 2 life and you gain 2 life."
 ///
 /// True cast-time choose-two via `Effect::ChooseModesCast` (min 2,
 /// max 2, no repeats): `GameAction::CastSpellSpree` carries the chosen
 /// modes, each target-bearing mode consuming its own target slot. A
 /// plain `CastSpell { mode }` still works as a single-mode fallback
 /// (bot / back-compat path).
+///
+/// Approximations: mode 0's printed mandatory "you return a land card"
+/// is modeled as `MayDo` (decline = the empty-graveyard no-op case);
+/// mode 3's printed "target opponent" is modeled as `EachOpponent`,
+/// which is equivalent in two-player games and avoids a fourth target
+/// slot.
 pub fn witherbloom_command() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Command",
@@ -382,9 +389,18 @@ pub fn rushed_rebirth() -> CardDefinition {
 
 // ── Callous Bloodmage ──────────────────────────────────────────────────────
 
-/// Callous Bloodmage — {2}{B}, 2/1 Vampire Warlock. "When this enters,
-/// choose one — • Create a 1/1 Pest token. • Exile target player's
-/// graveyard. • Draw a card and lose 1 life."
+/// Callous Bloodmage — {2}{B}, 2/1 Vampire Warlock. "When this creature
+/// enters, choose one —
+/// • Create a 1/1 black and green Pest creature token with 'When this
+///   token dies, you gain 1 life.'
+/// • You draw a card and you lose 1 life.
+/// • Exile target player's graveyard."
+///
+/// Approximation: player-targeting on ETB triggers is an engine-wide
+/// gap (see Bojuka Bog / Archon of Cruelty), so mode 2's "target
+/// player's graveyard" is modeled as `ExilePlayerGraveyard` on
+/// `EachOpponent` — faithful in two-player games, but the self-cast
+/// "exile my own graveyard" line is unavailable.
 pub fn callous_bloodmage() -> CardDefinition {
     let pest = stx_pest_token();
     CardDefinition {
@@ -408,6 +424,9 @@ pub fn callous_bloodmage() -> CardDefinition {
                     Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                     Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
                 ]),
+                // "Exile target player's graveyard." — EachOpponent stands
+                // in for the target slot (see doc comment).
+                Effect::ExilePlayerGraveyard { who: PlayerRef::EachOpponent },
             ]),
         )],
         ..Default::default()

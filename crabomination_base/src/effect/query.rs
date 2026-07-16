@@ -1237,6 +1237,11 @@ impl Effect {
             Effect::DestroyLandOfEachBasicType => {
                 "choose a land of each basic land type, then destroy those lands".into()
             }
+            Effect::ExilePlayerGraveyard { who } => match who {
+                crate::effect::PlayerRef::EachOpponent => "exile each opponent's graveyard".into(),
+                crate::effect::PlayerRef::You => "exile your graveyard".into(),
+                _ => "exile target player's graveyard".into(),
+            },
             Effect::Spree { .. } => "spree (choose one or more additional costs)".into(),
             Effect::Tiered { .. } => "tiered (choose one additional cost)".into(),
             Effect::ChooseModesCast { min, max, .. } => {

@@ -3102,32 +3102,48 @@ fn creative_outburst_deals_five_and_digs_for_one() {
         "dug-for top card landed in hand");
 }
 
+/// Real oracle line 2: "{U/R}{U/R}, Discard this card: Create a Treasure
+/// token." — a from-hand activated ability with a discard-self cost.
 #[test]
-fn heated_debate_damage_ignores_a_prevention_shield() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+fn creative_outburst_discarded_from_hand_mints_a_treasure() {
     let mut g = two_player_game();
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.clear_sickness(bear);
-    // Shield the bear with "prevent the next 3 damage" (Healing Salve mode 1).
-    let salve = g.add_card_to_hand(1, catalog::healing_salve());
-    g.players[1].mana_pool.add(Color::White, 1);
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: salve, target: Some(crabomination::game::types::Target::Permanent(bear)),
-        additional_targets: vec![], mode: Some(1), x_value: None,
-    }).expect("Healing Salve castable");
+    let id = g.add_card_to_hand(0, catalog::creative_outburst());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("{U/R}{U/R}, Discard this card: Create a Treasure");
     drain_stack(&mut g);
-    // Heated Debate: prevention is locked, so all 4 damage lands and kills it.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Creative Outburst discarded as the cost");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"),
+        "a Treasure token was created");
+}
+
+#[test]
+fn heated_debate_cant_be_countered_and_deals_four() {
+    // Real oracle: "This spell can't be countered. / Heated Debate deals
+    // 4 damage to target creature or planeswalker." (No prevention rider
+    // — an earlier synthesized body had "damage can't be prevented".)
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let hd = g.add_card_to_hand(0, catalog::heated_debate());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
-    g.priority.player_with_priority = 0;
     g.perform_action(GameAction::CastSpell {
         card_id: hd, target: Some(crabomination::game::types::Target::Permanent(bear)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Heated Debate castable");
+    // Opponent tries to counter it — the spell can't be countered.
+    g.perform_action(GameAction::PassPriority).unwrap();
+    let cs = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cs, target: Some(crabomination::game::types::Target::Permanent(hd)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Counterspell castable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(),
-        "shield is ignored — 4 damage kills the 2/2");
+        "Heated Debate resolved through the Counterspell — 4 damage kills the 2/2");
+    assert!(catalog::heated_debate().keywords.contains(&Keyword::CantBeCountered));
 }
