@@ -1240,18 +1240,14 @@ pub fn pyrotechnics() -> CardDefinition {
 /// that damage. Put a +1/+1 counter on this creature for each 1 damage
 /// prevented this way."
 ///
-/// 🟡 Body-only wire ({2}{W} 1/3 Flying). Missing primitive: a CR 615
-/// noncombat-damage prevention *replacement* on a creature that converts
-/// the prevented amount into +1/+1 counters. The engine's existing
-/// prevention hooks (`Keyword::Absorb`, `ProtectionFromCreatures`, the
-/// combat-damage prevention flag) either cap a fixed amount, cover
-/// creature sources only, or apply to combat damage — none intercepts
-/// arbitrary noncombat damage and none feeds the prevented amount into a
-/// counter payload. Until such a replacement primitive exists (tracked in
-/// TODO.md alongside the CR 615 prevention gaps), burn/fight damage kills
-/// this card instead of growing it. Tests:
-/// `stormwild_capridor_is_a_four_mana_one_four_flying_goat_beast`.
+/// Fully wired: the CR 615 replacement lives in the noncombat damage
+/// funnel (`StaticEffect::PreventNoncombatDamageToSelfAddCounters`) —
+/// burn/fight damage is prevented and lands that many +1/+1 counters
+/// instead (post-doubling amount; skipped while a "damage can't be
+/// prevented" effect is live, CR 615.12). Combat damage still hits
+/// normally.
 pub fn stormwild_capridor() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
     CardDefinition {
         name: "Stormwild Capridor",
         cost: cost(&[generic(2), w()]),
@@ -1263,6 +1259,10 @@ pub fn stormwild_capridor() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "If noncombat damage would be dealt to this creature,                           prevent that damage and put that many +1/+1 counters on it.",
+            effect: StaticEffect::PreventNoncombatDamageToSelfAddCounters,
+        }],
         ..Default::default()
     }
 }

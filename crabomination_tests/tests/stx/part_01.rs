@@ -251,8 +251,9 @@ fn quandrix_command_shuffle_mode_recycles_three_graveyard_cards() {
     g.perform_action(GameAction::CastSpellSpree {
         card_id: id,
         spree_modes: vec![2, 3],
+        // Slot 0: mode 2's creature; slot 1: mode 3's TARGET PLAYER.
         target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
+        additional_targets: vec![Target::Player(0)],
         x_value: None,
     })
     .expect("Quandrix Command counters+shuffle castable");
@@ -3936,10 +3937,12 @@ fn channeled_force_draws_hand_size_differential() {
     g.players[0].mana_pool.add_colorless(20);
 
     let p0_hand_before = g.players[0].hand.len();
+    // Slot 0: the chosen opponent (hand-size reference); slot 1: the
+    // chosen player who draws.
     g.perform_action(GameAction::CastSpell {
         card_id: cf,
-        target: None,
-        additional_targets: vec![],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(0)],
         mode: None,
         x_value: None,
     })

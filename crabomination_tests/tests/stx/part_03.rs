@@ -3093,3 +3093,29 @@ fn lorehold_resurgence_returns_low_mv_creature() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == bear), "bear on bf");
 }
+
+/// Stormwild Capridor converts prevented noncombat damage into +1/+1
+/// counters: a Bolt makes it a 4/6 instead of killing it.
+#[test]
+fn stormwild_capridor_converts_burn_into_counters() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let goat = g.add_card_to_battlefield(0, catalog::stormwild_capridor());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(goat)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(goat).expect("Capridor survives — damage prevented");
+    assert_eq!(c.damage, 0, "no damage marked");
+    assert_eq!(
+        c.counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "three +1/+1 counters for the three prevented damage"
+    );
+}

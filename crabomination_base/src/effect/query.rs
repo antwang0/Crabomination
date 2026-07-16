@@ -167,7 +167,8 @@ impl Effect {
             | Effect::AddManaAtNextMainPhase { .. }
             // Free-cast offers pick their own targets at cast time.
             | Effect::CastAnyOrderWithoutPaying { .. }
-            | Effect::PutResolvingSpellInLibraryFromTop(_) => false,
+            | Effect::PutResolvingSpellInLibraryFromTop(_)
+            | Effect::DistributeCountersAmongLastCreated { .. } => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,
@@ -234,7 +235,9 @@ impl Effect {
             Effect::ReturnGraveyardPermanentsDifferentNames => false,
             Effect::ReturnGraveyardCardsToHand { .. } => false,
             // Resolution-time ChooseCards by the affected player; untargeted.
-            Effect::ShuffleGraveyardCardsIntoLibrary { .. } => false,
+            // A `who: PlayerRef::Target(n)` makes the affected player a
+            // real cast-time target (Quandrix Command mode 3).
+            Effect::ShuffleGraveyardCardsIntoLibrary { who, .. } => player_has_target(who),
             Effect::LookTopNDeployPermanentsRestToHand { .. } => false,
             Effect::LookTopMayDeployAttacking { .. } => false,
             Effect::ExileTopUntilPermanentToBattlefieldOrHand => false,
@@ -1737,6 +1740,14 @@ impl Effect {
                 }
                 Value::NonNeg(a) | Value::HalvedRoundUp(a) => val_find(a, slot),
                 Value::Sum(vs) => vs.iter().find_map(|x| val_find(x, slot)),
+                // Player-ref values carrying a bare `PlayerRef::Target(n)`
+                // register a player slot (Channeled Force's "the chosen
+                // opponent's hand size" — the opponent's ONLY mention is
+                // inside the draw amount).
+                Value::HandSizeOf(p)
+                | Value::LifeOf(p)
+                | Value::GraveyardSizeOf(p)
+                | Value::LibrarySizeOf(p) => implicit_player_for_ref_slot(p, slot),
                 _ => None,
             }
         }
@@ -1934,6 +1945,7 @@ impl Effect {
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::ExilePlayerGraveyard { who }
                 | Effect::ExileHand { who }
+                | Effect::ShuffleGraveyardCardsIntoLibrary { who, .. }
                 | Effect::DiscardUnlessKind { who, .. } => implicit_player_for_ref_slot(who, slot),
                 Effect::PhaseOut { what, .. }
                 | Effect::GrantSuspend { what, .. }

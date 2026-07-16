@@ -1171,21 +1171,12 @@ pub fn quandrix_mathematician_b104() -> CardDefinition {
 /// Fractal Bloom (batch 104) — {3}{G}{U} Sorcery.
 ///
 /// Synthesised: "Create two 0/0 green-and-blue Fractal creature
-/// tokens. Put three +1/+1 counters distributed across them; for
-/// simplicity, two on the first and one on the second."
+/// tokens. Distribute three +1/+1 counters among them."
 ///
-/// Engine approximation (fixed split, not player-chosen): we mint two
-/// distinct Fractal tokens, each in its own `CreateToken` step so
-/// `Selector::LastCreatedToken` addresses the most recent mint; the
-/// first gets 2 counters, the second gets 1 — the printed three-counter
-/// total is exact. What's missing: a player-chosen distribution. The
-/// engine's `Effect::DistributeCounters` is CR 601.2d *target*-based —
-/// targets are locked in at cast, and tokens created by this same
-/// resolution don't exist yet, so they can't be targeted. A faithful
-/// wire needs a resolution-time "divide among the permanents just
-/// created" primitive (no such primitive today). Since both tokens are
-/// identical 0/0 Fractals, the fixed 2/1 split is materially
-/// indistinguishable from any chosen split.
+/// True player-chosen distribution via the resolution-time
+/// `Effect::DistributeCountersAmongLastCreated` — a UI controller
+/// splits the three counters however they like (3/0, 2/1, …); non-UI
+/// seats split as evenly as possible (2/1).
 pub fn fractal_bloom_b104() -> CardDefinition {
     use crate::card::CounterType;
     use crate::catalog::sets::sos::fractal_token;
@@ -1196,23 +1187,12 @@ pub fn fractal_bloom_b104() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                count: Value::Const(1),
+                count: Value::Const(2),
                 definition: fractal_token(),
             },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
+            Effect::DistributeCountersAmongLastCreated {
+                total: Value::Const(3),
                 kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: fractal_token(),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
             },
         ]),
         ..Default::default()

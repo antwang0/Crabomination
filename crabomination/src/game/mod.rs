@@ -13146,6 +13146,9 @@ fn static_effect_to_effects(
             // GrantStormToISSpells — read at cast time by `cast_spell`'s
             // intrinsic-storm branch; no layer effect.
             | StaticEffect::GrantStormToISSpells
+            // PreventNoncombatDamageToSelfAddCounters — read in the noncombat
+            // damage funnel (`deal_damage_to_from`); no layer effect.
+            | StaticEffect::PreventNoncombatDamageToSelfAddCounters
             // ExtraEtbCountersForCreatureCasts — read at creature-spell
             // resolution time in `stack.rs::resolve_spell`; no layer effect.
             | StaticEffect::ExtraEtbCountersForCreatureCasts { .. }

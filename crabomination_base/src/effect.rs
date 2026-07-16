@@ -3196,6 +3196,17 @@ pub enum Effect {
     /// resolution (Journey to the Oracle's discard rider). Flags the
     /// post-resolution routing the same way `ShuffleSelfIntoLibrary` does.
     ReturnResolvingSpellToHand,
+    /// "Distribute `total` counters of `kind` among the permanents created
+    /// earlier in THIS resolution" (`GameState.last_created_tokens`) — the
+    /// resolution-time sibling of the cast-time `DistributeCounters`
+    /// (fresh tokens can't be cast-time targets, CR 601.2d). A UI
+    /// controller picks each token's share via `ChooseAmount` (the last
+    /// token takes the remainder); non-UI seats split as evenly as
+    /// possible. Fractal Bloom.
+    DistributeCountersAmongLastCreated {
+        total: Value,
+        kind: crate::card::CounterType,
+    },
     /// "Put this card into its owner's library `from_top` cards from the
     /// top" for the RESOLVING spell (Approach of the Second Sun's
     /// seventh-from-the-top). Sets a transient consumed by the

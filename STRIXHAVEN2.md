@@ -165,15 +165,21 @@ Velomachus's reveal cap reads its LIVE power
 `RevealUntilFind`); plus MayPay/MayPayLife optionality, once-per-turn
 gates, Battle targets, token-discounts, and doc-only corrections.
 
-Still blocked (each doc-comment states the exact missing piece):
-Approach of the Second Sun (cast-count-by-name tracker + 7th-from-top
-put, migrate together), Channeled Force (Value-only player-target slots
-not surfaced), Multiple Choice (no predicate over the chosen-mode set),
-Transforming Flourish (impulse grantee ≠ caster), Fractal Bloom
-(distribute among same-resolution tokens), Stormwild Capridor (CR 615
-noncombat prevention→counters), Quandrix Command mode 3 (graveyard-card
-targets in `ShuffleGraveyardCardsIntoLibrary`), Strategic Planning
-(lives in decks/modern.rs).
+2026-07-15 follow-up: all eight blocked sites are now closed —
+Approach of the Second Sun (per-name lifetime cast tally +
+`PutResolvingSpellInLibraryFromTop(6)`; the single-copy recur loop is
+exact), Transforming Flourish (`grant_to_exiling_player` on the
+impulse), Multiple Choice (`ChooseModesCast` + the new
+`Predicate::ChoseModesAtLeast` chosen-mode-set gate), Fractal Bloom
+(`DistributeCountersAmongLastCreated` — UI-chosen split, even split for
+bots), Channeled Force (player-ref `Value`s surface target slots via
+`val_find`), Quandrix Command mode 3 (the shuffle's `who` is a real
+player target; card picks stay resolution-time — no rules-visible
+difference in the graveyard), Stormwild Capridor
+(`PreventNoncombatDamageToSelfAddCounters` in the noncombat damage
+funnel), and Strategic Planning (was already faithful; stale pointer
+comment removed). Remaining narrow nuances are stated inline on each
+card's doc comment.
 
 2026-07-15 follow-ups: Tam + Stone Docent use the real Gorgon/Chimera
 types; "pay X life" is a true cast-time additional cost

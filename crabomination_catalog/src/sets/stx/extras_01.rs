@@ -998,31 +998,27 @@ pub fn verdant_pledgemage() -> CardDefinition {
 /// equal to the difference between their hand size and the chosen
 /// opponent's hand size."
 ///
-/// Approximation: collapses to "you draw N cards where N = max(opp_hand -
-/// your_hand, 0)" — the caster is implicitly the "chosen player". Wired
-/// via `Effect::Draw` with `Value::Diff` reading opp/you hand sizes.
-///
-/// Not fixable with current primitives: the faithful two-player-target
-/// form needs slots whose ONLY mention is inside a `Value`
-/// (`Value::HandSizeOf(PlayerRef::Target(n))`), but the cast-time slot
-/// walk (`target_filter_for_slot_in_mode_kicked` in
-/// `effect/query.rs`) discovers slots solely from
-/// `Selector::TargetFiltered` / `Selector::ControlledBy{Target}`
-/// selectors and its `val_find` doesn't descend `HandSizeOf`, so the
-/// opponent slot would never be prompted/validated. Needs either
-/// `val_find` coverage for player-ref values or a dedicated
-/// hand-size-differential effect.
+/// Both printed player choices are real cast-time slots: slot 0 = the
+/// chosen opponent (its only mention is inside the draw amount —
+/// `val_find` now descends player-ref `Value`s), slot 1 = the chosen
+/// player (the drawer). Draw = max(opponent's hand − chosen player's
+/// hand, 0). Residual: slot 0's implicit filter is "player" rather than
+/// "opponent" (the implicit-slot machinery can't carry a narrower
+/// filter); a self-pick simply zeroes the difference.
 pub fn channeled_force() -> CardDefinition {
     CardDefinition {
         name: "Channeled Force",
         cost: cost(&[generic(2), u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Draw {
-            who: Selector::You,
-            amount: Value::Diff(
-                Box::new(Value::HandSizeOf(PlayerRef::EachOpponent)),
-                Box::new(Value::HandSizeOf(PlayerRef::You)),
-            ),
+            who: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Player,
+            },
+            amount: Value::NonNeg(Box::new(Value::Diff(
+                Box::new(Value::HandSizeOf(PlayerRef::Target(0))),
+                Box::new(Value::HandSizeOf(PlayerRef::Target(1))),
+            ))),
         },
         ..Default::default()
     }

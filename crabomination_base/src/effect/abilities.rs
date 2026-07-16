@@ -1359,6 +1359,12 @@ pub enum StaticEffect {
     /// funnel for creature targets; combat damage is marked on a separate path
     /// and is unaffected.
     PreventNoncombatDamageToYourCreatures,
+    /// CR 615 self-replacement: "If noncombat damage would be dealt to
+    /// this creature, prevent that damage. Put a +1/+1 counter on this
+    /// creature for each 1 damage prevented this way." Checked in the
+    /// noncombat damage funnel (`deal_damage_to_from`), after scaling,
+    /// unless prevention is off (CR 615.12). Stormwild Capridor.
+    PreventNoncombatDamageToSelfAddCounters,
     /// CR 106.4 override — "If you would lose unspent mana, that mana
     /// becomes colorless instead." Kruphix, God of Horizons. Consulted at
     /// the step/phase pool-empty sites.

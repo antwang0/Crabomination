@@ -161,12 +161,12 @@ pub fn decisive_denial() -> CardDefinition {
 /// chosen modes, each target-bearing mode consuming its own target
 /// slot; a plain `CastSpell { mode }` runs a single mode (bot path).
 ///
-/// Remaining approximation (mode 3 only): the engine's
-/// `ShuffleGraveyardCardsIntoLibrary` primitive supports neither a
-/// player target nor graveyard-card targets, so mode 3 is fixed to
-/// "you" and the affected player picks the up-to-three cards at
-/// resolution instead of the caster targeting a player + cards at
-/// cast time.
+/// Mode 3's "target player" is a real player slot
+/// (`ShuffleGraveyardCardsIntoLibrary`'s `who` ref is surfaced for
+/// cast-time validation). Residual nuance: the printed three CARDS are
+/// cast-time targets; here they're picked at resolution — no
+/// rules-visible difference for graveyard objects (no hexproof/ward in
+/// that zone).
 pub fn quandrix_command() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Command",

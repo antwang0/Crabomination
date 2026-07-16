@@ -395,6 +395,32 @@ impl GameState {
             let n = self.noncombat_damage_doublers_for(source, ent);
             amount.saturating_mul(1 << n.min(16))
         };
+        // CR 615 — Stormwild Capridor: "If noncombat damage would be dealt
+        // to this creature, prevent that damage. Put a +1/+1 counter on it
+        // for each 1 damage prevented this way." Applied after scaling so
+        // the counter count matches the damage that WOULD have been dealt;
+        // skipped when prevention is off (CR 615.12).
+        if let EntityRef::Permanent(tgt) = ent
+            && !self.damage_cant_be_prevented_this_turn
+            && self
+                .battlefield_find(tgt)
+                .is_some_and(|c| c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::PreventNoncombatDamageToSelfAddCounters
+                    )
+                }))
+        {
+            if let Some(c) = self.battlefield_find_mut(tgt) {
+                c.add_counters(crate::card::CounterType::PlusOnePlusOne, amount);
+            }
+            events.push(GameEvent::CounterAdded {
+                card_id: tgt,
+                counter_type: crate::card::CounterType::PlusOnePlusOne,
+                count: amount,
+            });
+            return;
+        }
         // "…deals that much damage plus N instead" (Aether Revolt) — additive,
         // opponent-scoped, applied after the doublers. Only when damage is
         // actually being dealt (amount > 0), so a 0 stays 0.

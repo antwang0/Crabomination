@@ -11277,6 +11277,65 @@ impl GameState {
                 self.exile_resolving_spell = true;
                 Ok(())
             }
+            Effect::DistributeCountersAmongLastCreated { total, kind } => {
+                // Resolution-time distribution among the tokens minted
+                // earlier in this resolution. A UI controller picks each
+                // token's share (the last token takes the remainder);
+                // non-UI seats split as evenly as possible.
+                use crate::decision::{Decision, DecisionAnswer};
+                let tokens: Vec<CardId> = self
+                    .last_created_tokens
+                    .iter()
+                    .copied()
+                    .filter(|id| self.battlefield_find(*id).is_some())
+                    .collect();
+                let mut remaining = self.evaluate_value(total, ctx).max(0) as u32;
+                if tokens.is_empty() || remaining == 0 {
+                    return Ok(());
+                }
+                let n_tokens = tokens.len();
+                for (i, cid) in tokens.iter().enumerate() {
+                    if remaining == 0 {
+                        break;
+                    }
+                    let share = if i + 1 == n_tokens {
+                        remaining
+                    } else if self.players[ctx.controller].wants_ui {
+                        let name = self
+                            .battlefield_find(*cid)
+                            .map(|c| c.definition.name)
+                            .unwrap_or("token");
+                        let answer = self.decider.decide(&Decision::ChooseAmount {
+                            source: *cid,
+                            prompt: format!("Counters for {name} ({remaining} left)"),
+                            max: remaining,
+                        });
+                        match answer {
+                            DecisionAnswer::Amount(v) => v.min(remaining),
+                            _ => 0,
+                        }
+                    } else {
+                        // Even split, front-loaded remainder.
+                        let left = (n_tokens - i) as u32;
+                        remaining.div_ceil(left)
+                    };
+                    if share > 0
+                        && let Some(c) = self.battlefield_find_mut(*cid)
+                    {
+                        c.add_counters(*kind, share);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: *cid,
+                            counter_type: *kind,
+                            count: share,
+                        });
+                        remaining -= share;
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::PutResolvingSpellInLibraryFromTop(n) => {
                 // Approach of the Second Sun — consumed by the post-resolution
                 // routing instead of the graveyard trip.
