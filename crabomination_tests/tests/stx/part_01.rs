@@ -1466,11 +1466,13 @@ fn multiple_choice_fires_all_four_modes() {
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
 
-    g.perform_action(GameAction::CastSpell {
+    // "Choose one or more" — pick ALL FOUR modes at cast time. Mode 2's
+    // pump targets the bear (its instance is the only target-bearing one).
+    g.perform_action(GameAction::CastSpellSpree {
         card_id: mc,
+        spree_modes: vec![0, 1, 2, 3],
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
-        mode: None,
         x_value: None,
     })
     .expect("Multiple Choice castable for {1}{U}{U}");
@@ -4675,24 +4677,41 @@ fn approach_of_the_second_sun_gains_seven_life_on_first_cast() {
 /// Second cast with one Approach already in graveyard: caster wins.
 #[test]
 fn approach_of_the_second_sun_wins_game_when_cast_with_one_in_graveyard() {
+    // The full printed loop with a SINGLE physical copy: cast #1 gains 7
+    // and goes seventh from the top (not the graveyard); the same card is
+    // then re-cast from hand and wins off the lifetime per-name tally.
     let mut g = two_player_game();
-    // Seed a copy of Approach in P0's graveyard (simulating the first cast).
-    g.add_card_to_graveyard(0, catalog::approach_of_the_second_sun());
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::forest());
+    }
     let id = g.add_card_to_hand(0, catalog::approach_of_the_second_sun());
-    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(6);
-
+    let life_before = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Approach castable at 8 mana");
+    .expect("first Approach castable");
     drain_stack(&mut g);
-
-    // Game over with P0 as winner.
+    assert_eq!(g.players[0].life, life_before + 7, "first cast gains 7");
+    assert_eq!(
+        g.players[0].library.get(6).map(|c| c.id),
+        Some(id),
+        "put into its owner's library SEVENTH from the top, not the graveyard"
+    );
+    assert_eq!(g.game_over, None, "no win on the first cast");
+    // Dig it back out and cast the SAME card again.
+    let card = g.players[0].library.remove(6);
+    g.players[0].hand.push(card);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("second Approach castable");
+    drain_stack(&mut g);
+    // Game over with P0 as winner — the single-copy loop the old
+    // graveyard-count stand-in couldn't express.
     assert_eq!(g.game_over, Some(Some(0)));
 }
 
@@ -5214,5 +5233,37 @@ fn pestilent_cauldron_back_castable_from_graveyard_after_sacrifice() {
     assert!(
         !g.players[0].graveyard.iter().any(|c| c.id == pc && c.may_cast_back_from_graveyard),
         "permission consumed after the back-face cast",
+    );
+}
+
+/// Multiple Choice's fourth bullet is gated on choosing ALL of the above:
+/// picking only mode 3 draws nothing.
+#[test]
+fn multiple_choice_mode_three_alone_draws_nothing() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let mc = g.add_card_to_hand(0, catalog::multiple_choice());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: mc,
+        spree_modes: vec![3],
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("single-mode pick castable");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before - 1,
+        "\"if you chose all of the above\" fails — no draw, only the cast card left hand"
+    );
+    assert!(
+        !g.battlefield.iter().any(|c| c.definition.name == "Pest"),
+        "unchosen modes don't run"
     );
 }

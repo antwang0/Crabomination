@@ -803,6 +803,19 @@ pub enum Predicate {
     /// damage was dealt this way"). Backed by
     /// `GameState.excess_damage_this_resolution`.
     ExcessDamageDealtThisResolution,
+    /// The controller has cast a spell with the SOURCE's printed name at
+    /// least `n` times this game (per-name lifetime tally, self-inclusive:
+    /// at resolution the resolving cast already counts, so "you've cast
+    /// ANOTHER spell named X this game" is `n = 2`). Approach of the
+    /// Second Sun.
+    CastOwnNameThisGameAtLeast(u32),
+    /// At least `n` mode instances were chosen for this cast
+    /// (`ctx.spree_modes`, stamped by `CastSpellSpree` /
+    /// `ChooseModesCast`). With distinct modes and `max = n`, this is
+    /// exactly "if you chose all of the above" (Multiple Choice's fourth
+    /// bullet). A plain single-mode `CastSpell { mode }` fallback carries
+    /// one mode, so the gate correctly fails.
+    ChoseModesAtLeast(u8),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
     /// The active player (whose turn it is) controls at least one permanent the
@@ -2856,6 +2869,12 @@ pub enum Effect {
         /// number of Mountains you control").
         #[serde(default)]
         hand_unless_mv_below: Option<Value>,
+        /// Grant the may-cast permission to the EXILING player (the library
+        /// owner) rather than the effect's controller — "ITS CONTROLLER
+        /// exiles ... then may cast it" (Transforming Flourish). Defaults
+        /// false (the caster gets the cast — the impulse-draw family).
+        #[serde(default)]
+        grant_to_exiling_player: bool,
     },
     /// "Look at the top `count` cards of your library. You may put a land card
     /// from among them onto the battlefield tapped. Put the rest on the bottom
@@ -3177,6 +3196,12 @@ pub enum Effect {
     /// resolution (Journey to the Oracle's discard rider). Flags the
     /// post-resolution routing the same way `ShuffleSelfIntoLibrary` does.
     ReturnResolvingSpellToHand,
+    /// "Put this card into its owner's library `from_top` cards from the
+    /// top" for the RESOLVING spell (Approach of the Second Sun's
+    /// seventh-from-the-top). Sets a transient consumed by the
+    /// post-resolution routing instead of the graveyard trip; `from_top`
+    /// is clamped to the library size.
+    PutResolvingSpellInLibraryFromTop(u32),
     /// Revel in Silence: each resolved player can't cast spells or activate
     /// loyalty abilities for the rest of the turn
     /// (`Player.silenced_this_turn`).

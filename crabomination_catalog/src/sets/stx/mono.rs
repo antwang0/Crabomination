@@ -321,17 +321,12 @@ pub fn test_of_talents() -> CardDefinition {
 /// gets +1/+0 and gains hexproof until end of turn. • If you chose all
 /// of the above, draw two cards."
 ///
-/// All four modes are wired via `Effect::ChooseN { picks: [0, 1, 2, 3],
-/// modes }`. The auto-decider runs every mode each cast — Scry 2 + 1/1
-/// Pest + +1/+0 hexproof EOT + Draw 2 — collapsing the printed "choose
-/// one or more" into "always do all four". `Effect::ChooseModesCast`
-/// could give true cast-time mode selection, but it cannot express the
-/// fourth bullet's condition ("if you chose all of the above"): there is
-/// no predicate over the set of chosen modes, so a free pick of mode 3
-/// alone would draw 2 without the gate. Until a chosen-modes predicate
-/// (or a dedicated conditional-bonus mode wrapper) exists, the
-/// always-all-four `ChooseN` collapse stays — it is the only mode set
-/// for which the printed bonus gate is satisfied.
+/// True cast-time "choose one or more" via `Effect::ChooseModesCast
+/// { min: 1, max: 4 }`; the fourth bullet's "if you chose all of the
+/// above" gate is `Predicate::ChoseModesAtLeast(4)` over the cast's
+/// chosen-mode set — picking mode 3 alone draws nothing, picking all
+/// four draws two. A plain `CastSpell { mode }` single-mode fallback
+/// carries one mode, so the gate correctly fails there too.
 pub fn multiple_choice() -> CardDefinition {
     use crate::effect::Duration;
     let pest = TokenDefinition {
@@ -356,8 +351,10 @@ pub fn multiple_choice() -> CardDefinition {
         name: "Multiple Choice",
         cost: cost(&[generic(1), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1, 2, 3],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 4,
+            allow_repeats: false,
             modes: vec![
                 // Mode 0: Scry 2.
                 Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
@@ -382,12 +379,16 @@ pub fn multiple_choice() -> CardDefinition {
                     },
                 ]),
                 // Mode 3: "If you chose all of the above, draw two cards."
-                // With `picks: [0, 1, 2, 3]` always firing all four, the
-                // gate is satisfied unconditionally — the draw fires every
-                // resolution. See the doc comment for why this stays a
-                // `ChooseN` collapse (no chosen-modes predicate exists to
-                // gate mode 3 under `ChooseModesCast`).
-                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                // The gate reads the cast's chosen-mode set: only a
+                // four-mode pick satisfies it.
+                Effect::If {
+                    cond: crate::effect::Predicate::ChoseModesAtLeast(4),
+                    then: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
             ],
         },
         ..Default::default()
@@ -869,25 +870,32 @@ pub fn creative_technique() -> CardDefinition {
 /// their library until they exile a nonland card, then may cast it without
 /// paying its mana cost."
 ///
-/// The impulse rider is still dropped: `Effect::ExileTopUntilNonlandMayPlay`
-/// can exile from the target's controller's library (via
-/// `PlayerRef::ControllerOf(Target(0))`), but it stamps the may-play
-/// permission with `player: ctx.controller` — the *caster* would get to cast
-/// the opponent's exiled card, inverting the printed "its controller may cast
-/// it". Needs the impulse primitive to grant the permission to the exiled
-/// card's owner (or a `grant_to` field) before this rider can ship.
+/// The impulse rider is wired: `ExileTopUntilNonlandMayPlay` exiles from
+/// the destroyed permanent's controller's library
+/// (`PlayerRef::ControllerOf(Target(0))` — resolved off death-time LKI)
+/// and `grant_to_exiling_player: true` gives the free cast to THAT
+/// player, exactly the printed "its controller ... then may cast it".
 pub fn transforming_flourish() -> CardDefinition {
     CardDefinition {
         name: "Transforming Flourish",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Artifact
-                    .or(SelectionRequirement::Creature)
-                    .and(SelectionRequirement::ControlledByOpponent),
-            ),
-        },
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::ExileTopUntilNonlandMayPlay {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                free: true,
+                hand_unless_mv_below: None,
+                grant_to_exiling_player: true,
+            },
+        ]),
         triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
         ..Default::default()
     }

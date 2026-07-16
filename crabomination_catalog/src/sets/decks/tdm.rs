@@ -1396,6 +1396,7 @@ pub fn breaching_dragonstorm() -> CardDefinition {
                 duration: MayPlayDuration::EndOfThisTurn,
                 free: true,
                 hand_unless_mv_below: Some(Value::Const(9)),
+                grant_to_exiling_player: false,
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)

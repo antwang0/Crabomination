@@ -1448,33 +1448,16 @@ pub fn maelstrom_muse() -> CardDefinition {
 /// you win the game. Otherwise, put this card seventh from the top of
 /// your owner's library and you gain 7 life."
 ///
-/// The win rider is gated on `Predicate::All([CastFromHand,
-/// SameNamedInZoneAtLeast(Graveyard, 1)])` — the "cast from your hand"
-/// half is exact (`EffectContext.cast_from_hand`); the "you've cast
-/// another spell named …" half is a graveyard-count approximation. On
-/// the second cast the graveyard already holds the first Approach (it
-/// hit the graveyard at resolution), so the predicate fires and the
-/// controller wins via `Effect::WinGame`.
-///
-/// Precisely what's still missing (not fixable without new engine
-/// work — the engine tracks no per-name "spells cast this game"
-/// counter, only `cycled_count_by_name`):
-/// 1. The win condition reads casts *this game* regardless of where
-///    the earlier copy went (exile, library, re-cast of the same
-///    physical card). The graveyard stand-in misses a single-copy
-///    Approach recur loop and any flow where copy #1 leaves the
-///    graveyard.
-/// 2. The printed "put it into its owner's library seventh from the
-///    top" is intentionally NOT wired even though
-///    `LibraryPosition::FromTop(6)` exists: routing the resolved card
-///    into the library would empty the graveyard the win-check counts,
-///    breaking the second-cast win outright. Both halves must migrate
-///    together once a cast-count-by-name tracker lands.
-/// Tests: `approach_of_the_second_sun_gains_seven_life_on_first_cast`,
-/// `approach_of_the_second_sun_wins_game_when_cast_with_one_in_graveyard`.
+/// Fully faithful: the win rider is gated on `Predicate::All([
+/// CastFromHand, CastOwnNameThisGameAtLeast(2)])` — a true per-name
+/// lifetime cast tally (`Player.spells_cast_by_name_this_game`, bumped
+/// in `finalize_cast`; the resolving cast counts itself, so "another
+/// spell named …" = 2). The otherwise-branch puts the card into its
+/// owner's library SEVENTH FROM THE TOP
+/// (`Effect::PutResolvingSpellInLibraryFromTop(6)`) and gains 7 — a
+/// single-copy recur loop works exactly as printed.
 pub fn approach_of_the_second_sun() -> CardDefinition {
     use crate::card::Predicate as P;
-    use crate::card::Zone;
     CardDefinition {
         name: "Approach of the Second Sun",
         cost: cost(&[generic(6), w()]),
@@ -1482,19 +1465,20 @@ pub fn approach_of_the_second_sun() -> CardDefinition {
         effect: Effect::If {
             cond: P::All(vec![
                 P::CastFromHand,
-                P::SameNamedInZoneAtLeast {
-                    who: PlayerRef::You,
-                    zone: Zone::Graveyard,
-                    at_least: Value::Const(1),
-                },
+                // Lifetime per-name cast tally (self-inclusive): ≥2 means
+                // "you've cast ANOTHER spell named ... this game".
+                P::CastOwnNameThisGameAtLeast(2),
             ]),
             then: Box::new(Effect::WinGame {
                 who: PlayerRef::You,
             }),
-            else_: Box::new(Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(7),
-            }),
+            else_: Box::new(Effect::Seq(vec![
+                Effect::PutResolvingSpellInLibraryFromTop(6),
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(7),
+                },
+            ])),
         },
         ..Default::default()
     }

@@ -120,6 +120,12 @@ pub struct Player {
     /// `TurnStarted`. Powers Damping Sphere's "second-and-onward spells
     /// cost {1} more" static.
     pub spells_cast_this_turn: u32,
+    /// Per-name lifetime cast counter — "you've cast another spell named X
+    /// this game" (Approach of the Second Sun). Bumped in `finalize_cast`
+    /// with the cast card's printed name; never reset. Defaults empty for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub spells_cast_by_name_this_game: std::collections::HashMap<String, u32>,
     /// Like `spells_cast_this_turn` but reset for every player at each
     /// turn's Cleanup (not just the player's own untap) — the CR-correct
     /// scope for Rule of Law's "each player can't cast more than one spell
@@ -718,6 +724,7 @@ impl Player {
             lands_played_this_turn: 0,
             extra_land_plays: 0,
             spells_cast_this_turn: 0,
+            spells_cast_by_name_this_game: std::collections::HashMap::new(),
             spells_cast_this_game_turn: 0,
             noncreature_spells_cast_this_game_turn: 0,
             nonartifact_spells_cast_this_game_turn: 0,

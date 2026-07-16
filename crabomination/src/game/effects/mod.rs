@@ -11277,6 +11277,12 @@ impl GameState {
                 self.exile_resolving_spell = true;
                 Ok(())
             }
+            Effect::PutResolvingSpellInLibraryFromTop(n) => {
+                // Approach of the Second Sun — consumed by the post-resolution
+                // routing instead of the graveyard trip.
+                self.resolving_spell_library_from_top = Some(*n);
+                Ok(())
+            }
 
             Effect::EndTheTurn => {
                 self.end_turn_requested = true;
@@ -14861,7 +14867,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileTopUntilNonlandMayPlay { who, duration, free, hand_unless_mv_below } => {
+            Effect::ExileTopUntilNonlandMayPlay { who, duration, free, hand_unless_mv_below, grant_to_exiling_player } => {
                 use crate::card::CardType;
                 use crate::effect::ZoneDest;
                 let granted_turn = self.turn_number;
@@ -14893,8 +14899,13 @@ impl GameState {
                     }
                     if let Some(card) = self.find_card_anywhere_mut(cid) {
                         let real_cost = card.definition.cost.clone();
+                        // "ITS CONTROLLER ... may cast it" — the permission
+                        // follows the exiling player when the flag is set
+                        // (Transforming Flourish); the impulse-draw family
+                        // keeps granting to the effect's controller.
+                        let grantee = if *grant_to_exiling_player { p } else { ctx.controller };
                         card.may_play_until = Some(crate::card::MayPlayPermission {
-                            player: ctx.controller,
+                            player: grantee,
                             granted_turn,
                             duration: *duration,
                             exile_after: false,

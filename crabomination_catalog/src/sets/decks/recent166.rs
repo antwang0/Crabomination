@@ -63,6 +63,7 @@ pub fn territorial_bruntar() -> CardDefinition {
                 duration: MayPlayDuration::EndOfThisTurn,
                 free: false,
                 hand_unless_mv_below: None,
+                grant_to_exiling_player: false,
             },
         }],
         ..Default::default()
@@ -91,6 +92,7 @@ pub fn solstice_revelations() -> CardDefinition {
                 sel: Box::new(Selector::EachPermanent(R::ControlledByYou)),
                 filter: R::HasLandType(LandType::Mountain),
             }),
+            grant_to_exiling_player: false,
         },
         ..Default::default()
     }

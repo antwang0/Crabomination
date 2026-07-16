@@ -5788,6 +5788,13 @@ impl GameState {
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
+        // Per-name lifetime tally — "you've cast another spell named X this
+        // game" (Approach of the Second Sun).
+        *self
+            .players[p]
+            .spells_cast_by_name_this_game
+            .entry(card.definition.name.to_string())
+            .or_insert(0) += 1;
         if from_hand {
             self.players[p].spells_cast_from_hand_this_turn += 1;
         }

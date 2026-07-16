@@ -485,16 +485,10 @@ pub fn curate() -> CardDefinition {
 
 // ── Strategic Planning (already defined in `decks::modern`) ────────────────
 //
-// Strategic Planning is wired in `catalog::sets::decks::modern::strategic_planning`
-// — currently a Mill 3 + Draw 1 approximation of the printed "look at
-// the top three cards; put one into your hand and the rest into your
-// graveyard" (the approximation removes the pick: you get the *top*
-// card, not your choice of the three). The faithful shape exists today
-// as `Effect::LookPickToHand { count: 3, rest_to_graveyard: true }`,
-// but the definition lives in `decks::modern` (outside this file's
-// ownership) and STX re-uses that function rather than redefining it —
-// adding a duplicate here would clash with the glob re-export from
-// `catalog::*`. Fix belongs in `decks/modern.rs`.
+// Strategic Planning is wired in
+// `catalog::sets::decks::modern::strategic_planning` as the faithful
+// `Effect::LookPickToHand { count: 3, rest_to_graveyard: true }` — look at
+// the top three, put your pick into your hand, rest to the graveyard.
 
 // ── Solve the Equation ─────────────────────────────────────────────────────
 

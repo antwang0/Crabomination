@@ -166,7 +166,8 @@ impl Effect {
             // Amount is a scratch read (CounteredSpellManaSpent), no slots.
             | Effect::AddManaAtNextMainPhase { .. }
             // Free-cast offers pick their own targets at cast time.
-            | Effect::CastAnyOrderWithoutPaying { .. } => false,
+            | Effect::CastAnyOrderWithoutPaying { .. }
+            | Effect::PutResolvingSpellInLibraryFromTop(_) => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,

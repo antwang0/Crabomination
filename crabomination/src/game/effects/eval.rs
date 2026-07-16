@@ -945,6 +945,20 @@ impl GameState {
                 .resolve_player(who, ctx)
                 .map(|p| !self.players[p].gained_life_earlier_this_turn)
                 .unwrap_or(false),
+            Predicate::ChoseModesAtLeast(n) => ctx.spree_modes.len() >= *n as usize,
+            Predicate::CastOwnNameThisGameAtLeast(n) => ctx
+                .source
+                .and_then(|s| self.find_card_anywhere(s))
+                .map(|c| c.definition.name)
+                .or(ctx.source_name)
+                .is_some_and(|name| {
+                    self.players[ctx.controller]
+                        .spells_cast_by_name_this_game
+                        .get(name)
+                        .copied()
+                        .unwrap_or(0)
+                        >= *n
+                }),
             Predicate::ExpendReached(n) => {
                 // CR 700.14 — fired only on the cost-payment that pushes the
                 // turn's spell-mana total from below `n` up to at least `n`.

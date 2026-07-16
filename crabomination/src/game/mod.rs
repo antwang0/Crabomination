@@ -539,6 +539,11 @@ pub struct GameState {
     /// `Effect::ExileResolvingSpell` — same shape, exile-bound.
     #[serde(skip)]
     pub(crate) exile_resolving_spell: bool,
+    /// `Effect::PutResolvingSpellInLibraryFromTop` — the resolving spell
+    /// goes into its owner's library this many cards from the top
+    /// (Approach of the Second Sun's seventh-from-the-top).
+    #[serde(skip)]
+    pub(crate) resolving_spell_library_from_top: Option<u32>,
     /// Transient: players whose `gained_life_earlier_this_turn` flag should
     /// flip once the current trigger-dispatch batch finishes filter
     /// evaluation (drained at the end of `push_ordered_trigger_candidates`,
@@ -1227,6 +1232,7 @@ impl Clone for GameState {
             return_resolving_spell_to_hand: self.return_resolving_spell_to_hand,
             exile_resolving_spell: self.exile_resolving_spell,
             gy_combat_trigger_fired_this_step: self.gy_combat_trigger_fired_this_step.clone(),
+            resolving_spell_library_from_top: self.resolving_spell_library_from_top,
             life_gain_flag_pending: self.life_gain_flag_pending.clone(),
             end_turn_requested: self.end_turn_requested,
             cipher_encode_pending: self.cipher_encode_pending,
@@ -1401,6 +1407,7 @@ impl GameState {
             return_resolving_spell_to_hand: false,
             exile_resolving_spell: false,
             gy_combat_trigger_fired_this_step: Vec::new(),
+            resolving_spell_library_from_top: None,
             life_gain_flag_pending: Vec::new(),
             end_turn_requested: false,
             cipher_encode_pending: None,
@@ -12247,6 +12254,14 @@ impl GameState {
             let owner = card.owner;
             self.players[owner].library.push(card);
             self.players[owner].library.shuffle(&mut rand::rng());
+            return Ok(events);
+        }
+        // Approach of the Second Sun — "put this card into its owner's
+        // library seventh from the top."
+        if let Some(from_top) = self.resolving_spell_library_from_top.take() {
+            let owner = card.owner;
+            let idx = (from_top as usize).min(self.players[owner].library.len());
+            self.players[owner].library.insert(idx, card);
             return Ok(events);
         }
         // Revel in Silence's "exile this" rider.

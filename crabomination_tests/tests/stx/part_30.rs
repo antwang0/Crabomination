@@ -360,3 +360,31 @@ fn revel_in_silence_locks_opponents_and_exiles_itself() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 17, "caster unaffected");
 }
+
+/// Transforming Flourish's impulse rider: the destroyed permanent's
+/// CONTROLLER exiles until a nonland and gets the free cast — not the
+/// Flourish's caster.
+#[test]
+fn transforming_flourish_grants_the_cast_to_the_targets_controller() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // P1's library top: a land, then a nonland hit.
+    let hit = g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::transforming_flourish());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Flourish castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "target destroyed");
+    let exiled = g.exile.iter().find(|c| c.id == hit).expect("nonland hit exiled");
+    assert_eq!(
+        exiled.may_play_until.map(|p| p.player),
+        Some(1),
+        "the free cast belongs to ITS CONTROLLER (P1), not the caster"
+    );
+}
