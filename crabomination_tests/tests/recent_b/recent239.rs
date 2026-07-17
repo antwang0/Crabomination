@@ -138,6 +138,22 @@ fn reluctant_role_model_counters_and_relocation() {
         "the model's counter left it");
 }
 
+/// Bite Down on Crime pumps your creature and fights an enemy for its power.
+#[test]
+fn bite_down_on_crime_pumps_and_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 4/2
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → dies to 4
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(mine), Target::Permanent(enemy)],
+        ..EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.resolve_effect(&catalog::bite_down_on_crime().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 4, "+2/+0");
+    assert!(g.battlefield_find(enemy).is_none(), "took 4 and died");
+}
+
 /// Trial of Agony burns one creature and locks the other out of blocking.
 #[test]
 fn trial_of_agony_burns_and_locks() {

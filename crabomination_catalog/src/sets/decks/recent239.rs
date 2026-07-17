@@ -158,6 +158,31 @@ pub fn norin_swift_survivalist() -> CardDefinition {
     }
 }
 
+/// Bite Down on Crime — {3}{G} Sorcery. Target creature you control gets +2/+0,
+/// then deals damage equal to its power to target creature you don't control.
+/// (The optional "collect evidence 6 for {2} less" discount is not modeled —
+/// the engine has no collect-evidence additional cost.)
+pub fn bite_down_on_crime() -> CardDefinition {
+    CardDefinition {
+        name: "Bite Down on Crime",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DealDamageEqualToPower {
+                source: Selector::Target(0),
+                target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Trial of Agony — {R} Sorcery. Two target creatures an opponent controls: 5
 /// damage to one, the other can't block this turn. (The "same opponent" and
 /// "that player chooses" clauses are collapsed to the caster's pick, matching
