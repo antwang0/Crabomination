@@ -138,6 +138,19 @@ fn reluctant_role_model_counters_and_relocation() {
         "the model's counter left it");
 }
 
+/// Tumbleweed Rising makes an Elemental whose power tracks your biggest
+/// creature, and it's plottable.
+#[test]
+fn tumbleweed_rising_makes_dynamic_token() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4 → X = 4
+    assert!(catalog::tumbleweed_rising().plot_cost.is_some());
+    g.resolve_effect(&catalog::tumbleweed_rising().effect, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    let token = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Elemental").expect("token made");
+    let id = token.id;
+    assert_eq!(g.computed_permanent(id).unwrap().power, 4, "X/X = greatest power you control");
+}
+
 /// Bite Down on Crime pumps your creature and fights an enemy for its power.
 #[test]
 fn bite_down_on_crime_pumps_and_fights() {

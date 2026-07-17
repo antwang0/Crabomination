@@ -6624,6 +6624,7 @@ static DECKS: &[Factory] = &[
     super::decks::getaway_glamer,
     super::decks::trial_of_agony,
     super::decks::bite_down_on_crime,
+    super::decks::tumbleweed_rising,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

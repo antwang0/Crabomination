@@ -4,7 +4,8 @@
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Keyword, MayPlayDuration, SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility,
+    Keyword, MayPlayDuration, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility,
 };
 use crate::effect::shortcut::{animate_land, deal, target_filtered};
 use crate::game::types::TurnStep;
@@ -12,7 +13,7 @@ use crate::effect::{
     DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
     Selector, SpreeMode, Value, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, w, x};
+use crate::mana::{b, cost, g, generic, r, w, x, Color};
 
 /// DSK **Survival** — "At the beginning of your second main phase, if this
 /// creature is tapped, …". Models to a PostCombatMain trigger gated on the
@@ -154,6 +155,38 @@ pub fn norin_swift_survivalist() -> CardDefinition {
                 ])),
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Tumbleweed Rising — {1}{G} Sorcery. Create an X/X green Elemental, X = the
+/// greatest power among creatures you control. Plot {2}{G}.
+pub fn tumbleweed_rising() -> CardDefinition {
+    CardDefinition {
+        name: "Tumbleweed Rising",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        plot_cost: Some(cost(&[generic(2), g()])),
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: TokenDefinition {
+                name: "Elemental".into(),
+                power: 0,
+                toughness: 0,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Elemental],
+                    ..Default::default()
+                },
+                dynamic_pt: Some((
+                    Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)),
+                    Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)),
+                )),
+                ..Default::default()
+            },
+        },
         ..Default::default()
     }
 }
