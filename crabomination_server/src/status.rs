@@ -209,6 +209,22 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     ] {
         out.push_str(&format!("crab_wins_total{{kind=\"{kind}\"}} {value}\n"));
     }
+    // The same split normalized to a share of decided wins. The pct helpers
+    // already exist for the JSON/HTML readouts; surfacing them as a gauge saves
+    // operators the count-over-total division and keeps the ratio stable across
+    // scrapes even as the counters climb. Same non-additive caveat as the counts.
+    out.push_str("# HELP crab_wins_share_pct Decided matches by win kind, as a percent of wins.\n");
+    out.push_str("# TYPE crab_wins_share_pct gauge\n");
+    for (kind, pct) in [
+        ("damage", st.damage_pct()),
+        ("alternate", st.deckout_pct()),
+        ("poison", st.poison_pct()),
+        ("decked", st.deck_pct()),
+        ("commander_damage", st.commander_damage_pct()),
+        ("other", st.other_pct()),
+    ] {
+        out.push_str(&format!("crab_wins_share_pct{{kind=\"{kind}\"}} {pct}\n"));
+    }
     // Match-duration histogram (see `MatchStats.duration_buckets`) as a labelled
     // series so operators can watch the distribution shift (e.g. a spike in the
     // "<30s" bucket flags bots conceding turn 1).
@@ -475,6 +491,11 @@ mod tests {
         assert!(body.contains("crab_wins_total{kind=\"alternate\"} 0"));
         assert!(body.contains("crab_wins_total{kind=\"poison\"} 0"));
         assert!(body.contains("crab_wins_total{kind=\"commander_damage\"} 0"));
+        // Normalized win-kind shares mirror the counts as gauges.
+        assert!(body.contains("# TYPE crab_wins_share_pct gauge"));
+        assert!(body.contains("crab_wins_share_pct{kind=\"damage\"} 0"));
+        assert!(body.contains("crab_wins_share_pct{kind=\"poison\"} 0"));
+        assert_eq!(body.matches("# TYPE crab_wins_share_pct").count(), 1);
         // Refusals split by which cap tripped (global vs per-IP).
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"global\"} 0"));
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"per_ip\"} 0"));
