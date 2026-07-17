@@ -6618,6 +6618,7 @@ static DECKS: &[Factory] = &[
     super::decks::norin_swift_survivalist,
     super::decks::valgavoths_onslaught,
     super::decks::altanak_the_thrice_called,
+    super::decks::come_back_wrong,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

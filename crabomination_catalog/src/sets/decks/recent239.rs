@@ -8,10 +8,10 @@ use crate::card::{
 };
 use crate::effect::shortcut::{deal, target_filtered};
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, Value,
-    ZoneDest,
+    DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
+    Selector, Value, ZoneDest,
 };
-use crate::mana::{cost, g, generic, r, x};
+use crate::mana::{b, cost, g, generic, r, x};
 
 /// Betrayer's Bargain — {1}{R} Instant. Additional cost: sacrifice a creature
 /// or enchantment or pay {2}. Deal 5 to target creature; if it would die this
@@ -142,6 +142,40 @@ pub fn norin_swift_survivalist() -> CardDefinition {
                 ])),
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Come Back Wrong — {2}{B} Sorcery. Destroy target creature. If a creature
+/// card is put into a graveyard this way, return it to the battlefield under
+/// your control, then sacrifice it at your next end step.
+pub fn come_back_wrong() -> CardDefinition {
+    CardDefinition {
+        name: "Come Back Wrong",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: Selector::Target(0) },
+            Effect::If {
+                // Only reanimate if the destroy actually buried a creature card
+                // (indestructible/regenerated creatures stay put; tokens vanish).
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: R::Creature.and(R::InGraveyard),
+                },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::DelayUntil {
+                        kind: DelayedTriggerKind::NextEndStep,
+                        body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

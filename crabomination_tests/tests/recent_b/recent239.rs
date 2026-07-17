@@ -98,6 +98,19 @@ fn norin_exiles_blocked_creature() {
     assert!(g.exile.iter().any(|c| c.id == ally), "blocked creature exiled");
 }
 
+/// Come Back Wrong destroys a creature, reanimates it under your control, and
+/// schedules a sacrifice at your next end step.
+#[test]
+fn come_back_wrong_steals_the_corpse() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = EffectContext { targets: vec![Target::Permanent(victim)], ..EffectContext::for_spell(0, None, 0, 0) };
+    g.resolve_effect(&catalog::come_back_wrong().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    let c = g.battlefield_find(victim).expect("reanimated onto the battlefield");
+    assert_eq!(c.controller, 0, "under your control now");
+}
+
 /// Valgavoth's Onslaught (X=2) manifests two 2/2s, each with two +1/+1
 /// counters (making them 4/4 face-down creatures).
 #[test]
