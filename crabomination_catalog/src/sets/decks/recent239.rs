@@ -6,12 +6,24 @@ use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
     Keyword, MayPlayDuration, SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility,
 };
-use crate::effect::shortcut::{deal, target_filtered};
+use crate::effect::shortcut::{animate_land, deal, target_filtered};
+use crate::game::types::TurnStep;
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
     Selector, Value, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, x};
+use crate::mana::{b, cost, g, generic, r, w, x};
+
+/// DSK **Survival** — "At the beginning of your second main phase, if this
+/// creature is tapped, …". Models to a PostCombatMain trigger gated on the
+/// source being tapped.
+fn survival(body: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::PostCombatMain), EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::Tapped }),
+        effect: body,
+    }
+}
 
 /// Betrayer's Bargain — {1}{R} Instant. Additional cost: sacrifice a creature
 /// or enchantment or pay {2}. Deal 5 to target creature; if it would die this
@@ -142,6 +154,60 @@ pub fn norin_swift_survivalist() -> CardDefinition {
                 ])),
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Rootwise Survivor — {3}{G}{G} Human Survivor 3/4. Haste. Survival — put
+/// three +1/+1 counters on up to one target land you control; it becomes a 0/0
+/// Elemental in addition to its types and gains haste. (Haste is modeled as
+/// permanent rather than until-your-next-turn.)
+pub fn rootwise_survivor() -> CardDefinition {
+    CardDefinition {
+        name: "Rootwise Survivor",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Survivor],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![survival(animate_land(0, 3))],
+        ..Default::default()
+    }
+}
+
+/// Reluctant Role Model — {1}{W} Human Survivor 2/2. Survival — put a flying,
+/// lifelink, or +1/+1 counter on it. Whenever it or another creature you
+/// control dies, put those counters on up to one target creature. ("Up to one"
+/// is modeled as a required target.)
+pub fn reluctant_role_model() -> CardDefinition {
+    CardDefinition {
+        name: "Reluctant Role Model",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Survivor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            survival(Effect::ChooseMode(vec![
+                Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Flying, amount: Value::ONE },
+                Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Lifelink, amount: Value::ONE },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+                effect: Effect::MoveAllCounters {
+                    from: Selector::TriggerSource,
+                    to: target_filtered(R::Creature),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

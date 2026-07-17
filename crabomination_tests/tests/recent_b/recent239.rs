@@ -98,6 +98,46 @@ fn norin_exiles_blocked_creature() {
     assert!(g.exile.iter().any(|c| c.id == ally), "blocked creature exiled");
 }
 
+/// Rootwise Survivor's Survival animates a target land with three +1/+1
+/// counters into a creature, and its trigger is a tapped-gated second main.
+#[test]
+fn rootwise_survivor_survival_animates_land() {
+    use crabomination::effect::{EventKind, EventScope};
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let def = catalog::rootwise_survivor();
+    assert_eq!(def.triggered_abilities[0].event.kind, EventKind::StepBegins(crabomination::game::TurnStep::PostCombatMain));
+    assert!(matches!(def.triggered_abilities[0].event.scope, EventScope::YourControl));
+    let ctx = EffectContext { targets: vec![Target::Permanent(land)], ..EffectContext::for_trigger(land, 0, None, 0) };
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).unwrap();
+    let l = g.computed_permanent(land).unwrap();
+    assert_eq!((l.power, l.toughness), (3, 3), "0/0 Elemental + three +1/+1");
+    assert!(l.card_types.contains(&crabomination::card::CardType::Creature));
+}
+
+/// Reluctant Role Model's Survival grants a flying counter, and its death
+/// trigger relocates the counters to another creature.
+#[test]
+fn reluctant_role_model_counters_and_relocation() {
+    let mut g = two_player_game();
+    let model = g.add_card_to_battlefield(0, catalog::reluctant_role_model());
+    let heir = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let survival = match &catalog::reluctant_role_model().triggered_abilities[0].effect {
+        Effect::ChooseMode(m) => m[0].clone(), // flying counter
+        _ => panic!("not modal"),
+    };
+    g.resolve_effect(&survival, &EffectContext::for_trigger(model, 0, None, 0)).unwrap();
+    assert!(g.computed_permanent(model).unwrap().keywords.contains(&Keyword::Flying));
+    // Death trigger moves the counters onto the heir.
+    let death = catalog::reluctant_role_model().triggered_abilities[1].effect.clone();
+    let ctx = EffectContext { targets: vec![Target::Permanent(heir)], ..EffectContext::for_trigger(model, 0, None, 0) };
+    g.resolve_effect(&death, &ctx).unwrap();
+    assert!(g.computed_permanent(heir).unwrap().keywords.contains(&Keyword::Flying),
+        "flying keyword counter relocated to the heir");
+    assert!(!g.computed_permanent(model).unwrap().keywords.contains(&Keyword::Flying),
+        "the model's counter left it");
+}
+
 /// Come Back Wrong destroys a creature, reanimates it under your control, and
 /// schedules a sacrifice at your next end step.
 #[test]

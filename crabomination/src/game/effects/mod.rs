@@ -7829,13 +7829,16 @@ impl GameState {
                     // left the battlefield; read its counters off the death
                     // LKI snapshot so "when this dies, move its counters …"
                     // (Parish-Blade Trainee) still relocates them.
-                    let taken = if let Some(c) = self.battlefield_find_mut(src) {
-                        std::mem::take(&mut c.counters)
+                    // Keyword counters live in a separate map, but "move all
+                    // counters" (CR 122.5) relocates every kind — including
+                    // keyword counters (Reluctant Role Model's flying/lifelink).
+                    let (taken, taken_kw) = if let Some(c) = self.battlefield_find_mut(src) {
+                        (std::mem::take(&mut c.counters), std::mem::take(&mut c.keyword_counters))
                     } else {
                         self.died_card_snapshots
                             .get(&src)
                             .or_else(|| self.leaves_bf_lki.get(&src))
-                            .map(|c| c.counters.clone())
+                            .map(|c| (c.counters.clone(), c.keyword_counters.clone()))
                             .unwrap_or_default()
                     };
                     if let Some(d) = self.battlefield_find_mut(dst) {
@@ -7847,6 +7850,11 @@ impl GameState {
                                     counter_type: kind,
                                     count: n,
                                 });
+                            }
+                        }
+                        for (kw, n) in taken_kw {
+                            if n > 0 {
+                                *d.keyword_counters.entry(kw).or_insert(0) += n;
                             }
                         }
                     }
