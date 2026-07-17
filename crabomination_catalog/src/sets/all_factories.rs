@@ -6612,6 +6612,10 @@ static DECKS: &[Factory] = &[
     super::decks::lively_dirge,
     super::decks::smugglers_surprise,
     super::decks::prairie_dog,
+    super::decks::betrayers_bargain,
+    super::decks::untimely_malfunction,
+    super::decks::omnivorous_flytrap,
+    super::decks::norin_swift_survivalist,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
