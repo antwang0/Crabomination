@@ -138,6 +138,24 @@ fn reluctant_role_model_counters_and_relocation() {
         "the model's counter left it");
 }
 
+/// Unscrupulous Contractor's ETB sacrifice draws two and drains the target.
+#[test]
+fn unscrupulous_contractor_sacrifice_draws_and_drains() {
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::unscrupulous_contractor());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let (life0, hand0) = (g.players[0].life, g.players[0].hand.len());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let etb = catalog::unscrupulous_contractor().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext::for_trigger(src, 0, Some(Target::Player(0)), 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "target drew 2");
+    assert_eq!(g.players[0].life, life0 - 2, "target lost 2");
+}
+
 /// Outlaw Stitcher makes a 2/2 Zombie Rogue that grows by two per extra spell
 /// cast this turn, and it's plottable.
 #[test]

@@ -210,6 +210,38 @@ pub fn outlaw_stitcher() -> CardDefinition {
     }
 }
 
+/// Unscrupulous Contractor — {2}{B} Human Assassin 3/2. When it enters, you may
+/// sacrifice a creature; if you do, target player draws two cards and loses 2
+/// life. Plot {2}{B}.
+pub fn unscrupulous_contractor() -> CardDefinition {
+    CardDefinition {
+        name: "Unscrupulous Contractor",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        plot_cost: Some(cost(&[generic(2), b()])),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice a creature: target player draws two cards and loses 2 life".into(),
+                filter: R::Creature,
+                count: Value::ONE,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+                    Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+                ])),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Tumbleweed Rising — {1}{G} Sorcery. Create an X/X green Elemental, X = the
 /// greatest power among creatures you control. Plot {2}{G}.
 pub fn tumbleweed_rising() -> CardDefinition {
