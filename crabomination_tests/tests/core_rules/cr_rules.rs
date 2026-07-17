@@ -9609,16 +9609,14 @@ fn cr_702_166_manifest_dread_repeat_puts_counters() {
 // ── CR 608.2b — a resolution-time "if greatest power" gate on a destroy ──
 #[test]
 fn cr_608_2b_conditional_destroy_gated_by_greatest_power() {
-    use crabomination::effect::{Effect, SpreeMode};
+    use crabomination::effect::Effect;
     use crabomination::game::effects::EffectContext;
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
     let destroy = match &catalog::getaway_glamer().effect {
-        Effect::Spree { modes } => match &modes[1] {
-            SpreeMode { effect, .. } => effect.clone(),
-        },
+        Effect::Spree { modes } => modes[1].effect.clone(),
         _ => panic!("not spree"),
     };
     // Targeting the smaller creature: another creature has greater power, no destroy.

@@ -1,7 +1,7 @@
 //! Functionality tests for `catalog::sets::decks::recent235` (DSK Rooms +
 //! the manifest-dread `LastMoved` rider).
 
-use crabomination::card::{CardType, CounterType};
+use crabomination::card::CounterType;
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::effect::Effect;

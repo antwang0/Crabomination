@@ -16337,8 +16337,7 @@ fn tester_of_the_tangential_pays_x_and_moves_x_counters() {
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(2)]));
     g.active_player_idx = 0;
     g.step = TurnStep::BeginCombat;
-    let evs = g.fire_step_triggers(TurnStep::BeginCombat);
-    let _ = evs;
+    g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
     assert_eq!(
         g.battlefield_find(tester).unwrap().counter_count(CounterType::PlusOnePlusOne),
@@ -16365,7 +16364,7 @@ fn tester_of_the_tangential_zero_declines() {
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(0)]));
     g.active_player_idx = 0;
     g.step = TurnStep::BeginCombat;
-    let _ = g.fire_step_triggers(TurnStep::BeginCombat);
+    g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
     assert_eq!(
         g.battlefield_find(tester).unwrap().counter_count(CounterType::PlusOnePlusOne),

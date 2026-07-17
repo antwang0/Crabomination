@@ -1,6 +1,6 @@
 //! Functionality tests for `catalog::sets::decks::recent237`.
 
-use crabomination::card::{CardType, Keyword};
+use crabomination::card::Keyword;
 use crabomination::catalog;
 use crabomination::effect::Effect;
 use crabomination::game::effects::EffectContext;
@@ -63,10 +63,9 @@ fn peer_past_the_veil_draws_by_types() {
     for _ in 0..6 {
         g.add_card_to_library(0, catalog::forest());
     }
-    let hand_before = g.players[0].hand.len();
     g.resolve_effect(&catalog::peer_past_the_veil().effect, &EffectContext::for_spell(0, None, 0, 0))
         .unwrap();
-    // Discarded `hand_before` cards (they add types), then drew types-in-gy.
+    // Discarded the hand (those cards add types), then drew types-in-gy.
     // GY now holds creature + instant + the discarded creatures → still 2 types.
     assert_eq!(g.players[0].hand.len(), 2, "drew 2 (creature + instant card types)");
     assert!(g.players[0].hand.iter().all(|c| c.definition.is_land()), "drew from library");

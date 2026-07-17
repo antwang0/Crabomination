@@ -173,11 +173,10 @@ fn trial_of_agony_burns_and_locks() {
 /// Getaway Glamer's first mode blinks a creature (exiles it now).
 #[test]
 fn getaway_glamer_blink_mode() {
-    use crabomination::effect::SpreeMode;
     let mut g = two_player_game();
     let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let blink = match &catalog::getaway_glamer().effect {
-        Effect::Spree { modes } => match &modes[0] { SpreeMode { effect, .. } => effect.clone() },
+        Effect::Spree { modes } => modes[0].effect.clone(),
         _ => panic!("not spree"),
     };
     let ctx = EffectContext { targets: vec![Target::Permanent(c)], ..EffectContext::for_spell(0, None, 0, 0) };
