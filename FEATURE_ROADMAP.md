@@ -16,16 +16,17 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **recent239 (DSK/OTJ/MKM gap batch, 15 cards):** the **Survival** ability word
-  (a PostCombatMain trigger gated on `R::Tapped` — Rootwise Survivor, Reluctant
-  Role Model), `Effect::ManifestDreadRepeatThenCounters` (Valgavoth's Onslaught),
-  `R::HasGreatestPowerAmongAllCreatures` (Getaway Glamer's conditional destroy),
-  and `MoveAllCounters` now relocating **keyword counters** too (Reluctant Role
-  Model). Plot + dynamic-P/T tokens (Tumbleweed Rising, Outlaw Stitcher) and a
-  may-sac ETB (Unscrupulous Contractor). Composition-only: Betrayer's Bargain,
-  Untimely Malfunction, Omnivorous Flytrap, Norin, Altanak, Come Back Wrong,
-  Trial of Agony, Bite Down on Crime. CR 122.5 / 702.166 / 608.2b conformance
-  tests. Tests in `tests/recent239.rs`.
+- **recent239 (DSK/OTJ/MKM/LCI gap batch, 17 cards):** the **Survival** ability
+  word (a PostCombatMain trigger gated on `R::Tapped` — Rootwise Survivor,
+  Reluctant Role Model), `Effect::ManifestDreadRepeatThenCounters` (Valgavoth's
+  Onslaught), `R::HasGreatestPowerAmongAllCreatures` (Getaway Glamer), and
+  `MoveAllCounters` now relocating **keyword counters** too. Plot + dynamic-P/T
+  tokens (Tumbleweed Rising, Outlaw Stitcher), saddle-triggered mill/pump
+  (Stubborn Burrowfiend), may-sac and modal ETBs (Unscrupulous Contractor,
+  Kutzil's Flanker), plus composition cards (Betrayer's Bargain, Untimely
+  Malfunction, Omnivorous Flytrap, Norin, Altanak, Come Back Wrong, Trial of
+  Agony, Bite Down on Crime). CR 122.5 / 702.166 / 608.2b conformance tests.
+  Tests in `tests/recent239.rs`.
 
 - **recent235–238 (DSK/OTJ, 20 cards):** manifest-dread → `Selector::LastMoved`
   rider; `Effect::TapAnyNumberThenPumpPerTapped`;
