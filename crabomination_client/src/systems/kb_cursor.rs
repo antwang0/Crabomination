@@ -94,10 +94,13 @@ fn build_rows(cv: &crabomination::net::ClientView) -> Vec<(KbRow, Vec<KbSelectio
     // by `bf_card_transform` (slot N is at offset N - center along X),
     // so iterating `cv.battlefield.iter().filter(...)` matches what
     // the player sees on screen.
-    let collect_bf = |owner_match: bool, want_land: bool| -> Vec<KbSelection> {
+    let collect_bf = |owner_match: bool, want_back_row: bool| -> Vec<KbSelection> {
         cv.battlefield
             .iter()
-            .filter(|c| (c.owner == viewer) == owner_match && c.is_land() == want_land)
+            .filter(|c| {
+                (c.owner == viewer) == owner_match
+                    && crate::card::in_back_row(c) == want_back_row
+            })
             .map(|c| KbSelection::Battlefield(c.id))
             .collect()
     };

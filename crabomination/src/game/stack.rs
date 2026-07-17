@@ -3063,12 +3063,13 @@ impl GameState {
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
 
-        // CR 704.5n / 303.4f — an Aura attached to an object it can no longer
-        // legally enchant (host lost the required type, or a "you control"
-        // Aura's host changed controllers) is put into its owner's graveyard.
-        // Only checked when the Aura's "enchant ___" filter is recoverable and
-        // its (live) host fails that filter — distinct from the missing-host
-        // sweep above. Bestowed Auras are exempt (their host loss reverts them
+        // CR 704.5n / 704.5m / 303.4f — an Aura attached to an object it can
+        // no longer legally enchant (host lost the required type, a "you
+        // control" Aura's host changed controllers, or the host gained
+        // protection from the Aura) is put into its owner's graveyard.
+        // The filter half is only checked when the Aura's "enchant ___"
+        // filter is recoverable — distinct from the missing-host sweep
+        // above. Bestowed Auras are exempt (their host loss reverts them
         // to creatures, handled earlier).
         let illegally_attached: Vec<CardId> = self
             .battlefield
@@ -3076,11 +3077,17 @@ impl GameState {
             .filter(|c| c.definition.is_aura() && !c.bestowed)
             .filter_map(|c| {
                 let host = c.attached_to?;
+                if !self.battlefield.iter().any(|b| b.id == host) {
+                    return None; // missing host: handled by the sweep above
+                }
+                // CR 704.5m — protection covers "can't be Enchanted by": a
+                // host with protection from the Aura's qualities (its color,
+                // card type, "everything", …) sheds the Aura.
+                if self.is_protected_from(c.id, host) {
+                    return Some(c.id);
+                }
                 let filter = c.definition.aura_enchant_filter()?;
-                let host_live = self.battlefield.iter().any(|b| b.id == host);
-                if host_live
-                    && !self.evaluate_requirement(filter, &Target::Permanent(host), c.controller)
-                {
+                if !self.evaluate_requirement(filter, &Target::Permanent(host), c.controller) {
                     Some(c.id)
                 } else {
                     None

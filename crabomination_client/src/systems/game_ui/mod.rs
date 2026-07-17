@@ -43,7 +43,7 @@ use crate::card::{
     PlayCardAnimation, PlayerTargetZone, SendToGraveyardAnimation,
     StackCard, TapAnimation, TapState, ValidTarget, back_face_rotation, bf_card_transform,
     card_back_face_material, card_front_material, deck_position, graveyard_position,
-    creature_card_transform, hand_card_transform, land_card_transform, spawn_single_card,
+    creature_card_transform, hand_card_transform, back_row_card_transform, in_back_row, spawn_single_card,
     stack_card_transform,
 };
 use crate::game::{AbilityMenuState, BlockingState, GameLog, TargetingState};
@@ -2031,27 +2031,21 @@ pub fn update_combat_preview_panel(
     });
 }
 
-// ── Visual sync: reconcile 3D card entities with the server-projected view ───
-
-/// Count `(lands, creatures)` for the given owner.
-fn bf_row_counts(battlefield: &[crabomination::net::PermanentView], owner: usize) -> (usize, usize) {
-    let lands = battlefield.iter().filter(|c| c.owner == owner && c.is_land()).count();
-    let creatures = battlefield.iter().filter(|c| c.owner == owner && !c.is_land()).count();
-    (lands, creatures)
-}
-
-/// Find the slot of a card within its row.
-fn bf_row_slot(
-    battlefield: &[crabomination::net::PermanentView],
-    owner: usize,
-    card_id: CardId,
-    is_land: bool,
-) -> Option<usize> {
-    battlefield
+/// Default seat for a freshly added attacker (and for "Attack All"): the
+/// first *surviving* opponent in seat order. Eliminated players are no
+/// longer in the game (CR 800.4a) and can't be attacked - without the
+/// filter, a 4-player game whose first opponent has died defaults every
+/// attack at the dead seat and the declaration bounces.
+fn default_attack_target_seat(cv: &crabomination::net::ClientView) -> usize {
+    cv.players
         .iter()
-        .filter(|c| c.owner == owner && c.is_land() == is_land)
-        .position(|c| c.id == card_id)
+        .filter(|p| !p.eliminated)
+        .map(|p| p.seat)
+        .find(|s| *s != cv.your_seat)
+        .unwrap_or(cv.your_seat)
 }
+
+// ── Visual sync: reconcile 3D card entities with the server-projected view ───
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn sync_game_visuals(
@@ -2325,10 +2319,6 @@ pub fn sync_game_visuals(
             )
         })
         .collect();
-    let creatures_by_owner: std::collections::HashMap<usize, usize> = (0..n_seats)
-        .map(|seat| (seat, bf_row_counts(&cv.battlefield, seat).1))
-        .collect();
-    let creature_count = |seat: usize| creatures_by_owner.get(&seat).copied().unwrap_or(0);
     // Server data drives the owner seat here — fall back to an empty set
     // rather than panicking on a seat outside 0..n_seats.
     static EMPTY_BF_IDS: std::sync::LazyLock<HashSet<CardId>> =
@@ -2441,9 +2431,9 @@ pub fn sync_game_visuals(
     for (entity, game_id, transform, stack_card, _lift, flipped_marker) in &hand_cards {
         if bf_ids_for(viewer).contains(&game_id.0) {
             let bf_card = cv.battlefield.iter().find(|c| c.id == game_id.0);
-            let is_land = bf_card.is_some_and(|c| c.is_land());
+            let is_land = bf_card.is_some_and(in_back_row);
             let target = if is_land {
-                land_card_transform(&cv.battlefield, viewer, viewer, n_seats, game_id.0)
+                back_row_card_transform(&cv.battlefield, viewer, viewer, n_seats, game_id.0)
                     .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, true, false))
             } else {
                 creature_card_transform(&cv.battlefield, viewer, viewer, n_seats, game_id.0, false)
@@ -2692,7 +2682,7 @@ pub fn sync_game_visuals(
                     // Already on-screen as a stack-card entity (transition step above handles it).
                     && !visual_opp_stack_ids.contains(&c.id)
             })
-            .map(|c| (c.id, c.name.clone(), c.is_land(), c.tapped, c.is_token))
+            .map(|c| (c.id, c.name.clone(), in_back_row(c), c.tapped, c.is_token))
             .collect();
 
         for (card_id, card_name, is_land, tapped, is_token) in to_spawn {
@@ -2704,7 +2694,7 @@ pub fn sync_game_visuals(
             // follow-up. This used to spawn directly into the tapped pose,
             // making the tap invisible.
             let target = if is_land {
-                land_card_transform(&cv.battlefield, seat, viewer, n_seats, card_id)
+                back_row_card_transform(&cv.battlefield, seat, viewer, n_seats, card_id)
                     .unwrap_or_else(|| bf_card_transform(seat, viewer, n_seats, 0, 1, true, false))
             } else {
                 creature_card_transform(&cv.battlefield, seat, viewer, n_seats, card_id, false)
@@ -2834,9 +2824,9 @@ pub fn sync_game_visuals(
             continue;
         };
         let seat = bf_card.owner;
-        let is_land = bf_card.is_land();
+        let is_land = in_back_row(bf_card);
         let target = if is_land {
-            land_card_transform(&cv.battlefield, seat, viewer, n_seats, game_id.0)
+            back_row_card_transform(&cv.battlefield, seat, viewer, n_seats, game_id.0)
                 .unwrap_or_else(|| bf_card_transform(seat, viewer, n_seats, 0, 1, true, false))
         } else {
             creature_card_transform(&cv.battlefield, seat, viewer, n_seats, game_id.0, bf_card.tapped)
@@ -2999,7 +2989,7 @@ pub fn sync_game_visuals(
                 && !visual_bf_ids.contains(&c.id)
                 && !hand_cards.iter().any(|(_, gid, _, _, _, _)| gid.0 == c.id)
         })
-        .map(|c| (c.id, c.name.clone(), c.is_land(), c.tapped, c.is_token))
+        .map(|c| (c.id, c.name.clone(), in_back_row(c), c.tapped, c.is_token))
         .collect();
 
     // Battlefield cards that didn't come from the viewer's hand (fetchlands,
@@ -3011,7 +3001,7 @@ pub fn sync_game_visuals(
         // the untapped pose, let tap-state-sync animate the tap on the
         // next frame if the engine state has the card already tapped.
         let target = if is_land {
-            land_card_transform(&cv.battlefield, viewer, viewer, n_seats, card_id)
+            back_row_card_transform(&cv.battlefield, viewer, viewer, n_seats, card_id)
                 .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, true, false))
         } else {
             creature_card_transform(&cv.battlefield, viewer, viewer, n_seats, card_id, false)
@@ -3086,29 +3076,29 @@ pub fn sync_game_visuals(
         let visual_tapped = tap_state.is_some_and(|ts| ts.tapped);
 
         let target = if is_land {
-            let Some(t) = land_card_transform(&cv.battlefield, owner.0, viewer, n_seats, game_id.0) else { continue };
+            let Some(t) = back_row_card_transform(&cv.battlefield, owner.0, viewer, n_seats, game_id.0) else { continue };
             let base_rot = t.rotation;
             let tapped_rot = Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2) * base_rot;
             let rot = if game_tapped { tapped_rot } else { base_rot };
             Transform { translation: t.translation, rotation: rot, scale: t.scale }
         } else {
-            let row_total = creature_count(owner.0);
-            let Some(slot) = bf_row_slot(&cv.battlefield, owner.0, game_id.0, false) else { continue };
-            bf_card_transform(owner.0, viewer, n_seats, slot, row_total, false, game_tapped)
+            // Grouped placement — the same token-pile cascade the spawn
+            // path uses, so a rebalance never scatters a pile.
+            let Some(t) = creature_card_transform(&cv.battlefield, owner.0, viewer, n_seats, game_id.0, game_tapped) else { continue };
+            t
         };
 
         if game_tapped != visual_tapped {
+            // Row rotations depend only on the seat's edge and tap state,
+            // not the slot, so a 1-card probe transform supplies both.
             let (untapped_rot, tapped_rot) = if is_land {
-                let land_base = land_card_transform(&cv.battlefield, owner.0, viewer, n_seats, game_id.0)
+                let base = back_row_card_transform(&cv.battlefield, owner.0, viewer, n_seats, game_id.0)
                     .map(|t| t.rotation).unwrap_or(target.rotation);
-                let land_tapped = Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2) * land_base;
-                (land_base, land_tapped)
+                (base, Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2) * base)
             } else {
-                let row_total = creature_count(owner.0);
-                let slot = bf_row_slot(&cv.battlefield, owner.0, game_id.0, false).unwrap_or(0);
                 (
-                    bf_card_transform(owner.0, viewer, n_seats, slot, row_total, false, false).rotation,
-                    bf_card_transform(owner.0, viewer, n_seats, slot, row_total, false, true).rotation,
+                    bf_card_transform(owner.0, viewer, n_seats, 0, 1, false, false).rotation,
+                    bf_card_transform(owner.0, viewer, n_seats, 0, 1, false, true).rotation,
                 )
             };
             let (start, end) = if game_tapped { (untapped_rot, tapped_rot) } else { (tapped_rot, untapped_rot) };
@@ -3542,12 +3532,7 @@ pub fn handle_game_input(
             } else if activate {
                 use crabomination::card::{CardType, Keyword};
                 use crabomination::game::AttackTarget;
-                let next_opp = cv
-                    .players
-                    .iter()
-                    .map(|p| p.seat)
-                    .find(|s| *s != your_seat)
-                    .unwrap_or(your_seat);
+                let next_opp = default_attack_target_seat(cv);
 
                 let mut consumed = false;
                 if let Some((game_id, owner)) = hovered_bf.iter().next() {
@@ -4277,12 +4262,7 @@ pub fn handle_game_input(
                     .map(|(attacker, target)| Attack { attacker: *attacker, target: *target })
                     .collect()
             } else {
-                let next_opp = cv
-                    .players
-                    .iter()
-                    .map(|p| p.seat)
-                    .find(|s| *s != your_seat)
-                    .unwrap_or(your_seat);
+                let next_opp = default_attack_target_seat(cv);
                 use crabomination::card::Keyword;
                 cv.battlefield
                     .iter()

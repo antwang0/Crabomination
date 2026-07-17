@@ -678,6 +678,12 @@ pub struct PlayerView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub commanders: Vec<CardId>,
+    /// `(commander name, times cast from the command zone)` per commander —
+    /// drives the HUD commander-tax chip (CR 903.8: each next cast costs
+    /// {2} more per prior command-zone cast). `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub commander_casts: Vec<(String, u32)>,
     /// True when this player has lost the game (life ≤ 0, drew from empty
     /// library, Pact fail, etc.). Surfaced so UIs can grey out eliminated
     /// players' portraits and skip them in turn order display.

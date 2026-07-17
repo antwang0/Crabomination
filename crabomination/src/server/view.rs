@@ -609,6 +609,26 @@ fn project_player(
             .map(|c| HandCardView::Known(known_card(c)))
             .collect(),
         commanders: player.commanders.clone(),
+        // Tax tally per commander (CR 903.8). Resolve each id to a name the
+        // same way `commander_damage_taken` does: any tracked zone first,
+        // then the command zones (which `find_card_anywhere` skips).
+        commander_casts: player
+            .commanders
+            .iter()
+            .map(|id| {
+                let name = state
+                    .find_card_anywhere(*id)
+                    .or_else(|| {
+                        state
+                            .players
+                            .iter()
+                            .find_map(|p| p.command.iter().find(|c| c.id == *id))
+                    })
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_else(|| "Commander".to_string());
+                (name, state.commander_cast_count.get(id).copied().unwrap_or(0))
+            })
+            .collect(),
         eliminated: player.eliminated,
         // Emblem label = source name plus any static-ability text, so the UI
         // can show what an anthem emblem (Vivien Reid's −8) actually does

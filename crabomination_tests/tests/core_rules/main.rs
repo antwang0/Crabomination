@@ -16,6 +16,7 @@ mod freerunning;
 mod game;
 mod jewel;
 mod lci_craft;
+mod misconceptions;
 mod multiplayer;
 mod quests;
 mod spree;

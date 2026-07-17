@@ -422,6 +422,50 @@ fn spawn_commander_damage_chip(
         });
 }
 
+/// Label for the commander-tax chip: `\u{2318} <commander> +N` where N = {2} x
+/// prior command-zone casts (CR 903.8). `None` while the tax is zero - an
+/// uncast commander needs no chip. Pure helper.
+pub(super) fn commander_tax_label(name: &str, casts: u32) -> Option<String> {
+    if casts == 0 {
+        return None;
+    }
+    Some(format!("\u{2318} {} +{}", commander_short_name(name), 2 * casts))
+}
+
+/// Spawn one commander-tax chip per commander that has been cast from the
+/// command zone at least once, so the whole pod can price the next recast.
+fn spawn_commander_tax_chips(
+    parent: &mut ChildSpawnerCommands,
+    ui_fonts: &UiFonts,
+    commander_casts: &[(String, u32)],
+) {
+    for (name, casts) in commander_casts {
+        let Some(label) = commander_tax_label(name, *casts) else { continue };
+        // Regal gold on a command-zone slate, distinct from the red-graded
+        // commander-damage chips beside it.
+        parent
+            .spawn((
+                Node {
+                    padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    border_radius: BorderRadius::all(Val::Px(3.0)),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.24, 0.22, 0.12, 1.0)),
+                Pickable::IGNORE,
+            ))
+            .with_children(|chip| {
+                chip.spawn((
+                    Text::new(label),
+                    ui_fonts.tf(12.0),
+                    TextColor(theme::ACCENT_GOLD),
+                    Pickable::IGNORE,
+                ));
+            });
+    }
+}
+
 /// `(background, text)` for a poison chip, graded by proximity to the
 /// CR 104.3c / 704.5c lethal threshold of 10 poison counters. A sickly green
 /// while low, ambering as it climbs, danger-red once one more Toxic/Infect hit
@@ -630,6 +674,8 @@ pub fn update_player_stats_chips(
         for entry in &p.commander_damage_taken {
             spawn_commander_damage_chip(row, &ui_fonts, entry);
         }
+        // CR 903.8 - the running commander tax, once it's nonzero.
+        spawn_commander_tax_chips(row, &ui_fonts, &p.commander_casts);
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, hand_chip_label(p.hand.len(), p.max_hand_size));
         spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
         // CR 401.5 — a revealed (or owner-peekable) library top is public
@@ -1066,6 +1112,8 @@ pub fn update_opponent_stats_rows(
                 for entry in &p.commander_damage_taken {
                     spawn_commander_damage_chip(row, &ui_fonts, entry);
                 }
+                // CR 903.8 - opponents' commander tax is public info too.
+                spawn_commander_tax_chips(row, &ui_fonts, &p.commander_casts);
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, hand_chip_label(p.hand.len(), p.max_hand_size));
                 spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
                 // CR 401.5 — an opponent's revealed library top is public.
@@ -1260,7 +1308,7 @@ pub fn animate_life_flash(
 
 #[cfg(test)]
 mod tests {
-    use super::{commander_damage_style, commander_short_name, deck_chip_kind, hand_chip_label, poison_chip_style, storm_chip_visible, StatChipKind};
+    use super::{commander_damage_style, commander_short_name, commander_tax_label, deck_chip_kind, hand_chip_label, poison_chip_style, storm_chip_visible, StatChipKind};
 
     #[test]
     fn hand_chip_flags_no_max_and_over_cap() {
@@ -1318,6 +1366,19 @@ mod tests {
     #[test]
     fn commander_name_short_unchanged() {
         assert_eq!(commander_short_name("Ghave"), "Ghave");
+    }
+
+    #[test]
+    fn commander_tax_label_hides_until_first_cast() {
+        assert_eq!(commander_tax_label("Atraxa, Praetors' Voice", 0), None);
+        assert_eq!(
+            commander_tax_label("Atraxa, Praetors' Voice", 1).as_deref(),
+            Some("\u{2318} Atraxa +2"),
+        );
+        assert_eq!(
+            commander_tax_label("Atraxa, Praetors' Voice", 3).as_deref(),
+            Some("\u{2318} Atraxa +6"),
+        );
     }
 
     #[test]

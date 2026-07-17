@@ -214,6 +214,9 @@ pub struct CardOwner(pub usize);
 /// Marks a card as on the battlefield, with row information.
 #[derive(Component)]
 pub struct BattlefieldCard {
+    /// True for *back-row* permanents (lands and nonland noncreature
+    /// support cards) — the layout's row split, not strictly the Land
+    /// card type. See `card::layout::in_back_row`.
     pub is_land: bool,
     /// Token permanents despawn (instead of flying to a graveyard pile)
     /// when they leave the battlefield. The visual layer mirrors the

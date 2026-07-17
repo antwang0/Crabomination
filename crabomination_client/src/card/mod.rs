@@ -20,7 +20,7 @@ pub use components::{
 };
 pub use layout::{
     back_face_rotation, bf_card_transform, command_zone_card_transform, deck_position,
-    creature_card_transform, graveyard_position, hand_card_transform, land_card_transform,
+    creature_card_transform, graveyard_position, hand_card_transform, back_row_card_transform, in_back_row,
     stack_card_transform,
 };
 pub use mesh::{create_border_mesh, create_rounded_rect_mesh, BORDER_WIDTH, CORNER_RADIUS};

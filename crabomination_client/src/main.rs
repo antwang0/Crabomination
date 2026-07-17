@@ -74,9 +74,10 @@ use systems::game_ui::{
     ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
-    draw_attachment_tethers, draw_attack_plan_gizmos, draw_attacker_overlays,
-    draw_blocking_gizmos, draw_legal_target_rings, draw_pt_modified_overlays, draw_stack_arrows,
-    draw_target_arrow, AttachmentGizmos, AttackPlanGizmos, AttackerGizmos, BlockingGizmos,
+    draw_active_seat_glow, draw_attachment_tethers, draw_attack_plan_gizmos,
+    draw_attacker_overlays, draw_blocking_gizmos, draw_legal_target_rings,
+    draw_pt_modified_overlays, draw_stack_arrows, draw_target_arrow, ActiveSeatGizmos,
+    AttachmentGizmos, AttackPlanGizmos, AttackerGizmos, BlockingGizmos,
     LegalTargetGizmos, PtModifiedGizmos, StackGizmos, TargetArrowGizmos,
 };
 use systems::quality::{
@@ -346,6 +347,7 @@ fn main() {
         .init_gizmo_group::<LegalTargetGizmos>()
         .init_gizmo_group::<TargetArrowGizmos>()
         .init_gizmo_group::<AttachmentGizmos>()
+        .init_gizmo_group::<ActiveSeatGizmos>()
         .init_gizmo_group::<crate::systems::impact::ImpactGizmos>()
         .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: cfg_quality.shadow_map_size() })
@@ -689,7 +691,9 @@ fn main() {
             Update,
             (
                 crate::systems::camera_zoom::adjust_camera_home_for_seats,
+                crate::systems::camera_zoom::camera_focus_hotkeys,
                 crate::systems::camera_zoom::camera_zoom,
+                crate::systems::eliminated::sync_eliminated_shrouds,
             )
                 .chain()
                 .run_if(in_state(AppState::InGame)),
@@ -710,6 +714,7 @@ fn main() {
                 draw_legal_target_rings,
                 draw_target_arrow,
                 draw_attachment_tethers,
+                draw_active_seat_glow,
             )
                 .after(animate_combat_lurch)
                 .run_if(in_state(AppState::InGame)),
@@ -763,6 +768,7 @@ fn main() {
         .init_resource::<systems::game_over::ActiveMatchFormat>()
         .init_resource::<systems::camera_zoom::CameraZoom>()
         .init_resource::<systems::camera_zoom::CameraHome>()
+        .init_resource::<systems::camera_zoom::CameraFocusSeat>()
         .add_systems(
             Update,
             (

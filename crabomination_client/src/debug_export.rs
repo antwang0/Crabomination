@@ -200,6 +200,7 @@ mod tests {
                 max_hand_size: Some(7),
                 command: vec![],
                 commanders: vec![],
+                commander_casts: vec![],
                 emblems: vec![],
                 eliminated: false,
                 has_prevention_shield: false,

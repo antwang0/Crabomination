@@ -1306,6 +1306,43 @@ fn commander_cast_tax_accrues_per_recast() {
     assert_eq!(g.stack.len(), 1);
 }
 
+/// The client view surfaces the running commander tax (CR 903.8) so the
+/// HUD can show a per-commander chip: `commander_casts` carries the
+/// commander's name and its command-zone cast count, for every viewer.
+#[test]
+fn view_projects_commander_cast_tally() {
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    // Before any cast: entry present with a zero count (chip hidden).
+    let view = crabomination::server::view::project(&g, 1);
+    assert_eq!(view.players[0].commander_casts, vec![("Test Commander".to_string(), 0)]);
+
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+    crabomination::game::drain_stack(&mut g);
+
+    // After one cast the tally is public to every seat — including while
+    // the commander is on the battlefield (name resolves outside the CZ).
+    for viewer in 0..2 {
+        let view = crabomination::server::view::project(&g, viewer);
+        assert_eq!(
+            view.players[0].commander_casts,
+            vec![("Test Commander".to_string(), 1)],
+            "viewer {viewer} sees the cast tally",
+        );
+    }
+}
+
 /// Phase L — second cast pays the tax. Cast once, drain stack,
 /// destroy the commander (which bounces it back via the J replacement),
 /// then attempt the second cast: with no mana in pool the cast

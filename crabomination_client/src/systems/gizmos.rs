@@ -70,6 +70,46 @@ pub struct TargetArrowGizmos;
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct AttachmentGizmos;
 
+/// Gold outline around the active player's board column, so "whose turn
+/// is it" reads on the 3-D table itself — not just the HUD roster.
+#[derive(Default, Reflect, GizmoConfigGroup)]
+pub struct ActiveSeatGizmos;
+
+/// Draw a glowing rectangle at table level around the active player's
+/// column. Skipped when it's the viewer's own turn in 1v1 (the phase bar
+/// already carries that signal); in a pod it always draws, since the
+/// seat → column mapping is exactly what the eye has to find.
+pub fn draw_active_seat_glow(
+    view: Res<CurrentView>,
+    time: Res<Time>,
+    mut gizmos: Gizmos<ActiveSeatGizmos>,
+) {
+    let Some(cv) = &view.0 else { return };
+    if cv.game_over.is_some() {
+        return;
+    }
+    let n = cv.players.len();
+    if n <= 2 && cv.active_player == cv.your_seat {
+        return;
+    }
+    let (min, max) =
+        crate::card::layout::seat_board_outline(cv.active_player, cv.your_seat, n);
+    // Gentle breathing so the outline reads as "live" without pulsing
+    // hard enough to pull the eye during someone else's long turn.
+    let breathe = 0.75 + 0.25 * (time.elapsed_secs() * 1.6).sin();
+    let color = glow(Color::srgba(0.95, 0.78, 0.30, 0.85), CUE_GLOW * breathe);
+    let y = 0.04;
+    let corners = [
+        Vec3::new(min.x, y, min.z),
+        Vec3::new(max.x, y, min.z),
+        Vec3::new(max.x, y, max.z),
+        Vec3::new(min.x, y, max.z),
+    ];
+    for i in 0..4 {
+        gizmos.line(corners[i], corners[(i + 1) % 4], color);
+    }
+}
+
 /// Draw a low-alpha tether from every attached permanent to its host. The
 /// tether brightens when either end is hovered, so "what's enchanting
 /// this?" is answerable by pointing at a card. Skipped for co-located

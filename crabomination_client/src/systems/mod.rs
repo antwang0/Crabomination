@@ -1,5 +1,6 @@
 pub mod animate;
 pub mod camera_zoom;
+pub mod eliminated;
 pub mod chat;
 pub mod counter_coins;
 pub mod counter_tooltip;

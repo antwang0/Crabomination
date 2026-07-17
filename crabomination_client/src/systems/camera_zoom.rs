@@ -54,6 +54,63 @@ pub fn adjust_camera_home_for_seats(
     }
 }
 
+/// Seat the camera is parked on via the seat-focus hotkeys (`1`–`6`).
+/// `None` = the normal home pose. Pressing the focused seat's digit again
+/// (or Escape) returns home.
+#[derive(Resource, Default)]
+pub struct CameraFocusSeat(pub Option<usize>);
+
+/// Digit hotkeys park the camera over a seat's shoulder — `1` is seat 0,
+/// `2` seat 1, and so on — so far-edge boards in a multiplayer pod can be
+/// inspected up close (their cards read upright from behind their edge).
+/// Suppressed while any text surface owns the keyboard.
+pub fn camera_focus_hotkeys(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    view: Res<crate::net_plugin::CurrentView>,
+    chat: Res<crate::systems::chat::ChatInputState>,
+    console: Res<crate::systems::debug_console::DebugConsoleState>,
+    export_prompt: Res<crate::systems::export_prompt::ExportPromptState>,
+    mut focus: ResMut<CameraFocusSeat>,
+) {
+    let Some(cv) = &view.0 else {
+        focus.0 = None;
+        return;
+    };
+    let n = cv.players.len();
+    // A stale focus (seat count shrank between games) snaps home.
+    if focus.0.is_some_and(|s| s >= n) {
+        focus.0 = None;
+    }
+    if chat.open || console.card_input_focused || export_prompt.active {
+        return;
+    }
+    const DIGITS: [KeyCode; 6] = [
+        KeyCode::Digit1,
+        KeyCode::Digit2,
+        KeyCode::Digit3,
+        KeyCode::Digit4,
+        KeyCode::Digit5,
+        KeyCode::Digit6,
+    ];
+    for (seat, key) in DIGITS.iter().enumerate() {
+        if seat < n && keyboard.just_pressed(*key) {
+            focus.0 = if focus.0 == Some(seat) { None } else { Some(seat) };
+        }
+    }
+    if keyboard.just_pressed(KeyCode::Escape) {
+        focus.0 = None;
+    }
+}
+
+/// Over-the-shoulder pose for a focused seat: hovering behind that seat's
+/// table edge, looking down at the middle of their board rows.
+fn focus_pose(seat: usize, viewer: usize, n_seats: usize) -> Transform {
+    let spot = crate::card::layout::seat_spot(seat, viewer, n_seats);
+    let look_at = Vec3::new(spot.board_center, 0.0, spot.z_sign * 6.0);
+    let pos = look_at + Vec3::new(0.0, 20.0, spot.z_sign * 14.0);
+    Transform::from_translation(pos).looking_at(look_at, Vec3::Y)
+}
+
 /// Last computed focus point, held across frames so the zoom stays put
 /// when the cursor briefly leaves the table (e.g. drifts over a UI
 /// panel) while Ctrl is still down.
@@ -83,6 +140,8 @@ pub fn camera_zoom(
     // keeps the zoom focus from stuttering between them.
     kb_selected_bf: Query<&GlobalTransform, (With<BattlefieldCard>, With<KeyboardSelected>)>,
     home_pose: Res<CameraHome>,
+    focus_seat: Res<CameraFocusSeat>,
+    view: Res<crate::net_plugin::CurrentView>,
     mut camera: Query<(&mut Transform, &Camera), With<MainCamera>>,
 ) {
     let Ok((mut cam_xform, camera)) = camera.single_mut() else { return };
@@ -107,6 +166,9 @@ pub fn camera_zoom(
         // (else: keep the previously stored focus)
         let pos = zoom.focus + home_pos * CAM_ZOOM_SCALE;
         Transform::from_translation(pos).looking_at(zoom.focus, Vec3::Y)
+    } else if let (Some(seat), Some(cv)) = (focus_seat.0, view.0.as_ref()) {
+        // Seat focus (hotkeys 1-6): hold-Ctrl inspection still wins above.
+        focus_pose(seat, cv.your_seat, cv.players.len())
     } else {
         home
     };
