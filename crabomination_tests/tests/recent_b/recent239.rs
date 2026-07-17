@@ -138,6 +138,26 @@ fn reluctant_role_model_counters_and_relocation() {
         "the model's counter left it");
 }
 
+/// Kutzil's Flanker's second mode gains life and scries; its third exiles a
+/// target player's graveyard.
+#[test]
+fn kutzils_flanker_modes() {
+    let mut g = two_player_game();
+    let flanker = g.add_card_to_battlefield(0, catalog::kutzils_flanker());
+    assert!(catalog::kutzils_flanker().keywords.contains(&Keyword::Flash));
+    let modes = match &catalog::kutzils_flanker().triggered_abilities[0].effect {
+        Effect::ChooseMode(m) => m.clone(),
+        _ => panic!("not modal"),
+    };
+    let life0 = g.players[0].life;
+    g.resolve_effect(&modes[1], &EffectContext::for_trigger(flanker, 0, None, 0)).unwrap();
+    assert_eq!(g.players[0].life, life0 + 2, "gained 2 life");
+    // Mode 3 exiles a target player's graveyard.
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.resolve_effect(&modes[2], &EffectContext::for_trigger(flanker, 0, Some(Target::Player(1)), 0)).unwrap();
+    assert!(g.players[1].graveyard.is_empty(), "opponent graveyard exiled");
+}
+
 /// Stubborn Burrowfiend's saddle trigger mills two and pumps by graveyard
 /// creatures, and it fires only once per turn.
 #[test]

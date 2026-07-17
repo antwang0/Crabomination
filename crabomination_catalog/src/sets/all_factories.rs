@@ -6628,6 +6628,7 @@ static DECKS: &[Factory] = &[
     super::decks::outlaw_stitcher,
     super::decks::unscrupulous_contractor,
     super::decks::stubborn_burrowfiend,
+    super::decks::kutzils_flanker,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

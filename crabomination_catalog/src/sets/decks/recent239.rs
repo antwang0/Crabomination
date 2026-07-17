@@ -210,6 +210,41 @@ pub fn outlaw_stitcher() -> CardDefinition {
     }
 }
 
+/// Kutzil's Flanker — {2}{W} Cat Warrior 3/1. Flash. When it enters, choose one
+/// — a +1/+1 counter per creature that left your control this turn (approximated
+/// as creatures that died this turn); gain 2 life and scry 2; or exile target
+/// player's graveyard.
+pub fn kutzils_flanker() -> CardDefinition {
+    CardDefinition {
+        name: "Kutzil's Flanker",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::CreaturesDiedThisTurn(PlayerRef::You),
+                },
+                Effect::Seq(vec![
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                ]),
+                Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Stubborn Burrowfiend — {1}{G} Badger Beast Mount 2/2. Saddle 2. The first
 /// time it becomes saddled each turn, mill two, then it gets +X/+X until end of
 /// turn, where X is the number of creature cards in your graveyard.
