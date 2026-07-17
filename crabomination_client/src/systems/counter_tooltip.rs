@@ -690,7 +690,11 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantBlock => "Can't block.",
         K::CantAttack => "Can't attack.",
         K::MustAttack => "Attacks each combat if able.",
-        K::MustBlock | K::AllMustBlock | K::MustBeBlocked => "Is forced into combat by a block/attack requirement.",
+        // Three distinct block requirements (CR 509.1c) — split so the tooltip
+        // says which one, instead of one vague "forced into combat" line.
+        K::MustBlock => "Blocks each combat if able.",
+        K::AllMustBlock => "All creatures able to block this creature do so (Lure).",
+        K::MustBeBlocked => "Must be blocked if able.",
         K::CantBeCopied => "Can't be copied.",
         K::DealsNoCombatDamage => "Assigns no combat damage.",
         K::AssignsCombatDamageByToughness => {
