@@ -138,6 +138,37 @@ fn reluctant_role_model_counters_and_relocation() {
         "the model's counter left it");
 }
 
+/// Trial of Agony burns one creature and locks the other out of blocking.
+#[test]
+fn trial_of_agony_burns_and_locks() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → dies to 5
+    let b = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(a), Target::Permanent(b)],
+        ..EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.resolve_effect(&catalog::trial_of_agony().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none(), "took 5 and died");
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::CantBlock));
+}
+
+/// Getaway Glamer's first mode blinks a creature (exiles it now).
+#[test]
+fn getaway_glamer_blink_mode() {
+    use crabomination::effect::SpreeMode;
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blink = match &catalog::getaway_glamer().effect {
+        Effect::Spree { modes } => match &modes[0] { SpreeMode { effect, .. } => effect.clone() },
+        _ => panic!("not spree"),
+    };
+    let ctx = EffectContext { targets: vec![Target::Permanent(c)], ..EffectContext::for_spell(0, None, 0, 0) };
+    g.resolve_effect(&blink, &ctx).unwrap();
+    assert!(g.battlefield_find(c).is_none(), "creature exiled by the blink");
+}
+
 /// Come Back Wrong destroys a creature, reanimates it under your control, and
 /// schedules a sacrifice at your next end step.
 #[test]

@@ -158,6 +158,31 @@ pub fn norin_swift_survivalist() -> CardDefinition {
     }
 }
 
+/// Trial of Agony — {R} Sorcery. Two target creatures an opponent controls: 5
+/// damage to one, the other can't block this turn. (The "same opponent" and
+/// "that player chooses" clauses are collapsed to the caster's pick, matching
+/// the catalog's other opponent-choice removal.)
+pub fn trial_of_agony() -> CardDefinition {
+    let opp_creature = || R::Creature.and(R::ControlledByOpponent);
+    CardDefinition {
+        name: "Trial of Agony",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 0, filter: opp_creature() },
+                amount: Value::Const(5),
+            },
+            Effect::GrantKeyword {
+                what: Selector::TargetFiltered { slot: 1, filter: opp_creature() },
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Getaway Glamer — {W} Instant. Spree — +{1} blink target nontoken creature
 /// (returns at the next end step); +{2} destroy target creature if no other
 /// creature has greater power.

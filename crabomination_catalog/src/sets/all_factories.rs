@@ -6622,6 +6622,7 @@ static DECKS: &[Factory] = &[
     super::decks::rootwise_survivor,
     super::decks::reluctant_role_model,
     super::decks::getaway_glamer,
+    super::decks::trial_of_agony,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
