@@ -9847,6 +9847,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ManifestDreadRepeatThenCounters { count, counters } => {
+                let n = self.evaluate_value(count, ctx).max(0);
+                let mut manifested: Vec<CardId> = Vec::new();
+                for _ in 0..n {
+                    self.run_effect(&Effect::ManifestDread { who: PlayerRef::You }, ctx, events)?;
+                    if let Some(&id) = self.last_moved_cards.first() {
+                        manifested.push(id);
+                    }
+                }
+                if !manifested.is_empty() {
+                    // Reuse the AddCounter path (doublers, events) by pointing
+                    // `LastMoved` at the whole manifested set.
+                    self.last_moved_cards = manifested;
+                    self.run_effect(
+                        &Effect::AddCounter {
+                            what: Selector::LastMoved,
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: counters.clone(),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::SearchUpToN { who, filter, to, count } => {
                 let n = self.evaluate_value(count, ctx).max(0);
                 if n == 0 { return Ok(()); }

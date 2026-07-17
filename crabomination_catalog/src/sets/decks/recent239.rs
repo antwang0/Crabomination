@@ -3,15 +3,15 @@
 //! `tests/recent239.rs`.
 
 use crate::card::{
-    AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType, Keyword,
-    MayPlayDuration, SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
+    Keyword, MayPlayDuration, SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility,
 };
 use crate::effect::shortcut::{deal, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, Value,
     ZoneDest,
 };
-use crate::mana::{cost, g, generic, r};
+use crate::mana::{cost, g, generic, r, x};
 
 /// Betrayer's Bargain — {1}{R} Instant. Additional cost: sacrifice a creature
 /// or enchantment or pay {2}. Deal 5 to target creature; if it would die this
@@ -141,6 +141,60 @@ pub fn norin_swift_survivalist() -> CardDefinition {
                     },
                 ])),
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Valgavoth's Onslaught — {X}{X}{G} Sorcery. Manifest dread X times, then put
+/// X +1/+1 counters on each of those creatures.
+pub fn valgavoths_onslaught() -> CardDefinition {
+    CardDefinition {
+        name: "Valgavoth's Onslaught",
+        cost: cost(&[x(), x(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ManifestDreadRepeatThenCounters {
+            count: Value::XFromCost,
+            counters: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
+/// Altanak, the Thrice-Called — {5}{G}{G} Insect Beast 9/9. Trample. Whenever
+/// it becomes the target of a spell/ability an opponent controls, draw a card.
+/// {1}{G}, Discard this card: return target land card from your graveyard to
+/// the battlefield tapped. (The draw trigger reuses the Battle Mammoth scope,
+/// which fires for any permanent you control.)
+pub fn altanak_the_thrice_called() -> CardDefinition {
+    CardDefinition {
+        name: "Altanak, the Thrice-Called",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 9,
+        toughness: 9,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::BecameTarget,
+                EventScope::YourPermanentTargetedByOpponent,
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            from_hand: true,
+            discard_self_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(R::Land.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }

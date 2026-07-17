@@ -283,6 +283,7 @@ impl Effect {
             Effect::CreateTokenAttachedTo { target, .. } => sel_has_target(target),
             Effect::CreateTokenAttachedToEach { target, .. } => sel_has_target(target),
             Effect::ManifestDread { .. } => false,
+            Effect::ManifestDreadRepeatThenCounters { .. } => false,
             Effect::Cloak { .. } => false,
             Effect::CatchUpBasicLands => false,
             Effect::ExileUntilDuplicateName { .. } => false,

@@ -97,3 +97,36 @@ fn norin_exiles_blocked_creature() {
     g.resolve_effect(&effect, &ctx).unwrap();
     assert!(g.exile.iter().any(|c| c.id == ally), "blocked creature exiled");
 }
+
+/// Valgavoth's Onslaught (X=2) manifests two 2/2s, each with two +1/+1
+/// counters (making them 4/4 face-down creatures).
+#[test]
+fn valgavoths_onslaught_manifests_and_counters() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let ctx = EffectContext::for_spell(0, None, 0, 2); // X = 2
+    g.resolve_effect(&catalog::valgavoths_onslaught().effect, &ctx).unwrap();
+    let facedown: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && c.face_down).collect();
+    assert_eq!(facedown.len(), 2, "two creatures manifested");
+    for c in facedown {
+        assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2, "each got X=2 counters");
+    }
+}
+
+/// Altanak's channel ability returns a target land card from the graveyard to
+/// the battlefield tapped, and it carries the opponent-target draw trigger.
+#[test]
+fn altanak_channel_returns_land_tapped() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_graveyard(0, catalog::forest());
+    let def = catalog::altanak_the_thrice_called();
+    assert!(def.keywords.contains(&Keyword::Trample));
+    assert_eq!(def.triggered_abilities[0].event.kind, crabomination::effect::EventKind::BecameTarget);
+    let effect = def.activated_abilities[0].effect.clone();
+    let ctx = EffectContext { targets: vec![Target::Permanent(land)], ..EffectContext::for_ability(land, 0, None) };
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let l = g.battlefield_find(land).expect("land returned to battlefield");
+    assert!(l.tapped, "enters tapped");
+}

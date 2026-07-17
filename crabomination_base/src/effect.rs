@@ -4725,6 +4725,12 @@ pub enum Effect {
     /// the other into their graveyard.
     ManifestDread { who: PlayerRef },
 
+    /// Manifest dread `count` times, then put `counters` +1/+1 counters on each
+    /// of the creatures manifested this way (Valgavoth's Onslaught, where both
+    /// are the cast's X). Self-contained so the manifested set is tracked across
+    /// the repeats without leaking into `last_moved_cards`.
+    ManifestDreadRepeatThenCounters { count: Value, counters: Value },
+
     /// CR 702.182 — Cloak: put the top `amount` cards of `who`'s library onto
     /// the battlefield face down as 2/2 creatures with ward {2}. Each can be
     /// turned face up for its mana cost if it's a creature card.
