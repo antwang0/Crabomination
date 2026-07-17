@@ -3694,7 +3694,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   Crawler), `Value::DungeonsCompleted` (Cloister Gargoyle). Tests `tests/afr.rs`.
   Remaining ⏳: room abilities don't use the stack; Tomb's two pay-or-lose
   rooms are flat life loss; Mad Wizard's Lair free-cast collapsed to the draws.
-- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g) ✅ (`CounterType::Defense`, CR 310). Counter-clear on zone change (122.2) ✅ strict — cleared at every zone-change funnel; dies-with-counters triggers read the `died_card_snapshots` / `leaves_bf_lki` LKI caches (Felisa, Ambitious Augmenter). `-0/-1` / `-1/-0` counter types ✅. Counter-removal as an activation gate ✅ — `CounterType::Fuse` + an `ActivatedAbility.condition` on `Value::CountersOn` ≥ N (Goblin Bomb's "remove five fuse counters: deal 20"). "Choose a kind of counter at random it doesn't have" ✅ via `Effect::AddRandomMissingCounter` (keyword counters + +1/+1, never duplicating a present kind; respects Solemnity — Crystalline Giant). Return-a-died-creature-with-a-keyword-counter ✅ — a `CreatureDied`/`AnotherOfYours` trigger `Move`s `Selector::TriggerSource` (its gy card) back to the battlefield, then `AddKeywordCounter` on `Selector::LastMoved` (Luminous Broodmoth's flying counter; `luminous_broodmoth_returns_with_flying`). CR 614.16 additive replacement for *every* counter kind ✅ — `StaticEffect::ExtraCounterAllKinds` (Winding Constrictor) adds one to any counter placed on your creatures, via `GameState::scaled_counter_count`; composes with Hardened Scales (+1/+1-only) and Doubling Season. The player-counter "counters you'd get" half now covers energy **and** experience (`AddExperience` honors `extra_any_kind_adders_for`; `cr_614_16_winding_constrictor_boosts_experience`). Poison now scales too ✅ — `GameState::scaled_player_counter_count` (adder + doublers) routes every poison site (AddPoison, AddCounter(Player), Infect/Toxic combat); `cr_614_16_winding_constrictor_boosts_poison`. Keyword counters granting the keyword via layers ✅; test `cr_122_1_keyword_counter_grants_keyword` (Gift of the Viper). "Enters with N counters" ✅ (`CardDefinition.enters_with_counters` — Argent Dais's two oil; `cr_122_1_permanent_enters_with_printed_counters`).
+- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g) ✅ (`CounterType::Defense`, CR 310). Counter-clear on zone change (122.2) ✅ strict — cleared at every zone-change funnel; dies-with-counters triggers read the `died_card_snapshots` / `leaves_bf_lki` LKI caches (Felisa, Ambitious Augmenter). `-0/-1` / `-1/-0` counter types ✅. Counter-removal as an activation gate ✅ — `CounterType::Fuse` + an `ActivatedAbility.condition` on `Value::CountersOn` ≥ N (Goblin Bomb's "remove five fuse counters: deal 20"). "Choose a kind of counter at random it doesn't have" ✅ via `Effect::AddRandomMissingCounter` (keyword counters + +1/+1, never duplicating a present kind; respects Solemnity — Crystalline Giant). Return-a-died-creature-with-a-keyword-counter ✅ — a `CreatureDied`/`AnotherOfYours` trigger `Move`s `Selector::TriggerSource` (its gy card) back to the battlefield, then `AddKeywordCounter` on `Selector::LastMoved` (Luminous Broodmoth's flying counter; `luminous_broodmoth_returns_with_flying`). CR 614.16 additive replacement for *every* counter kind ✅ — `StaticEffect::ExtraCounterAllKinds` (Winding Constrictor) adds one to any counter placed on your creatures, via `GameState::scaled_counter_count`; composes with Hardened Scales (+1/+1-only) and Doubling Season. The player-counter "counters you'd get" half now covers energy **and** experience (`AddExperience` honors `extra_any_kind_adders_for`; `cr_614_16_winding_constrictor_boosts_experience`). Poison now scales too ✅ — `GameState::scaled_player_counter_count` (adder + doublers) routes every poison site (AddPoison, AddCounter(Player), Infect/Toxic combat); `cr_614_16_winding_constrictor_boosts_poison`. Keyword counters granting the keyword via layers ✅; test `cr_122_1_keyword_counter_grants_keyword` (Gift of the Viper). "Enters with N counters" ✅ (`CardDefinition.enters_with_counters` — Argent Dais's two oil; `cr_122_1_permanent_enters_with_printed_counters`). CR 122.5 relocation now moves **keyword counters** too — `Effect::MoveAllCounters` drains the separate `keyword_counters` map alongside `counters` (Reluctant Role Model; `cr_122_5_move_all_counters_relocates_keyword_counters`).
 - 🟡 **CR 401 — Library** — play-with-top-revealed + play/cast-from-top ✅
   (401.5/401.6 — `StaticEffect::{TopOfLibraryRevealed,PlayFromLibraryTop}` plus
   the turn-scoped `Player.play_from_top_this_turn` grant
@@ -3840,6 +3840,29 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **recent239 (DSK/OTJ/MKM) deferred, each blocked on one primitive:**
+  - **Collect-evidence additional cost** (`AdditionalCastCost::CollectEvidence
+    { amount, optional }` + a `SpellCollectedEvidence` predicate for the
+    cost-reduction/branch riders). Unblocks Bite Down on Crime's real {2}-less
+    discount, Behind the Mask, Analyze the Pollen, and Axebane Ferox's
+    **Ward—Collect evidence 4**. `Effect::CollectEvidence` already exists for the
+    resolution-time action; this is the cast-cost sibling.
+  - **"Whenever you manifest dread" trigger** (`EventKind::ManifestedDread` +
+    `GameEvent::ManifestedDread { player, milled }` + wire mirror + subject
+    binding to the milled card). Unblocks Paranormal Analyst ("put a card you
+    put into your graveyard this way into your hand") and Oblivious Bookworm's
+    face-down-this-turn clause.
+  - **Type-filtered death tally** — "if a non-Zombie creature died this turn"
+    (Undead Sprinter's graveyard-cast condition). Needs either a filtered
+    death predicate or a small per-turn typed tally on `Player`.
+  - **Tap-1-or-2-then-each-deals-power** — Coordinated Clobbering (needs
+    explicit tapper target slots + a shared recipient slot).
+  - **Choose/reveal-creature-power additional cost** — Monstrous Emergence
+    (`AdditionalCastCost::ChooseOrRevealCreature` + a `Value` reading the
+    chosen creature's power).
+  - **Dual-pile exile-return-to-hand linked to LTB** — Fear of Abduction (the
+    additional-cost-exiled own creature and the ETB-exiled opponent creature
+    both return to their owners' hands when it leaves).
 - ⏳ **Deferred cards from the recent156-161 waves (each blocked on one
   primitive):**
   - **Two-target "your creature deals damage = power to their creature"** —
