@@ -1660,6 +1660,11 @@ pub enum SelectionRequirement {
     /// Onyx's −3 ("each opponent sacrifices a creature with the
     /// greatest power among creatures that player controls").
     HasGreatestPowerAmongControlled(Box<SelectionRequirement>),
+    /// "A creature with the greatest power among all creatures on the
+    /// battlefield" — the candidate must be a creature whose power ≥ every
+    /// other creature's (any controller). Ties pass. Gates Getaway Glamer's
+    /// "destroy target creature if no other creature has greater power."
+    HasGreatestPowerAmongAllCreatures,
     /// True when the candidate's `definition.name` exactly matches.
     /// Used by Grandeur-style activations that require discarding
     /// another card with the source's printed name (Page, Loose Leaf).

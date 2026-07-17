@@ -10,7 +10,7 @@ use crate::effect::shortcut::{animate_land, deal, target_filtered};
 use crate::game::types::TurnStep;
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
-    Selector, Value, ZoneDest,
+    Selector, SpreeMode, Value, ZoneDest,
 };
 use crate::mana::{b, cost, g, generic, r, w, x};
 
@@ -154,6 +154,39 @@ pub fn norin_swift_survivalist() -> CardDefinition {
                 ])),
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Getaway Glamer — {W} Instant. Spree — +{1} blink target nontoken creature
+/// (returns at the next end step); +{2} destroy target creature if no other
+/// creature has greater power.
+pub fn getaway_glamer() -> CardDefinition {
+    CardDefinition {
+        name: "Getaway Glamer",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Spree {
+            modes: vec![
+                SpreeMode {
+                    cost: cost(&[generic(1)]),
+                    effect: Effect::ExileReturnNextEndStep {
+                        what: target_filtered(R::Creature.and(R::NotToken)),
+                    },
+                },
+                SpreeMode {
+                    cost: cost(&[generic(2)]),
+                    effect: Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::Target(0),
+                            filter: R::HasGreatestPowerAmongAllCreatures,
+                        },
+                        then: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                },
+            ],
+        },
         ..Default::default()
     }
 }

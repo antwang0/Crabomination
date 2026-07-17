@@ -9566,3 +9566,69 @@ fn cr_702_16e_protection_from_creature_type_prevents_damage() {
         "the Roadrunner still damages the Coyote normally",
     );
 }
+
+// ── CR 122.5 — moving counters relocates every kind, keyword counters too ──
+#[test]
+fn cr_122_5_move_all_counters_relocates_keyword_counters() {
+    use crabomination::card::Keyword;
+    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx_a = EffectContext::for_ability(a, 0, None);
+    g.resolve_effect(
+        &Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Flying, amount: Value::ONE },
+        &ctx_a,
+    )
+    .unwrap();
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Flying));
+    let ctx_move = EffectContext { targets: vec![Target::Permanent(b)], ..EffectContext::for_ability(a, 0, None) };
+    g.resolve_effect(&Effect::MoveAllCounters { from: Selector::This, to: Selector::Target(0) }, &ctx_move).unwrap();
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Flying), "keyword counter relocated");
+    assert!(!g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Flying), "source lost it");
+}
+
+// ── CR 702.166 — manifest dread N times, then counters on those creatures ──
+#[test]
+fn cr_702_166_manifest_dread_repeat_puts_counters() {
+    use crabomination::card::CounterType;
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let ctx = EffectContext::for_spell(0, None, 0, 2); // X = 2
+    g.resolve_effect(&catalog::valgavoths_onslaught().effect, &ctx).unwrap();
+    let facedown: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && c.face_down).collect();
+    assert_eq!(facedown.len(), 2);
+    assert!(facedown.iter().all(|c| c.counter_count(CounterType::PlusOnePlusOne) == 2));
+}
+
+// ── CR 608.2b — a resolution-time "if greatest power" gate on a destroy ──
+#[test]
+fn cr_608_2b_conditional_destroy_gated_by_greatest_power() {
+    use crabomination::effect::{Effect, SpreeMode};
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let destroy = match &catalog::getaway_glamer().effect {
+        Effect::Spree { modes } => match &modes[1] {
+            SpreeMode { effect, .. } => effect.clone(),
+        },
+        _ => panic!("not spree"),
+    };
+    // Targeting the smaller creature: another creature has greater power, no destroy.
+    let ctx_small = EffectContext { targets: vec![Target::Permanent(small)], ..EffectContext::for_spell(0, None, 0, 0) };
+    g.resolve_effect(&destroy, &ctx_small).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(small).is_some(), "no creature has less power to gate on — spared");
+    // Targeting the biggest creature: destroyed.
+    let ctx_big = EffectContext { targets: vec![Target::Permanent(big)], ..EffectContext::for_spell(0, None, 0, 0) };
+    g.resolve_effect(&destroy, &ctx_big).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "greatest-power creature destroyed");
+}

@@ -2380,6 +2380,18 @@ impl GameState {
                                 && other.power() > cand_pow
                         })
                     }
+                    R::HasGreatestPowerAmongAllCreatures => {
+                        let Some(cand) = self.battlefield_find(*cid) else { return false };
+                        if !cand.definition.is_creature() {
+                            return false;
+                        }
+                        let cand_pow = cand.power();
+                        !self.battlefield.iter().any(|other| {
+                            other.id != *cid
+                                && other.definition.is_creature()
+                                && other.power() > cand_pow
+                        })
+                    }
                     R::HasName(name) => card.definition.name == name.as_str(),
                     R::ManaValueAtMostControlledCount(inner) => {
                         let count = self
@@ -2624,6 +2636,7 @@ impl GameState {
             // surface this filter).
             R::HasGreatestManaValueAmongControlled(_) => false,
             R::HasGreatestPowerAmongControlled(_) => false,
+            R::HasGreatestPowerAmongAllCreatures => false,
             // Name match works in any zone — used by Grandeur
             // activations that walk a hand for a same-named card.
             R::HasName(name) => card.definition.name == name.as_str(),

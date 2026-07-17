@@ -6621,6 +6621,7 @@ static DECKS: &[Factory] = &[
     super::decks::come_back_wrong,
     super::decks::rootwise_survivor,
     super::decks::reluctant_role_model,
+    super::decks::getaway_glamer,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
