@@ -138,6 +138,24 @@ fn reluctant_role_model_counters_and_relocation() {
         "the model's counter left it");
 }
 
+/// Stubborn Burrowfiend's saddle trigger mills two and pumps by graveyard
+/// creatures, and it fires only once per turn.
+#[test]
+fn stubborn_burrowfiend_saddle_mill_and_pump() {
+    use crabomination::effect::EventKind;
+    let mut g = two_player_game();
+    let fiend = g.add_card_to_battlefield(0, catalog::stubborn_burrowfiend()); // 2/2
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // 2 creatures → X=2
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); } // mill lands, X unchanged
+    let def = catalog::stubborn_burrowfiend();
+    assert_eq!(def.triggered_abilities[0].event.kind, EventKind::CrewsOrSaddles);
+    assert!(def.triggered_abilities[0].event.once_per_turn, "first-time-each-turn gate");
+    g.resolve_effect(&def.triggered_abilities[0].effect, &EffectContext::for_trigger(fiend, 0, None, 0)).unwrap();
+    let c = g.computed_permanent(fiend).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "2/2 + X/X (X = 2 graveyard creatures)");
+}
+
 /// Unscrupulous Contractor's ETB sacrifice draws two and drains the target.
 #[test]
 fn unscrupulous_contractor_sacrifice_draws_and_drains() {

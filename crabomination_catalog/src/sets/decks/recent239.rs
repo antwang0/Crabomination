@@ -210,6 +210,39 @@ pub fn outlaw_stitcher() -> CardDefinition {
     }
 }
 
+/// Stubborn Burrowfiend — {1}{G} Badger Beast Mount 2/2. Saddle 2. The first
+/// time it becomes saddled each turn, mill two, then it gets +X/+X until end of
+/// turn, where X is the number of creature cards in your graveyard.
+pub fn stubborn_burrowfiend() -> CardDefinition {
+    let gy_creatures =
+        || Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature };
+    CardDefinition {
+        name: "Stubborn Burrowfiend",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Badger, CreatureType::Beast, CreatureType::Mount],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Saddle(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource).once_per_turn(),
+            effect: Effect::Seq(vec![
+                Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: gy_creatures(),
+                    toughness: gy_creatures(),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Unscrupulous Contractor — {2}{B} Human Assassin 3/2. When it enters, you may
 /// sacrifice a creature; if you do, target player draws two cards and loses 2
 /// life. Plot {2}{B}.
