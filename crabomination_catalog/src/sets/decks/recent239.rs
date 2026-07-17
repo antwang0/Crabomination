@@ -13,7 +13,7 @@ use crate::effect::{
     DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
     Selector, SpreeMode, Value, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, w, x, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
 
 /// DSK **Survival** — "At the beginning of your second main phase, if this
 /// creature is tapped, …". Models to a PostCombatMain trigger gated on the
@@ -154,6 +154,57 @@ pub fn norin_swift_survivalist() -> CardDefinition {
                     },
                 ])),
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Outlaw Stitcher — {3}{U} Human Warlock 1/4. When it enters, create a 2/2
+/// blue-black Zombie Rogue, then put two +1/+1 counters on it for each spell
+/// you've cast this turn other than the first. Plot {4}{U}.
+pub fn outlaw_stitcher() -> CardDefinition {
+    CardDefinition {
+        name: "Outlaw Stitcher",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        plot_cost: Some(cost(&[generic(4), u()])),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Zombie Rogue".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Blue, Color::Black],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Zombie, CreatureType::Rogue],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Times(
+                        Box::new(Value::Const(2)),
+                        Box::new(Value::NonNeg(Box::new(Value::Diff(
+                            Box::new(Value::SpellsCastThisTurn(PlayerRef::You)),
+                            Box::new(Value::ONE),
+                        )))),
+                    ),
+                },
+            ]),
         }],
         ..Default::default()
     }

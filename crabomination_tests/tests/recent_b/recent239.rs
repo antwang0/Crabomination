@@ -138,6 +138,21 @@ fn reluctant_role_model_counters_and_relocation() {
         "the model's counter left it");
 }
 
+/// Outlaw Stitcher makes a 2/2 Zombie Rogue that grows by two per extra spell
+/// cast this turn, and it's plottable.
+#[test]
+fn outlaw_stitcher_token_scales_with_spells() {
+    let mut g = two_player_game();
+    g.players[0].spells_cast_this_turn = 3; // Stitcher + 2 others → 2 extra
+    assert!(catalog::outlaw_stitcher().plot_cost.is_some());
+    let src = g.add_card_to_battlefield(0, catalog::outlaw_stitcher());
+    let etb = catalog::outlaw_stitcher().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&etb, &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
+    let token = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Zombie Rogue").expect("token made");
+    // base 2/2 + 2 counters * (3 - 1) = four counters.
+    assert_eq!(token.counter_count(CounterType::PlusOnePlusOne), 4);
+}
+
 /// Tumbleweed Rising makes an Elemental whose power tracks your biggest
 /// creature, and it's plottable.
 #[test]
