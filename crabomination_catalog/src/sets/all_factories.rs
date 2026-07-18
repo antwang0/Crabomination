@@ -6774,6 +6774,8 @@ static DECKS: &[Factory] = &[
     // recent256 — Golgari graveyard engine + Azorius top-of-library
     super::decks::insidious_roots,
     super::decks::assemble_the_players,
+    // recent257 — Azorius Detective
+    super::decks::alquist_proft_master_sleuth,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
