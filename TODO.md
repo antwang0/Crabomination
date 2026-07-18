@@ -311,15 +311,15 @@ factory doc comment:
   IsSuspected` now ships, so only the per-controller solve counter remains),
   Burning Masks (solve = "3+ sources you controlled dealt damage this turn" —
   needs a distinct-damage-source-count tracker).
-- **"Sacrificed an artifact this turn" cost/blocking conditionals:** Suspicious
-  Detonation ({3} less if you've sacrificed an artifact this turn), Furtive
-  Courier (currently ships with the "can't be blocked while you've sacrificed an
-  artifact this turn" rider dropped), and Magnetic Snuffler ("whenever you
-  sacrifice an artifact") need a per-turn artifact-sacrifice tracker
-  (`Player.artifacts_sacrificed_this_turn` + reset + a
-  `Predicate::SacrificedArtifactThisTurn`); the "whenever you sacrifice an
-  artifact" half is already expressible as a `PermanentSacrificed`/`YourControl`
-  trigger filtered to `R::Artifact`.
+- **"Sacrificed an artifact this turn" — SHIPPED** (`recent248`):
+  `Player.artifacts_sacrificed_this_turn` + `Predicate::SacrificedArtifactThisTurn`
+  + `SelectionRequirement::ControllerSacrificedArtifactThisTurn` +
+  `self_cost_reduction_if_sacrificed_artifact` power Suspicious Detonation and
+  Furtive Courier's unblockable rider. Magnetic Snuffler still needs a
+  "return an Equipment card from your graveyard to the battlefield attached to
+  this creature" ETB effect (no reanimate-attached primitive yet); its
+  "whenever you sacrifice an artifact → +1/+1" half is a
+  `PermanentSacrificed`/`YourControl` trigger filtered to `R::Artifact`.
 - **Cross-permanent death-stat triggers:** "whenever a creature dies, if its
   [power/toughness] was X" on a *different* permanent (Massacre Girl) reads the
   dying creature's death-time stat correctly through the trigger **filter** (the

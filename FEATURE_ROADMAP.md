@@ -16,7 +16,7 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **MKM recent245–247 (20 cards):** the **Clue Equipment** cycle (Wrench, Rope,
+- **MKM recent245–248 (23 cards):** the **Clue Equipment** cycle (Wrench, Rope,
   Knife, Candlestick) + Thinking Cap on new `EquipBonus.activated_abilities`
   (equipment grants an activated ability to the equipped creature, CR 702.6e —
   surfaced in the view as "Equipped:" labels) and `EquipBonus.during_your_turn_pt`
@@ -28,8 +28,13 @@ exercising each) was elided in a compaction pass; recover it from
   Courier, Chalk Outline, Soul Enervation, Convenient Target, Curious Inquiry,
   Due Diligence, Magnifying Glass, Escape Tunnel, Scene of the Crime, Massacre
   Girl (team wither + toughness-gated death draw via a death-snapshot filter).
-  CR conformance: 702.90 (wither combat), 509.1g (lone block), 701.59 (collect).
-  Tests in `tests/recent_b/recent245`–`247` + `core_rules/cr_mkm_extra`.
+  recent248 adds a per-turn **artifact-sacrifice tracker**
+  (`Player.artifacts_sacrificed_this_turn` + `Predicate::SacrificedArtifactThisTurn`
+  + `SelectionRequirement::ControllerSacrificedArtifactThisTurn` +
+  `self_cost_reduction_if_sacrificed_artifact`) — Suspicious Detonation, Furtive
+  Courier's unblockable rider, Deadly Complication. CR conformance: 702.90
+  (wither combat), 509.1g (lone block), 701.59 (collect). Tests in
+  `tests/recent_b/recent245`–`248` + `core_rules/cr_mkm_extra`.
 
 - **recent240–241 (DSK + MKM gap batch, 31 cards):** CR 603.4 turn-scoped
   delayed triggers — `Effect::CreaturesYouControlDyingThisTurn` (Waltz of Rage)
