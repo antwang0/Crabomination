@@ -260,11 +260,11 @@ pub fn extra_cost_for_spell(
                     tax += pay;
                 }
             }
-            crate::card::AdditionalCastCost::ForageOrPay { pay } => {
-                // No forage material → the pay half joins the cost.
-                if !state.can_forage(caster) {
-                    tax += pay;
-                }
+            // No forage material → the pay half joins the cost.
+            crate::card::AdditionalCastCost::ForageOrPay { pay }
+                if !state.can_forage(caster) =>
+            {
+                tax += pay;
             }
             _ => {}
         }
