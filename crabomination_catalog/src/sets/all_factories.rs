@@ -6755,6 +6755,7 @@ static DECKS: &[Factory] = &[
     super::decks::trostani_three_whispers,
     super::decks::ezrim_agency_chief,
     super::decks::agrus_kos_spirit_of_justice,
+    super::decks::aurelia_the_law_above,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

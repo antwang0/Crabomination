@@ -76,3 +76,28 @@ fn agrus_kos_suspects_then_exiles() {
     assert!(g.battlefield_find(foe).is_none(), "suspected creature exiled");
     assert!(g.exile.iter().any(|c| c.id == foe), "moved to exile");
 }
+
+/// Aurelia draws on a 3-creature attack and drains on a 5-creature attack.
+#[test]
+fn aurelia_law_above_attack_triggers() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let aurelia = g.add_card_to_battlefield(0, catalog::aurelia_the_law_above());
+    let mut atk = vec![aurelia];
+    for _ in 0..4 {
+        atk.push(g.add_card_to_battlefield(0, catalog::grizzly_bears()));
+    }
+    for &id in &atk { g.clear_sickness(id); }
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let hand_before = g.players[0].hand.len();
+    let foe_life = g.players[1].life;
+    let my_life = g.players[0].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(atk.iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(1) }).collect())
+        .expect("declare five attackers");
+    drain_stack(&mut g);
+    // 5 attackers ≥ 3 (draw) and ≥ 5 (drain) both fire.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew from the 3+ attack trigger");
+    assert_eq!(g.players[1].life, foe_life - 3, "opponent took 3 from the 5+ trigger");
+    assert_eq!(g.players[0].life, my_life + 3, "gained 3 from the 5+ trigger");
+}

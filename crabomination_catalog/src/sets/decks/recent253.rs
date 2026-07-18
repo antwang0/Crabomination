@@ -4,9 +4,10 @@
 use crate::card::{CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, Subtypes, Supertype};
 use crate::effect::shortcut::{etb, investigate, target_filtered};
 use crate::effect::{
-    ActivatedAbility, Duration, Effect, EventKind, EventScope, EventSpec, Predicate, Selector, TriggeredAbility,
+    ActivatedAbility, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
+    Selector, TriggeredAbility, Value,
 };
-use crate::mana::{cost, g, generic, hybrid, u, w, Color};
+use crate::mana::{cost, g, generic, hybrid, r, u, w, Color};
 
 fn gw() -> crate::mana::ManaSymbol {
     hybrid(Color::Green, Color::White)
@@ -80,7 +81,6 @@ pub fn ezrim_agency_chief() -> CardDefinition {
 /// attacks, choose up to one target creature. If it's suspected, exile it.
 /// Otherwise, suspect it.
 pub fn agrus_kos_spirit_of_justice() -> CardDefinition {
-    use crate::mana::r;
     let interrogate = Effect::ApplyToTargets {
         max_targets: 1,
         min_targets: 0,
@@ -108,6 +108,44 @@ pub fn agrus_kos_spirit_of_justice() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
                 effect: interrogate,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Aurelia, the Law Above — {3}{R}{W} Legendary Creature — Angel 4/4, flying,
+/// vigilance, haste. Whenever a player attacks with three or more creatures,
+/// you draw a card. Whenever a player attacks with five or more creatures,
+/// Aurelia deals 3 damage to each of your opponents and you gain 3 life.
+pub fn aurelia_the_law_above() -> CardDefinition {
+    CardDefinition {
+        name: "Aurelia, the Law Above",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::AnyPlayer).with_filter(
+                    Predicate::AttackedWithCountAtLeast { who: PlayerRef::ActivePlayer, at_least: 3 },
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::AnyPlayer).with_filter(
+                    Predicate::AttackedWithCountAtLeast { who: PlayerRef::ActivePlayer, at_least: 5 },
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(3),
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                ]),
             },
         ],
         ..Default::default()
