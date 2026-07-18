@@ -548,3 +548,30 @@ fn creeping_peeper_enchantment_only_mana() {
     assert!(SpendRestriction::EnchantmentSpell.allows(&catalog::pacifism().spell_kind()));
     assert!(!SpendRestriction::EnchantmentSpell.allows(&catalog::grizzly_bears().spell_kind()));
 }
+
+/// Fear of Burning Alive burns each opponent for 4 on ETB, and with delirium its
+/// noncombat-damage trigger copies the damage onto an opponent's creature.
+#[test]
+fn fear_of_burning_alive_etb_and_delirium_copy() {
+    use crabomination::effect::{EventKind, EventScope};
+    let mut g = two_player_game();
+    let etb = catalog::fear_of_burning_alive().triggered_abilities[0].effect.clone();
+    let before = g.players[1].life;
+    g.resolve_effect(&etb, &EffectContext::for_trigger(crabomination::card::CardId(0), 0, None, 0)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 4, "each opponent burned for 4");
+
+    // Delirium trigger is a noncombat-damage listener; it copies the amount.
+    let def = catalog::fear_of_burning_alive();
+    assert_eq!(def.triggered_abilities[1].event.kind, EventKind::PlayerDealtNoncombatDamage);
+    assert!(matches!(def.triggered_abilities[1].event.scope, EventScope::OpponentControl));
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::fear_of_burning_alive());
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let copy = def.triggered_abilities[1].effect.clone();
+    let mut ctx = EffectContext { targets: vec![Target::Permanent(victim)], ..EffectContext::for_trigger(src, 0, None, 0) };
+    ctx.event_amount = 5; // an earlier source dealt 5 noncombat
+    g.resolve_effect(&copy, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "5 copied damage killed the 3/3");
+}

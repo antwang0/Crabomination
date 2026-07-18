@@ -423,6 +423,38 @@ pub fn analyze_the_pollen() -> CardDefinition {
     }
 }
 
+/// Fear of Burning Alive — {4}{R}{R} Enchantment Creature — Nightmare 4/4. ETB:
+/// deals 4 to each opponent. Delirium — whenever a source you control deals
+/// noncombat damage to an opponent, if delirium, deal that much to a creature
+/// that player controls. (The "source you control" clause collapses to "an
+/// opponent is dealt noncombat damage", matching the catalog's other
+/// noncombat-damage triggers.)
+pub fn fear_of_burning_alive() -> CardDefinition {
+    CardDefinition {
+        name: "Fear of Burning Alive",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(4) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PlayerDealtNoncombatDamage, EventScope::OpponentControl)
+                    .with_filter(Predicate::DeliriumActive { who: PlayerRef::You }),
+                effect: Effect::DealDamage {
+                    to: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) },
+                    amount: Value::TriggerEventAmount,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Creeping Peeper — {1}{U} Eye 2/1. {T}: Add {U}. Spend only to cast an
 /// enchantment spell, unlock a door, or turn a permanent face up. (Only the
 /// enchantment-spell half of the restriction is enforced.)

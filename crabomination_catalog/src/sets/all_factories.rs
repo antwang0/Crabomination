@@ -6637,6 +6637,7 @@ static DECKS: &[Factory] = &[
     super::decks::monstrous_emergence,
     super::decks::leyline_of_hope,
     super::decks::creeping_peeper,
+    super::decks::fear_of_burning_alive,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
