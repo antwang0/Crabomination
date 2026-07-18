@@ -6776,6 +6776,9 @@ static DECKS: &[Factory] = &[
     super::decks::assemble_the_players,
     // recent257 — Azorius Detective
     super::decks::alquist_proft_master_sleuth,
+    // recent258 — MKM split cards
+    super::decks::fuss_bother,
+    super::decks::cease_desist,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
