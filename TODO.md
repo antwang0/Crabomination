@@ -335,7 +335,7 @@ factory doc comment:
   Whisperer still blocked only on the "target land becomes a 5/5 *for as long as
   this creature remains tapped*" conditional land-animation duration (a
   source-tapped-gated continuous grant — no primitive yet).
-- **MKM remaining gaps (~90 cards):** legends (Anzrag, Delney, Etrata, Teysa,
+- **MKM remaining gaps (~85 cards):** legends (Anzrag, Delney, Etrata, Teysa,
   Judith, Rakdos, Kaya PW, …), the split cards (Cease // Desist, Flotsam //
   Jetsam, …), Disguise/Cloak value (Coveted Falcon, Fugitive Codebreaker),
   modal spells (Deadly Complication, Expose the Culprit), and the remaining

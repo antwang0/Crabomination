@@ -6739,6 +6739,13 @@ static DECKS: &[Factory] = &[
     // recent251 — token hate + Merfolk untapper
     super::decks::kraul_whipcracker,
     super::decks::forensic_researcher,
+    // recent252 — Selesnya value, Rakdos payoff, disguise bodies, Goblin engine
+    super::decks::treacherous_greed,
+    super::decks::flourishing_bloom_kin,
+    super::decks::concealed_weapon,
+    super::decks::lumbering_laundry,
+    super::decks::audience_with_trostani,
+    super::decks::krenko_baron_of_tin_street,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -626,6 +626,10 @@ pub enum Value {
     /// Scroll's "draw X cards, where X is the number of differently named
     /// lands you control").
     DifferentlyNamedLandsControlled,
+    /// Number of differently-named creature *tokens* the controller controls
+    /// (Audience with Trostani's "draw cards equal to the number of differently
+    /// named creature tokens you control").
+    DifferentlyNamedCreatureTokensControlled,
     /// Number of cards `who` has drawn on the current turn. Powers
     /// Strixhaven's Quandrix scaling — Fractal Anomaly's "X +1/+1
     /// counters where X is the number of cards you've drawn this turn"

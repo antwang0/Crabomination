@@ -1,0 +1,219 @@
+//! MKM (Murders at Karlov Manor) gap batch — Selesnya value, Rakdos payoff,
+//! disguise bodies, and a Goblin engine. Tests in `tests/recent_b/recent252.rs`.
+
+use crate::card::{
+    ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EquipBonus,
+    Keyword, LandType, SelectionRequirement as R, Subtypes, TokenDefinition,
+};
+use crate::effect::shortcut::target_filtered;
+use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility, Value, ZoneDest};
+use crate::mana::{b, cost, g, generic, r, w};
+
+/// Treacherous Greed — {1}{W}{B} Instant. Additional cost: sacrifice a creature
+/// that dealt damage this turn. Draw three cards. Each opponent loses 3 life
+/// and you gain 3 life.
+pub fn treacherous_greed() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Treacherous Greed",
+        cost: cost(&[generic(1), w(), b()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature.and(R::DealtDamageThisTurn),
+            count: 1,
+        }],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flourishing Bloom-Kin — {1}{G} Creature — Plant Elemental 0/0. Gets +1/+1 for
+/// each Forest you control. Disguise {4}{G}. When turned face up, search your
+/// library for a Forest onto the battlefield tapped and another into your hand.
+pub fn flourishing_bloom_kin() -> CardDefinition {
+    CardDefinition {
+        name: "Flourishing Bloom-Kin",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        dynamic_pt: Some(DynamicPt::BasePlusLandsOfTypeControlled {
+            land_type: LandType::Forest,
+            base_p: 0,
+            base_t: 0,
+        }),
+        keywords: vec![Keyword::Disguise(cost(&[generic(4), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Land.and(R::HasLandType(LandType::Forest)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Land.and(R::HasLandType(LandType::Forest)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Concealed Weapon — {1}{R} Artifact — Equipment. Equipped creature gets +3/+0.
+/// Disguise {2}{R}. When turned face up, attach it to target creature you
+/// control. Equip {1}{R}.
+pub fn concealed_weapon() -> CardDefinition {
+    CardDefinition {
+        name: "Concealed Weapon",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![
+            Keyword::Equip(cost(&[generic(1), r()])),
+            Keyword::Disguise(cost(&[generic(2), r()])),
+        ],
+        equipped_bonus: Some(EquipBonus { power: 3, toughness: 0, ..Default::default() }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::Attach {
+                what: Selector::This,
+                to: target_filtered(R::Creature.and(R::ControlledByYou)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lumbering Laundry — {5} Artifact Creature — Golem 4/5. Disguise {5}. (Its
+/// "{2}: look at face-down creatures you don't control" is an info-only ability
+/// with no rules-visible effect in this engine and is omitted.)
+pub fn lumbering_laundry() -> CardDefinition {
+    CardDefinition {
+        name: "Lumbering Laundry",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Disguise(cost(&[generic(5)]))],
+        ..Default::default()
+    }
+}
+
+/// Audience with Trostani — {2}{G} Sorcery. Create a 0/1 green Plant creature
+/// token, then draw cards equal to the number of differently named creature
+/// tokens you control.
+pub fn audience_with_trostani() -> CardDefinition {
+    CardDefinition {
+        name: "Audience with Trostani",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: plant_0_1_token(),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::DifferentlyNamedCreatureTokensControlled,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Krenko, Baron of Tin Street — {2}{R} Legendary Creature — Goblin 3/3, haste.
+/// {T}, Sacrifice an artifact: Put a +1/+1 counter on each Goblin you control.
+/// Whenever an artifact is put into a graveyard from the battlefield, you may
+/// pay {R}. If you do, create a 1/1 red Goblin creature token with haste.
+pub fn krenko_baron_of_tin_street() -> CardDefinition {
+    use crate::effect::ActivatedAbility;
+    CardDefinition {
+        name: "Krenko, Baron of Tin Street",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Artifact.and(R::ControlledByYou), 1)),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Goblin).and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::AnyPlayer).with_filter(
+                crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact,
+                },
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {R} to create a hasty Goblin?".into(),
+                mana_cost: cost(&[r()]),
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: hasty_goblin_token(),
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+fn plant_0_1_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Plant".into(),
+        colors: vec![crate::mana::Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+fn hasty_goblin_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Goblin".into(),
+        colors: vec![crate::mana::Color::Red],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    }
+}
