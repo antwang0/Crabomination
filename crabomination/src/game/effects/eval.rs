@@ -318,6 +318,20 @@ impl GameState {
                 names.dedup();
                 names.len() as i32
             }
+            Value::OozesInExileAndGraveyard => {
+                let p = ctx.controller;
+                let is_ooze = |c: &crate::card::CardInstance| {
+                    c.owner == p
+                        && (c.definition.name == "Slime Against Humanity"
+                            || c.definition
+                                .subtypes
+                                .creature_types
+                                .contains(&crate::card::CreatureType::Ooze))
+                };
+                let gy = self.players[p].graveyard.iter().filter(|c| is_ooze(c)).count();
+                let ex = self.exile.iter().filter(|c| is_ooze(c)).count();
+                (gy + ex) as i32
+            }
             Value::TotalToughnessControlled => {
                 let ids: Vec<_> = self
                     .battlefield

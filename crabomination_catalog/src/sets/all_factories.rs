@@ -6751,6 +6751,7 @@ static DECKS: &[Factory] = &[
     super::decks::undergrowth_recon,
     super::decks::dramatic_accusation,
     super::decks::lamplight_phoenix,
+    super::decks::slime_against_humanity,
     // recent253 — Ravnica guild legends
     super::decks::trostani_three_whispers,
     super::decks::ezrim_agency_chief,

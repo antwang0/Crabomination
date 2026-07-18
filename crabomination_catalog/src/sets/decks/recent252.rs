@@ -425,3 +425,34 @@ pub fn lamplight_phoenix() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Slime Against Humanity — {2}{G} Sorcery. Create a 0/0 green Ooze creature
+/// token with trample, then put X +1/+1 counters on it, where X is two plus the
+/// number of cards you own in exile and in your graveyard that are Oozes or are
+/// named Slime Against Humanity.
+pub fn slime_against_humanity() -> CardDefinition {
+    let ooze = TokenDefinition {
+        name: "Ooze".into(),
+        colors: vec![crate::mana::Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Slime Against Humanity",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: ooze },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Sum(vec![Value::Const(2), Value::OozesInExileAndGraveyard]),
+            },
+        ]),
+        ..Default::default()
+    }
+}

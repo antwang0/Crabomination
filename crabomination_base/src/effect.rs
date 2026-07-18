@@ -630,6 +630,10 @@ pub enum Value {
     /// (Audience with Trostani's "draw cards equal to the number of differently
     /// named creature tokens you control").
     DifferentlyNamedCreatureTokensControlled,
+    /// Cards the controller owns in exile and in their graveyard that are Oozes
+    /// or are named "Slime Against Humanity" (Slime Against Humanity's counter
+    /// count).
+    OozesInExileAndGraveyard,
     /// Number of cards `who` has drawn on the current turn. Powers
     /// Strixhaven's Quandrix scaling — Fractal Anomaly's "X +1/+1
     /// counters where X is the number of cards you've drawn this turn"

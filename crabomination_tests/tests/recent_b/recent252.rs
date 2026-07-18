@@ -335,3 +335,28 @@ fn lamplight_phoenix_returns_via_collect_evidence() {
     // The two other graveyard cards were exiled to collect evidence (not the phoenix).
     assert_eq!(g.exile.len(), 2, "collected evidence 4 by exiling the cheap cards");
 }
+
+/// Slime Against Humanity makes an Ooze with 2 + (Oozes in exile/graveyard)
+/// counters.
+#[test]
+fn slime_against_humanity_scales_with_oozes() {
+    use crabomination::card::{CardType, CreatureType, Subtypes};
+    let mut g = two_player_game();
+    // One Ooze card in the graveyard → X = 2 + 1 = 3.
+    let ooze_card = crabomination::card::CardDefinition {
+        name: "Some Ooze",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    };
+    g.add_card_to_graveyard(0, ooze_card);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::slime_against_humanity().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    let ooze = g.battlefield.iter().find(|c| c.definition.name == "Ooze" && c.controller == 0)
+        .expect("Ooze token created");
+    let c = g.computed_permanent(ooze.id).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "0/0 + three +1/+1 counters");
+}
