@@ -16,6 +16,21 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **MKM recent245–247 (20 cards):** the **Clue Equipment** cycle (Wrench, Rope,
+  Knife, Candlestick) + Thinking Cap on new `EquipBonus.activated_abilities`
+  (equipment grants an activated ability to the equipped creature, CR 702.6e —
+  surfaced in the view as "Equipped:" labels) and `EquipBonus.during_your_turn_pt`
+  (Knife's turn-gated +1/+0). New `EventKind::EvidenceCollected` (emitted from all
+  three collect paths — cast cost, `Effect::CollectEvidence`, Ward) drives
+  "whenever you collect evidence" (Surveillance Monitor, Evidence Examiner). New
+  `SelectionRequirement::IsSuspected` (CR 701.60 — Rune-Brand Juggler's sac-a-
+  suspected). Cards also incl. Unscrupulous Agent, Undercity Eliminator, Furtive
+  Courier, Chalk Outline, Soul Enervation, Convenient Target, Curious Inquiry,
+  Due Diligence, Magnifying Glass, Escape Tunnel, Scene of the Crime, Massacre
+  Girl (team wither + toughness-gated death draw via a death-snapshot filter).
+  CR conformance: 702.90 (wither combat), 509.1g (lone block), 701.59 (collect).
+  Tests in `tests/recent_b/recent245`–`247` + `core_rules/cr_mkm_extra`.
+
 - **recent240–241 (DSK + MKM gap batch, 31 cards):** CR 603.4 turn-scoped
   delayed triggers — `Effect::CreaturesYouControlDyingThisTurn` (Waltz of Rage)
   and `CreaturesYouControlDealingCombatDamageThisTurn` (Mistway Spy), plus
