@@ -6733,6 +6733,9 @@ static DECKS: &[Factory] = &[
     super::decks::clandestine_meddler,
     super::decks::forensic_gadgeteer,
     super::decks::pompous_gadabout,
+    // recent250 — control + protection Auras
+    super::decks::coerced_to_kill,
+    super::decks::airtight_alibi,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
