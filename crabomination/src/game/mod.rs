@@ -4725,6 +4725,10 @@ impl GameState {
                 push_mod(&mut all_effects, Layer::L4Type, None,
                     Modification::SetLandTypes(types.clone()));
             }
+            if let Some(types) = &bonus.set_artifact_types {
+                push_mod(&mut all_effects, Layer::L4Type, None,
+                    Modification::SetArtifactSubtypes(types.clone()));
+            }
             if let Some(colors) = &bonus.set_colors {
                 push_mod(&mut all_effects, Layer::L5Color, None,
                     Modification::SetColors(colors.clone()));

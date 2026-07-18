@@ -2155,6 +2155,22 @@ impl GameState {
                     Some(cp) => cp.subtypes.creature_types.contains(ct),
                     None => card.definition.subtypes.creature_types.contains(ct),
                 };
+                // CR 613.2 layer-4 — subtypes/supertypes a permanent gained (or
+                // lost) from a continuous effect (Vraska's Treasure, Song of the
+                // Dryads' Forest, Sugar Coat's Food, the Ring-bearer's Legendary)
+                // read from the *computed* type line on the battlefield.
+                let has_atype = |a: &crate::card::ArtifactSubtype| match &computed {
+                    Some(cp) => cp.subtypes.artifact_subtypes.contains(a),
+                    None => card.definition.subtypes.artifact_subtypes.contains(a),
+                };
+                let has_ltype = |lt: &crate::card::LandType| match &computed {
+                    Some(cp) => cp.subtypes.land_types.contains(lt),
+                    None => card.definition.subtypes.land_types.contains(lt),
+                };
+                let has_stype = |st: &Supertype| match &computed {
+                    Some(cp) => cp.supertypes.contains(st),
+                    None => card.definition.supertypes.contains(st),
+                };
                 use crate::card::CardType as CT;
                 match req {
                     // CR 604.3 — Grist is a creature everywhere but the
@@ -2240,12 +2256,12 @@ impl GameState {
                         card.counters.values().all(|&n| n == 0)
                             && card.keyword_counters.values().all(|&n| n == 0)
                     }
-                    R::HasSupertype(st) => card.definition.supertypes.contains(st),
+                    R::HasSupertype(st) => has_stype(st),
                     R::HasCreatureType(ct) => has_ctype(ct)
                         || card.has_keyword(&crate::card::Keyword::Changeling),
                     R::IsOutlaw => card_is_outlaw(card),
-                    R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
-                    R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
+                    R::HasLandType(lt) => has_ltype(lt),
+                    R::HasArtifactSubtype(a) => has_atype(a),
                     R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
                     R::HasPlaneswalkerType(pw) => card.definition.subtypes.planeswalker_subtypes.contains(pw),
                     R::IsToken => card.is_token,

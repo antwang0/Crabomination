@@ -2908,6 +2908,10 @@ pub struct EquipBonus {
     /// intrinsic basic-land mana ability follows the granted type.
     #[serde(default)]
     pub set_land_types: Option<Vec<LandType>>,
+    /// Artifact subtypes the host's type line becomes (the "is a Food artifact"
+    /// auras — Sugar Coat). Pairs with `set_card_types: Some([Artifact])`.
+    #[serde(default)]
+    pub set_artifact_types: Option<Vec<ArtifactSubtype>>,
     #[serde(default)]
     pub set_colors: Option<Vec<crate::mana::Color>>,
     /// When true the host loses all abilities (layer 6 — CR 613.1f).

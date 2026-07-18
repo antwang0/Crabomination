@@ -55489,12 +55489,15 @@ fn alpine_moon_neutralizes_named_land() {
     let computed = g.computed_permanent(post).unwrap();
     assert!(computed.lost_all_abilities, "printed abilities stripped");
     assert!(computed.subtypes.land_types.is_empty(), "land types stripped");
-    // The granted any-color ability is usable by the land's controller.
+    // The granted "{T}: any color" ability (index 1) is the real replacement;
+    // Cloudpost's own "{C} per Locus" ability (index 0) now counts zero Loci
+    // since its Locus type was stripped (CR 613.2, computed subtypes).
     g.priority.player_with_priority = 1;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: post, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
-    }).expect("granted mana ability");
-    assert_eq!(g.players[1].mana_pool.total(), 1, "made one mana of a chosen color");
+        card_id: post, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("granted any-color ability");
+    assert_eq!(g.players[1].mana_pool.amount(Color::Green), 1, "made one mana of the chosen color");
 }
 
 // ── AKH embalm pair, Bring to Light, Conspicuous Snoop ──────────────────────

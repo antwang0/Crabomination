@@ -6787,6 +6787,8 @@ static DECKS: &[Factory] = &[
     super::decks::buried_in_the_garden,
     // recent262 — Gruul X burn + land ramp
     super::decks::worldsouls_rage,
+    // BLB — Bloomburrow gap batch
+    super::decks::sugar_coat,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
