@@ -159,6 +159,48 @@ fn sanguine_savior_grants_lifelink() {
     assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Lifelink));
 }
 
+/// CR 701.60 — a suspected creature has menace and can't block.
+#[test]
+fn cr_701_60_suspected_creature_has_menace_and_cant_block() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(bear)],
+        ..EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.resolve_effect(&Effect::Suspect { what: Selector::Target(0) }, &ctx).unwrap();
+    let c = g.computed_permanent(bear).unwrap();
+    assert!(c.keywords.contains(&Keyword::Menace), "suspected -> menace");
+    assert!(c.keywords.contains(&Keyword::CantBlock), "suspected -> can't block");
+}
+
+/// CR 701.13 — an investigated Clue sacrifices for a card.
+#[test]
+fn cr_701_13_clue_sacrifices_to_draw() {
+    use crabomination::game::GameAction;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let lox = g.add_card_to_battlefield(0, catalog::loxodon_eavesdropper());
+    g.add_card_to_library(0, catalog::forest());
+    g.fire_self_etb_triggers(lox, 0);
+    drain_stack(&mut g);
+    let clue = g.battlefield.iter().find(|c| c.definition.name == "Clue").unwrap().id;
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: clue,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("sacrifice the Clue to draw");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(clue).is_none(), "Clue sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}
+
 /// Mistway Spy, once turned face up, investigates whenever a creature you
 /// control deals combat damage to a player this turn.
 #[test]
