@@ -6767,6 +6767,10 @@ static DECKS: &[Factory] = &[
     // recent254 — Izzet/Rakdos legends + variable collect-evidence dragon
     super::decks::melek_reforged_researcher,
     super::decks::incinerator_of_the_guilty,
+    // recent255 — MKM Cases (second batch)
+    super::decks::case_of_the_ransacked_lab,
+    super::decks::case_of_the_stashed_skeleton,
+    super::decks::case_of_the_pilfered_proof,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
