@@ -490,10 +490,10 @@ impl GameState {
             if !self.evaluate_predicate(&pred, &ctx) {
                 continue;
             }
-            if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                if card.solve_case() {
-                    solved_events.push(GameEvent::CaseSolved { case: id, controller: active });
-                }
+            if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == id)
+                && card.solve_case()
+            {
+                solved_events.push(GameEvent::CaseSolved { case: id, controller: active });
             }
         }
         if !solved_events.is_empty() {

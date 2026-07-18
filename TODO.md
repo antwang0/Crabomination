@@ -300,6 +300,22 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
+- **MKM Cases shipped (`decks::recent242`, 6 + Case File Auditor); remaining Cases
+  need new primitives:** Case of the Gorgon's Kiss (solved = self-animates to a
+  4/4 creature — needs a "this permanent becomes a creature" static, plus a
+  "3+ creature cards to graveyards this turn" solve counter), Pilfered Proof
+  (solved token-replacement adding a Clue), Locked Hothouse (extra-land static +
+  play-from-top-of-library static), Ransacked Lab (solve = "4+ instant/sorcery
+  spells cast this turn" — no I/S-specific per-turn count predicate yet), Stashed
+  Skeleton (solve = "no suspected Skeletons you control" — needs a `Suspected`
+  `SelectionRequirement`), Burning Masks (solve = "3+ sources you controlled dealt
+  damage this turn" — needs a distinct-damage-source-count tracker).
+- **"Sacrificed an artifact this turn" cost/blocking conditionals:** Suspicious
+  Detonation ({3} less if you've sacrificed an artifact this turn) and Furtive
+  Courier (can't be blocked while you've sacrificed an artifact this turn) need a
+  predicate-keyed cost reduction / conditional-unblockable static keyed on
+  `PermanentsSacrificedThisTurn` filtered to artifacts.
+
 - **FDN/DSK gap cards shipped (`decks::recent202`–`recent205`, 20):** Rite of the
   Dragoncaller, Koma World-Eater, Niv-Mizzet Visionary, Perforating Artist, Kiora
   the Rising Tide, Soulstone Sanctuary, Lunar Insight, Valkyrie's Call, Infernal
