@@ -545,6 +545,15 @@ impl GameState {
                     .battlefield_find(cid)
                     .map(|c| c.definition.is_planeswalker())
                     .unwrap_or(false);
+                // CR 310.10 — damage dealt to a battle removes that many
+                // defense counters (the noncombat analogue of the combat path
+                // in `combat.rs`; a battle isn't a creature, so without this it
+                // would mark useless `c.damage`). The defeat trigger fires from
+                // the SBA once the last counter is gone.
+                let is_battle = self
+                    .battlefield_find(cid)
+                    .map(|c| c.definition.is_battle())
+                    .unwrap_or(false);
                 if is_pw {
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         let current = c.counter_count(CounterType::Loyalty);
@@ -561,6 +570,19 @@ impl GameState {
                         events.push(GameEvent::LoyaltyChanged {
                             card_id: cid,
                             new_loyalty: new_loyalty as i32,
+                        });
+                    }
+                } else if is_battle {
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        let current = c.counter_count(CounterType::Defense);
+                        let new_defense = current.saturating_sub(amount);
+                        c.counters.insert(CounterType::Defense, new_defense);
+                        events.push(GameEvent::DamageDealt {
+                            amount,
+                            to_player: None,
+                            to_card: Some(cid),
+                            combat: false,
+                            from_controller,
                         });
                     }
                 } else {

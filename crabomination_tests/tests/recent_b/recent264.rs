@@ -161,6 +161,32 @@ fn onakke_javelineer_pings_a_player() {
     assert_eq!(g.players[1].life, before - 2);
 }
 
+/// CR 310.10 — Onakke Javelineer's noncombat ping removes defense counters
+/// from a battle (the noncombat analogue of combat damage to a battle).
+#[test]
+fn onakke_javelineer_damages_a_battle() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let battle = g.add_card_to_battlefield(0, catalog::invasion_of_zendikar());
+    {
+        let b = g.battlefield_find_mut(battle).unwrap();
+        b.counters.insert(CounterType::Defense, 3);
+        b.protected_by = Some(1);
+    }
+    let jav = g.add_card_to_battlefield(0, catalog::onakke_javelineer());
+    g.battlefield_find_mut(jav).unwrap().summoning_sick = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jav, ability_index: 0,
+        target: Some(Target::Permanent(battle)), additional_targets: vec![], x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(battle).unwrap().counter_count(CounterType::Defense),
+        1,
+        "2 damage removed two defense counters"
+    );
+}
+
 /// Dreg Recycler sacrifices to drain one.
 #[test]
 fn dreg_recycler_drains_one() {

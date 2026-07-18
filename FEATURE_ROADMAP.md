@@ -808,9 +808,11 @@ Each unblocks a large swath of cards.
 
 - ✅ **Battle card type** (CR 310) — `CardType::Battle` + `BattleSubtype::Siege`,
   defense counters (CR 310.7), protector choice (CR 310.6), attack-your-own-Siege
-  (`AttackTarget::Battle`), combat damage removes defense counters (CR 310.10),
-  defeat→exile/transform SBA (CR 704.5x). 6 MOM Invasions in `decks::mom`; tests
-  in `tests/mom.rs`. Remaining: multiplayer protector choice.
+  (`AttackTarget::Battle`), **both combat and noncombat** damage remove defense
+  counters (CR 310.10 — the noncombat path mirrors the planeswalker loyalty
+  strip in `deal_damage_to_from`; Onakke Javelineer's ping), defeat→exile/
+  transform SBA (CR 704.5x). 6 MOM Invasions in `decks::mom`; tests in
+  `tests/mom.rs`. Remaining: multiplayer protector choice.
 - ✅ **Sagas** (714). `saga_chapters` + `saga_advance` (History of Benalia, The
   Eldest Reborn); DFC sagas ✅ (`ExileSelfReturnTransformed` — Fable of the
   Mirror-Breaker); Read Ahead ✅ (702.155 starting-chapter choice).

@@ -3751,9 +3751,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   Elemental tokens at the next end step (faithful).
 - ✅ CR 310 — Battle / Siege. `CardType::Battle` + `BattleSubtype::Siege`, defense
   counters (310.7), protector choice (310.6), attack-your-own-Siege
-  (`AttackTarget::Battle`), combat damage strips defense counters (310.10),
-  defeat→exile/transform SBA (704.5x via `defeat_battle`). 6 MOM Invasions in
-  `decks::mom`; tests in `tests/mom.rs`. ⏳ multiplayer protector choice.
+  (`AttackTarget::Battle`), combat **and noncombat** damage strip defense
+  counters (310.10 — noncombat path added in `deal_damage_to_from`; Onakke
+  Javelineer, `onakke_javelineer_damages_a_battle`), defeat→exile/transform SBA
+  (704.5x via `defeat_battle`). 6 MOM Invasions in `decks::mom`. ⏳ multiplayer
+  protector choice.
 
 ### Partial (🟡) — remaining gap noted
 - 🟡 **CR 509.2 / 510.1c — Banding** — a banding blocker routes the blocked
