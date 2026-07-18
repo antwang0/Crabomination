@@ -525,3 +525,25 @@ pub fn cryptic_coat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Outrageous Robbery — {X}{B}{B} Instant. Target opponent exiles the top X
+/// cards of their library face down. You may look at and play those cards for
+/// as long as they remain exiled, spending mana as though it were any type to
+/// cast them. (Player target modeled as "target player".)
+pub fn outrageous_robbery() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    CardDefinition {
+        name: "Outrageous Robbery",
+        cost: cost(&[crate::mana::x(), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::Target(0),
+            count: Value::XFromCost,
+            duration: MayPlayDuration::WhileExiled,
+            pay_any_color: true,
+            pay_own_cost: false,
+            uncast_penalty: None,
+        },
+        ..Default::default()
+    }
+}

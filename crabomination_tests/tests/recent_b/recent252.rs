@@ -404,3 +404,20 @@ fn cryptic_coat_cloaks_and_attaches() {
     assert_eq!((c.power, c.toughness), (3, 2), "2/2 face-down + the coat's +1/+0");
     assert!(c.keywords.contains(&Keyword::Unblockable), "equipped creature can't be blocked");
 }
+
+/// Outrageous Robbery exiles the top X of the target's library, castable by you.
+#[test]
+fn outrageous_robbery_exiles_and_grants_play() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(1, catalog::grizzly_bears());
+    let b = g.add_card_to_library(1, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(0, Some(Target::Player(1)), 0, 2);
+    g.resolve_effect(&catalog::outrageous_robbery().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    for id in [a, b] {
+        let c = g.exile.iter().find(|c| c.id == id).expect("exiled from opponent's library");
+        let perm = c.may_play_until.as_ref().expect("has a may-play grant");
+        assert_eq!(perm.player, 0, "you may play the exiled cards");
+    }
+}
