@@ -6756,6 +6756,7 @@ static DECKS: &[Factory] = &[
     super::decks::magnetic_snuffler,
     super::decks::cryptic_coat,
     super::decks::outrageous_robbery,
+    super::decks::presumed_dead,
     // recent253 — Ravnica guild legends
     super::decks::trostani_three_whispers,
     super::decks::ezrim_agency_chief,

@@ -299,6 +299,7 @@ impl Effect {
             Effect::ReturnSelfAsEnchantment => false,
             Effect::ReturnSelfTappedWithCounters { .. } => false,
             Effect::ReturnSelfTapped => false,
+            Effect::ReturnSelf => false,
             Effect::ReturnTopCreatureFromGraveyard { .. } => false,
             Effect::Transform { what } => sel_has_target(what),
             Effect::BecomeRenowned { what } => sel_has_target(what),

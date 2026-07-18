@@ -6975,6 +6975,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnSelf => {
+                let Some(src) = ctx.source else { return Ok(()); };
+                let Some(owner) = self
+                    .players
+                    .iter()
+                    .position(|p| p.graveyard.iter().any(|c| c.id == src))
+                else { return Ok(()); };
+                let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false };
+                let ret_ctx = EffectContext::for_ability(src, owner, None);
+                self.move_card_to(src, &dest, &ret_ctx, events);
+                Ok(())
+            }
+
             Effect::ReturnTopCreatureFromGraveyard { who } => {
                 use crate::card::CardType;
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()); };

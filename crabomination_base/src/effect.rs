@@ -3356,6 +3356,10 @@ pub enum Effect {
     /// a granted "when this dies, return it tapped" rider (Fake Your Own Death).
     /// No-op if the source isn't in a graveyard.
     ReturnSelfTapped,
+    /// "Return it to the battlefield under its owner's control" (untapped) —
+    /// the untapped sibling of `ReturnSelfTapped` (Presumed Dead's granted
+    /// die-trigger). No-op if the source isn't in a graveyard.
+    ReturnSelf,
     /// Bronzehide Lion — "when this creature dies, return it to the
     /// battlefield [as its `back_face` Aura] attached to a creature you
     /// control" (auto-pick: greatest power). No-op if the source isn't in a

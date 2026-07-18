@@ -421,3 +421,22 @@ fn outrageous_robbery_exiles_and_grants_play() {
         assert_eq!(perm.player, 0, "you may play the exiled cards");
     }
 }
+
+/// Presumed Dead pumps a creature and gives it a die-then-return-and-suspect
+/// rider.
+#[test]
+fn presumed_dead_returns_and_suspects() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    g.resolve_effect(&catalog::presumed_dead().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "+2/+0 applied");
+    // Kill it; the granted trigger returns and suspects it.
+    let events = g.remove_to_graveyard_with_triggers(bear);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(bear).expect("returned to the battlefield");
+    assert!(!back.tapped, "returns untapped");
+    assert!(back.suspected, "returned suspected");
+}

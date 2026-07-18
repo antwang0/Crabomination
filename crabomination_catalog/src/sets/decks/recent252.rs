@@ -547,3 +547,36 @@ pub fn outrageous_robbery() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Presumed Dead — {1}{B} Instant. Until end of turn, target creature gets +2/+0
+/// and gains "When this creature dies, return it to the battlefield under its
+/// owner's control and suspect it."
+pub fn presumed_dead() -> CardDefinition {
+    use crate::effect::Duration;
+    let revive = crate::card::TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+        effect: Effect::Seq(vec![
+            Effect::ReturnSelf,
+            Effect::Suspect { what: Selector::This },
+        ]),
+    };
+    CardDefinition {
+        name: "Presumed Dead",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(revive),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
