@@ -2222,11 +2222,19 @@ impl GameState {
                 return CleanupOutcome::Suspended;
             }
             let mut cleanup_events = Vec::new();
+            let mut discarded = 0u32;
             while self.players[active].hand.len() > max {
                 let Some(cid) = self.players[active].hand.first().map(|c| c.id) else {
                     break;
                 };
                 self.discard_card(active, cid, &mut cleanup_events);
+                discarded += 1;
+            }
+            // CR 701.9 / 514.3 — the cleanup discard is still "discard one or
+            // more cards"; emit the batch so those triggers fire (Containment
+            // Construct-style payoffs, "whenever you discard …").
+            if discarded > 0 {
+                cleanup_events.push(GameEvent::DiscardedBatch { player: active, count: discarded });
             }
             if !cleanup_events.is_empty() {
                 // Dispatched here only — the caller re-dispatches whatever it

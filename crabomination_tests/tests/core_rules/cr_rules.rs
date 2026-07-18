@@ -8699,6 +8699,24 @@ fn cr_701_9_discard_batch_fires_once_with_count() {
     assert_eq!(g.players[1].life, opp - 3, "3 discarded → 3 damage, applied once");
 }
 
+/// CR 514.3 / 701.9 — the cleanup discard-down is still "discard one or more
+/// cards", so it fires the batch trigger once for the count (Magmakin bolts
+/// the opponent for the two cards trimmed at cleanup).
+#[test]
+fn cr_514_3_cleanup_discard_fires_batch_trigger() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::magmakin_artillerist());
+    // Nine cards in hand → discard two down to the seven-card maximum.
+    for _ in 0..9 { g.add_card_to_hand(0, catalog::forest()); }
+    let opp = g.players[1].life;
+    g.active_player_idx = 0;
+    let mut events = Vec::new();
+    g.do_cleanup(&mut events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 7, "trimmed to the maximum hand size");
+    assert_eq!(g.players[1].life, opp - 2, "cleanup discard of two bolts for two, once");
+}
+
 /// CR 702.179 — "each player who doesn't have max speed" excludes speed-4
 /// players (Outpace Oblivion's sacrifice).
 #[test]

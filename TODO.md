@@ -3575,9 +3575,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   the count via `Value::TriggerEventAmount` — Magmakin Artillerist deals that much
   to each opponent, once. Emitted from `resolve_effect` off the
   `cards_discarded_per_player_this_resolution` scratch; test
-  `cr_701_9_discard_batch_fires_once_with_count`. (Cost-payment discards —
-  cycling, cleanup over-hand — don't route through `resolve_effect`, so they emit
-  no batch yet.)
+  `cr_701_9_discard_batch_fires_once_with_count`. The CR 514.1 cleanup
+  discard-down now emits the batch too (both the deterministic and UI-resume
+  paths; `cr_514_3_cleanup_discard_fires_batch_trigger`). Remaining: cost-payment
+  discards (cycling, other "discard this card" costs) still don't route through
+  `resolve_effect`, so they emit no batch.
 - ✅ CR 701.13 — Mill (incl. `Effect::MillThenToHand { amount, filter }` — mill,
   then pick one card matching `filter` from those milled this way to hand;
   Cache Grab, `SelectionRequirement::PermanentCard`; test

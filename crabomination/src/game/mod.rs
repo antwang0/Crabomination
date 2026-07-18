@@ -10875,6 +10875,7 @@ impl GameState {
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 };
                 let mut evs = Vec::new();
+                let mut discarded = 0u32;
                 for id in ids {
                     // CR 514.1 — discard down to, never past, the maximum.
                     // Once the hand is back at the limit, ignore any further
@@ -10888,7 +10889,13 @@ impl GameState {
                     }
                     if self.players[player].hand.iter().any(|c| c.id == id) {
                         self.discard_card(player, id, &mut evs);
+                        discarded += 1;
                     }
+                }
+                // CR 701.9 / 514.3 — emit the "discard one or more" batch (see
+                // the non-UI path in `do_cleanup`).
+                if discarded > 0 {
+                    evs.push(GameEvent::DiscardedBatch { player, count: discarded });
                 }
                 if !evs.is_empty() {
                     self.dispatch_triggers_for_events(&evs);
