@@ -600,3 +600,27 @@ fn mudflat_village_returns_kindred_and_restricts_mana() {
     g.resolve_effect(&ab.effect, &ctx).unwrap();
     assert!(g.players[0].hand.iter().any(|c| c.id == rat), "Rat returned to hand");
 }
+
+/// Oakhollow Village's {G} ability counters only your kindred creatures that
+/// entered this turn.
+#[test]
+fn oakhollow_village_counters_kindred_entered_this_turn() {
+    let mut g = two_player_game();
+    g.turn_number = 5;
+    // A Frog that entered this turn (kindred), a Rat this turn (not kindred),
+    // and a Frog that entered earlier.
+    let fresh_frog = g.add_card_to_battlefield(0, catalog::spore_frog());
+    let rat = g.add_card_to_battlefield(0, catalog::typhoid_rats());
+    let old_frog = g.add_card_to_battlefield(0, catalog::spore_frog());
+    g.battlefield_find_mut(fresh_frog).unwrap().entered_turn = Some(5);
+    g.battlefield_find_mut(rat).unwrap().entered_turn = Some(5);
+    g.battlefield_find_mut(old_frog).unwrap().entered_turn = Some(1);
+    let ab = catalog::oakhollow_village().activated_abilities[2].effect.clone();
+    g.resolve_effect(&ab, &EffectContext::for_ability(crabomination::card::CardId(0), 0, None)).unwrap();
+    assert_eq!(g.battlefield_find(fresh_frog).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "kindred creature that entered this turn gets a counter");
+    assert_eq!(g.battlefield_find(rat).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "non-kindred creature untouched");
+    assert_eq!(g.battlefield_find(old_frog).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "kindred creature that entered earlier untouched");
+}

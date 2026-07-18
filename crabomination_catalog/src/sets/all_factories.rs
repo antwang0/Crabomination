@@ -6639,6 +6639,7 @@ static DECKS: &[Factory] = &[
     super::decks::creeping_peeper,
     super::decks::fear_of_burning_alive,
     super::decks::mudflat_village,
+    super::decks::oakhollow_village,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

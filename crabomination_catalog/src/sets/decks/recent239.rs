@@ -471,6 +471,51 @@ pub fn mudflat_village() -> CardDefinition {
     }
 }
 
+/// Oakhollow Village — Land. {T}: Add {C}. {T}: Add {G}, creature-spells only.
+/// {G}, {T}: put a +1/+1 counter on each Frog/Rabbit/Raccoon/Squirrel you
+/// control that entered this turn.
+pub fn oakhollow_village() -> CardDefinition {
+    let kindred = R::HasCreatureType(CreatureType::Frog)
+        .or(R::HasCreatureType(CreatureType::Rabbit))
+        .or(R::HasCreatureType(CreatureType::Raccoon))
+        .or(R::HasCreatureType(CreatureType::Squirrel));
+    CardDefinition {
+        name: "Oakhollow Village",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colors(vec![Color::Green])),
+                        SpendRestriction::CreatureOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[g()]),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        kindred.and(R::ControlledByYou).and(R::EnteredThisTurn),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Fear of Burning Alive — {4}{R}{R} Enchantment Creature — Nightmare 4/4. ETB:
 /// deals 4 to each opponent. Delirium — whenever a source you control deals
 /// noncombat damage to an opponent, if delirium, deal that much to a creature
