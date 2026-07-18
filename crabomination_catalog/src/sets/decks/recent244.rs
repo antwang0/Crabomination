@@ -8,7 +8,51 @@ use crate::card::{
 use crate::card::{AdditionalCastCost, ArtifactSubtype, EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{investigate, target_filtered};
 use crate::effect::{Effect, PlayerRef, Predicate, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, x};
+use crate::mana::{b, cost, g, generic, r, u, w, x};
+
+/// Wispdrinker Vampire — {2}{W}{B} Creature — Vampire Rogue 2/4, flying. Whenever
+/// another creature you control with power 2 or less enters, drain 1. {5}{W}{B}:
+/// creatures you control with power 2 or less gain deathtouch and lifelink.
+pub fn wispdrinker_vampire() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Wispdrinker Vampire",
+        cost: cost(&[generic(2), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::PowerAtMost(2)),
+                }),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), w(), b()]),
+            effect: Effect::GrantKeywords {
+                what: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::PowerAtMost(2)),
+                ),
+                keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
 
 /// Torch the Witness — {X}{R} Sorcery. Deal twice X damage to target creature.
 /// If excess damage was dealt this way, investigate.

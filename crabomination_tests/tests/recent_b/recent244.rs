@@ -12,6 +12,39 @@ fn clues(g: &crabomination::game::GameState, who: usize) -> usize {
     g.battlefield.iter().filter(|c| c.definition.name == "Clue" && c.controller == who).count()
 }
 
+/// Wispdrinker Vampire drains on a small creature's entry and its activated
+/// ability grants deathtouch + lifelink to your small creatures.
+#[test]
+fn wispdrinker_vampire_drains_and_buffs_small_creatures() {
+    let mut g = two_player_game();
+    let _wisp = g.add_card_to_battlefield(0, catalog::wispdrinker_vampire());
+    let life = g.players[0].life;
+    let opp = g.players[1].life;
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves()); // 1/1
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: elf }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "drained 1 into your life");
+    assert_eq!(g.players[1].life, opp - 1, "opponent lost 1");
+    // Activate the anthem-grant.
+    let wisp_id = g.battlefield.iter().find(|c| c.definition.name == "Wispdrinker Vampire").unwrap().id;
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wisp_id,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate the deathtouch/lifelink grant");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(elf).unwrap().keywords.contains(&Keyword::Deathtouch),
+        "small creature gains deathtouch"
+    );
+}
+
 /// Torch the Witness deals twice X and investigates when excess damage lands.
 #[test]
 fn torch_the_witness_double_x_and_excess_investigate() {
