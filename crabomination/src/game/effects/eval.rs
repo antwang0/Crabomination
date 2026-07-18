@@ -1589,6 +1589,10 @@ impl GameState {
                 // CR 701.59 — true iff this spell's "collect evidence" cost was paid.
                 ctx.cast_collected_evidence
             }
+            Predicate::LastDiscardedManaValueAtMost(n) => {
+                // A discard must have happened this resolution and its MV ≤ n.
+                self.last_discarded_mana_value.is_some_and(|mv| mv <= *n)
+            }
             Predicate::OwnExiledAdventureCard => {
                 // CR 715 — the controller owns a card in exile on an Adventure.
                 let owner = ctx.controller;

@@ -706,3 +706,29 @@ fn whiskervale_forerunner_valiant_dig() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == small), "small creature deployed");
 }
+
+/// Hollow Marauder costs less per graveyard creature, and its ETB draws only
+/// when the opponent's discard was cheap (MV ≤ 3).
+#[test]
+fn hollow_marauder_cost_and_conditional_draw() {
+    use crabomination::card::SelectionRequirement as R;
+    let def = catalog::hollow_marauder();
+    assert_eq!(def.affinity_graveyard_filter, Some(R::Creature));
+    assert!(def.keywords.contains(&Keyword::Flying));
+    // Cheap discard → draw.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // MV 2
+    let src = g.add_card_to_battlefield(0, catalog::hollow_marauder());
+    let etb = def.triggered_abilities[0].effect.clone();
+    let before = g.players[0].hand.len();
+    g.resolve_effect(&etb, &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew after a cheap discard");
+    // Expensive discard → no draw.
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::serra_angel()); // MV 5
+    let src = g.add_card_to_battlefield(0, catalog::hollow_marauder());
+    let before = g.players[0].hand.len();
+    g.resolve_effect(&def.triggered_abilities[0].effect.clone(), &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
+    assert_eq!(g.players[0].hand.len(), before, "no draw after an expensive discard");
+}

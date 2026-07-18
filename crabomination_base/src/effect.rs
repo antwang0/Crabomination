@@ -1298,6 +1298,10 @@ pub enum Predicate {
     /// `CardInstance.cast_collected_evidence`. Gates "if evidence was collected,
     /// …" branches (Behind the Mask, Analyze the Pollen).
     SpellCollectedEvidence,
+    /// True if the most recently discarded card this resolution had mana value
+    /// ≤ `n`. Reads `GameState.last_discarded_mana_value` (Hollow Marauder's
+    /// "draw unless they discarded a card with mana value 4 or greater").
+    LastDiscardedManaValueAtMost(u32),
     /// CR 715 — true iff `ctx.controller` owns a card in exile that is on an
     /// Adventure (a creature card cast for its Adventure half, waiting in exile
     /// to be recast). Gates Howling Galefang's "has haste as long as you own a

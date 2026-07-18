@@ -699,6 +699,42 @@ pub fn whiskervale_forerunner() -> CardDefinition {
     }
 }
 
+/// Hollow Marauder — {6}{B} Specter Rogue 4/2. Costs {1} less per creature card
+/// in your graveyard. Flying. ETB: each opponent discards a card, and you draw a
+/// card for each who discarded a card with mana value 3 or less. (The "any
+/// number of target opponents" slot collapses to each opponent — 1v1-faithful.)
+pub fn hollow_marauder() -> CardDefinition {
+    CardDefinition {
+        name: "Hollow Marauder",
+        cost: cost(&[generic(6), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Specter, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        affinity_graveyard_filter: Some(R::Creature),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::ONE,
+                    random: false,
+                },
+                Effect::If {
+                    cond: Predicate::LastDiscardedManaValueAtMost(3),
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Fear of Burning Alive — {4}{R}{R} Enchantment Creature — Nightmare 4/4. ETB:
 /// deals 4 to each opponent. Delirium — whenever a source you control deals
 /// noncombat damage to an opponent, if delirium, deal that much to a creature
