@@ -1281,6 +1281,7 @@ mod tests {
             monstrous: false,
             suspected: false,
             renowned: false,
+            case_solved: None,
             detained: false,
             untap_locked: false,
             pt_modified: false,

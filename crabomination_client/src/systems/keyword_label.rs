@@ -302,8 +302,20 @@ fn keyword_strip(keywords: &[Keyword]) -> String {
 /// Full board-glance strip: the keyword chips plus status prefixes that aren't
 /// keywords — "Susp" for a suspected creature (CR 701.60) and "Zzz" for
 /// summoning sickness. Empty when there's nothing to show.
-fn board_status_strip(keywords: &[Keyword], summoning_sick: bool, suspected: bool) -> String {
+fn board_status_strip(
+    keywords: &[Keyword],
+    summoning_sick: bool,
+    suspected: bool,
+    case_solved: Option<bool>,
+) -> String {
     let mut parts: Vec<String> = Vec::new();
+    // MKM Case (CR — Solve): show whether it's solved yet. Leads the strip so the
+    // solve state reads at a glance on the non-creature enchantment.
+    match case_solved {
+        Some(true) => parts.push("Solved".to_string()),
+        Some(false) => parts.push("Case".to_string()),
+        None => {}
+    }
     // Suspected reads at a glance — it's *why* the creature shows Men/NoBlk.
     if suspected {
         parts.push("Susp".to_string());
@@ -356,10 +368,13 @@ pub fn sync_keyword_labels(
     if view.is_changed() {
         desired_cache.clear();
         for p in &cv.battlefield {
-            if !p.is_creature() {
+            // Creatures get the keyword/status strip; Cases (non-creatures) get a
+            // solve-state chip.
+            if !p.is_creature() && p.case_solved.is_none() {
                 continue;
             }
-            let strip = board_status_strip(&p.keywords, p.summoning_sick, p.suspected);
+            let strip =
+                board_status_strip(&p.keywords, p.summoning_sick, p.suspected, p.case_solved);
             if !strip.is_empty() {
                 desired_cache.insert(p.id, strip);
             }
@@ -434,7 +449,7 @@ pub fn sync_keyword_labels(
 
 #[cfg(test)]
 mod tests {
-    use super::keyword_strip;
+    use super::{board_status_strip, keyword_strip};
     use crabomination::card::Keyword;
 
     #[test]
@@ -600,15 +615,22 @@ mod tests {
     fn board_status_prefixes_suspected_and_sick() {
         // A suspected creature shows "Susp" ahead of its (injected) Men/NoBlk.
         assert_eq!(
-            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true),
+            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true, None),
             "Susp Men NoBlk",
         );
         // Summoning sickness tags "Zzz"; Haste suppresses it.
-        assert_eq!(board_status_strip(&[], true, false), "Zzz");
-        assert_eq!(board_status_strip(&[Keyword::Haste], true, false), "Hst");
+        assert_eq!(board_status_strip(&[], true, false, None), "Zzz");
+        assert_eq!(board_status_strip(&[Keyword::Haste], true, false, None), "Hst");
         // Both statuses stack, suspected first.
-        assert_eq!(board_status_strip(&[], true, true), "Susp Zzz");
-        assert_eq!(board_status_strip(&[], false, false), "");
+        assert_eq!(board_status_strip(&[], true, true, None), "Susp Zzz");
+        assert_eq!(board_status_strip(&[], false, false, None), "");
+    }
+
+    #[test]
+    fn board_status_shows_case_solve_state() {
+        // An unsolved Case reads "Case"; a solved one reads "Solved".
+        assert_eq!(board_status_strip(&[], false, false, Some(false)), "Case");
+        assert_eq!(board_status_strip(&[], false, false, Some(true)), "Solved");
     }
 
     #[test]

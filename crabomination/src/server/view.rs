@@ -1097,6 +1097,7 @@ fn project_permanent(
         monstrous: card.monstrous,
         suspected: card.suspected,
         renowned: card.renowned,
+        case_solved: card.definition.case.is_some().then_some(card.case_solved),
         detained: card.detained_by.is_some(),
         untap_locked: card.untap_locked_by.is_some(),
         impending_counters: {

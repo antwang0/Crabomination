@@ -1311,6 +1311,11 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub renowned: bool,
+    /// MKM — true when this permanent is a Case that has been solved. `None` for
+    /// non-Cases; `Some(false)` for an unsolved Case. A UI hint so the client can
+    /// badge Cases with their solve state. Populated by `project_permanent`.
+    #[serde(default)]
+    pub case_solved: Option<bool>,
     /// True when this permanent is detained (CR 701.35) — a UI hint so the
     /// client can badge it as "can't attack/block/activate." Populated by
     /// `project_permanent`.

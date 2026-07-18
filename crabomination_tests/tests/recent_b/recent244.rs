@@ -1,13 +1,48 @@
 //! Functionality tests for `catalog::sets::decks::recent244` (MKM batch).
 
-use crabomination::card::Keyword;
+use crabomination::card::{CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::effects::EffectContext;
+use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::{drain_stack, two_player_game, GameEvent};
+use crabomination::mana::Color;
 
 fn clues(g: &crabomination::game::GameState, who: usize) -> usize {
     g.battlefield.iter().filter(|c| c.definition.name == "Clue" && c.controller == who).count()
+}
+
+/// Vitu-Ghazi Inspector rewards a collected evidence: +1/+1 on a creature and 2
+/// life. Without evidence, its ETB does nothing.
+#[test]
+fn vitu_ghazi_inspector_rewards_collected_evidence() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 6 to collect
+    }
+    let spell = g.add_card_to_hand(0, catalog::vitu_ghazi_inspector());
+    let life = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Vitu-Ghazi Inspector collecting evidence");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained 2 life with evidence");
+    let counters: u32 = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0)
+        .map(|c| c.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0))
+        .sum();
+    assert_eq!(counters, 1, "a +1/+1 counter was placed");
 }
 
 /// Novice Inspector investigates on ETB.

@@ -5,24 +5,44 @@ use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Keyword, SelectionRequirement as R,
     Subtypes, TriggeredAbility,
 };
-use crate::card::{ArtifactSubtype, EventKind, EventScope, EventSpec};
-use crate::effect::shortcut::{etb, investigate};
+use crate::card::{AdditionalCastCost, ArtifactSubtype, EventKind, EventScope, EventSpec};
+use crate::effect::shortcut::{investigate, target_filtered};
 use crate::effect::{Effect, PlayerRef, Predicate, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, u, w};
+use crate::mana::{b, cost, g, generic, u};
 
-/// Novice Inspector — {W} Creature — Human Detective 1/2. ETB investigate.
-pub fn novice_inspector() -> CardDefinition {
+/// Vitu-Ghazi Inspector — {1}{G} Creature — Elf Detective 1/3, reach. Optional
+/// additional cost: collect evidence 6. ETB: if evidence was collected, put a
+/// +1/+1 counter on target creature and gain 2 life.
+pub fn vitu_ghazi_inspector() -> CardDefinition {
     CardDefinition {
-        name: "Novice Inspector",
-        cost: cost(&[w()]),
+        name: "Vitu-Ghazi Inspector",
+        cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Detective],
+            creature_types: vec![CreatureType::Elf, CreatureType::Detective],
             ..Default::default()
         },
         power: 1,
-        toughness: 2,
-        triggered_abilities: vec![etb(investigate(1))],
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 6, optional: true }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            // "if evidence was collected" is read at resolution off the source's
+            // cast flag (CR 701.59), so gate the body rather than the event.
+            effect: Effect::If {
+                cond: Predicate::SpellCollectedEvidence,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(R::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
         ..Default::default()
     }
 }

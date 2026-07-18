@@ -6697,8 +6697,8 @@ static DECKS: &[Factory] = &[
     super::decks::they_went_this_way,
     super::decks::undercover_crocodelf,
     super::decks::sharp_eyed_rookie,
-    super::decks::novice_inspector,
     super::decks::curious_cadaver,
+    super::decks::vitu_ghazi_inspector,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
