@@ -1,5 +1,6 @@
 //! Optional HTTP status endpoint: set `CRAB_STATUS_BIND` (e.g. `0.0.0.0:7778`)
-//! to serve `GET /healthz` → `ok` (load-balancer probe), `/status.json` → a
+//! to serve `GET /healthz` → `ok` (liveness probe), `/readyz` → `ready`/503
+//! saturated (readiness probe), `/status.json` → a
 //! machine-readable metric object (for scrapers), `/metrics` → Prometheus text,
 //! `/dashboard` → a self-contained HTML stat page for a browser, and any other
 //! path → a plaintext operator snapshot (uptime, rolling match stats, slot
@@ -364,6 +365,18 @@ fn route(method: &str, path: &str, started: Instant, slots: &SlotManager) -> (&'
     let path = if path.len() > 1 { path.trim_end_matches('/') } else { path };
     match path {
         "/healthz" => ("200 OK", "text/plain", "ok\n".to_string()),
+        // Readiness (distinct from `/healthz` liveness): 503 while the global
+        // cap is full so an orchestrator stops routing *new* traffic to a
+        // saturated instance without killing it (existing matches drain).
+        // Unlimited cap (0) is always ready.
+        "/readyz" => {
+            let sl = slots.snapshot();
+            if sl.global_cap != 0 && sl.current >= sl.global_cap {
+                ("503 Service Unavailable", "text/plain", "saturated\n".to_string())
+            } else {
+                ("200 OK", "text/plain", "ready\n".to_string())
+            }
+        }
         "/status.json" | "/metrics.json" => ("200 OK", "application/json", render_status_json(started, slots)),
         "/metrics" => ("200 OK", "text/plain; version=0.0.4", render_metrics(started, slots)),
         "/dashboard" => ("200 OK", "text/html; charset=utf-8", render_dashboard(started, slots)),
@@ -384,7 +397,7 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
             return;
         }
     };
-    eprintln!("status endpoint listening on http://{bind} (/healthz, /status, /status.json)");
+    eprintln!("status endpoint listening on http://{bind} (/healthz, /readyz, /status, /status.json)");
     std::thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { continue };
@@ -468,6 +481,23 @@ mod tests {
         assert_eq!(route("GET", "/status.json?pretty=1", now, &slots).1, "application/json");
         assert_eq!(route("GET", "/status/", now, &slots).0, "200 OK");
         assert_eq!(route("GET", "/", now, &slots).0, "200 OK", "root still served after slash-trim");
+    }
+
+    #[test]
+    fn readyz_flips_to_503_when_global_cap_is_full() {
+        use std::net::{IpAddr, Ipv4Addr};
+        let now = Instant::now();
+        let slots = SlotManager::new(2, 0);
+        // Headroom → ready.
+        assert_eq!(route("GET", "/readyz", now, &slots).0, "200 OK");
+        let _a = slots.try_acquire(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))).unwrap();
+        let _b = slots.try_acquire(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))).unwrap();
+        // Global cap full → not ready (but still alive / not 404).
+        let (status, _, body) = route("GET", "/readyz", now, &slots);
+        assert_eq!(status, "503 Service Unavailable");
+        assert_eq!(body, "saturated\n");
+        // An unlimited cap is always ready.
+        assert_eq!(route("GET", "/readyz", now, &SlotManager::new(0, 0)).0, "200 OK");
     }
 
     #[test]
