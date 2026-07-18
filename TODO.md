@@ -3867,6 +3867,27 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Dual-pile exile-return-to-hand linked to LTB** — Fear of Abduction (the
     additional-cost-exiled own creature and the ETB-exiled opponent creature
     both return to their owners' hands when it leaves).
+- ⏳ **Newly-noticed primitives (discovered during the DSK/BLB gap batch):**
+  - **Gift on a permanent (creature/artifact)** — the gift's `gifted_effect`
+    resolves only on the instant/sorcery spell path; a Gift *creature*
+    (Scrapshooter, Starforged Sword) needs the permanent-ETB path to check
+    `card.gift_promised` and run `gifted_effect` as the ETB.
+  - **Forage / cost-hybrid mana abilities** — Thornvault Forager's
+    "{T}, Forage: add two mana" wants a forage additional cost on
+    `ActivatedAbility` (only cast-cost `Effect::Forage` exists today).
+  - **Enchant-player auras + `PlayerStaticTarget::Enchanted`** — Grievous Wound
+    ("enchanted player can't gain life; when dealt damage, lose half life"):
+    no player-attaching aura support today.
+  - **"You gave a gift" trigger** (`EventKind::GaveGift`) — Jolly Gerbils.
+  - **Delirium-gated modal count** ("choose one; if delirium, choose one or
+    more instead") — Let's Play a Game.
+  - **Per-turn ability-resolution count** ("draw if this is the second time
+    this ability resolved this turn") — Harvestrite Host.
+  - **"No mana spent to cast" ETB gate** — Freestrider Commando's
+    enters-with-two-counters (verify `ctx.mana_spent` is threaded to a
+    self-ETB trigger before wiring; the plot/reanimate cases both want 0).
+  - **Type/ability rewrite auras** ("becomes a colorless Food artifact with …,
+    loses all other card types and abilities") — Sugar Coat.
 - ⏳ **Deferred cards from the recent156-161 waves (each blocked on one
   primitive):**
   - **Two-target "your creature deals damage = power to their creature"** —
