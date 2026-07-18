@@ -681,3 +681,28 @@ fn rockface_village_pumps_and_hastes_kindred() {
     assert_eq!(c.power, 3, "+1/+0 applied");
     assert!(c.keywords.contains(&Keyword::Haste), "gained haste");
 }
+
+/// Whiskervale Forerunner's Valiant trigger digs five deep for a small creature
+/// and deploys it; the trigger is once-per-turn on becoming your target.
+#[test]
+fn whiskervale_forerunner_valiant_dig() {
+    use crabomination::effect::{Effect, EventKind};
+    let def = catalog::whiskervale_forerunner();
+    let t = &def.triggered_abilities[0];
+    assert_eq!(t.event.kind, EventKind::BecameTarget);
+    assert!(t.event.once_per_turn, "first time each turn");
+    match &t.effect {
+        Effect::LookPickToHand { count, pick_filter: Some(_), to_battlefield: true, rest_bottom_random: true, .. } => {
+            assert!(matches!(count, crabomination::effect::Value::Const(5)));
+        }
+        _ => panic!("not a five-deep creature dig"),
+    }
+    // The dig deploys a small creature from the top of the library.
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::whiskervale_forerunner());
+    let small = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2 creature
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![small])]));
+    g.resolve_effect(&t.effect, &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == small), "small creature deployed");
+}

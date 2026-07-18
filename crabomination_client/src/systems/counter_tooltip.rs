@@ -1287,6 +1287,7 @@ mod tests {
             mana_cost_display: String::new(),
             creature_types: vec![],
             ward_cost: 0,
+            ward_label: String::new(),
             mana_value: 0,
             is_legendary: false,
             has_plus_one_counters: false,

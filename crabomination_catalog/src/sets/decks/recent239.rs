@@ -7,7 +7,7 @@ use crate::card::{
     Keyword, MayPlayDuration, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility,
 };
-use crate::effect::shortcut::{animate_land, deal, target_filtered};
+use crate::effect::shortcut::{animate_land, deal, target_filtered, valiant};
 use crate::game::types::TurnStep;
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload,
@@ -662,6 +662,39 @@ pub fn rockface_village() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Whiskervale Forerunner — {3}{W} Mouse Bard 3/4. Valiant — the first time it
+/// becomes the target of your spell/ability each turn, look at the top five,
+/// reveal a creature card with mana value 3 or less, and put it onto the
+/// battlefield (approximating the "if it's your turn, else hand" routing);
+/// bottom the rest at random.
+pub fn whiskervale_forerunner() -> CardDefinition {
+    CardDefinition {
+        name: "Whiskervale Forerunner",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![valiant(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(R::Creature.and(R::ManaValueAtMost(3))),
+            take: None,
+            to_battlefield: true,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
+            optional: true,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: true,
+        })],
         ..Default::default()
     }
 }

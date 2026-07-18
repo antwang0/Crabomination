@@ -937,7 +937,7 @@ mod tests {
         for total in 1..40usize {
             for half in [4.0f32, 6.0, 10.0, 13.0] {
                 let (rows, per_row) = front_row_shape(total, half);
-                assert!(rows >= 1 && rows <= MAX_WRAP_ROWS);
+                assert!((1..=MAX_WRAP_ROWS).contains(&rows));
                 assert!(rows * per_row >= total, "shape must cover all groups");
                 assert!(per_row * (rows - 1) < total, "no empty trailing row");
             }
