@@ -16,12 +16,18 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **MKM recent245–252 (36 cards):** recent252 adds
+- **MKM recent245–253 (50 cards):** recent252/253 add
   `ActivatedAbility.collect_evidence_cost` (CR 701.59 as an activation cost —
   finishing Forensic Researcher), `Value::DifferentlyNamedCreatureTokensControlled`
-  (Audience with Trostani), and six cards (Treacherous Greed, Flourishing
-  Bloom-Kin, Concealed Weapon, Lumbering Laundry, Audience with Trostani, Krenko
-  Baron of Tin Street). The **Clue Equipment** cycle (Wrench, Rope,
+  (Audience with Trostani), `Value::OozesInExileAndGraveyard` (Slime Against
+  Humanity), the `Unlock` counter, and `Effect::Cloak` now exposing the cloaked
+  permanent on `Selector::LastMoved` (Cryptic Coat). Cards: Treacherous Greed,
+  Flourishing Bloom-Kin, Concealed Weapon, Lumbering Laundry, Audience with
+  Trostani, Krenko Baron of Tin Street, Cryptex, Detective's Satchel, Polygraph
+  Orb, Undergrowth Recon, Dramatic Accusation, Lamplight Phoenix, Slime Against
+  Humanity, Magnetic Snuffler, Cryptic Coat, and the Ravnica legends Trostani
+  Three Whispers / Ezrim / Agrus Kos / Aurelia the Law Above. The **Clue
+  Equipment** cycle (Wrench, Rope,
   Knife, Candlestick) + Thinking Cap on new `EquipBonus.activated_abilities`
   (equipment grants an activated ability to the equipped creature, CR 702.6e —
   surfaced in the view as "Equipped:" labels) and `EquipBonus.during_your_turn_pt`
