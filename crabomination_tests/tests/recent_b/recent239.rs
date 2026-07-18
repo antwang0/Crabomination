@@ -732,3 +732,39 @@ fn hollow_marauder_cost_and_conditional_draw() {
     g.resolve_effect(&def.triggered_abilities[0].effect.clone(), &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
     assert_eq!(g.players[0].hand.len(), before, "no draw after an expensive discard");
 }
+
+/// Feed the Cycle forages (exiling three graveyard cards) to pay its additional
+/// cost, then destroys a creature; with no forage material the pay is folded.
+#[test]
+fn feed_the_cycle_forage_or_pay() {
+    use crabomination::card::AdditionalCastCost;
+    let def = catalog::feed_the_cycle();
+    assert!(matches!(def.additional_cast_cost[0], AdditionalCastCost::ForageOrPay { pay: 1 }));
+    // With three graveyard cards, cast forages (no extra mana) and destroys.
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::feed_the_cycle());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1); // exactly {1}{B}
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("forage pays the additional cost");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature destroyed");
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0).count(), 3, "three cards foraged");
+
+    // With no forage material the pay ({1}) is folded — {1}{B} is one short.
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::feed_the_cycle());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no forage material means the folded generic makes it unaffordable");
+}

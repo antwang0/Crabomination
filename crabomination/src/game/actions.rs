@@ -260,6 +260,12 @@ pub fn extra_cost_for_spell(
                     tax += pay;
                 }
             }
+            crate::card::AdditionalCastCost::ForageOrPay { pay } => {
+                // No forage material → the pay half joins the cost.
+                if !state.can_forage(caster) {
+                    tax += pay;
+                }
+            }
             _ => {}
         }
     }
@@ -5430,6 +5436,9 @@ impl GameState {
             A::CollectEvidence { amount, optional } => {
                 *optional || self.graveyard_can_collect_evidence(p, *amount)
             }
+            // Forage-or-pay is always announceable: with no forage material the
+            // pay half is folded into the cost.
+            A::ForageOrPay { .. } => true,
             // Need a creature to point at — one you control or one to reveal.
             A::ChooseOrRevealCreature => {
                 self.battlefield.iter().any(|c| c.controller == p && c.definition.is_creature())
@@ -5447,6 +5456,19 @@ impl GameState {
             .map(|c| c.definition.cost.cmc())
             .sum();
         total >= amount
+    }
+
+    /// CR 701.61 — can `p` forage (exile three graveyard cards or sacrifice a
+    /// Food they control)?
+    pub(crate) fn can_forage(&self, p: usize) -> bool {
+        self.players[p].graveyard.len() >= 3
+            || self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition
+                        .subtypes
+                        .artifact_subtypes
+                        .contains(&crate::card::ArtifactSubtype::Food)
+            })
     }
 
     /// CR 601.2h — pay each additional cast cost immediately. Returns the
@@ -5808,6 +5830,32 @@ impl GameState {
                     });
                     if sac_power.is_none() {
                         sac_power = power;
+                    }
+                }
+                A::ForageOrPay { .. } => {
+                    // With forage material, forage (exile three graveyard cards,
+                    // else sacrifice a Food) and fire the Foraged event; else the
+                    // pay half was folded into the cost.
+                    if self.can_forage(p) {
+                        let gy_ids: Vec<CardId> =
+                            self.players[p].graveyard.iter().take(3).map(|c| c.id).collect();
+                        if gy_ids.len() >= 3 {
+                            let ctx = EffectContext::for_spell(p, None, 0, 0);
+                            for id in gy_ids {
+                                self.move_card_to(id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
+                            }
+                        } else if let Some(fid) = self.battlefield.iter().find(|c| {
+                            c.controller == p
+                                && c.definition
+                                    .subtypes
+                                    .artifact_subtypes
+                                    .contains(&crate::card::ArtifactSubtype::Food)
+                        }).map(|c| c.id) {
+                            events.push(GameEvent::PermanentSacrificed { card_id: fid, who: p });
+                            let mut die = self.remove_to_graveyard_with_triggers(fid);
+                            events.append(&mut die);
+                        }
+                        events.push(GameEvent::Foraged { player: p });
                     }
                 }
                 A::CollectEvidence { amount, .. } => {

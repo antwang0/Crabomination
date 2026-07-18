@@ -735,6 +735,21 @@ pub fn hollow_marauder() -> CardDefinition {
     }
 }
 
+/// Feed the Cycle — {1}{B} Instant. Additional cost: forage or pay {B} (folded
+/// as {1} generic). Destroy target creature or planeswalker.
+pub fn feed_the_cycle() -> CardDefinition {
+    CardDefinition {
+        name: "Feed the Cycle",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::ForageOrPay { pay: 1 }],
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature.or(R::Planeswalker)),
+        },
+        ..Default::default()
+    }
+}
+
 /// Fear of Burning Alive — {4}{R}{R} Enchantment Creature — Nightmare 4/4. ETB:
 /// deals 4 to each opponent. Delirium — whenever a source you control deals
 /// noncombat damage to an opponent, if delirium, deal that much to a creature

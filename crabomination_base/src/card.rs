@@ -2754,6 +2754,11 @@ pub enum AdditionalCastCost {
     /// caster controls no creature and reveals none. Auto-picks the highest
     /// power (battlefield first, then hand).
     ChooseOrRevealCreature,
+    /// "As an additional cost to cast this spell, forage or pay {pay}." (Feed
+    /// the Cycle.) When the caster can forage (three cards in the graveyard or a
+    /// Food to sacrifice) the forage half is paid; otherwise `pay` generic joins
+    /// the cost via `extra_cost_for_spell`. CR 701.61.
+    ForageOrPay { pay: u32 },
     /// "As an additional cost, (you may) collect evidence N" (CR 701.59 — exile
     /// cards with total mana value ≥ `amount` from your graveyard). When
     /// `optional` the cost may be skipped; whether it was paid is read at
