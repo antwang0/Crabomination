@@ -9749,6 +9749,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DeployLandsFromHandAndGraveyard { count } => {
+                let p = ctx.controller;
+                let max = self.evaluate_value(count, ctx).max(0) as usize;
+                if max == 0 { return Ok(()); }
+                // Prefer graveyard lands so playable hand lands are kept.
+                let mut ids: Vec<CardId> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_land())
+                    .map(|c| c.id)
+                    .collect();
+                ids.extend(
+                    self.players[p]
+                        .hand
+                        .iter()
+                        .filter(|c| c.definition.is_land())
+                        .map(|c| c.id),
+                );
+                ids.truncate(max);
+                let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: true };
+                for id in ids {
+                    self.move_card_to(id, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::ManifestFromHand { who, count, controller_draws } => self.resolve_manifest_from_hand(who, count, *controller_draws, ctx, events),
 
 

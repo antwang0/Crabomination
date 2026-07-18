@@ -267,6 +267,7 @@ impl Effect {
             Effect::GrantPlayFromTopThisTurn => false,
             Effect::HoneFromHand { .. } => false,
             Effect::PutFromHandOntoBattlefield { .. } => false,
+            Effect::DeployLandsFromHandAndGraveyard { .. } => false,
             Effect::Manifest { .. } => false,
             Effect::ManifestFromHand { who, count, .. } => {
                 sel_has_target(who) || value_has_target(count)

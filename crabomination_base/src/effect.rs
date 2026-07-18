@@ -4719,6 +4719,11 @@ pub enum Effect {
         sacrifice_eot: bool,
     },
 
+    /// "Put up to `count` land cards from your hand and/or graveyard onto the
+    /// battlefield tapped." Deploys as many lands as available (up to `count`),
+    /// preferring the graveyard so hand lands stay playable. Worldsoul's Rage.
+    DeployLandsFromHandAndGraveyard { count: Value },
+
     /// CR 701.34 — Manifest: put the top `amount` cards of `who`'s library
     /// onto the battlefield face down as 2/2 creatures (the real card is
     /// stashed and can be turned face up for its mana cost if it's a creature).

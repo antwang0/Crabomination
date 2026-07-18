@@ -6785,6 +6785,8 @@ static DECKS: &[Factory] = &[
     super::decks::anzrag_the_quake_mole,
     // recent261 — Selesnya land Aura
     super::decks::buried_in_the_garden,
+    // recent262 — Gruul X burn + land ramp
+    super::decks::worldsouls_rage,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
