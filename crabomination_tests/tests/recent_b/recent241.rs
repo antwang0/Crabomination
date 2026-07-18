@@ -159,6 +159,40 @@ fn sanguine_savior_grants_lifelink() {
     assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Lifelink));
 }
 
+/// Gleaming Geardrake investigates on ETB.
+#[test]
+fn gleaming_geardrake_investigates() {
+    let mut g = two_player_game();
+    let drake = g.add_card_to_battlefield(0, catalog::gleaming_geardrake());
+    g.fire_self_etb_triggers(drake, 0);
+    drain_stack(&mut g);
+    assert_eq!(clues(&g, 0), 1, "ETB investigate");
+}
+
+/// Private Eye is a Detective lord.
+#[test]
+fn private_eye_boosts_other_detectives() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::private_eye());
+    let other = g.add_card_to_battlefield(0, catalog::loxodon_eavesdropper()); // 3/3 Detective
+    let c = g.computed_permanent(other).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "other Detective gets +1/+1");
+}
+
+/// Gadget Technician makes a Thopter when it enters.
+#[test]
+fn gadget_technician_makes_thopter() {
+    let mut g = two_player_game();
+    let tech = g.add_card_to_battlefield(0, catalog::gadget_technician());
+    g.fire_self_etb_triggers(tech, 0);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Thopter").count(),
+        1,
+        "one Thopter token"
+    );
+}
+
 /// CR 701.60 — a suspected creature has menace and can't block.
 #[test]
 fn cr_701_60_suspected_creature_has_menace_and_cant_block() {

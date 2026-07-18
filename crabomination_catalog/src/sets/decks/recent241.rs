@@ -4,12 +4,12 @@
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Keyword, SelectionRequirement as R,
-    Subtypes, TriggeredAbility,
+    StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, investigate};
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, Value,
-    ZoneDest,
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, StaticEffect,
+    Value, ZoneDest,
 };
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaSymbol};
 
@@ -293,6 +293,110 @@ fn may_loot() -> Effect {
             Effect::Draw { who: Selector::You, amount: Value::ONE },
             Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
         ])),
+    }
+}
+
+/// A "whenever you sacrifice an artifact, put a +1/+1 counter on this" trigger.
+fn sac_artifact_counter() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact }),
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        },
+    }
+}
+
+/// Gleaming Geardrake — {U}{R} Artifact Creature — Drake 1/1, flying. ETB:
+/// investigate. Whenever you sacrifice an artifact, put a +1/+1 counter on it.
+pub fn gleaming_geardrake() -> CardDefinition {
+    CardDefinition {
+        name: "Gleaming Geardrake",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(investigate(1)), sac_artifact_counter()],
+        ..Default::default()
+    }
+}
+
+/// Private Eye — {1}{W}{U} Homunculus Detective 3/3. Other Detectives you control
+/// get +1/+1. Whenever you draw your second card each turn, target Detective
+/// can't be blocked this turn.
+pub fn private_eye() -> CardDefinition {
+    CardDefinition {
+        name: "Private Eye",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Homunculus, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other Detectives you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Detective)
+                        .and(R::ControlledByYou)
+                        .and(R::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![on_second_draw(Effect::GrantKeyword {
+            what: Selector::TargetFiltered { slot: 0, filter: R::HasCreatureType(CreatureType::Detective) },
+            keyword: Keyword::Unblockable,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Gadget Technician — {2}{U}{R} Goblin Artificer 3/2. When it enters or is
+/// turned face up, create a 1/1 colorless Thopter artifact creature with flying.
+/// Disguise {U/R}{U/R}.
+pub fn gadget_technician() -> CardDefinition {
+    let ur = ManaSymbol::Hybrid(Color::Blue, Color::Red);
+    let thopter = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: crate::card::TokenDefinition {
+            name: "Thopter".into(),
+            power: 1,
+            toughness: 1,
+            card_types: vec![CardType::Artifact, CardType::Creature],
+            subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        },
+    };
+    CardDefinition {
+        name: "Gadget Technician",
+        cost: cost(&[generic(2), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Disguise(cost(&[ur, ur]))],
+        triggered_abilities: vec![
+            etb(thopter()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+                effect: thopter(),
+            },
+        ],
+        ..Default::default()
     }
 }
 

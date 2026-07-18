@@ -6671,6 +6671,9 @@ static DECKS: &[Factory] = &[
     super::decks::cerebral_confiscation,
     super::decks::caught_red_handed,
     super::decks::mistway_spy,
+    super::decks::gleaming_geardrake,
+    super::decks::private_eye,
+    super::decks::gadget_technician,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
