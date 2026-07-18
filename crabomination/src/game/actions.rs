@@ -1524,6 +1524,20 @@ impl crate::game::GameState {
                     GameEvent::ManaAdded { player, color, .. } if *player == p => Some(*color),
                     _ => None,
                 }),
+                ExtraManaKind::AnyColor => {
+                    let legal = vec![
+                        ManaColor::White, ManaColor::Blue, ManaColor::Black,
+                        ManaColor::Red, ManaColor::Green,
+                    ];
+                    let answer = self.decider.decide(&crate::decision::Decision::ChooseColor {
+                        source: src_id,
+                        legal,
+                    });
+                    Some(match answer {
+                        crate::decision::DecisionAnswer::Color(c) => c,
+                        _ => ManaColor::White,
+                    })
+                }
                 // Handled above (colorless-only fast path).
                 ExtraManaKind::MirrorColorless => continue,
             };

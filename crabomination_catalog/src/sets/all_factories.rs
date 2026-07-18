@@ -6783,6 +6783,8 @@ static DECKS: &[Factory] = &[
     super::decks::living_conundrum,
     // recent260 — Gruul Mole God
     super::decks::anzrag_the_quake_mole,
+    // recent261 — Selesnya land Aura
+    super::decks::buried_in_the_garden,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

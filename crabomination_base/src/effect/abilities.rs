@@ -39,6 +39,9 @@ pub enum ExtraManaKind {
     /// One {C}, only when the tap produced colorless mana (Ultima's
     /// "whenever you tap a land for {C}, add an additional {C}").
     MirrorColorless,
+    /// One mana of any color, chosen by the controller at tap time (Buried in
+    /// the Garden — "adds an additional one mana of any color").
+    AnyColor,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
