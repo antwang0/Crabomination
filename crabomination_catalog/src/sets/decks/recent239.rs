@@ -423,6 +423,54 @@ pub fn analyze_the_pollen() -> CardDefinition {
     }
 }
 
+/// Mudflat Village — Land. {T}: Add {C}. {T}: Add {B}, creature-spells only.
+/// {1}{B}, {T}, Sacrifice: return a Bat/Lizard/Rat/Squirrel card from your
+/// graveyard to your hand.
+pub fn mudflat_village() -> CardDefinition {
+    let kindred = || {
+        R::HasCreatureType(CreatureType::Bat)
+            .or(R::HasCreatureType(CreatureType::Lizard))
+            .or(R::HasCreatureType(CreatureType::Rat))
+            .or(R::HasCreatureType(CreatureType::Squirrel))
+    };
+    CardDefinition {
+        name: "Mudflat Village",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colors(vec![Color::Black])),
+                        SpendRestriction::CreatureOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1), b()]),
+                sac_cost: true,
+                effect: Effect::Move {
+                    what: target_filtered(kindred()),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Fear of Burning Alive — {4}{R}{R} Enchantment Creature — Nightmare 4/4. ETB:
 /// deals 4 to each opponent. Delirium — whenever a source you control deals
 /// noncombat damage to an opponent, if delirium, deal that much to a creature

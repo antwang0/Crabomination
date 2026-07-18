@@ -575,3 +575,28 @@ fn fear_of_burning_alive_etb_and_delirium_copy() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "5 copied damage killed the 3/3");
 }
+
+/// Mudflat Village's sac ability returns a Rat card from the graveyard to hand;
+/// its {B} ability is creature-spell restricted.
+#[test]
+fn mudflat_village_returns_kindred_and_restricts_mana() {
+    use crabomination::effect::{Effect, ManaPayload};
+    use crabomination::mana::SpendRestriction;
+    let def = catalog::mudflat_village();
+    // The {B} ability is creature-only.
+    match &def.activated_abilities[1].effect {
+        Effect::AddMana { pool: ManaPayload::Restricted(_, r), .. } => {
+            assert_eq!(*r, SpendRestriction::CreatureOnly);
+        }
+        _ => panic!("not creature-restricted mana"),
+    }
+    // Sac ability (tap + sacrifice + {1}{B}) returns a matching Rat to hand.
+    let ab = &def.activated_abilities[2];
+    assert!(ab.tap_cost && ab.sac_cost, "tap + sacrifice cost");
+    assert_eq!(ab.mana_cost.cmc(), 2, "one-generic-plus-black activation");
+    let mut g = two_player_game();
+    let rat = g.add_card_to_graveyard(0, catalog::typhoid_rats());
+    let ctx = EffectContext { targets: vec![Target::Permanent(rat)], ..EffectContext::for_ability(rat, 0, None) };
+    g.resolve_effect(&ab.effect, &ctx).unwrap();
+    assert!(g.players[0].hand.iter().any(|c| c.id == rat), "Rat returned to hand");
+}
