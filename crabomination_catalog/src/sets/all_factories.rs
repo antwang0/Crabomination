@@ -6646,6 +6646,7 @@ static DECKS: &[Factory] = &[
     super::decks::whiskervale_forerunner,
     super::decks::hollow_marauder,
     super::decks::feed_the_cycle,
+    super::decks::freestrider_commando,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

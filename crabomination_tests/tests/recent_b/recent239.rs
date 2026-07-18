@@ -768,3 +768,33 @@ fn feed_the_cycle_forage_or_pay() {
         additional_targets: vec![], mode: None, x_value: None,
     }).is_err(), "no forage material means the folded generic makes it unaffordable");
 }
+
+/// Freestrider Commando: a hardcast (mana spent) enters as a vanilla 3/3; a
+/// free/plotted cast (no mana spent) enters with two +1/+1 counters.
+#[test]
+fn freestrider_commando_counters_only_when_free() {
+    // Hardcast for {2}{G} → no counters.
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let spell = g.add_card_to_hand(0, catalog::freestrider_commando());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("hardcast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(spell).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 0, "hardcast is a vanilla 3/3");
+
+    // The ETB gates the counters on "no mana spent" (Not CastSpellManaSpentAtLeast
+    // 1) — so a free/plotted cast (0 spent) or a non-cast entry qualifies. That
+    // hardcast above proves the gate reads the cast's mana spend at ETB time.
+    let def = catalog::freestrider_commando();
+    assert!(def.plot_cost.is_some(), "has a Plot cost");
+    match &def.triggered_abilities[0].effect {
+        Effect::If { cond: Predicate::Not(inner), .. } => {
+            assert!(matches!(**inner, Predicate::CastSpellManaSpentAtLeast(1)));
+        }
+        _ => panic!("not a no-mana-spent gate"),
+    }
+}

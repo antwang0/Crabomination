@@ -735,6 +735,38 @@ pub fn hollow_marauder() -> CardDefinition {
     }
 }
 
+/// Freestrider Commando — {2}{G} Centaur Mercenary 3/3. Plot {3}{G}. Enters with
+/// two +1/+1 counters if no mana was spent to cast it (a plotted/free cast) or
+/// it wasn't cast at all.
+pub fn freestrider_commando() -> CardDefinition {
+    CardDefinition {
+        name: "Freestrider Commando",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        plot_cost: Some(cost(&[generic(3), g()])),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                // "wasn't cast" OR "no mana spent" — either leaves mana_spent 0.
+                cond: Predicate::Not(Box::new(Predicate::CastSpellManaSpentAtLeast(1))),
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Feed the Cycle — {1}{B} Instant. Additional cost: forage or pay {B} (folded
 /// as {1} generic). Destroy target creature or planeswalker.
 pub fn feed_the_cycle() -> CardDefinition {
