@@ -614,6 +614,58 @@ pub fn lilypad_village() -> CardDefinition {
     }
 }
 
+/// Rockface Village — Land. {T}: Add {C}. {T}: Add {R}, creature-spells only.
+/// {R}, {T}: target Lizard/Mouse/Otter/Raccoon you control gets +1/+0 and haste
+/// until end of turn (sorcery speed).
+pub fn rockface_village() -> CardDefinition {
+    let kindred = R::HasCreatureType(CreatureType::Lizard)
+        .or(R::HasCreatureType(CreatureType::Mouse))
+        .or(R::HasCreatureType(CreatureType::Otter))
+        .or(R::HasCreatureType(CreatureType::Raccoon));
+    CardDefinition {
+        name: "Rockface Village",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colors(vec![Color::Red])),
+                        SpendRestriction::CreatureOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[r()]),
+                sorcery_speed: true,
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: target_filtered(kindred.and(R::ControlledByYou)),
+                        power: Value::ONE,
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Fear of Burning Alive — {4}{R}{R} Enchantment Creature — Nightmare 4/4. ETB:
 /// deals 4 to each opponent. Delirium — whenever a source you control deals
 /// noncombat damage to an opponent, if delirium, deal that much to a creature

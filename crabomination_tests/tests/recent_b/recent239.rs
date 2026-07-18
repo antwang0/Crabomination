@@ -668,3 +668,16 @@ fn lilypad_village_surveil_gate() {
     g.battlefield_find_mut(frog).unwrap().entered_turn = Some(3);
     assert!(g.evaluate_predicate(ab.condition.as_ref().unwrap(), &ctx), "kindred present → gate open");
 }
+
+/// Rockface Village's sorcery-speed ability pumps and hastes a kindred creature.
+#[test]
+fn rockface_village_pumps_and_hastes_kindred() {
+    let mut g = two_player_game();
+    let lizard = g.add_card_to_battlefield(0, catalog::viashino_pyromancer()); // Lizard 2/1
+    let ab = catalog::rockface_village().activated_abilities[2].effect.clone();
+    let ctx = EffectContext { targets: vec![Target::Permanent(lizard)], ..EffectContext::for_ability(crabomination::card::CardId(0), 0, None) };
+    g.resolve_effect(&ab, &ctx).unwrap();
+    let c = g.computed_permanent(lizard).unwrap();
+    assert_eq!(c.power, 3, "+1/+0 applied");
+    assert!(c.keywords.contains(&Keyword::Haste), "gained haste");
+}
