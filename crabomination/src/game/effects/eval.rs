@@ -2045,6 +2045,15 @@ impl GameState {
                 };
                 self.players[owner].artifacts_sacrificed_this_turn > 0
             }
+            R::ControllersTurn => {
+                let owner = match target {
+                    Target::Permanent(cid) => {
+                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                    }
+                    Target::Player(p) => *p,
+                };
+                self.active_player_idx == owner
+            }
             R::ControllerCorrupted => {
                 let owner = match target {
                     Target::Permanent(cid) => {
@@ -2539,6 +2548,7 @@ impl GameState {
             R::ControllerSacrificedArtifactThisTurn => {
                 self.players[card.controller].artifacts_sacrificed_this_turn > 0
             }
+            R::ControllersTurn => self.active_player_idx == card.controller,
             R::ControllerCorrupted => self.players[card.controller].poison_counters >= 3,
             R::Land => card.definition.is_land(),
             R::Nonland => !card.definition.is_land(),

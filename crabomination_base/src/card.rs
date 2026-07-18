@@ -1642,6 +1642,10 @@ pub enum SelectionRequirement {
     /// a `SelfHasKeywordWhile` for "can't be blocked as long as you've sacrificed
     /// an artifact this turn" (Furtive Courier).
     ControllerSacrificedArtifactThisTurn,
+    /// True when it's the candidate's controller's turn (`active_player_idx ==
+    /// controller`). Used as the `condition` of a `SelfHasKeywordWhile` for
+    /// "during your turn, this creature has [keyword]" (Pompous Gadabout).
+    ControllersTurn,
     /// True when the candidate card is in the exile zone. Mirrors
     /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
     /// (Chandra, Torch of Defiance) to detect an uncast exiled card.

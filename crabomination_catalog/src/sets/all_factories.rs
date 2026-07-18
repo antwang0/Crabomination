@@ -6729,6 +6729,10 @@ static DECKS: &[Factory] = &[
     // recent248 — artifact-sacrifice payoff + modal removal
     super::decks::suspicious_detonation,
     super::decks::deadly_complication,
+    // recent249 — suspect + artifact Detectives, during-your-turn body
+    super::decks::clandestine_meddler,
+    super::decks::forensic_gadgeteer,
+    super::decks::pompous_gadabout,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
