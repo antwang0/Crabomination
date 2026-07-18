@@ -351,6 +351,10 @@ factory doc comment:
   (put up to X land cards from hand and/or graveyard onto the battlefield tapped,
   graveyard-first) + X damage to any target. Reusable for future "put lands from
   hand/graveyard" ramp.
+- **Ill-Timed Explosion ✅** (`decks::recent262`) — `Value::GreatestDiscardedManaValueThisEffect`
+  (greatest MV among cards discarded this resolution; maxed per discard). Draw
+  two, may discard two, deal that MV to each creature. Reusable for other
+  "greatest MV discarded this way" payoffs.
 - **MKM remaining gaps (~50 cards):** legends (Delney, Etrata, Teysa, Judith,
   Kaya PW, Tolsimir's Wolf-attack lure, …), the remaining split cards (Flotsam //
   Jetsam, Push // Pull, Hustle // Bustle, Fuss // Bother ✅, Cease // Desist ✅),
