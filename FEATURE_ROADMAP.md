@@ -16,6 +16,19 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **recent240–241 (DSK + MKM gap batch, 23 cards):** CR 603.4 turn-scoped
+  delayed triggers — `Effect::CreaturesYouControlDyingThisTurn` (Waltz of Rage)
+  and `CreaturesYouControlDealingCombatDamageThisTurn` (Mistway Spy), plus
+  `Value::CardsExiledWithSourceCount` (Veteran Survivor's exile-with-count
+  static). DSK: Fear of Abduction, Say Its Name, Veteran Survivor, Coordinated
+  Clobbering, Waltz of Rage. MKM: the Detective / Disguise / surveil-investigate
+  suite (Loxodon Eavesdropper, Jaded Analyst, Projektor Inspector, Dog Walker,
+  Forum Familiar, Sanguine Savior, Mistway Spy, Exit Specialist, Glint Weaver,
+  Hotshot Investigators, Innocent Bystander, Rot Farm Mortipede, Snarling
+  Gorehound, Sanitation Automaton, Frantic Scapegoat, Slice from the Shadows,
+  Cerebral Confiscation, Caught Red-Handed). Tests in `tests/recent_b/recent240`
+  / `recent241` + CR 603.4/701.13/701.60 conformance.
+
 - **recent239 (DSK/OTJ/MKM/LCI/BLB gap batch, 36 cards):** the **Survival** ability
   word (a PostCombatMain trigger gated on `R::Tapped` — Rootwise Survivor,
   Reluctant Role Model), `Effect::ManifestDreadRepeatThenCounters` (Valgavoth's

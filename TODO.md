@@ -2846,6 +2846,37 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     `target`, right → `additional_targets[0]`); a fusable card with a
     multi-target half would need the slot convention generalized.
 
+- **DSK/MKM gap cards deferred (recent240–241 follow-ups).** Each wants one
+  small primitive (verified absent this run):
+  - **Miasma Demon** — "discard any number; up to that many target creatures
+    each get -2/-2." Needs a reflexive discard whose count caps a
+    resolution-time multi-target debuff (`ApplyToTargets.max_targets` is a
+    fixed `u8`; make it read a `Value`, or add a reflexive discard-then-targets
+    effect).
+  - **Grievous Wound** — enchant-*player* Aura with "enchanted player can't gain
+    life" + "when dealt damage, they lose half their life." The `PlayerCannotGainLife`
+    static and `LoseHalf` effect exist; needs a player-enchant Aura + a
+    `PlayerRef::EnchantedPlayer` actor.
+  - **Leyline of Transformation** — opening-hand + choose-a-creature-type static
+    that adds the type to your creatures *and* spells/cards in other zones.
+    Needs a continuous creature-type-add static keyed on `chosen_creature_type`.
+  - **Leyline of Mutation** — "pay {W}{U}{B}{R}{G} rather than mana cost for
+    spells you cast." Needs a general alt-cost static.
+  - **Leyline of Resonance** — "copy your I/S that targets only a single
+    creature you control." Needs a copy-on-cast static keyed on target shape.
+  - **Leering Onlooker / Rubblebelt Maverick** — graveyard-activated abilities
+    (`ActivatedAbility.from_graveyard` + `exile_self_cost` fields exist — wire a
+    catalog card through them and confirm the activation path).
+  - **Frantic Scapegoat** — the "when other creatures enter, if suspected, you
+    may move the suspicion" rider (front haste + ETB-suspect ship; the reflexive
+    suspect-another/`ClearSuspected`-self rider is dropped).
+  - **Say Its Name** — the three-copy graveyard-exile combo that tutors Altanak
+    (front mill+regrowth ships).
+  - **Unidentified Hovership / Hedge Shredder / Dissection Tools / Chainsaw /
+    Cursed Recording** — exile-remember-owner LTB manifest-dread; mill-lands-to-
+    battlefield replacement; equip-cost-as-sacrifice; self-counter-scaled equip
+    CDA; cast-count time-counter artifact.
+
 - **Card primitives deferred this run (claude/modern_decks).** Real cards
   skipped for lack of a primitive — each is a small, reusable addition:
   - ✅ **"Whenever this blocks a creature, [affect that creature]"** — shipped
@@ -3430,7 +3461,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   (`Keyword::ProtectionFromEverything`, every protection-check site) — Hexdrinker
 - ✅ CR 603.4 — once-per-turn / per-subject trigger budget is now charged only
   *after* the intervening filter passes (Faerie Mastermind's "second card each
-  turn" via `Predicate::PlayerDrewAtLeastThisTurn` + `once_per_turn`)
+  turn" via `Predicate::PlayerDrewAtLeastThisTurn` + `once_per_turn`).
+  Turn-scoped "until end of turn, whenever a creature you control dies / deals
+  combat damage to a player" delayed triggers now ship
+  (`DelayedKind::CreatureYouControlDies/DealsCombatDamageThisTurn` +
+  `Effect::CreaturesYouControlDying/DealingCombatDamageThisTurn`, expiring at
+  cleanup) — Waltz of Rage, Mistway Spy. Tests in `recent240`/`recent241`.
 - ✅ CR 702.148 — Cleave
 - ✅ CR 702.47 — Splice
 - ✅ CR 704.5k — world rule
