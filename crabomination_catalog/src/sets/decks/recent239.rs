@@ -516,6 +516,58 @@ pub fn oakhollow_village() -> CardDefinition {
     }
 }
 
+/// Lupinflower Village — Land. {T}: Add {C}. {T}: Add {W}, creature-spells only.
+/// {1}{W}, {T}, Sacrifice: look at the top six cards, put a Bat/Bird/Mouse/Rabbit
+/// card into your hand, bottom the rest in a random order.
+pub fn lupinflower_village() -> CardDefinition {
+    let kindred = R::HasCreatureType(CreatureType::Bat)
+        .or(R::HasCreatureType(CreatureType::Bird))
+        .or(R::HasCreatureType(CreatureType::Mouse))
+        .or(R::HasCreatureType(CreatureType::Rabbit));
+    CardDefinition {
+        name: "Lupinflower Village",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colors(vec![Color::White])),
+                        SpendRestriction::CreatureOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1), w()]),
+                sac_cost: true,
+                effect: Effect::LookPickToHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(6),
+                    rest_to_graveyard: false,
+                    pick_filter: Some(kindred),
+                    take: None,
+                    to_battlefield: false,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
+                    optional: true,
+                    picked_lands_to_battlefield: false,
+                    rest_bottom_random: true,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Fear of Burning Alive — {4}{R}{R} Enchantment Creature — Nightmare 4/4. ETB:
 /// deals 4 to each opponent. Delirium — whenever a source you control deals
 /// noncombat damage to an opponent, if delirium, deal that much to a creature

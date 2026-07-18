@@ -624,3 +624,27 @@ fn oakhollow_village_counters_kindred_entered_this_turn() {
     assert_eq!(g.battlefield_find(old_frog).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
         "kindred creature that entered earlier untouched");
 }
+
+/// Lupinflower Village's sac ability digs six deep for a Rabbit and bottoms the
+/// rest; its {W} ability is creature-restricted.
+#[test]
+fn lupinflower_village_digs_for_kindred() {
+    use crabomination::effect::{Effect, ManaPayload};
+    use crabomination::mana::SpendRestriction;
+    let def = catalog::lupinflower_village();
+    match &def.activated_abilities[1].effect {
+        Effect::AddMana { pool: ManaPayload::Restricted(_, r), .. } => {
+            assert_eq!(*r, SpendRestriction::CreatureOnly);
+        }
+        _ => panic!("not creature-restricted mana"),
+    }
+    // Sac ability digs six deep for a kindred card, bottoming the rest at random.
+    let ab = &def.activated_abilities[2];
+    assert!(ab.tap_cost && ab.sac_cost);
+    match &ab.effect {
+        Effect::LookPickToHand { count, pick_filter: Some(_), rest_bottom_random: true, optional: true, .. } => {
+            assert!(matches!(count, crabomination::effect::Value::Const(6)));
+        }
+        _ => panic!("not a six-deep kindred dig"),
+    }
+}
