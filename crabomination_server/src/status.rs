@@ -357,6 +357,11 @@ fn route(method: &str, path: &str, started: Instant, slots: &SlotManager) -> (&'
     if method != "GET" && method != "HEAD" {
         return ("405 Method Not Allowed", "text/plain", "method not allowed\n".to_string());
     }
+    // Strip any query string (`/metrics?collect=now`) and a single trailing
+    // slash (`/status/`) so scrapers and probes that decorate the path still
+    // reach the intended handler instead of a 404.
+    let path = path.split('?').next().unwrap_or(path);
+    let path = if path.len() > 1 { path.trim_end_matches('/') } else { path };
     match path {
         "/healthz" => ("200 OK", "text/plain", "ok\n".to_string()),
         "/status.json" | "/metrics.json" => ("200 OK", "application/json", render_status_json(started, slots)),
@@ -458,6 +463,11 @@ mod tests {
         assert_eq!(route("POST", "/status", now, &slots).0, "405 Method Not Allowed");
         assert_eq!(route("HEAD", "/healthz", now, &slots).0, "200 OK");
         assert_eq!(route("GET", "/dashboard", now, &slots).1, "text/html; charset=utf-8");
+        // Query strings and a trailing slash still route to the handler.
+        assert_eq!(route("GET", "/metrics?collect=now", now, &slots).1, "text/plain; version=0.0.4");
+        assert_eq!(route("GET", "/status.json?pretty=1", now, &slots).1, "application/json");
+        assert_eq!(route("GET", "/status/", now, &slots).0, "200 OK");
+        assert_eq!(route("GET", "/", now, &slots).0, "200 OK", "root still served after slash-trim");
     }
 
     #[test]

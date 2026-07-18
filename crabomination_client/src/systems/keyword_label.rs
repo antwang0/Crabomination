@@ -299,6 +299,26 @@ fn keyword_strip(keywords: &[Keyword]) -> String {
     tags.join(" ")
 }
 
+/// Full board-glance strip: the keyword chips plus status prefixes that aren't
+/// keywords — "Susp" for a suspected creature (CR 701.60) and "Zzz" for
+/// summoning sickness. Empty when there's nothing to show.
+fn board_status_strip(keywords: &[Keyword], summoning_sick: bool, suspected: bool) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    // Suspected reads at a glance — it's *why* the creature shows Men/NoBlk.
+    if suspected {
+        parts.push("Susp".to_string());
+    }
+    // Summoning sickness gets a board-visible tag — skipped when Haste lifts it.
+    if summoning_sick && !keywords.contains(&Keyword::Haste) {
+        parts.push("Zzz".to_string());
+    }
+    let strip = keyword_strip(keywords);
+    if !strip.is_empty() {
+        parts.push(strip);
+    }
+    parts.join(" ")
+}
+
 /// Reconcile keyword strips with the engine view. Runs every frame in
 /// `AppState::InGame`.
 #[allow(clippy::type_complexity)]
@@ -339,16 +359,7 @@ pub fn sync_keyword_labels(
             if !p.is_creature() {
                 continue;
             }
-            let mut strip = keyword_strip(&p.keywords);
-            // Summoning sickness gets a board-visible "Zzz" tag (previously
-            // tooltip-only) — skipped when Haste lifts the restriction.
-            if p.summoning_sick && !p.keywords.contains(&Keyword::Haste) {
-                strip = if strip.is_empty() {
-                    "Zzz".to_string()
-                } else {
-                    format!("Zzz {strip}")
-                };
-            }
+            let strip = board_status_strip(&p.keywords, p.summoning_sick, p.suspected);
             if !strip.is_empty() {
                 desired_cache.insert(p.id, strip);
             }
@@ -583,6 +594,21 @@ mod tests {
             ))]),
             "Atk?"
         );
+    }
+
+    #[test]
+    fn board_status_prefixes_suspected_and_sick() {
+        // A suspected creature shows "Susp" ahead of its (injected) Men/NoBlk.
+        assert_eq!(
+            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true),
+            "Susp Men NoBlk",
+        );
+        // Summoning sickness tags "Zzz"; Haste suppresses it.
+        assert_eq!(board_status_strip(&[], true, false), "Zzz");
+        assert_eq!(board_status_strip(&[Keyword::Haste], true, false), "Hst");
+        // Both statuses stack, suspected first.
+        assert_eq!(board_status_strip(&[], true, true), "Susp Zzz");
+        assert_eq!(board_status_strip(&[], false, false), "");
     }
 
     #[test]
