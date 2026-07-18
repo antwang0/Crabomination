@@ -422,6 +422,23 @@ pub fn analyze_the_pollen() -> CardDefinition {
     }
 }
 
+/// Monstrous Emergence — {1}{G} Sorcery. Additional cost: choose a creature you
+/// control or reveal a creature card from your hand. Deal damage equal to that
+/// creature's power to target creature.
+pub fn monstrous_emergence() -> CardDefinition {
+    CardDefinition {
+        name: "Monstrous Emergence",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::ChooseOrRevealCreature],
+        effect: Effect::DealDamage {
+            to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            amount: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
 /// Oblivious Bookworm — {G}{U} Human Wizard 2/3. At the beginning of your end
 /// step, you may draw a card; if you do, discard a card unless a permanent
 /// entered face down under your control this turn or you turned a permanent

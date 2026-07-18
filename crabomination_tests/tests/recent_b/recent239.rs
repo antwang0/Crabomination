@@ -470,3 +470,41 @@ fn oblivious_bookworm_discard_unless_face_down_activity() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), before + 1, "kept the drawn card");
 }
+
+/// Monstrous Emergence deals damage equal to the chosen creature's power (its
+/// choose-a-creature additional cost picks the highest-power creature you
+/// control).
+#[test]
+fn monstrous_emergence_deals_chosen_power() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    let _ = big;
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let spell = g.add_card_to_hand(0, catalog::monstrous_emergence());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Monstrous Emergence");
+    drain_stack(&mut g);
+    // Highest-power creature is the 3/3 Hill Giant → 3 damage kills the 3/3.
+    assert!(g.battlefield_find(victim).is_none(), "3 damage (chosen creature's power) killed the 3/3");
+}
+
+/// The additional cost is unpayable with no creature to choose or reveal.
+#[test]
+fn monstrous_emergence_needs_a_creature() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::monstrous_emergence());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no creature to choose or reveal");
+}

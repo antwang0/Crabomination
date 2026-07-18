@@ -5430,6 +5430,11 @@ impl GameState {
             A::CollectEvidence { amount, optional } => {
                 *optional || self.graveyard_can_collect_evidence(p, *amount)
             }
+            // Need a creature to point at — one you control or one to reveal.
+            A::ChooseOrRevealCreature => {
+                self.battlefield.iter().any(|c| c.controller == p && c.definition.is_creature())
+                    || self.players[p].hand.iter().any(|c| c.definition.is_creature())
+            }
         })
     }
 
@@ -5781,6 +5786,28 @@ impl GameState {
                                 amount: (-applied) as u32,
                             });
                         }
+                    }
+                }
+                A::ChooseOrRevealCreature => {
+                    // Choose the highest-power creature you control, else reveal
+                    // the highest-power creature card in hand; its power becomes
+                    // the spell's X (read via `Value::XFromCost`). Nothing moves.
+                    let on_bf = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && c.definition.is_creature())
+                        .map(|c| c.power().max(0) as u32)
+                        .max();
+                    let power = on_bf.or_else(|| {
+                        self.players[p]
+                            .hand
+                            .iter()
+                            .filter(|c| c.definition.is_creature())
+                            .map(|c| c.definition.power.max(0) as u32)
+                            .max()
+                    });
+                    if sac_power.is_none() {
+                        sac_power = power;
                     }
                 }
                 A::CollectEvidence { amount, .. } => {

@@ -2747,6 +2747,13 @@ pub enum AdditionalCastCost {
         filter: SelectionRequirement,
         life: u32,
     },
+    /// "As an additional cost to cast this spell, choose a creature you control
+    /// or reveal a creature card from your hand." (Monstrous Emergence.) The
+    /// chosen/revealed creature's power is threaded into the spell's X (read via
+    /// `Value::XFromCost`); nothing is sacrificed or moved. Rejected if the
+    /// caster controls no creature and reveals none. Auto-picks the highest
+    /// power (battlefield first, then hand).
+    ChooseOrRevealCreature,
     /// "As an additional cost, (you may) collect evidence N" (CR 701.59 — exile
     /// cards with total mana value ≥ `amount` from your graveyard). When
     /// `optional` the cost may be skipped; whether it was paid is read at

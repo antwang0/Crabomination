@@ -3860,9 +3860,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     death predicate or a small per-turn typed tally on `Player`.
   - **Tap-1-or-2-then-each-deals-power** — Coordinated Clobbering (needs
     explicit tapper target slots + a shared recipient slot).
-  - **Choose/reveal-creature-power additional cost** — Monstrous Emergence
-    (`AdditionalCastCost::ChooseOrRevealCreature` + a `Value` reading the
-    chosen creature's power).
+  - ✅ ~~**Choose/reveal-creature-power additional cost**~~ — shipped
+    (`AdditionalCastCost::ChooseOrRevealCreature` threads the chosen/revealed
+    creature's power into the spell's X via `Value::XFromCost`). Monstrous
+    Emergence is wired; auto-picks the highest-power creature.
   - **Dual-pile exile-return-to-hand linked to LTB** — Fear of Abduction (the
     additional-cost-exiled own creature and the ETB-exiled opponent creature
     both return to their owners' hands when it leaves).
