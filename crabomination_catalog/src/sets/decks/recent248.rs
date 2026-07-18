@@ -24,23 +24,35 @@ pub fn suspicious_detonation() -> CardDefinition {
 }
 
 /// Deadly Complication — {1}{B}{R} Sorcery. Choose one or both — destroy target
-/// creature; and/or put a +1/+1 counter on target suspected creature you control.
-/// (The optional "may become no longer suspected" rider is dropped.)
+/// creature; and/or put a +1/+1 counter on a target suspected creature you
+/// control and you may have it become no longer suspected.
 pub fn deadly_complication() -> CardDefinition {
     CardDefinition {
         name: "Deadly Complication",
         cost: cost(&[generic(1), b(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
             modes: vec![
                 Effect::Destroy { what: target_filtered(R::Creature) },
-                Effect::AddCounter {
-                    what: target_filtered(R::Creature.and(R::IsSuspected).and(R::ControlledByYou)),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                },
+                Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(
+                            R::Creature.and(R::IsSuspected).and(R::ControlledByYou),
+                        ),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::MayDo {
+                        description: "Have it become no longer suspected?".into(),
+                        body: Box::new(Effect::ClearSuspected {
+                            what: crate::effect::Selector::Target(0),
+                        }),
+                    },
+                ]),
             ],
+            min: 1,
+            max: 2,
+            allow_repeats: false,
         },
         ..Default::default()
     }

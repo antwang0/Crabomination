@@ -89,3 +89,31 @@ fn deadly_complication_destroys() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "destroy mode killed the creature");
 }
+
+/// Deadly Complication's second mode grows a suspected creature you control and
+/// can clear its suspected status.
+#[test]
+fn deadly_complication_grows_and_unsuspects() {
+    use crabomination::card::CounterType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().suspected = true;
+    // Resolve the counter-and-unsuspect mode directly (mode index 1).
+    let crabomination::effect::Effect::ChooseModesCast { modes, .. } =
+        catalog::deadly_complication().effect
+    else {
+        panic!("Deadly Complication is a modal spell");
+    };
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // yes, unsuspect
+    let ctx = EffectContext::for_spell(0, Some(Target::Permanent(mine)), 0, 0);
+    g.resolve_effect(&modes[1], &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(mine).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "suspected creature got a +1/+1 counter",
+    );
+    assert!(!g.battlefield_find(mine).unwrap().suspected, "it is no longer suspected");
+}
