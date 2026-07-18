@@ -365,7 +365,9 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     // opponent can't gain life." without scrolling through the card
     // detail panel. Added per the TODO improvement "Static-ability
     // tooltip exposure" — pairs with the existing
-    // `triggered_ability_labels` block above.
+    // `triggered_ability_labels` block above. Also carries the
+    // "Equipped: {cost}: {effect}" lines an Equipment grants via
+    // `EquipBonus.activated_abilities` (Wrench's tap ability).
     if !p.static_ability_labels.is_empty() {
         if !lines.is_empty() {
             lines.push(String::from("─────────"));

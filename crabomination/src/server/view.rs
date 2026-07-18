@@ -1281,12 +1281,27 @@ fn project_permanent(
 /// abilities yield an empty vector. The descriptions are 'static and
 /// stable across recomputes — they're the printed Oracle wording.
 fn project_static_ability_labels(card: &CardInstance) -> Vec<String> {
-    card.definition
+    let mut out: Vec<String> = card
+        .definition
         .static_abilities
         .iter()
         .map(|s| s.description.to_string())
         .filter(|d| !d.is_empty())
-        .collect()
+        .collect();
+    // Activated abilities an Equipment grants to the creature it's attached to
+    // (CR 702.6e — `EquipBonus.activated_abilities`, Wrench's "{3}, {T}: Tap
+    // target creature"). Surface them on the Equipment's own tooltip so the
+    // grant is visible; they activate off the equipped creature by index.
+    if let Some(bonus) = &card.definition.equipped_bonus {
+        for a in &bonus.activated_abilities {
+            out.push(format!(
+                "Equipped: {}: {}",
+                ability_cost_label(a),
+                ability_effect_label(&a.effect)
+            ));
+        }
+    }
+    out
 }
 
 /// Generate one-line summaries per triggered ability for the client
@@ -2670,6 +2685,21 @@ mod tests {
         let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
         assert!(perm.static_ability_labels.is_empty(),
             "vanilla creature has no statics");
+    }
+
+    #[test]
+    fn permanent_view_surfaces_equipment_granted_activated_ability() {
+        // Wrench grants "{3}, {T}: Tap target creature" via
+        // EquipBonus.activated_abilities — the Equipment's tooltip must show it.
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::wrench());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
+        assert!(
+            perm.static_ability_labels.iter().any(|s| s.starts_with("Equipped:")),
+            "granted activated ability should appear: {:?}",
+            perm.static_ability_labels
+        );
     }
 
     #[test]
