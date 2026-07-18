@@ -603,6 +603,10 @@ pub enum Value {
     /// Curator's "four or more card types among cards exiled with this
     /// creature" threshold.
     DistinctCardTypesExiledWith,
+    /// Number of cards in exile stamped `exiled_with = source` (the resolving
+    /// source). Backs "as long as three or more cards are exiled with this
+    /// creature" static thresholds (Veteran Survivor).
+    CardsExiledWithSourceCount,
     /// Number of distinct power values among creatures the controller
     /// controls. Backs Golden Ratio's "draw a card for each different
     /// power among creatures you control."

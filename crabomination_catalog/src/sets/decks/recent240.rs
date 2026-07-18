@@ -3,11 +3,27 @@
 
 use crate::card::{
     AdditionalCastCost, CardDefinition, CardType, CreatureType, ExileReturnZone, Keyword,
-    SelectionRequirement as R, Subtypes,
+    SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::etb;
-use crate::effect::{Effect, Selector, Value};
+use crate::effect::{
+    Effect, EventKind, EventScope, EventSpec, Predicate, Selector, StaticEffect, Value,
+};
+use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, w};
+
+/// "Survival — At the beginning of your second main phase, if this creature is
+/// tapped, [effect]."
+fn survival(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::PostCombatMain), EventScope::ActivePlayer),
+        effect: Effect::If {
+            cond: Predicate::EntityMatches { what: Selector::This, filter: R::Tapped },
+            then: Box::new(effect),
+            else_: Box::new(Effect::Noop),
+        },
+    }
+}
 
 /// Fear of Abduction — {4}{W}{W} Enchantment Creature — Nightmare 5/5. Flying.
 /// Additional cost: exile a creature you control. ETB: exile target creature an
@@ -42,6 +58,39 @@ pub fn say_its_name() -> CardDefinition {
             Effect::Mill { who: Selector::You, amount: Value::Const(3) },
             Effect::ReturnGraveyardCardsToHand { filter: R::Creature.or(R::Land), max: Value::Const(1) },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Veteran Survivor — {W} Human Survivor 2/1. Survival — exile up to one target
+/// card from a graveyard. While 3+ cards are exiled with it, +3/+3 and hexproof.
+pub fn veteran_survivor() -> CardDefinition {
+    CardDefinition {
+        name: "Veteran Survivor",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Survivor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![survival(Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 0,
+            filter: R::InGraveyard,
+            effect: Box::new(Effect::ExileWithSource { what: Selector::Target(0) }),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "While 3+ cards exiled with this, it gets +3/+3 and has hexproof.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: Predicate::ValueAtLeast(Value::CardsExiledWithSourceCount, Value::Const(3)),
+                applies_to: Selector::This,
+                power: 3,
+                toughness: 3,
+                keywords: vec![Keyword::Hexproof],
+            },
+        }],
         ..Default::default()
     }
 }

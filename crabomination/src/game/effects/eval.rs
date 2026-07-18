@@ -695,6 +695,10 @@ impl GameState {
                 }
                 seen.len() as i32
             }
+            Value::CardsExiledWithSourceCount => {
+                let Some(src) = ctx.source else { return 0; };
+                self.exile.iter().filter(|c| c.exiled_with == Some(src)).count() as i32
+            }
             Value::CardsDrawnThisTurn(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].cards_drawn_this_turn as i32)

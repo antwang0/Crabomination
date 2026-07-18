@@ -6650,6 +6650,7 @@ static DECKS: &[Factory] = &[
     super::decks::crimestopper_sprite,
     super::decks::fear_of_abduction,
     super::decks::say_its_name,
+    super::decks::veteran_survivor,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -45,3 +45,24 @@ fn say_its_name_mills_then_returns() {
     );
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature returned to hand");
 }
+
+/// Veteran Survivor gains +3/+3 and hexproof once three cards are exiled with
+/// it via its Survival ability.
+#[test]
+fn veteran_survivor_buffs_at_three_exiled() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let vet = g.add_card_to_battlefield(0, catalog::veteran_survivor());
+    // Baseline: 2/1, no hexproof.
+    let c = g.computed_permanent(vet).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 1));
+    assert!(!c.keywords.contains(&Keyword::Hexproof));
+    // Exile three cards stamped with the survivor as their source.
+    for _ in 0..3 {
+        let card = g.add_card_to_exile(1, catalog::grizzly_bears());
+        g.exile.iter_mut().find(|c| c.id == card).unwrap().exiled_with = Some(vet);
+    }
+    let c = g.computed_permanent(vet).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 4), "+3/+3 at three exiled");
+    assert!(c.keywords.contains(&Keyword::Hexproof), "hexproof at three exiled");
+}
