@@ -6685,6 +6685,14 @@ static DECKS: &[Factory] = &[
     super::decks::case_of_the_filched_falcon,
     super::decks::case_of_the_uneaten_feast,
     super::decks::case_file_auditor,
+    super::decks::the_chase_is_on,
+    super::decks::galvanize,
+    super::decks::red_herring,
+    super::decks::vengeful_creeper,
+    super::decks::rubblebelt_maverick,
+    super::decks::leering_onlooker,
+    super::decks::tunnel_tipster,
+    super::decks::gravestone_strider,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
