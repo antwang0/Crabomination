@@ -539,6 +539,11 @@ pub enum Value {
     /// rider — gates an `Effect::If { ValueAtLeast(this, 1), ... }`.
     /// Reset to 0 between independent resolutions.
     CreatureCardsDiscardedThisEffect,
+    /// Greatest mana value among cards discarded within the current effect
+    /// resolution (`GameState.greatest_discarded_mv_this_resolution`). Used by
+    /// Ill-Timed Explosion's "deals X damage to each creature, where X is the
+    /// greatest mana value among cards discarded this way." 0 if none discarded.
+    GreatestDiscardedManaValueThisEffect,
     /// Number of creature cards among the cards moved so far within the current
     /// effect resolution (`last_moved_cards`) that are now in a graveyard —
     /// i.e. creature cards milled this way (Dread Summons' "for each creature

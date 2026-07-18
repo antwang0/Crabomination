@@ -6785,8 +6785,9 @@ static DECKS: &[Factory] = &[
     super::decks::anzrag_the_quake_mole,
     // recent261 — Selesnya land Aura
     super::decks::buried_in_the_garden,
-    // recent262 — Gruul X burn + land ramp
+    // recent262 — Gruul X burn + land ramp, Izzet loot-and-burn
     super::decks::worldsouls_rage,
+    super::decks::ill_timed_explosion,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];

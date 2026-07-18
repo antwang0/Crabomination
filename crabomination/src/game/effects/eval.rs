@@ -496,6 +496,9 @@ impl GameState {
             Value::CreatureCardsDiscardedThisEffect => {
                 self.creature_cards_discarded_this_resolution as i32
             }
+            Value::GreatestDiscardedManaValueThisEffect => {
+                self.greatest_discarded_mv_this_resolution as i32
+            }
             Value::CreatureCardsMilledThisEffect => self
                 .last_moved_cards
                 .iter()

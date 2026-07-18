@@ -865,6 +865,7 @@ impl GameState {
         self.cards_discarded_this_resolution = 0;
         self.energy_paid_this_resolution = 0;
         self.creature_cards_discarded_this_resolution = 0;
+        self.greatest_discarded_mv_this_resolution = 0;
         self.cards_discarded_per_player_this_resolution.clear();
         self.nonland_cards_discarded_per_player_this_resolution.clear();
         self.discarded_card_ids_this_resolution.clear();

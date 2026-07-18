@@ -510,6 +510,13 @@ pub struct GameState {
     /// Reset to 0 between independent resolutions.
     #[serde(skip)]
     pub(crate) creature_cards_discarded_this_resolution: u32,
+    /// Transient: greatest mana value among cards discarded within the current
+    /// effect resolution. Read by `Value::GreatestDiscardedManaValueThisEffect`
+    /// so a follow-up step in the same `Effect::Seq` can scale off "the greatest
+    /// mana value among cards discarded this way" (Ill-Timed Explosion). Reset
+    /// to 0 between independent resolutions.
+    #[serde(skip)]
+    pub(crate) greatest_discarded_mv_this_resolution: u32,
     /// Transient: per-player count of cards discarded within the current
     /// effect resolution, indexed by player seat. Bumped alongside the
     /// flat `cards_discarded_this_resolution` whenever a discard event
@@ -1226,6 +1233,7 @@ impl Clone for GameState {
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
             energy_paid_this_resolution: self.energy_paid_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
+            greatest_discarded_mv_this_resolution: self.greatest_discarded_mv_this_resolution,
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
             nonland_cards_discarded_per_player_this_resolution: self.nonland_cards_discarded_per_player_this_resolution.clone(),
             shuffle_resolving_spell_into_library: self.shuffle_resolving_spell_into_library,
@@ -1401,6 +1409,7 @@ impl GameState {
             cards_discarded_this_resolution: 0,
             energy_paid_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
+            greatest_discarded_mv_this_resolution: 0,
             cards_discarded_per_player_this_resolution: HashMap::new(),
             nonland_cards_discarded_per_player_this_resolution: HashMap::new(),
             shuffle_resolving_spell_into_library: false,
@@ -7897,6 +7906,8 @@ impl GameState {
         self.players[p].discarded_this_turn.insert(card_id);
         self.cards_discarded_this_resolution += 1;
         self.last_discarded_mana_value = Some(card.definition.cost.cmc());
+        self.greatest_discarded_mv_this_resolution =
+            self.greatest_discarded_mv_this_resolution.max(card.definition.cost.cmc());
         self.last_discarded_card_types = card.definition.card_types.len() as u32;
         *self
             .cards_discarded_per_player_this_resolution
