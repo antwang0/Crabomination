@@ -1630,6 +1630,10 @@ pub enum GameEvent {
     TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
+    /// DSK — `player` manifested dread, putting `milled` into their graveyard
+    /// this way (the non-manifested of the top two). Drives
+    /// `EventKind::ManifestedDread`; the subject is `milled`.
+    ManifestedDread { player: usize, milled: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
     AttackerDeclared(CardId),
     BlockerDeclared { blocker: CardId, attacker: CardId },

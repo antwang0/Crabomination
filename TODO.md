@@ -3849,11 +3849,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     graveyard can afford it. Still open: **Axebane Ferox's Ward—Collect
     evidence 4** (a ward cost, not a cast cost — needs ward-cost integration),
     and an interactive collect prompt for UI casters (currently auto).
-  - **"Whenever you manifest dread" trigger** (`EventKind::ManifestedDread` +
-    `GameEvent::ManifestedDread { player, milled }` + wire mirror + subject
-    binding to the milled card). Unblocks Paranormal Analyst ("put a card you
-    put into your graveyard this way into your hand") and Oblivious Bookworm's
-    face-down-this-turn clause.
+  - ✅ ~~**"Whenever you manifest dread" trigger**~~ — shipped
+    (`EventKind::ManifestedDread` + `GameEvent::ManifestedDread { player, milled }`
+    + wire mirror + milled-card subject binding). Paranormal Analyst is wired.
+    Oblivious Bookworm still needs a per-turn "a permanent entered face down /
+    was turned face up this turn" flag (its end-step discard-unless clause).
   - **Type-filtered death tally** — "if a non-Zombie creature died this turn"
     (Undead Sprinter's graveyard-cast condition). Needs either a filtered
     death predicate or a small per-turn typed tally on `Player`.

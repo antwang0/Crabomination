@@ -2052,6 +2052,7 @@ pub enum GameEventWire {
     TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
+    ManifestedDread { player: usize, milled: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
     AttackerDeclared(CardId),
     BlockerDeclared { blocker: CardId, attacker: CardId },
@@ -2273,6 +2274,10 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::CardMilled { player, card_id } => GameEventWire::CardMilled {
                 player: *player,
                 card_id: *card_id,
+            },
+            GameEvent::ManifestedDread { player, milled } => GameEventWire::ManifestedDread {
+                player: *player,
+                milled: *milled,
             },
             GameEvent::ScryPerformed { player, looked_at, bottomed } => {
                 GameEventWire::ScryPerformed {
@@ -2514,6 +2519,9 @@ impl GameEventWire {
             E::TokenCreated { card_id } => format!("token {} created", name(*card_id)),
             E::CardMilled { player, card_id } => {
                 format!("{} milled {}", pn(*player), name(*card_id))
+            }
+            E::ManifestedDread { player, milled } => {
+                format!("{} manifested dread (milled {})", pn(*player), name(*milled))
             }
             E::ScryPerformed {
                 player,

@@ -6631,6 +6631,7 @@ static DECKS: &[Factory] = &[
     super::decks::kutzils_flanker,
     super::decks::behind_the_mask,
     super::decks::analyze_the_pollen,
+    super::decks::paranormal_analyst,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

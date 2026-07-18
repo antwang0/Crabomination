@@ -1804,6 +1804,11 @@ pub enum EventKind {
     /// trigger fires from the graveyard off the milled card itself
     /// (Narcomoeba, Creeping Chill).
     CardMilled,
+    /// DSK — "Whenever you manifest dread, …" (`GameEvent::ManifestedDread`).
+    /// The event subject is the card put into the graveyard "this way" (the
+    /// non-manifested card), so a body can return it to hand (Paranormal
+    /// Analyst). The manifesting player is the event actor.
+    ManifestedDread,
     /// CR 702.108 — a permanent became untapped (Inspired). Fired once per
     /// permanent that flips tapped→untapped during the untap step. The
     /// triggering permanent is the event subject.

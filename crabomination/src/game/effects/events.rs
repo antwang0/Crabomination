@@ -75,6 +75,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         (EventKind::CardMilled, GameEvent::CardMilled { .. }) => true,
+        (EventKind::ManifestedDread, GameEvent::ManifestedDread { .. }) => true,
         (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
         (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
         (
@@ -474,6 +475,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::Foraged { player }
         | GameEvent::PoisonAdded { player, .. }
         | GameEvent::CardMilled { player, .. }
+        | GameEvent::ManifestedDread { player, .. }
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::ColorlessManaAdded { player, .. }
         | GameEvent::CardLeftGraveyard { player, .. }
@@ -579,6 +581,10 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // from a library" — Dreadhound). SelfSource milled triggers match by
         // id in the scope check, so this rebind doesn't affect them.
         GameEvent::CardMilled { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        // Bind TriggerSource to the card put into the graveyard "this way", so
+        // Paranormal Analyst's "put a card you put into your graveyard this way
+        // into your hand" can return it.
+        GameEvent::ManifestedDread { milled, .. } => Some(EntityRef::Card(*milled)),
         GameEvent::LifeGained { player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::ManaAdded { player, .. }

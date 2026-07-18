@@ -422,6 +422,30 @@ pub fn analyze_the_pollen() -> CardDefinition {
     }
 }
 
+/// Paranormal Analyst — {1}{U} Human Detective 1/3. Whenever you manifest
+/// dread, put the card you put into your graveyard this way into your hand.
+pub fn paranormal_analyst() -> CardDefinition {
+    CardDefinition {
+        name: "Paranormal Analyst",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::ManifestedDread, EventScope::YourControl),
+            effect: Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Trial of Agony — {R} Sorcery. Two target creatures an opponent controls: 5
 /// damage to one, the other can't block this turn. (The "same opponent" and
 /// "that player chooses" clauses are collapsed to the caster's pick, matching

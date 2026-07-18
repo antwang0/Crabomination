@@ -422,3 +422,25 @@ fn analyze_the_pollen_evidence_widens_search() {
     drain_stack(&mut g);
     assert!(!g.players[0].hand.iter().any(|c| c.id == bear), "creature is not a basic land");
 }
+
+/// Paranormal Analyst returns the card milled by manifest dread to hand.
+#[test]
+fn paranormal_analyst_returns_milled_card() {
+    use crabomination::effect::{Effect, PlayerRef};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::paranormal_analyst());
+    // Two cards on top: the analyst manifests one, mills the other, and its
+    // trigger returns that milled card to hand.
+    let manifested = g.add_card_to_library(0, catalog::grizzly_bears());
+    let milled = g.add_card_to_library(0, catalog::forest());
+    // Library is a stack — ensure `manifested` is on top so `forest` is the mill.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![manifested])]));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let events = g.resolve_effect(&Effect::ManifestDread { who: PlayerRef::You }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == milled),
+        "milled card returned to hand by Paranormal Analyst");
+    assert!(g.battlefield.iter().any(|c| c.id == manifested && c.face_down),
+        "the chosen card is manifested face down");
+}

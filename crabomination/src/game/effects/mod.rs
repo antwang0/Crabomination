@@ -9856,6 +9856,14 @@ impl GameState {
                 if let Some(other_id) = other {
                     self.move_card_to(other_id, &ZoneDest::Graveyard, ctx, events);
                 }
+                // DSK — "Whenever you manifest dread, …" (Paranormal Analyst).
+                // Emitted after the mill so the subject card sits in the
+                // graveyard; `other_id` is the card put there "this way"
+                // (CardId(0) when the library had a single card to manifest).
+                events.push(GameEvent::ManifestedDread {
+                    player: p,
+                    milled: other.unwrap_or(CardId(0)),
+                });
                 // Expose the manifested creature on `Selector::LastMoved` so a
                 // chained "then put a +1/+1 counter on that creature" rider
                 // (Slimy Aquarium, Weight Room) can reference it.
