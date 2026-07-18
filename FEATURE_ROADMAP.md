@@ -16,7 +16,7 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **recent239 (DSK/OTJ/MKM/LCI gap batch, 25 cards):** the **Survival** ability
+- **recent239 (DSK/OTJ/MKM/LCI/BLB gap batch, 36 cards):** the **Survival** ability
   word (a PostCombatMain trigger gated on `R::Tapped` — Rootwise Survivor,
   Reluctant Role Model), `Effect::ManifestDreadRepeatThenCounters` (Valgavoth's
   Onslaught), `R::HasGreatestPowerAmongAllCreatures` (Getaway Glamer), and
@@ -30,8 +30,15 @@ exercising each) was elided in a compaction pass; recover it from
   the **manifest-dread** trigger (Paranormal Analyst), a per-turn **face-down
   activity** flag (Oblivious Bookworm), the **choose/reveal-creature** cast cost
   (Monstrous Emergence), Leyline of Hope (opening-hand + life-gated anthem), and
-  Creeping Peeper (enchantment-only mana). CR 122.5 / 702.166 / 608.2b / 701.59
-  / 708 conformance tests. Tests in `tests/recent239.rs`.
+  Creeping Peeper (`SpendRestriction::EnchantmentSpell`). Plus the five
+  Bloomburrow **village** lands (creature-restricted mana + kindred payoffs),
+  Whiskervale Forerunner (Valiant five-deep dig), Hollow Marauder
+  (`Predicate::LastDiscardedManaValueAtMost` + graveyard affinity), Feed the
+  Cycle (`AdditionalCastCost::ForageOrPay`), Freestrider Commando (no-mana-spent
+  ETB counters), Fear of Burning Alive (delirium noncombat-damage copy), and
+  Crimestopper Sprite (self-ETB reads the collect-evidence flag). CR 122.5 /
+  702.166 / 608.2b / 701.59 / 701.61 / 708 conformance tests. Tests in
+  `tests/recent239.rs`.
 
 - **recent235–238 (DSK/OTJ, 20 cards):** manifest-dread → `Selector::LastMoved`
   rider; `Effect::TapAnyNumberThenPumpPerTapped`;
