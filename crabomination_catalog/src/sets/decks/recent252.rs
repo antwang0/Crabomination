@@ -400,3 +400,28 @@ fn hasty_goblin_token() -> TokenDefinition {
         ..Default::default()
     }
 }
+
+/// Lamplight Phoenix — {1}{R}{R} Creature — Phoenix 3/3, flying. When it dies,
+/// you may exile it and collect evidence 4. If you do, return it to the
+/// battlefield tapped.
+pub fn lamplight_phoenix() -> CardDefinition {
+    CardDefinition {
+        name: "Lamplight Phoenix",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phoenix], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            // `CollectEvidence` carries the printed "you may" via its own
+            // optional prompt; paying it returns the phoenix.
+            effect: Effect::CollectEvidence {
+                amount: Value::Const(4),
+                then: Box::new(Effect::ReturnSelfTapped),
+            },
+        }],
+        ..Default::default()
+    }
+}

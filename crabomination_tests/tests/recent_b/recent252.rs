@@ -313,3 +313,25 @@ fn dramatic_accusation_taps_then_shuffles() {
     assert!(g.battlefield_find(foe).is_none(), "creature left the battlefield");
     assert!(g.players[1].library.iter().any(|c| c.id == foe), "shuffled into owner's library");
 }
+
+/// Lamplight Phoenix returns from the graveyard on death by collecting
+/// evidence 4, and stays dead when the graveyard can't pay.
+#[test]
+fn lamplight_phoenix_returns_via_collect_evidence() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Two cheap graveyard cards cover the collect-evidence 4 cost.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let phoenix = g.add_card_to_graveyard(0, catalog::lamplight_phoenix());
+    // Accept the optional "collect evidence" prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let trig = catalog::lamplight_phoenix().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext::for_trigger(phoenix, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    let back = g.battlefield_find(phoenix).expect("phoenix returned to the battlefield");
+    assert!(back.tapped, "returns tapped");
+    // The two other graveyard cards were exiled to collect evidence (not the phoenix).
+    assert_eq!(g.exile.len(), 2, "collected evidence 4 by exiling the cheap cards");
+}
