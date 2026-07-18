@@ -380,20 +380,6 @@ factory doc comment:
     no Spell variant) + a library-owner-choice move effect.
   - **Tin Street Gossip / Goblin Maskmaker** — restricted / discounted mana for
     face-down casts needs a face-down-spell spend restriction + cost reduction.
-  - **Reflexive gy-target return** (Blood Spatter Analysis) — "sacrifice this if
-    5+ bloodstain; when you do, return target creature card from your graveyard"
-    needs the return target chosen only when the sacrifice fires, not every death.
-    Also needs a Bloodstain counter type + a "whenever one or more creatures die,
-    mill + add a counter" trigger.
-  - **Tenth District Hero** — first ability is ready (`collect_evidence_cost` +
-    `BecomeCreature` sets 4/4 Detective + vigilance); second ability blocks on a
-    rename + "Other creatures you control have indestructible" anthem granted by
-    a self-becomes effect.
-  - **Sudden Setback** — "put target spell or nonland permanent on library, owner
-    chooses top/bottom" needs a spell-or-permanent target + a library-owner-choice
-    move effect.
-  - **Tin Street Gossip** — restricted mana (spend only to cast face-down spells
-    / turn creatures face up) needs a face-down-spell spend restriction.
 
 - **FDN/DSK gap cards shipped (`decks::recent202`–`recent205`, 20):** Rite of the
   Dragoncaller, Koma World-Eater, Niv-Mizzet Visionary, Perforating Artist, Kiora

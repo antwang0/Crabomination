@@ -354,16 +354,32 @@ fn html_escape(s: &str) -> String {
 /// Route one request to `(status_line, content_type, body)`. Only GET/HEAD are
 /// served; unknown paths 404 and other methods 405 so scrapers and probes read
 /// correct semantics instead of a 200 status page for everything.
-fn route(method: &str, path: &str, started: Instant, slots: &SlotManager) -> (&'static str, &'static str, String) {
+/// Returns `(status_line, content_type, body, extra_headers)`. `extra_headers`
+/// is a `\r\n`-terminated block folded into the response after the standard
+/// headers — telemetry is always live, so every reply carries
+/// `Cache-Control: no-store`, and a 405 additionally advertises the allowed
+/// methods per RFC 9110 §15.5.6.
+fn route(
+    method: &str,
+    path: &str,
+    started: Instant,
+    slots: &SlotManager,
+) -> (&'static str, &'static str, String, &'static str) {
     if method != "GET" && method != "HEAD" {
-        return ("405 Method Not Allowed", "text/plain", "method not allowed\n".to_string());
+        return (
+            "405 Method Not Allowed",
+            "text/plain",
+            "method not allowed\n".to_string(),
+            "Allow: GET, HEAD\r\nCache-Control: no-store\r\n",
+        );
     }
     // Strip any query string (`/metrics?collect=now`) and a single trailing
     // slash (`/status/`) so scrapers and probes that decorate the path still
     // reach the intended handler instead of a 404.
     let path = path.split('?').next().unwrap_or(path);
     let path = if path.len() > 1 { path.trim_end_matches('/') } else { path };
-    match path {
+    const NO_STORE: &str = "Cache-Control: no-store\r\n";
+    let (status, content_type, body) = match path {
         "/healthz" => ("200 OK", "text/plain", "ok\n".to_string()),
         // Readiness (distinct from `/healthz` liveness): 503 while the global
         // cap is full so an orchestrator stops routing *new* traffic to a
@@ -382,7 +398,8 @@ fn route(method: &str, path: &str, started: Instant, slots: &SlotManager) -> (&'
         "/dashboard" => ("200 OK", "text/html; charset=utf-8", render_dashboard(started, slots)),
         "/status" | "/" => ("200 OK", "text/plain", render_status(started, slots)),
         _ => ("404 Not Found", "text/plain", "not found\n".to_string()),
-    }
+    };
+    (status, content_type, body, NO_STORE)
 }
 
 /// Spawn the status listener thread if `CRAB_STATUS_BIND` is set. Bind
@@ -413,15 +430,16 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
             let mut parts = request_line.split_whitespace();
             let method = parts.next().unwrap_or("");
             let path = parts.next().unwrap_or("");
-            let (status, content_type, body) = route(method, path, started, &slots);
+            let (status, content_type, body, extra_headers) = route(method, path, started, &slots);
             // HEAD gets headers only (CR-agnostic HTTP nicety for probes).
             let payload = if method == "HEAD" { "" } else { &body };
             let _ = write!(
                 stream,
-                "HTTP/1.0 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                "HTTP/1.0 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n{}Connection: close\r\n\r\n{}",
                 status,
                 content_type,
                 body.len(),
+                extra_headers,
                 payload
             );
         }
@@ -484,6 +502,19 @@ mod tests {
     }
 
     #[test]
+    fn responses_carry_no_store_and_405_advertises_allow() {
+        let now = Instant::now();
+        let slots = SlotManager::new(10, 5);
+        // Telemetry is live — every reply forbids caching.
+        assert!(route("GET", "/status", now, &slots).3.contains("Cache-Control: no-store"));
+        assert!(route("GET", "/metrics", now, &slots).3.contains("Cache-Control: no-store"));
+        // A 405 advertises the methods it accepts (RFC 9110 §15.5.6).
+        let hdrs = route("POST", "/status", now, &slots).3;
+        assert!(hdrs.contains("Allow: GET, HEAD"), "405 must send Allow");
+        assert!(hdrs.contains("Cache-Control: no-store"));
+    }
+
+    #[test]
     fn readyz_flips_to_503_when_global_cap_is_full() {
         use std::net::{IpAddr, Ipv4Addr};
         let now = Instant::now();
@@ -493,7 +524,7 @@ mod tests {
         let _a = slots.try_acquire(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))).unwrap();
         let _b = slots.try_acquire(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))).unwrap();
         // Global cap full → not ready (but still alive / not 404).
-        let (status, _, body) = route("GET", "/readyz", now, &slots);
+        let (status, _, body, _) = route("GET", "/readyz", now, &slots);
         assert_eq!(status, "503 Service Unavailable");
         assert_eq!(body, "saturated\n");
         // An unlimited cap is always ready.

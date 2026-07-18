@@ -1837,6 +1837,15 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => ability_effect_label(body),
         // "You may pay {X}" (Well of Lost Dreams) — surface the paid-for body.
         Effect::MayPayGenericUpTo { body, .. } => ability_effect_label(body),
+        // Reflexive / optional-cost wrappers surface the payoff they gate.
+        Effect::Reflexive { body } | Effect::MayPayX { body, .. } => ability_effect_label(body),
+        Effect::MayDiscard { then, .. }
+        | Effect::MayTap { then, .. }
+        | Effect::MaySacrifice { then, .. }
+        | Effect::MaySacrificeSource { then, .. } => ability_effect_label(then),
+        Effect::Learn { .. } => "Learn",
+        Effect::Venture => "Venture into the dungeon",
+        Effect::Populate { .. } => "Populate",
         Effect::LoseLife { .. } => "Pay life / fetch land",
         Effect::Search { .. } => "Search library",
         Effect::Move { .. } => "Move permanent",
