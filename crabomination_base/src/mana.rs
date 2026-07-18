@@ -438,6 +438,10 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast a Dragon spell or an Omen spell."
     /// (Maelstrom of the Spirit Dragon.)
     DragonOrOmenSpell,
+    /// "Spend this mana only to cast an enchantment spell, unlock a door, or
+    /// turn a permanent face up." (Creeping Peeper.) Only the enchantment-spell
+    /// half is enforced; the ability halves aren't gated.
+    EnchantmentSpell,
 }
 
 impl SpendRestriction {
@@ -470,6 +474,7 @@ impl SpendRestriction {
                     || kind.changeling
                     || kind.creature_types.contains(&crate::card::CreatureType::Dragon)
             }
+            SpendRestriction::EnchantmentSpell => kind.enchantment,
         }
     }
 }
@@ -517,6 +522,11 @@ pub struct SpellKind {
     /// Dragon's "Dragon spell or an Omen spell" restriction). Set only on the
     /// Omen-cast path; `spell_kind()` leaves it false.
     pub omen: bool,
+    /// Casting an enchantment spell (Creeping Peeper's "enchantment spell" spend
+    /// restriction). The "unlock a door / turn a permanent face up" halves of
+    /// that restriction aren't captured (those are ability activations, not
+    /// spells) — funding them is a minor approximation.
+    pub enchantment: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

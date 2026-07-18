@@ -530,3 +530,21 @@ fn leyline_of_hope_lifegain_and_anthem() {
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4), "anthem online at 7+ above starting");
 }
+
+/// Creeping Peeper taps for {U} that only casts enchantment spells.
+#[test]
+fn creeping_peeper_enchantment_only_mana() {
+    use crabomination::effect::{Effect, ManaPayload};
+    use crabomination::mana::SpendRestriction;
+    let def = catalog::creeping_peeper();
+    // The ability adds enchantment-restricted blue mana.
+    match &def.activated_abilities[0].effect {
+        Effect::AddMana { pool: ManaPayload::Restricted(_, r), .. } => {
+            assert_eq!(*r, SpendRestriction::EnchantmentSpell);
+        }
+        _ => panic!("not enchantment-restricted mana"),
+    }
+    // The restriction admits an enchantment spell but not a creature spell.
+    assert!(SpendRestriction::EnchantmentSpell.allows(&catalog::pacifism().spell_kind()));
+    assert!(!SpendRestriction::EnchantmentSpell.allows(&catalog::grizzly_bears().spell_kind()));
+}

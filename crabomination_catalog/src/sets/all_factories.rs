@@ -6636,6 +6636,7 @@ static DECKS: &[Factory] = &[
     super::decks::oblivious_bookworm,
     super::decks::monstrous_emergence,
     super::decks::leyline_of_hope,
+    super::decks::creeping_peeper,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

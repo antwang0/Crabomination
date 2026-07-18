@@ -3350,6 +3350,7 @@ impl CardDefinition {
             mana_value: self.cost.cmc(),
             has_x: self.cost.has_x(),
             omen: false,
+            enchantment: self.is_enchantment(),
         }
     }
 

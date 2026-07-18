@@ -16,7 +16,7 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **recent239 (DSK/OTJ/MKM/LCI gap batch, 17 cards):** the **Survival** ability
+- **recent239 (DSK/OTJ/MKM/LCI gap batch, 25 cards):** the **Survival** ability
   word (a PostCombatMain trigger gated on `R::Tapped` — Rootwise Survivor,
   Reluctant Role Model), `Effect::ManifestDreadRepeatThenCounters` (Valgavoth's
   Onslaught), `R::HasGreatestPowerAmongAllCreatures` (Getaway Glamer), and
@@ -25,8 +25,13 @@ exercising each) was elided in a compaction pass; recover it from
   (Stubborn Burrowfiend), may-sac and modal ETBs (Unscrupulous Contractor,
   Kutzil's Flanker), plus composition cards (Betrayer's Bargain, Untimely
   Malfunction, Omnivorous Flytrap, Norin, Altanak, Come Back Wrong, Trial of
-  Agony, Bite Down on Crime). CR 122.5 / 702.166 / 608.2b conformance tests.
-  Tests in `tests/recent239.rs`.
+  Agony, Bite Down on Crime). **Collect-evidence** additional cost + Ward
+  (Bite Down on Crime, Behind the Mask, Analyze the Pollen, Axebane Ferox),
+  the **manifest-dread** trigger (Paranormal Analyst), a per-turn **face-down
+  activity** flag (Oblivious Bookworm), the **choose/reveal-creature** cast cost
+  (Monstrous Emergence), Leyline of Hope (opening-hand + life-gated anthem), and
+  Creeping Peeper (enchantment-only mana). CR 122.5 / 702.166 / 608.2b / 701.59
+  / 708 conformance tests. Tests in `tests/recent239.rs`.
 
 - **recent235–238 (DSK/OTJ, 20 cards):** manifest-dread → `Selector::LastMoved`
   rider; `Effect::TapAnyNumberThenPumpPerTapped`;

@@ -10,10 +10,11 @@ use crate::card::{
 use crate::effect::shortcut::{animate_land, deal, target_filtered};
 use crate::game::types::TurnStep;
 use crate::effect::{
-    DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, OpeningHandEffect,
-    PlayerRef, PlayerStaticTarget, Predicate, Selector, SpreeMode, StaticEffect, Value, ZoneDest,
+    DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload,
+    OpeningHandEffect, PlayerRef, PlayerStaticTarget, Predicate, Selector, SpreeMode, StaticEffect,
+    Value, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color, SpendRestriction};
 
 /// DSK **Survival** — "At the beginning of your second main phase, if this
 /// creature is tapped, …". Models to a PostCombatMain trigger gated on the
@@ -418,6 +419,32 @@ pub fn analyze_the_pollen() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
         },
+        ..Default::default()
+    }
+}
+
+/// Creeping Peeper — {1}{U} Eye 2/1. {T}: Add {U}. Spend only to cast an
+/// enchantment spell, unlock a door, or turn a permanent face up. (Only the
+/// enchantment-spell half of the restriction is enforced.)
+pub fn creeping_peeper() -> CardDefinition {
+    CardDefinition {
+        name: "Creeping Peeper",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eye], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colors(vec![Color::Blue])),
+                    SpendRestriction::EnchantmentSpell,
+                ),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
