@@ -296,34 +296,6 @@ fn may_loot() -> Effect {
     }
 }
 
-/// Sample Collector — {2}{G} Troll Detective 2/3. Whenever it attacks, collect
-/// evidence 3; when you do, put a +1/+1 counter on target creature you control.
-pub fn sample_collector() -> CardDefinition {
-    CardDefinition {
-        name: "Sample Collector",
-        cost: cost(&[generic(2), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Troll, CreatureType::Detective],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 3,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::CollectEvidence {
-                amount: Value::Const(3),
-                then: Box::new(Effect::AddCounter {
-                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                }),
-            },
-        }],
-        ..Default::default()
-    }
-}
-
 /// Meddling Youths — {3}{R}{W} Human Detective 4/5, haste. Whenever you attack
 /// with three or more creatures, investigate.
 pub fn meddling_youths() -> CardDefinition {

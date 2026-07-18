@@ -6674,7 +6674,6 @@ static DECKS: &[Factory] = &[
     super::decks::gleaming_geardrake,
     super::decks::private_eye,
     super::decks::gadget_technician,
-    super::decks::sample_collector,
     super::decks::meddling_youths,
 ];
 static DIS: &[Factory] = &[
