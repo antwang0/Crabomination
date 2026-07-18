@@ -1933,6 +1933,14 @@ pub struct ActivatedAbility {
     /// Defaults to false.
     #[serde(default)]
     pub waterbend: bool,
+    /// CR 701.59 — "Collect evidence N" as part of this ability's cost
+    /// ("{T}, Collect evidence N: …"). Exiles the cheapest set of graveyard
+    /// cards whose total mana value is ≥ N and emits `EvidenceCollected`.
+    /// Pre-flight-gated on `graveyard_can_collect_evidence`; paid after
+    /// tap/mana/life succeed but before the effect resolves. Powers Forensic
+    /// Researcher's tap-untap sibling. Defaults to None.
+    #[serde(default)]
+    pub collect_evidence_cost: Option<u32>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

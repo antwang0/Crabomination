@@ -3775,6 +3775,7 @@ fn is_free_mana_ability(a: &ActivatedAbility) -> bool {
         || a.discard_cost.is_some()
         || a.exile_self_cost
         || a.energy_cost > 0
+        || a.collect_evidence_cost.is_some()
         || a.condition.is_some()
         || a.from_graveyard
         || a.from_hand

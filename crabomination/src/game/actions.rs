@@ -5465,6 +5465,39 @@ impl GameState {
         total >= amount
     }
 
+    /// CR 701.59 — pay collect evidence `amount`: exile the cheapest set of
+    /// `p`'s graveyard cards whose total mana value is ≥ `amount` (keeping the
+    /// pricier cards) and emit `EvidenceCollected`. Assumes the caller has
+    /// already confirmed `graveyard_can_collect_evidence`. Shared by the cast
+    /// additional-cost path and the activated-ability cost path.
+    pub(crate) fn collect_evidence_from_graveyard(&mut self, p: usize, amount: u32) -> Vec<GameEvent> {
+        let mut events = Vec::new();
+        let mut gy: Vec<(CardId, u32)> = self.players[p]
+            .graveyard
+            .iter()
+            .map(|c| (c.id, c.definition.cost.cmc()))
+            .collect();
+        gy.sort_by_key(|&(_, mv)| mv);
+        let mut acc = 0u32;
+        let mut to_exile = Vec::new();
+        for (id, mv) in gy {
+            if acc >= amount {
+                break;
+            }
+            acc += mv;
+            to_exile.push(id);
+        }
+        for id in to_exile {
+            if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
+                self.exile.push(card);
+                self.players[p].cards_exiled_this_turn += 1;
+                events.push(GameEvent::PermanentExiled { card_id: id });
+            }
+        }
+        events.push(GameEvent::EvidenceCollected { player: p });
+        events
+    }
+
     /// CR 701.61 — can `p` forage (exile three graveyard cards or sacrifice a
     /// Food they control)?
     pub(crate) fn can_forage(&self, p: usize) -> bool {
@@ -5871,29 +5904,7 @@ impl GameState {
                     // pricier cards). The `cast_collected_evidence` stamp is set
                     // by the caller from the same graveyard-can-afford check.
                     if self.graveyard_can_collect_evidence(p, *amount) {
-                        let mut gy: Vec<(CardId, u32)> = self.players[p]
-                            .graveyard
-                            .iter()
-                            .map(|c| (c.id, c.definition.cost.cmc()))
-                            .collect();
-                        gy.sort_by_key(|&(_, mv)| mv);
-                        let mut acc = 0u32;
-                        let mut to_exile = Vec::new();
-                        for (id, mv) in gy {
-                            if acc >= *amount {
-                                break;
-                            }
-                            acc += mv;
-                            to_exile.push(id);
-                        }
-                        for id in to_exile {
-                            if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
-                                self.exile.push(card);
-                                self.players[p].cards_exiled_this_turn += 1;
-                                events.push(GameEvent::PermanentExiled { card_id: id });
-                            }
-                        }
-                        events.push(GameEvent::EvidenceCollected { player: p });
+                        events.append(&mut self.collect_evidence_from_graveyard(p, *amount));
                     }
                 }
             }
@@ -10334,6 +10345,15 @@ impl GameState {
             return Err(GameError::InsufficientEnergy);
         }
 
+        // Pre-flight collect-evidence gate (CR 701.59): reject cleanly when the
+        // graveyard can't supply the required total mana value, so tap/mana
+        // aren't burned. The exile happens after payment succeeds.
+        if let Some(amount) = ability.collect_evidence_cost
+            && !self.graveyard_can_collect_evidence(p, amount)
+        {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // Pre-flight exile-other-from-gy gate: confirm `count` graveyard
         // cards matching the cost's filter exist, *excluding* the source
         // itself for graveyard activations where source_in_gy is true. If
@@ -10971,6 +10991,12 @@ impl GameState {
         }
         if ability.energy_x_cost {
             self.spend_energy(p, x_value.unwrap_or(0));
+        }
+        // Pay the collect-evidence cost (CR 701.59). Tap/mana/life/energy are
+        // committed; the pre-flight gate guaranteed the graveyard can afford it.
+        if let Some(amount) = ability.collect_evidence_cost {
+            let mut ev = self.collect_evidence_from_graveyard(p, amount);
+            auto_mana_events.append(&mut ev);
         }
 
         let mut events = auto_mana_events;

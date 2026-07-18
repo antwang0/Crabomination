@@ -30,9 +30,8 @@ pub fn kraul_whipcracker() -> CardDefinition {
 }
 
 /// Forensic Researcher — {2}{U} Creature — Merfolk Detective 1/3. {T}: Untap
-/// another target permanent you control. (Its "{T}, Collect evidence 3: Tap
-/// target creature you don't control" ability is not modeled — activated
-/// abilities can't yet take a collect-evidence cost.)
+/// another target permanent you control. {T}, Collect evidence 3: Tap target
+/// creature you don't control.
 pub fn forensic_researcher() -> CardDefinition {
     CardDefinition {
         name: "Forensic Researcher",
@@ -44,16 +43,26 @@ pub fn forensic_researcher() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            effect: Effect::Untap {
-                what: target_filtered(
-                    R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource),
-                ),
-                up_to: None,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Untap {
+                    what: target_filtered(
+                        R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource),
+                    ),
+                    up_to: None,
+                },
+                ..Default::default()
             },
-            ..Default::default()
-        }],
+            ActivatedAbility {
+                tap_cost: true,
+                collect_evidence_cost: Some(3),
+                effect: Effect::Tap {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

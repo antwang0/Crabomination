@@ -1749,6 +1749,10 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.discard_self_cost {
         parts.push("Discard this".into());
     }
+    // Collect-evidence-as-cost (Forensic Researcher) — CR 701.59.
+    if let Some(n) = ability.collect_evidence_cost {
+        parts.push(format!("Collect evidence {n}"));
+    }
     let mut label = if parts.is_empty() { "0".into() } else { parts.join(", ") };
     // Opponent-only escape clauses (Detention Vortex) — flag who may activate
     // so the tooltip doesn't read as a self-usable ability.
