@@ -2063,6 +2063,8 @@ impl GameState {
             pl.double_your_source_damage_this_turn = false;
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
+            // CR 708 — "entered face down / turned face up this turn" resets.
+            pl.face_down_activity_this_turn = false;
             // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
             pl.play_from_top_this_turn = false;
             // Johann's once-per-turn top-of-library cast resets each turn.

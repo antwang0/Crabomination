@@ -8983,9 +8983,18 @@ impl GameState {
                     // time, drawn from the same counter as resolved-effect
                     // timestamps so static-vs-spell ordering is coherent.
                     let ts = self.next_timestamp();
+                    let mut face_down_ctrl = None;
                     if let Some(c) = self.battlefield_find_mut(*card_id) {
                         c.entered_turn = Some(turn);
                         c.battlefield_timestamp = ts;
+                        if c.face_down {
+                            face_down_ctrl = Some(c.controller);
+                        }
+                    }
+                    // CR 708 — track "a permanent entered face down under your
+                    // control this turn" (Oblivious Bookworm).
+                    if let Some(p) = face_down_ctrl {
+                        self.players[p].face_down_activity_this_turn = true;
                     }
                     self.apply_soulbond_pairing(*card_id);
                 }
@@ -8999,8 +9008,16 @@ impl GameState {
                 }
                 GameEvent::Transformed { card_id } | GameEvent::TurnedFaceUp { card_id } => {
                     let ts = self.next_timestamp();
+                    let mut face_up_ctrl = None;
                     if let Some(c) = self.battlefield_find_mut(*card_id) {
                         c.battlefield_timestamp = ts;
+                        if matches!(e, GameEvent::TurnedFaceUp { .. }) {
+                            face_up_ctrl = Some(c.controller);
+                        }
+                    }
+                    // CR 708 — "you turned a permanent face up this turn".
+                    if let Some(p) = face_up_ctrl {
+                        self.players[p].face_down_activity_this_turn = true;
                     }
                 }
                 // Per-turn sacrifice tally — every sacrifice path funnels a

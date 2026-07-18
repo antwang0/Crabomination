@@ -444,3 +444,29 @@ fn paranormal_analyst_returns_milled_card() {
     assert!(g.battlefield.iter().any(|c| c.id == manifested && c.face_down),
         "the chosen card is manifested face down");
 }
+
+/// Oblivious Bookworm draws then discards when you had no face-down activity,
+/// but keeps the drawn card when a permanent entered face down this turn.
+#[test]
+fn oblivious_bookworm_discard_unless_face_down_activity() {
+    // No face-down activity → draw then discard (net hand unchanged).
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let effect = catalog::oblivious_bookworm().triggered_abilities[0].effect.clone();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let before = g.players[0].hand.len();
+    g.resolve_effect(&effect, &EffectContext::for_trigger(crabomination::card::CardId(0), 0, None, 0)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before, "drew one, discarded one");
+
+    // A permanent entered face down this turn → no discard (net +1 hand).
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].face_down_activity_this_turn = true;
+    let effect = catalog::oblivious_bookworm().triggered_abilities[0].effect.clone();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let before = g.players[0].hand.len();
+    g.resolve_effect(&effect, &EffectContext::for_trigger(crabomination::card::CardId(0), 0, None, 0)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "kept the drawn card");
+}

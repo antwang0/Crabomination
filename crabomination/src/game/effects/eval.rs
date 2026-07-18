@@ -1749,6 +1749,9 @@ impl GameState {
             Predicate::CommittedCrimeThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].committed_crime_this_turn),
+            Predicate::FaceDownActivityThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].face_down_activity_this_turn),
             Predicate::UnlockedDoorsControlledAtLeast { who, count } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 let total: u32 = self

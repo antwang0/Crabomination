@@ -3852,8 +3852,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - ✅ ~~**"Whenever you manifest dread" trigger**~~ — shipped
     (`EventKind::ManifestedDread` + `GameEvent::ManifestedDread { player, milled }`
     + wire mirror + milled-card subject binding). Paranormal Analyst is wired.
-    Oblivious Bookworm still needs a per-turn "a permanent entered face down /
-    was turned face up this turn" flag (its end-step discard-unless clause).
+  - ✅ ~~**Per-turn face-down activity flag**~~ — shipped
+    (`Player.face_down_activity_this_turn` + `Predicate::FaceDownActivityThisTurn`,
+    set on a face-down ETB or turn-face-up, CR 708). Oblivious Bookworm is wired.
   - **Type-filtered death tally** — "if a non-Zombie creature died this turn"
     (Undead Sprinter's graveyard-cast condition). Needs either a filtered
     death predicate or a small per-turn typed tally on `Player`.

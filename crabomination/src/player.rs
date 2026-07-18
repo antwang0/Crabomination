@@ -332,6 +332,12 @@ pub struct Player {
     /// "if you've committed a crime this turn" gates (Nimble Brigand).
     #[serde(default)]
     pub committed_crime_this_turn: bool,
+    /// CR 708 — a permanent entered the battlefield face down under this
+    /// player's control, or they turned a permanent face up, this turn. Powers
+    /// Oblivious Bookworm's "unless … entered face down / you turned a permanent
+    /// face up this turn" discard-skip. Reset at the turn boundary.
+    #[serde(default)]
+    pub face_down_activity_this_turn: bool,
     /// Revel in Silence: this player can't cast spells or activate loyalty
     /// abilities for the rest of the turn. Reset at the turn boundary.
     #[serde(default)]
@@ -763,6 +769,7 @@ impl Player {
             dealt_combat_damage_to_player_this_turn: false,
             double_your_source_damage_this_turn: false,
             committed_crime_this_turn: false,
+            face_down_activity_this_turn: false,
             descended_this_turn: false,
             descend_count_this_turn: 0,
             silenced_this_turn: false,

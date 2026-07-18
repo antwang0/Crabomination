@@ -1374,6 +1374,10 @@ pub enum Predicate {
     /// `Player.committed_crime_this_turn`. Powers "as long as / if you've
     /// committed a crime this turn" riders (Nimble Brigand's evasion).
     CommittedCrimeThisTurn { who: PlayerRef },
+    /// CR 708 — a permanent entered the battlefield face down under `who`'s
+    /// control, or they turned a permanent face up, this turn. Backed by
+    /// `Player.face_down_activity_this_turn` (Oblivious Bookworm).
+    FaceDownActivityThisTurn { who: PlayerRef },
     /// CR 709.5 — `who` controls at least `count` unlocked doors among the
     /// Rooms they control (each Room can have up to two doors unlocked). Powers
     /// "as long as there are N or more unlocked doors among Rooms you control"

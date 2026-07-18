@@ -422,6 +422,43 @@ pub fn analyze_the_pollen() -> CardDefinition {
     }
 }
 
+/// Oblivious Bookworm — {G}{U} Human Wizard 2/3. At the beginning of your end
+/// step, you may draw a card; if you do, discard a card unless a permanent
+/// entered face down under your control this turn or you turned a permanent
+/// face up this turn.
+pub fn oblivious_bookworm() -> CardDefinition {
+    CardDefinition {
+        name: "Oblivious Bookworm",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Draw a card (then discard unless you had face-down activity)?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::If {
+                        cond: Predicate::FaceDownActivityThisTurn { who: PlayerRef::You },
+                        then: Box::new(Effect::Noop),
+                        else_: Box::new(Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                            random: false,
+                        }),
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Axebane Ferox — {2}{G}{G} Beast 4/4. Deathtouch, haste, Ward—Collect
 /// evidence 4.
 pub fn axebane_ferox() -> CardDefinition {
