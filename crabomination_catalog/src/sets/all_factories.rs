@@ -6726,6 +6726,9 @@ static DECKS: &[Factory] = &[
     super::decks::escape_tunnel,
     super::decks::scene_of_the_crime,
     super::decks::massacre_girl_known_killer,
+    // recent248 — artifact-sacrifice payoff + modal removal
+    super::decks::suspicious_detonation,
+    super::decks::deadly_complication,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

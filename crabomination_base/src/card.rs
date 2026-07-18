@@ -1637,6 +1637,11 @@ pub enum SelectionRequirement {
     /// `SelfHasKeywordWhile` for "as long as you've drawn two or more cards this
     /// turn" grants (Foggy Swamp Hunters' lifelink/menace, June's unblockable).
     ControllerDrewAtLeastThisTurn(u32),
+    /// True when the candidate's controller has sacrificed an artifact this turn
+    /// (`Player.artifacts_sacrificed_this_turn > 0`). Used as the `condition` of
+    /// a `SelfHasKeywordWhile` for "can't be blocked as long as you've sacrificed
+    /// an artifact this turn" (Furtive Courier).
+    ControllerSacrificedArtifactThisTurn,
     /// True when the candidate card is in the exile zone. Mirrors
     /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
     /// (Chandra, Torch of Defiance) to detect an uncast exiled card.
@@ -2245,6 +2250,11 @@ pub struct CardDefinition {
     /// Reads `Player.committed_crime_this_turn`. `None` by default.
     #[serde(default)]
     pub self_cost_reduction_if_crime: Option<u32>,
+    /// "This spell costs `{amount}` less to cast if you've sacrificed an
+    /// artifact this turn" (Suspicious Detonation). Generic-only, clamped by the
+    /// caller. Reads `Player.artifacts_sacrificed_this_turn`. `None` by default.
+    #[serde(default)]
+    pub self_cost_reduction_if_sacrificed_artifact: Option<u32>,
     /// "This spell costs {1} less to cast for each card you've drawn this
     /// turn" (Deem Inferior). Generic-only, clamped by the caller. Reads
     /// `Player.cards_drawn_this_turn`. Defaults to `false`.

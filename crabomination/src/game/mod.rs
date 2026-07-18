@@ -9035,10 +9035,20 @@ impl GameState {
                 // Per-turn sacrifice tally — every sacrifice path funnels a
                 // `PermanentSacrificed` through here exactly once, so this is
                 // the one place to count "you sacrificed a permanent this turn".
-                GameEvent::PermanentSacrificed { who, .. } => {
+                GameEvent::PermanentSacrificed { who, card_id } => {
+                    // The sacrificed card's death snapshot tells us its type
+                    // (the card itself has already left the battlefield).
+                    let was_artifact = self
+                        .died_card_snapshots
+                        .get(card_id)
+                        .is_some_and(|c| c.definition.is_artifact());
                     if let Some(pl) = self.players.get_mut(*who) {
                         pl.permanents_sacrificed_this_turn =
                             pl.permanents_sacrificed_this_turn.saturating_add(1);
+                        if was_artifact {
+                            pl.artifacts_sacrificed_this_turn =
+                                pl.artifacts_sacrificed_this_turn.saturating_add(1);
+                        }
                     }
                 }
                 _ => {}

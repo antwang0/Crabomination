@@ -1094,6 +1094,10 @@ pub enum Predicate {
     /// by `Player.permanents_sacrificed_this_turn`. Used by "if you
     /// sacrificed a permanent this turn" payoffs (Sawblade Skinripper).
     PermanentsSacrificedThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// `who` has sacrificed at least one *artifact* this turn. Backed by
+    /// `Player.artifacts_sacrificed_this_turn`. Used by "if you've sacrificed an
+    /// artifact this turn" riders (Suspicious Detonation, Furtive Courier).
+    SacrificedArtifactThisTurn { who: PlayerRef },
     /// At least `at_least` creatures died this turn under **any** player's
     /// control — the global "Morbid" condition (CR 700.4 "a creature died
     /// this turn"). Sums `Player.creatures_died_this_turn` across all

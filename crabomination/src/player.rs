@@ -443,6 +443,14 @@ pub struct Player {
     /// this turn" payoffs (Sawblade Skinripper).
     #[serde(default)]
     pub permanents_sacrificed_this_turn: u32,
+    /// Number of *artifacts* this player has sacrificed so far this turn (a
+    /// subset of `permanents_sacrificed_this_turn`). Bumped in
+    /// `dispatch_triggers_for_events` per `PermanentSacrificed` event whose
+    /// subject snapshot is an artifact; reset in `do_untap`. Powers "if you've
+    /// sacrificed an artifact this turn" riders (Suspicious Detonation,
+    /// Furtive Courier).
+    #[serde(default)]
+    pub artifacts_sacrificed_this_turn: u32,
     /// "[Filter] spells you cast this turn cost {N} less" grants
     /// (`Effect::SpellsCostLessThisTurn` — Urza, Planeswalker's +2).
     /// Each entry applies to every matching spell for the rest of the
@@ -787,6 +795,7 @@ impl Player {
             cards_discarded_this_turn: 0,
             discarded_this_turn: std::collections::HashSet::new(),
             permanents_sacrificed_this_turn: 0,
+            artifacts_sacrificed_this_turn: 0,
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             life_locked_this_turn: false,

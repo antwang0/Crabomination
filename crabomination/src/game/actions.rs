@@ -562,6 +562,13 @@ pub fn cost_reduction_for_spell_zoned(
     {
         reduction = reduction.saturating_add(amount);
     }
+    // Card-intrinsic "costs {amount} less if you've sacrificed an artifact this
+    // turn" (Suspicious Detonation).
+    if let Some(amount) = card.definition.self_cost_reduction_if_sacrificed_artifact
+        && state.players[caster].artifacts_sacrificed_this_turn > 0
+    {
+        reduction = reduction.saturating_add(amount);
+    }
     // Card-intrinsic "costs {1} less for each card you've drawn this turn"
     // (Deem Inferior). Generic-only, clamped by the caller.
     if card.definition.self_cost_reduction_per_cards_drawn {

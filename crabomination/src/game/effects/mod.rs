@@ -964,11 +964,14 @@ impl GameState {
             .battlefield_find(id)
             .map(|c| c.definition.is_creature())
             .unwrap_or(false);
+        // Cache a snapshot for AnotherOfYours / death-matters triggers and the
+        // per-turn artifact-sacrifice tally (which reads the sacrificed
+        // permanent's type after it has left the battlefield). Snapshot every
+        // permanent, not just creatures, so a sacrificed artifact is typed.
+        if let Some(c) = self.battlefield_find(id) {
+            self.died_card_snapshots.insert(id, c.clone());
+        }
         if is_creature {
-            // Cache snapshot for AnotherOfYours / death-matters triggers.
-            if let Some(c) = self.battlefield_find(id) {
-                self.died_card_snapshots.insert(id, c.clone());
-            }
             events.push(GameEvent::CreatureSacrificed { card_id: id, who });
             events.push(GameEvent::CreatureDied { card_id: id });
         }

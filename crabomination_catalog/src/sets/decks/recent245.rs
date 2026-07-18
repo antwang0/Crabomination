@@ -224,11 +224,11 @@ pub fn unscrupulous_agent() -> CardDefinition {
     }
 }
 
-/// Furtive Courier — {2}{U} Creature — Merfolk Advisor 3/2. Whenever it attacks,
-/// draw a card, then discard a card. (The "can't be blocked if you've sacrificed
-/// an artifact this turn" rider is dropped — the engine has no per-turn
-/// artifact-sacrifice tracking.)
+/// Furtive Courier — {2}{U} Creature — Merfolk Advisor 3/2. Can't be blocked as
+/// long as you've sacrificed an artifact this turn. Whenever it attacks, draw a
+/// card, then discard a card.
 pub fn furtive_courier() -> CardDefinition {
+    use crate::card::{Keyword, SelectionRequirement as R, StaticAbility, StaticEffect};
     CardDefinition {
         name: "Furtive Courier",
         cost: cost(&[generic(2), u()]),
@@ -239,6 +239,13 @@ pub fn furtive_courier() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Can't be blocked while you've sacrificed an artifact this turn",
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::Unblockable,
+                condition: R::ControllerSacrificedArtifactThisTurn,
+            },
+        }],
         triggered_abilities: vec![on_attack_loot()],
         ..Default::default()
     }

@@ -1261,6 +1261,10 @@ impl GameState {
                     .map(|p| self.players[p].permanents_sacrificed_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::SacrificedArtifactThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .map(|p| self.players[p].artifacts_sacrificed_this_turn > 0)
+                .unwrap_or(false),
             Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 let total: u32 = self
@@ -2032,6 +2036,15 @@ impl GameState {
                 };
                 self.players[owner].cards_drawn_this_turn >= *n
             }
+            R::ControllerSacrificedArtifactThisTurn => {
+                let owner = match target {
+                    Target::Permanent(cid) => {
+                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                    }
+                    Target::Player(p) => *p,
+                };
+                self.players[owner].artifacts_sacrificed_this_turn > 0
+            }
             R::ControllerCorrupted => {
                 let owner = match target {
                     Target::Permanent(cid) => {
@@ -2522,6 +2535,9 @@ impl GameState {
                 .any(|c| c.id != card.id && c.definition.name == card.definition.name),
             R::ControllerDrewAtLeastThisTurn(n) => {
                 self.players[controller].cards_drawn_this_turn >= *n
+            }
+            R::ControllerSacrificedArtifactThisTurn => {
+                self.players[card.controller].artifacts_sacrificed_this_turn > 0
             }
             R::ControllerCorrupted => self.players[card.controller].poison_counters >= 3,
             R::Land => card.definition.is_land(),
