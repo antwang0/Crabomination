@@ -226,6 +226,156 @@ pub fn forum_familiar() -> CardDefinition {
     }
 }
 
+/// A "you may draw a card, then discard a card" loot payoff.
+fn may_loot() -> Effect {
+    Effect::MayDo {
+        description: "draw a card, then discard a card".into(),
+        body: Box::new(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+        ])),
+    }
+}
+
+/// Glint Weaver — {5}{G}{G} Spider 3/3, reach. ETB: distribute three +1/+1
+/// counters among up to three target creatures, then gain life equal to the
+/// greatest toughness among creatures you control.
+pub fn glint_weaver() -> CardDefinition {
+    CardDefinition {
+        name: "Glint Weaver",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::DistributeCounters {
+                total: Value::Const(3),
+                counter: CounterType::PlusOnePlusOne,
+                filter: R::Creature,
+                max_targets: 3,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ToughnessOf(Box::new(Selector::GreatestToughnessYouControl)),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Exit Specialist — {1}{U} Human Detective 2/1. Can't be blocked by power 3+.
+/// Disguise {1}{U}. When turned face up, return another target creature to hand.
+pub fn exit_specialist() -> CardDefinition {
+    CardDefinition {
+        name: "Exit Specialist",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::CantBeBlockedByPowerAtLeast(3), Keyword::Disguise(cost(&[generic(1), u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::OtherThanSource) },
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Projektor Inspector — {2}{U} Human Detective 3/2. Whenever this or another
+/// Detective you control enters, and whenever a Detective you control is turned
+/// face up, you may draw then discard.
+pub fn projektor_inspector() -> CardDefinition {
+    CardDefinition {
+        name: "Projektor Inspector",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Detective),
+                    }),
+                effect: may_loot(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Detective),
+                    }),
+                effect: may_loot(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Hotshot Investigators — {5}{U} Vedalken Detective 4/4. ETB: return up to one
+/// other target creature to its owner's hand; if you controlled it, investigate.
+pub fn hotshot_investigators() -> CardDefinition {
+    CardDefinition {
+        name: "Hotshot Investigators",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: R::ControlledByYou,
+                    },
+                    then: Box::new(investigate(1)),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::Move {
+                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::OtherThanSource) },
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Frantic Scapegoat — {R} Goat 1/1, haste. ETB: suspect it. (The "move the
+/// suspicion to another creature you control" upkeep-shuffle rider is dropped.)
+pub fn frantic_scapegoat() -> CardDefinition {
+    CardDefinition {
+        name: "Frantic Scapegoat",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goat], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::Suspect { what: Selector::This })],
+        ..Default::default()
+    }
+}
+
 /// Sanguine Savior — {1}{W}{B} Vampire Cleric 2/1, flying, lifelink. Disguise
 /// {W/B}{W/B}. When turned face up, another target creature you control gains
 /// lifelink until end of turn.

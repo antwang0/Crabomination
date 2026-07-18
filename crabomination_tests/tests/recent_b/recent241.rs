@@ -159,6 +159,98 @@ fn sanguine_savior_grants_lifelink() {
     assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Lifelink));
 }
 
+/// Glint Weaver distributes three +1/+1 counters and gains life for greatest
+/// toughness.
+#[test]
+fn glint_weaver_counters_and_lifegain() {
+    let mut g = two_player_game();
+    let weaver = g.add_card_to_battlefield(0, catalog::glint_weaver()); // 3/3
+    let big = g.add_card_to_battlefield(0, catalog::avenger_of_zendikar()); // 5/5
+    let effect = catalog::glint_weaver().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(big)],
+        ..EffectContext::for_ability(weaver, 0, None)
+    };
+    let life = g.players[0].life;
+    g.resolve_effect(&effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    // All three counters land on the sole target (5/5 -> 8/8), greatest toughness
+    // among the OTHER creatures (Avenger) is then 8.
+    assert_eq!(g.computed_permanent(big).unwrap().toughness, 8, "three counters distributed");
+    assert_eq!(g.players[0].life, life + 8, "gained life = greatest toughness");
+}
+
+/// Exit Specialist can't be blocked by big creatures and bounces one when
+/// turned face up.
+#[test]
+fn exit_specialist_evasion_and_bounce() {
+    let mut g = two_player_game();
+    let exit = g.add_card_to_battlefield(0, catalog::exit_specialist());
+    assert!(g
+        .computed_permanent(exit)
+        .unwrap()
+        .keywords
+        .contains(&Keyword::CantBeBlockedByPowerAtLeast(3)));
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let effect = catalog::exit_specialist().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(victim)],
+        ..EffectContext::for_ability(exit, 0, None)
+    };
+    g.resolve_effect(&effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "creature returned to hand");
+}
+
+/// Projektor Inspector loots when a Detective you control enters.
+#[test]
+fn projektor_inspector_loots_on_detective() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::projektor_inspector());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let to_pitch = g.add_card_to_hand(0, catalog::forest());
+    // AutoDecider declines "may" — script the yes + the discard choice.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Discard(vec![to_pitch]),
+    ]));
+    let other = g.add_card_to_battlefield(0, catalog::loxodon_eavesdropper()); // a Detective
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: other }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == to_pitch), "looted (drew then discarded)");
+}
+
+/// Hotshot Investigators bounces a creature and investigates when it was yours.
+#[test]
+fn hotshot_investigators_bounces_and_investigates_own() {
+    let mut g = two_player_game();
+    let hot = g.add_card_to_battlefield(0, catalog::hotshot_investigators());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let effect = catalog::hotshot_investigators().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(mine)],
+        ..EffectContext::for_ability(hot, 0, None)
+    };
+    g.resolve_effect(&effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "own creature returned to hand");
+    assert_eq!(clues(&g, 0), 1, "controlled it -> investigate");
+}
+
+/// Frantic Scapegoat suspects itself on entry.
+#[test]
+fn frantic_scapegoat_suspects_itself() {
+    let mut g = two_player_game();
+    let goat = g.add_card_to_battlefield(0, catalog::frantic_scapegoat());
+    g.fire_self_etb_triggers(goat, 0);
+    drain_stack(&mut g);
+    let c = g.computed_permanent(goat).unwrap();
+    // Suspected creatures have menace and can't block.
+    assert!(c.keywords.contains(&Keyword::Menace), "suspected -> menace");
+}
+
 /// Snarling Gorehound surveils when a small creature you control enters.
 #[test]
 fn snarling_gorehound_surveils_on_small_creature() {

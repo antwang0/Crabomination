@@ -6662,6 +6662,11 @@ static DECKS: &[Factory] = &[
     super::decks::dog_walker,
     super::decks::forum_familiar,
     super::decks::sanguine_savior,
+    super::decks::glint_weaver,
+    super::decks::exit_specialist,
+    super::decks::projektor_inspector,
+    super::decks::hotshot_investigators,
+    super::decks::frantic_scapegoat,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
