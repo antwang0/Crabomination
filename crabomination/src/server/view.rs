@@ -2925,6 +2925,16 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(ability_cost_label(&ballista), "Remove a +1/+1 counter");
+        // Forensic Researcher: {T}, Collect evidence 3: ...
+        let researcher = ActivatedAbility {
+            tap_cost: true,
+            collect_evidence_cost: Some(3),
+            ..Default::default()
+        };
+        assert!(
+            ability_cost_label(&researcher).contains("Collect evidence 3"),
+            "collect-evidence cost shown in the tooltip",
+        );
     }
 
     /// `sac_other_filter` / `tap_other_filter` additional costs must show

@@ -5592,8 +5592,11 @@ mod tests {
             ..plain.clone()
         };
         assert!(!is_free_mana_ability(&tap_n), "tap-N-cost mana source isn't free");
-        let energy = ActivatedAbility { energy_cost: 1, ..plain };
+        let energy = ActivatedAbility { energy_cost: 1, ..plain.clone() };
         assert!(!is_free_mana_ability(&energy), "energy-cost mana source isn't free");
+        // Collect-evidence is a real graveyard-exile cost — never a free tap.
+        let collect = ActivatedAbility { collect_evidence_cost: Some(3), ..plain };
+        assert!(!is_free_mana_ability(&collect), "collect-evidence mana source isn't free");
     }
 
     /// Reproducer for the "Vandalblast freeze" bug. The bot is in its main
