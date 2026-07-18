@@ -6678,6 +6678,7 @@ static DECKS: &[Factory] = &[
     super::decks::harried_dronesmith,
     super::decks::vengeful_tracker,
     super::decks::essence_of_antiquity,
+    super::decks::drag_the_canal,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

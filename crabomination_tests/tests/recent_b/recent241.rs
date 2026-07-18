@@ -180,6 +180,28 @@ fn sample_collector_collects_and_counters() {
     assert_eq!(after, base + 1, "a +1/+1 counter landed on a creature you control");
 }
 
+/// Drag the Canal makes a Detective and, if a creature died, gains life +
+/// investigates.
+#[test]
+fn drag_the_canal_death_bonus() {
+    let mut g = two_player_game();
+    // Register a creature death this turn.
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().damage = 5;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    let life = g.players[0].life;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::drag_the_canal().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Detective" && c.controller == 0),
+        "Detective token created"
+    );
+    assert_eq!(g.players[0].life, life + 2, "gained 2 (a creature died this turn)");
+    assert_eq!(clues(&g, 0), 1, "investigated");
+}
+
 /// Harried Dronesmith makes a hasty Thopter at the beginning of combat.
 #[test]
 fn harried_dronesmith_makes_hasty_thopter() {

@@ -297,6 +297,41 @@ fn may_loot() -> Effect {
     }
 }
 
+/// Drag the Canal — {U}{B} Instant. Create a 2/2 white and blue Detective. If a
+/// creature died this turn, gain 2 life, surveil 2, then investigate.
+pub fn drag_the_canal() -> CardDefinition {
+    CardDefinition {
+        name: "Drag the Canal",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: crate::card::TokenDefinition {
+                    name: "Detective".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White, Color::Blue],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Detective], ..Default::default() },
+                    ..Default::default()
+                },
+            },
+            Effect::If {
+                cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                    investigate(1),
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Harried Dronesmith — {3}{R} Human Artificer 2/3. At the beginning of combat
 /// on your turn, create a 1/1 colorless Thopter with flying and haste; sacrifice
 /// it at the beginning of your next end step.
