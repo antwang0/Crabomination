@@ -221,6 +221,43 @@ pub fn case_of_the_uneaten_feast() -> CardDefinition {
     }
 }
 
+/// Case of the Locked Hothouse — {3}{G} Enchantment — Case. You may play an
+/// additional land each turn. Solve: you control seven or more lands. Solved:
+/// look at the top card any time, and play lands / cast creature and enchantment
+/// spells from the top of your library.
+pub fn case_of_the_locked_hothouse() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Case of the Locked Hothouse",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: case_subtypes(),
+        static_abilities: vec![StaticAbility {
+            description: "You may play an additional land on each of your turns.",
+            effect: StaticEffect::ExtraLandPerTurn,
+        }],
+        case: Some(Box::new(CaseData {
+            to_solve: control_at_least(R::Land, 7),
+            solved_static: vec![
+                StaticAbility {
+                    description: "Look at the top card of your library any time.",
+                    effect: StaticEffect::TopOfLibraryRevealed,
+                },
+                StaticAbility {
+                    description:
+                        "You may play lands and cast creature and enchantment spells from the top of your library.",
+                    effect: StaticEffect::PlayFromLibraryTop {
+                        filter: R::Land.or(R::Creature).or(R::Enchantment),
+                    },
+                },
+            ],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
 /// Case of the Gateway Express — {1}{W} Enchantment — Case. ETB: choose target
 /// creature you don't control; each creature you control deals 1 damage to it.
 /// Solve: three or more creatures attacked this turn. Solved: creatures you

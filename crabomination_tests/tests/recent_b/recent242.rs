@@ -203,6 +203,28 @@ fn uneaten_feast_gains_life_and_solves() {
     assert!(is_solved(&g, case), "gaining 5 life this turn solves the Case");
 }
 
+// ── Case of the Locked Hothouse ──────────────────────────────────────────────
+
+/// Solves on seven lands and arms the play-from-top statics.
+#[test]
+fn locked_hothouse_solves_on_seven_lands_and_arms_top_play() {
+    let mut g = two_player_game();
+    let case = g.add_card_to_battlefield(0, catalog::case_of_the_locked_hothouse());
+    let armed_before =
+        g.battlefield.iter().find(|c| c.id == case).unwrap().definition.static_abilities.len();
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    solve_now(&mut g);
+    assert!(!is_solved(&g, case), "six lands is not enough");
+    g.add_card_to_battlefield(0, catalog::forest());
+    solve_now(&mut g);
+    assert!(is_solved(&g, case), "seven lands solves the Case");
+    let armed_after =
+        g.battlefield.iter().find(|c| c.id == case).unwrap().definition.static_abilities.len();
+    assert_eq!(armed_after, armed_before + 2, "solved Case gains its two top-play statics");
+}
+
 // ── Case of the Gateway Express ──────────────────────────────────────────────
 
 /// ETB: each creature you control pings the chosen enemy creature. Solved: your

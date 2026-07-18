@@ -6685,6 +6685,7 @@ static DECKS: &[Factory] = &[
     super::decks::case_of_the_filched_falcon,
     super::decks::case_of_the_uneaten_feast,
     super::decks::case_of_the_gateway_express,
+    super::decks::case_of_the_locked_hothouse,
     super::decks::case_file_auditor,
     super::decks::the_chase_is_on,
     super::decks::galvanize,
