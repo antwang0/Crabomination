@@ -6764,6 +6764,9 @@ static DECKS: &[Factory] = &[
     super::decks::aurelia_the_law_above,
     super::decks::rakdos_patron_of_chaos,
     super::decks::voja_jaws_of_the_conclave,
+    // recent254 — Izzet/Rakdos legends + variable collect-evidence dragon
+    super::decks::melek_reforged_researcher,
+    super::decks::incinerator_of_the_guilty,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

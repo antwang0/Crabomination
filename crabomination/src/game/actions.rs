@@ -449,6 +449,13 @@ pub fn cost_reduction_for_spell_zoned(
                 {
                     reduction += amount;
                 }
+                StaticEffect::CostReductionFirstInstantOrSorcery { amount }
+                    if src.controller == caster
+                        && state.players[caster].instants_or_sorceries_cast_this_turn == 0
+                        && (card.definition.is_instant() || card.definition.is_sorcery()) =>
+                {
+                    reduction += amount;
+                }
                 StaticEffect::CostReductionTargetingFilter {
                     spell_filter,
                     target_filter,

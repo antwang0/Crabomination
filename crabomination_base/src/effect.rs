@@ -2890,6 +2890,12 @@ pub enum Effect {
     /// engine auto-picks the cheapest qualifying set to exile; `then`'s
     /// targets are chosen when the ability goes on the stack.)
     CollectEvidence { amount: Value, then: Box<Effect> },
+    /// CR 701.59 — *collect evidence X*, where the controller chooses X: they
+    /// may exile any cards from their graveyard; X is the total mana value
+    /// exiled. If they do, `then` resolves with `ctx.x_value = X` (read via
+    /// `Value::XFromCost`). Incinerator of the Guilty. UI players pick the
+    /// exact set; the bot policy exiles the whole graveyard when it opts in.
+    CollectEvidenceX { then: Box<Effect> },
     /// CR 701.61 — *forage*: as an optional cost, exile three cards from your
     /// graveyard **or** sacrifice a Food. If paid, the reflexive `then` payoff
     /// resolves. Engine prefers exiling three graveyard cards; falls back to

@@ -15257,6 +15257,84 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CollectEvidenceX { then } => {
+                // CR 701.59 — collect evidence X: the controller may exile any
+                // cards from their graveyard; X = total mana value exiled. On a
+                // nonzero collection, run `then` with `ctx.x_value = X`.
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let src = ctx.source.unwrap_or(CardId(0));
+                if self.players[p].graveyard.is_empty() {
+                    return Ok(());
+                }
+                let to_exile: Vec<CardId> = if self.players[p].wants_ui {
+                    let candidates: Vec<(CardId, String)> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: src,
+                        prompt: "Collect evidence X: exile any cards from your \
+                                 graveyard (X = their total mana value)"
+                            .into(),
+                        candidates,
+                        min: 0,
+                        max: self.players[p].graveyard.len() as u32,
+                    });
+                    match answer {
+                        DecisionAnswer::Cards(ids) => ids,
+                        _ => vec![],
+                    }
+                } else {
+                    // Bot policy: opt in by exiling the whole graveyard (max X).
+                    let answer = self.decider.decide(&Decision::OptionalTrigger {
+                        source: src,
+                        description: "Collect evidence X? (exile cards from your \
+                                      graveyard; X = their total mana value)"
+                            .into(),
+                    });
+                    if !matches!(answer, DecisionAnswer::Bool(true)) {
+                        return Ok(());
+                    }
+                    self.players[p].graveyard.iter().map(|c| c.id).collect()
+                };
+                let gy_ids: std::collections::HashSet<CardId> =
+                    self.players[p].graveyard.iter().map(|c| c.id).collect();
+                let chosen: Vec<CardId> =
+                    to_exile.into_iter().filter(|id| gy_ids.contains(id)).collect();
+                if chosen.is_empty() {
+                    return Ok(()); // declined — no evidence collected
+                }
+                let x: u32 = chosen
+                    .iter()
+                    .filter_map(|id| {
+                        self.players[p]
+                            .graveyard
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| c.definition.cost.cmc())
+                    })
+                    .sum();
+                for cid in chosen {
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                }
+                events.push(GameEvent::EvidenceCollected { player: p });
+                // `then` reads X via `Value::XFromCost`. Keep the trigger's
+                // targets (a combat-damage trigger binds the damaged player to
+                // slot 0); only auto-fill if `then` needs a target none is set.
+                let mut then_ctx = ctx.clone();
+                then_ctx.x_value = x;
+                if then.requires_target() && then_ctx.targets.is_empty() {
+                    let (slot0, additional) =
+                        self.auto_targets_for_effect_all_slots(then, p, None);
+                    then_ctx.targets = slot0.into_iter().chain(additional).collect();
+                }
+                self.run_effect(then, &then_ctx, events)?;
+                Ok(())
+            }
+
             Effect::Forage { then } => {
                 // CR 701.61 — exile three cards from your graveyard or sacrifice
                 // a Food. Optional: ask the controller; on yes, pay (prefer

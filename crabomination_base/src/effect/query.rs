@@ -387,6 +387,7 @@ impl Effect {
             Effect::CollectEvidence { amount, then } => {
                 value_has_target(amount) || then.requires_target()
             }
+            Effect::CollectEvidenceX { then } => then.requires_target(),
             Effect::Forage { then } => then.requires_target(),
             Effect::Endure { target, n } => sel_has_target(target) || value_has_target(n),
             // Earthbend targets a land you control; blight chooses at resolution.
@@ -1032,7 +1033,9 @@ impl Effect {
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.primary_target_filter(),
             Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => then.primary_target_filter(),
             Effect::Process { then, .. } => then.primary_target_filter(),
-            Effect::CollectEvidence { then, .. } | Effect::Forage { then } => {
+            Effect::CollectEvidence { then, .. }
+            | Effect::CollectEvidenceX { then }
+            | Effect::Forage { then } => {
                 then.primary_target_filter()
             }
             Effect::WithSacrificedPt { body, .. }
@@ -1864,7 +1867,8 @@ impl Effect {
                 | Effect::MayPayX { body, .. }
                 | Effect::MayPay { body, .. }
                 | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),
-                Effect::CollectEvidence { then, .. } => eff_find(then, slot, mode, kicked),
+                Effect::CollectEvidence { then, .. }
+                | Effect::CollectEvidenceX { then } => eff_find(then, slot, mode, kicked),
                 Effect::IfRevealFromHand { then, else_, .. } => {
                     eff_find(then, slot, mode, kicked).or_else(|| eff_find(else_, slot, mode, kicked))
                 }

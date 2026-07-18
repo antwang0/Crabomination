@@ -3171,6 +3171,9 @@ pub enum DynamicPt {
     /// Power = the number of cards the controller has drawn this turn;
     /// toughness = the fixed `base_t`. Duelist of the Mind (`*`/3, CR 604.3).
     CardsDrawnThisTurnPower { base_t: i32 },
+    /// Power = toughness = `mult` × the number of instant and sorcery cards in
+    /// the controller's graveyard. Melek, Reforged Researcher (`*/*`, mult 2).
+    InstantSorceryCardsInControllerGraveyard { mult: i32 },
 }
 
 fn one_i32() -> i32 { 1 }

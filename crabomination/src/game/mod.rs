@@ -6228,6 +6228,12 @@ impl GameState {
                 crate::card::DynamicPt::CardsDrawnThisTurnPower { base_t } => {
                     (self.players[card.controller].cards_drawn_this_turn as i32, base_t)
                 }
+                crate::card::DynamicPt::InstantSorceryCardsInControllerGraveyard { mult } => {
+                    let n = self.players[card.controller].graveyard.iter()
+                        .filter(|c| c.definition.is_instant() || c.definition.is_sorcery())
+                        .count() as i32;
+                    (mult * n, mult * n)
+                }
                 crate::card::DynamicPt::NoncreatureNonlandCardsInControllerGraveyard { base_t } => {
                     let n = self.players[card.controller].graveyard.iter()
                         .filter(|c| !c.definition.is_creature() && !c.definition.is_land())
@@ -13180,6 +13186,7 @@ fn static_effect_to_effects(
             | StaticEffect::CostReductionDuringOpponentsTurn { .. }
             | StaticEffect::CostReductionNthSpell { .. }
             | StaticEffect::CostReductionFirstCreatureSpell { .. }
+            | StaticEffect::CostReductionFirstInstantOrSorcery { .. }
             | StaticEffect::CostReductionTargetingFilter { .. }
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::AdditionalCost { .. }
