@@ -132,3 +132,139 @@ fn krenko_baron_counters_each_goblin() {
         );
     }
 }
+
+/// Cryptex's collect-evidence ability adds mana and an unlock counter; the
+/// sacrifice ability is gated on five unlock counters and draws three.
+#[test]
+fn cryptex_collect_evidence_and_unlock_sacrifice() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let cryptex = g.add_card_to_battlefield(0, catalog::cryptex());
+    // Graveyard cards worth ≥ 3 to collect evidence.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cryptex,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate collect-evidence mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
+    assert_eq!(
+        g.battlefield_find(cryptex).unwrap().counters.get(&CounterType::Unlock).copied().unwrap_or(0),
+        1,
+        "gained an unlock counter",
+    );
+    // With five unlock counters the sacrifice ability draws three.
+    g.battlefield_find_mut(cryptex).unwrap().counters.insert(CounterType::Unlock, 5);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cryptex,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate the sacrifice draw ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cryptex).is_none(), "Cryptex sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 3, "drew three");
+}
+
+/// Cryptex's sacrifice ability is rejected without five unlock counters.
+#[test]
+fn cryptex_sacrifice_gated_on_five_counters() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let cryptex = g.add_card_to_battlefield(0, catalog::cryptex());
+    g.battlefield_find_mut(cryptex).unwrap().counters.insert(CounterType::Unlock, 4);
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: cryptex,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    });
+    assert!(err.is_err(), "rejected with only four unlock counters");
+    assert!(g.battlefield_find(cryptex).is_some(), "not sacrificed");
+}
+
+/// Detective's Satchel investigates twice on ETB, and its Thopter ability is
+/// gated on having sacrificed an artifact this turn.
+#[test]
+fn detectives_satchel_investigate_and_gated_thopter() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let satchel = g.add_card_to_battlefield(0, catalog::detectives_satchel());
+    g.fire_self_etb_triggers(satchel, 0);
+    drain_stack(&mut g);
+    let clues = g.battlefield.iter().filter(|c| c.definition.name == "Clue" && c.controller == 0).count();
+    assert_eq!(clues, 2, "investigated twice");
+    // Without a sacrificed artifact this turn the Thopter ability is rejected.
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: satchel,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    });
+    assert!(err.is_err(), "gated before an artifact sacrifice");
+    // After sacrificing an artifact it makes a Thopter.
+    g.players[0].artifacts_sacrificed_this_turn = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: satchel,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("Thopter ability now activatable");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Thopter" && c.controller == 0),
+        "created a Thopter",
+    );
+}
+
+/// Polygraph Orb digs on ETB (two to hand, two to graveyard, lose 2), and its
+/// activated ability drains an opponent who can't discard or sacrifice.
+#[test]
+fn polygraph_orb_etb_dig_and_punisher() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let hand_before = g.players[0].hand.len();
+    let orb = g.add_card_to_battlefield(0, catalog::polygraph_orb());
+    g.fire_self_etb_triggers(orb, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "two cards to hand");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Forest").count(), 2, "two milled");
+    assert_eq!(g.players[0].life, 18, "lost two life");
+    // Opponent with empty hand and no creatures must lose 3 life.
+    g.players[1].hand.clear();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: orb,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate the collect-evidence punisher");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "opponent lost three (no dodge available)");
+}

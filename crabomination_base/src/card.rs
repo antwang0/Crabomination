@@ -466,6 +466,9 @@ pub enum CounterType {
     /// Supply counter — Stocking the Pantry accrues one whenever you put +1/+1
     /// counters on a creature you control; remove one to draw.
     Supply,
+    /// Unlock counter — MKM's Cryptex tallies one per collect-evidence
+    /// activation; its sacrifice ability is gated on five or more.
+    Unlock,
 }
 
 /// Every zone a card can occupy.

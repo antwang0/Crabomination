@@ -5,9 +5,9 @@ use crate::card::{
     ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EquipBonus,
     Keyword, LandType, SelectionRequirement as R, Subtypes, TokenDefinition,
 };
-use crate::effect::shortcut::target_filtered;
+use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Treacherous Greed — {1}{W}{B} Instant. Additional cost: sacrifice a creature
 /// that dealt damage this turn. Draw three cards. Each opponent loses 3 life
@@ -189,6 +189,133 @@ pub fn krenko_baron_of_tin_street() -> CardDefinition {
                 else_: None,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Cryptex — {2} Artifact. {T}, Collect evidence 3: Add one mana of any color
+/// and put an unlock counter on this. Sacrifice this: Surveil 3, then draw
+/// three cards. Activate only if it has five or more unlock counters.
+pub fn cryptex() -> CardDefinition {
+    use crate::effect::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Cryptex",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                collect_evidence_cost: Some(3),
+                effect: Effect::Seq(vec![
+                    Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Unlock,
+                        amount: Value::ONE,
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                sac_cost: true,
+                condition: Some(crate::effect::Predicate::SourceHasCountersAtLeast {
+                    counter: CounterType::Unlock,
+                    n: 5,
+                }),
+                effect: Effect::Seq(vec![
+                    Effect::Surveil { who: PlayerRef::You, amount: Value::Const(3) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Detective's Satchel — {2}{U}{R} Artifact. When it enters, investigate twice.
+/// {T}: Create a 1/1 colorless Thopter artifact creature token with flying.
+/// Activate only if you've sacrificed an artifact this turn.
+pub fn detectives_satchel() -> CardDefinition {
+    use crate::effect::shortcut::investigate;
+    use crate::effect::ActivatedAbility;
+    CardDefinition {
+        name: "Detective's Satchel",
+        cost: cost(&[generic(2), u(), r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(investigate(2))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(crate::effect::Predicate::SacrificedArtifactThisTurn {
+                who: PlayerRef::You,
+            }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: thopter_token(),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Polygraph Orb — {4}{B} Artifact. When it enters, look at the top four cards
+/// of your library, put two into your hand and the rest into your graveyard;
+/// you lose 2 life. {2}, {T}, Collect evidence 3: Each opponent loses 3 life
+/// unless they discard a card or sacrifice a creature.
+pub fn polygraph_orb() -> CardDefinition {
+    use crate::effect::ActivatedAbility;
+    CardDefinition {
+        name: "Polygraph Orb",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: Some(Value::Const(2)),
+                to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
+                optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
+            },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            collect_evidence_cost: Some(3),
+            effect: Effect::Punisher {
+                chooser: Selector::Player(PlayerRef::EachOpponent),
+                options: vec![
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Creature },
+                ],
+                otherwise: Box::new(Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+fn thopter_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Thopter".into(),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
         ..Default::default()
     }
 }

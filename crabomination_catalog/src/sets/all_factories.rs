@@ -6746,6 +6746,9 @@ static DECKS: &[Factory] = &[
     super::decks::lumbering_laundry,
     super::decks::audience_with_trostani,
     super::decks::krenko_baron_of_tin_street,
+    super::decks::cryptex,
+    super::decks::detectives_satchel,
+    super::decks::polygraph_orb,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

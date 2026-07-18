@@ -9603,7 +9603,9 @@ impl GameState {
                     match picked {
                         Some(opt) => self.run_effect(opt, &opt_ctx, events)?,
                         // No affordable option — the ability's controller
-                        // gets the payoff (uses the original ctx).
+                        // gets the payoff (uses the original ctx, so an
+                        // `otherwise` naming `EachOpponent`/`Triggerer`
+                        // resolves relative to the source's controller).
                         None => self.run_effect(otherwise, ctx, events)?,
                     }
                 }
