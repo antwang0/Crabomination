@@ -9196,6 +9196,42 @@ impl GameState {
                 }
             }
         }
+        // Turn-scoped "whenever a creature you control dies this turn" delayed
+        // triggers (CR 603.4 — Waltz of Rage). Fire once per creature that
+        // died under the trigger's controller (read from the death LKI
+        // snapshot); the dead creature is the trigger source. These persist
+        // until cleanup.
+        let died_creatures: Vec<(CardId, usize)> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::CreatureDied { card_id } => self
+                    .died_card_snapshots
+                    .get(card_id)
+                    .map(|snap| (*card_id, snap.controller)),
+                _ => None,
+            })
+            .collect();
+        if !died_creatures.is_empty() {
+            use crate::game::types::DelayedKind;
+            let watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| matches!(dt.kind, DelayedKind::CreatureYouControlDiesThisTurn))
+                .cloned()
+                .collect();
+            for (cid, controller) in &died_creatures {
+                for dt in &watchers {
+                    if dt.controller != *controller {
+                        continue;
+                    }
+                    self.stack.push(
+                        TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                            .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
+                            .build(),
+                    );
+                }
+            }
+        }
         // Phase 1: collect candidate triggers while the borrow on
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
         // and call `&self.evaluate_predicate` to gate each candidate by

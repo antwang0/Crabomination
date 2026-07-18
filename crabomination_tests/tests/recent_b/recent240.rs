@@ -110,3 +110,25 @@ fn waltz_of_rage_radiates() {
     assert!(g.battlefield_find(ally).is_none(), "friendly creature took 5 and died");
     assert!(g.battlefield_find(enemy).is_none(), "enemy creature took 5 and died");
 }
+
+/// After Waltz of Rage resolves, a creature you control dying exiles the top of
+/// your library (impulse-play window).
+#[test]
+fn waltz_of_rage_impulses_on_death() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::avenger_of_zendikar());
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(hero)],
+        ..EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.resolve_effect(&catalog::waltz_of_rage().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    // Now a creature you control dies — the delayed trigger exiles the top card.
+    let victim = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let top = g.add_card_to_library(0, catalog::forest());
+    g.battlefield_find_mut(victim).unwrap().damage = 5;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == top), "top card exiled on the death");
+}

@@ -687,6 +687,11 @@ pub enum DelayedKind {
     /// that enters for the rest of the turn; the entering creature is the
     /// trigger source. Expires at cleanup. Powers First Day of Class.
     CreatureYouControlEntersThisTurn,
+    /// "Until end of turn, whenever a creature you control dies, …" (CR 603.4).
+    /// Fires once per creature owned+controlled (via death LKI) by
+    /// `DelayedTrigger.controller` that dies for the rest of the turn; the dead
+    /// creature is the trigger source. Expires at cleanup. Powers Waltz of Rage.
+    CreatureYouControlDiesThisTurn,
     /// "When you cast your next spell this turn, …" (CR 603.7e). Fires once
     /// on the controller's next spell cast, with the cast spell bound as the
     /// trigger source; expires at cleanup if no spell was cast. Codie.

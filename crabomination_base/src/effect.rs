@@ -4969,6 +4969,15 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// "Until end of turn, whenever a creature you control dies, [body]."
+    /// Registers a turn-scoped delayed trigger (CR 603.4) that fires once per
+    /// creature the controller controlled (read from death LKI) that dies for
+    /// the rest of the turn; the dead creature is exposed to `body` as
+    /// `Selector::TriggerSource`. Expires at cleanup. Used by Waltz of Rage.
+    CreaturesYouControlDyingThisTurn {
+        body: Box<Effect>,
+    },
+
     /// "Whenever you cast a spell this turn, [body]" — like
     /// `OnYourNextSpellCastThisTurn` but repeating until cleanup
     /// (Rediscover the Way chapter III; gate the body with an

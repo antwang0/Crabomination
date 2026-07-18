@@ -3,11 +3,11 @@
 
 use crate::card::{
     AdditionalCastCost, CardDefinition, CardType, CreatureType, ExileReturnZone, Keyword,
-    SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
+    MayPlayDuration, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{
-    Effect, EventKind, EventScope, EventSpec, Predicate, Selector, StaticEffect, Value,
+    Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, StaticEffect, Value,
 };
 use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, r, w};
@@ -94,19 +94,31 @@ pub fn coordinated_clobbering() -> CardDefinition {
 }
 
 /// Waltz of Rage — {3}{R}{R} Sorcery. Target creature you control deals damage
-/// equal to its power to each other creature. (The delayed "creatures you
-/// control that die exile the top card" rider is dropped — needs a temporary
-/// triggered-ability grant.)
+/// equal to its power to each other creature. Until end of turn, whenever a
+/// creature you control dies, exile the top card of your library — you may play
+/// it until the end of your next turn.
 pub fn waltz_of_rage() -> CardDefinition {
     CardDefinition {
         name: "Waltz of Rage",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamageEqualToPowerToEach {
-            source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
-            targets: Selector::EachPermanent(R::Creature),
-            each_opponent: false,
-        },
+        effect: Effect::Seq(vec![
+            Effect::DealDamageEqualToPowerToEach {
+                source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                targets: Selector::EachPermanent(R::Creature),
+                each_opponent: false,
+            },
+            Effect::CreaturesYouControlDyingThisTurn {
+                body: Box::new(Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: MayPlayDuration::EndOfControllersNextTurn,
+                    pay_any_color: false,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                }),
+            },
+        ]),
         ..Default::default()
     }
 }
