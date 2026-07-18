@@ -568,6 +568,52 @@ pub fn lupinflower_village() -> CardDefinition {
     }
 }
 
+/// Lilypad Village — Land. {T}: Add {C}. {T}: Add {U}, creature-spells only.
+/// {U}, {T}: Surveil 2. Activate only if a Bird/Frog/Otter/Rat you control
+/// entered this turn. (The "entered this turn" gate reads a kindred creature you
+/// currently control — one that entered and then left is approximated away.)
+pub fn lilypad_village() -> CardDefinition {
+    let kindred = R::HasCreatureType(CreatureType::Bird)
+        .or(R::HasCreatureType(CreatureType::Frog))
+        .or(R::HasCreatureType(CreatureType::Otter))
+        .or(R::HasCreatureType(CreatureType::Rat));
+    CardDefinition {
+        name: "Lilypad Village",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colors(vec![Color::Blue])),
+                        SpendRestriction::CreatureOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[u()]),
+                condition: Some(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        kindred.and(R::ControlledByYou).and(R::EnteredThisTurn),
+                    ),
+                    n: Value::ONE,
+                }),
+                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Fear of Burning Alive — {4}{R}{R} Enchantment Creature — Nightmare 4/4. ETB:
 /// deals 4 to each opponent. Delirium — whenever a source you control deals
 /// noncombat damage to an opponent, if delirium, deal that much to a creature

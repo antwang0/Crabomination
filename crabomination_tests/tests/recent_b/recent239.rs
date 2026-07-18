@@ -648,3 +648,23 @@ fn lupinflower_village_digs_for_kindred() {
         _ => panic!("not a six-deep kindred dig"),
     }
 }
+
+/// Lilypad Village's surveil ability is gated on controlling a kindred creature
+/// that entered this turn.
+#[test]
+fn lilypad_village_surveil_gate() {
+    use crabomination::effect::Effect;
+    let def = catalog::lilypad_village();
+    let ab = &def.activated_abilities[2];
+    assert!(matches!(ab.effect, Effect::Surveil { .. }));
+    assert!(ab.condition.is_some(), "gated on a kindred entered-this-turn");
+    // The gate is unmet with no kindred on the board.
+    let mut g = two_player_game();
+    g.turn_number = 3;
+    let ctx = EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    assert!(!g.evaluate_predicate(ab.condition.as_ref().unwrap(), &ctx), "no kindred → gate closed");
+    // With a Frog that entered this turn, the gate opens.
+    let frog = g.add_card_to_battlefield(0, catalog::spore_frog());
+    g.battlefield_find_mut(frog).unwrap().entered_turn = Some(3);
+    assert!(g.evaluate_predicate(ab.condition.as_ref().unwrap(), &ctx), "kindred present → gate open");
+}

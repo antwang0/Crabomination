@@ -6641,6 +6641,7 @@ static DECKS: &[Factory] = &[
     super::decks::mudflat_village,
     super::decks::oakhollow_village,
     super::decks::lupinflower_village,
+    super::decks::lilypad_village,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
