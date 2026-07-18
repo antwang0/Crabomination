@@ -2820,6 +2820,11 @@ pub struct EquipBonus {
     /// "During your turn, equipped creature has flying."
     #[serde(default)]
     pub during_your_turn_keywords: Vec<Keyword>,
+    /// "During your turn, equipped creature gets +P/+T" (layer 7c, gated on the
+    /// source controller's turn — Knife's "+1/+0" half). `(0, 0)` for the
+    /// common always-on case.
+    #[serde(default)]
+    pub during_your_turn_pt: (i32, i32),
     /// Optional board-count scaling (CR 613 layer 7c): the attached creature
     /// gets an additional `per_power`/`per_toughness` for each permanent
     /// matching `filter` the source's controller controls, on top of the flat
@@ -2834,6 +2839,13 @@ pub struct EquipBonus {
     /// cycle's combat-damage triggers. Empty for the common static-bonus case.
     #[serde(default)]
     pub triggered_abilities: Vec<crate::effect::TriggeredAbility>,
+    /// Activated abilities granted to the equipped creature (CR 702.6e). Each
+    /// resolves as though printed on the creature — its `{T}` taps the
+    /// creature, `Selector::This` reads the creature. Surfaced through
+    /// `granted_abilities_for` alongside the Soulbond/static grants (Wrench's
+    /// "{3}, {T}: Tap target creature"). Empty for the common static case.
+    #[serde(default)]
+    pub activated_abilities: Vec<crate::effect::ActivatedAbility>,
     /// When true, `triggered_abilities` resolve with the **Equipment** as the
     /// trigger source (so `Selector::This` reads the Equipment, not the equipped
     /// creature). Umezawa's Jitte's "whenever equipped creature deals combat

@@ -5886,6 +5886,7 @@ impl GameState {
                                 events.push(GameEvent::PermanentExiled { card_id: id });
                             }
                         }
+                        events.push(GameEvent::EvidenceCollected { player: p });
                     }
                 }
             }
@@ -9595,6 +9596,17 @@ impl GameState {
             if (src.id == card_id || partner == card_id)
                 && self.battlefield.iter().any(|c| c.id == partner)
             {
+                out.extend(bonus.activated_abilities.iter().cloned());
+            }
+        }
+        // CR 702.6e — Equipment-granted activated abilities. An Equipment whose
+        // `equipped_bonus.activated_abilities` is non-empty and is attached to
+        // this creature grants them (Wrench's "{3}, {T}: Tap target creature").
+        for eq in &self.battlefield {
+            if eq.attached_to != Some(card_id) {
+                continue;
+            }
+            if let Some(bonus) = &eq.definition.equipped_bonus {
                 out.extend(bonus.activated_abilities.iter().cloned());
             }
         }

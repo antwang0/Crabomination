@@ -4670,6 +4670,18 @@ impl GameState {
                         modification: Modification::AddKeyword(kw.clone()),
                     });
                 }
+                let (dp, dt) = bonus.during_your_turn_pt;
+                if dp != 0 || dt != 0 {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![target]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(dp, dt),
+                    });
+                }
             }
             // Characteristic-overriding Auras (Ichthyomorphosis,
             // One with the Stars): set base P/T (7b), card/creature types,

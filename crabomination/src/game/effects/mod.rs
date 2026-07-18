@@ -8960,6 +8960,9 @@ impl GameState {
                                     events.push(GameEvent::PermanentExiled { card_id: id });
                                 }
                             }
+                            events.push(GameEvent::EvidenceCollected {
+                                player: affected_controller,
+                            });
                             true
                         } else {
                             false
@@ -15216,6 +15219,9 @@ impl GameState {
                 for cid in to_exile {
                     self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                 }
+                // CR 701.59 — the collection is complete; fire "whenever you
+                // collect evidence".
+                events.push(GameEvent::EvidenceCollected { player: p });
                 // The "when you do" payoff is a reflexive trigger: its targets
                 // are chosen now, after collecting. Auto-target `then` and
                 // thread the picks through a derived context.

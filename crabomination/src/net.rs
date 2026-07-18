@@ -2007,6 +2007,8 @@ pub enum GameEventWire {
     Proliferated { player: usize },
     /// Wire mirror of `GameEvent::Foraged` (CR 701.61).
     Foraged { player: usize },
+    /// Wire mirror of `GameEvent::EvidenceCollected` (CR 701.59).
+    EvidenceCollected { player: usize },
     /// Wire mirror of `GameEvent::EnergyGained`.
     EnergyGained { player: usize, amount: u32 },
     /// Wire mirror of `GameEvent::DiscardedBatch` (CR 701.9 discard batch).
@@ -2180,6 +2182,9 @@ impl From<&GameEvent> for GameEventWire {
                 GameEventWire::Proliferated { player: *player }
             }
             GameEvent::Foraged { player } => GameEventWire::Foraged { player: *player },
+            GameEvent::EvidenceCollected { player } => {
+                GameEventWire::EvidenceCollected { player: *player }
+            }
             GameEvent::EnergyGained { player, amount } => GameEventWire::EnergyGained {
                 player: *player,
                 amount: *amount,
@@ -2468,6 +2473,7 @@ impl GameEventWire {
             E::ScriedOrSurveiled { .. } => String::new(),
             E::Proliferated { player } => format!("{} proliferates", pn(*player)),
             E::Foraged { player } => format!("{} forages", pn(*player)),
+            E::EvidenceCollected { player } => format!("{} collects evidence", pn(*player)),
             E::EnergyGained { player, amount } => format!("{} gets {amount} energy", pn(*player)),
             // Per-card `CardDiscarded` rows already narrate the discards.
             E::DiscardedBatch { .. } => String::new(),
