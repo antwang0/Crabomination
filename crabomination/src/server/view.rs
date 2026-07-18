@@ -1957,6 +1957,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Discover { .. } => "Discover",
         Effect::Cascade { .. } => "Cascade",
         Effect::CollectEvidence { .. } => "Collect evidence",
+        Effect::CollectEvidenceX { .. } => "Collect evidence X",
         Effect::Forage { .. } => "Forage",
         Effect::Endure { .. } => "Endure",
         Effect::DigToHandLoseLife { .. } => "Dig, lose life per card kept",
