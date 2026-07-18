@@ -335,12 +335,31 @@ factory doc comment:
   Whisperer still blocked only on the "target land becomes a 5/5 *for as long as
   this creature remains tapped*" conditional land-animation duration (a
   source-tapped-gated continuous grant — no primitive yet).
-- **MKM remaining gaps (~63 cards):** legends (Anzrag, Delney, Etrata, Teysa,
-  Judith, Kaya PW, …), the split cards (Cease // Desist, Flotsam //
-  Jetsam, …), Disguise/Cloak value (Coveted Falcon, Fugitive Codebreaker),
-  modal spells (Deadly Complication, Expose the Culprit), and the remaining
-  lands (Public Thoroughfare, Branch of Vitu-Ghazi). `scripts/set_gaps.py mkm`
-  lists them. Notable primitives still blocking specific cards:
+- **MKM remaining gaps (~50 cards):** legends (Delney, Etrata, Teysa, Judith,
+  Kaya PW, Tolsimir's Wolf-attack lure, …), the remaining split cards (Flotsam //
+  Jetsam, Push // Pull, Hustle // Bustle, Fuss // Bother ✅, Cease // Desist ✅),
+  Disguise/Cloak value (Coveted Falcon, Fugitive Codebreaker), the reanimators
+  (Relive the Past, Anzrag's Rampage), Krenko's Buzzcrusher (per-player land
+  destruction + fetch), Officious Interrogation (per-target cost + investigate X),
+  and the remaining lands (Public Thoroughfare, Branch of Vitu-Ghazi).
+  `scripts/set_gaps.py mkm` lists them. Notable primitives still blocking cards:
+  - **Wolf-attack lure** (Tolsimir) — "target creature blocks *that Wolf* if
+    able" needs a MustBlock variant pointing at the trigger source, not the
+    ability source (`MustBlockSource` binds `ctx.source`).
+  - **Reflexive gy-target return** (Blood Spatter Analysis) — "sacrifice this if
+    5+ bloodstain; when you do, return target creature card from your graveyard"
+    needs the return target chosen only when the sacrifice fires, not every death.
+    Also needs a Bloodstain counter type + a "whenever one or more creatures die,
+    mill + add a counter" trigger.
+  - **Tenth District Hero** — first ability is ready (`collect_evidence_cost` +
+    `BecomeCreature` sets 4/4 Detective + vigilance); second ability blocks on a
+    rename + "Other creatures you control have indestructible" anthem granted by
+    a self-becomes effect.
+  - **Sudden Setback** — "put target spell or nonland permanent on library, owner
+    chooses top/bottom" needs a spell-or-permanent target (the `Target` enum has
+    no Spell variant) + a library-owner-choice move effect.
+  - **Tin Street Gossip / Goblin Maskmaker** — restricted / discounted mana for
+    face-down casts needs a face-down-spell spend restriction + cost reduction.
   - **Reflexive gy-target return** (Blood Spatter Analysis) — "sacrifice this if
     5+ bloodstain; when you do, return target creature card from your graveyard"
     needs the return target chosen only when the sacrifice fires, not every death.

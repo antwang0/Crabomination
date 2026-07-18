@@ -16,6 +16,17 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **MKM recent254–261 (14 cards) + primitives:** `Effect::CollectEvidenceX`
+  (choose-your-X collect evidence; threads the exiled total via `ctx.x_value` —
+  Incinerator of the Guilty), `DynamicPt::InstantSorceryCardsInControllerGraveyard`
+  and `StaticEffect::CostReductionFirstInstantOrSorcery` (Melek), and
+  `ExtraManaKind::AnyColor` (tap-time color choice — Buried in the Garden). Cards:
+  Melek, Incinerator of the Guilty, Cases (Ransacked Lab / Stashed Skeleton /
+  Pilfered Proof), Insidious Roots, Assemble the Players, Alquist Proft, the
+  Fuss // Bother and Cease // Desist splits, Living Conundrum (empty-library
+  10/10 via `SetBasePtIf`), Anzrag the Quake-Mole (BecomesBlocked + extra
+  combat), Buried in the Garden. Deadly Complication upgraded to a faithful
+  one-or-both `ChooseModesCast` (was forced-both, unsuspect rider dropped).
 - **MKM recent245–253 (50 cards):** recent252/253 add
   `ActivatedAbility.collect_evidence_cost` (CR 701.59 as an activation cost —
   finishing Forensic Researcher), `Value::DifferentlyNamedCreatureTokensControlled`
