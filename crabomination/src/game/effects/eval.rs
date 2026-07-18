@@ -2229,6 +2229,8 @@ impl GameState {
                     }),
                     // CR 301.5 — "equipped" = an Equipment is attached.
                     R::IsEquipped => self.attached_equipment_count(*cid) > 0,
+                    // CR 701.60 — suspected.
+                    R::IsSuspected => card.suspected,
                     // CR 301.5 — equipped by at least `n` Equipment (Balan).
                     R::EquippedByAtLeast(n) => {
                         self.attached_equipment_count(*cid) as u32 >= *n
@@ -2728,6 +2730,8 @@ impl GameState {
             // A battlefield instance carries this flag directly (Rowdy Research's
             // "{1} less for each creature that attacked this turn" affinity).
             R::AttackedThisTurn => card.attacked_this_turn,
+            // CR 701.60 — the suspected flag lives on the instance.
+            R::IsSuspected => card.suspected,
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_) | R::WithAnyCounter
             | R::IsUnblocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone

@@ -1438,6 +1438,10 @@ pub enum SelectionRequirement {
     /// True when the candidate permanent has an Equipment attached
     /// (CR 301.5 "equipped"). Battlefield-only. Kor Duelist.
     IsEquipped,
+    /// CR 701.60 — true while the candidate creature is suspected (has the
+    /// `suspected` flag). Powers "Sacrifice a suspected creature" costs
+    /// (Rune-Brand Juggler) and suspected-creature payoffs.
+    IsSuspected,
     /// True when the candidate is currently attached to *some* permanent
     /// (`attached_to.is_some()`). Source-precise "attached to this creature"
     /// filters (Faunsbane Troll's "Sacrifice an Aura attached to this
