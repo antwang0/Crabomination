@@ -6648,6 +6648,8 @@ static DECKS: &[Factory] = &[
     super::decks::feed_the_cycle,
     super::decks::freestrider_commando,
     super::decks::crimestopper_sprite,
+    super::decks::fear_of_abduction,
+    super::decks::say_its_name,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
