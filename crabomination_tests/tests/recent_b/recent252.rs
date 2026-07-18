@@ -268,3 +268,48 @@ fn polygraph_orb_etb_dig_and_punisher() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 17, "opponent lost three (no dodge available)");
 }
+
+/// Undergrowth Recon returns a land from your graveyard to the battlefield
+/// tapped at your upkeep.
+#[test]
+fn undergrowth_recon_returns_land_on_upkeep() {
+    let mut g = two_player_game();
+    let recon = g.add_card_to_battlefield(0, catalog::undergrowth_recon());
+    let land = g.add_card_to_graveyard(0, catalog::forest());
+    let ctx = EffectContext::for_trigger(recon, 0, Some(Target::Permanent(land)), 0);
+    let trig = catalog::undergrowth_recon().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    let ret = g.battlefield_find(land).expect("land back on the battlefield");
+    assert!(ret.tapped, "returned tapped");
+}
+
+/// Dramatic Accusation taps the enchanted creature on ETB and can shuffle it
+/// into its owner's library.
+#[test]
+fn dramatic_accusation_taps_then_shuffles() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::dramatic_accusation());
+    // ETB effect: attach + tap.
+    let ctx = EffectContext::for_trigger(aura, 0, Some(Target::Permanent(foe)), 0);
+    let etb = catalog::dramatic_accusation().effect.clone();
+    g.resolve_effect(&etb, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "enchanted creature tapped on ETB");
+    // Activate the shuffle.
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate the shuffle ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature left the battlefield");
+    assert!(g.players[1].library.iter().any(|c| c.id == foe), "shuffled into owner's library");
+}

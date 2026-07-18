@@ -308,6 +308,62 @@ pub fn polygraph_orb() -> CardDefinition {
     }
 }
 
+/// Undergrowth Recon — {1}{G}{G} Enchantment. At the beginning of your upkeep,
+/// return target land card from your graveyard to the battlefield tapped.
+pub fn undergrowth_recon() -> CardDefinition {
+    CardDefinition {
+        name: "Undergrowth Recon",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::Move {
+                what: target_filtered(R::Land),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dramatic Accusation — {2}{U} Aura. Enchant creature. When it enters, tap the
+/// enchanted creature; the enchanted creature doesn't untap (modeled by tapping
+/// it each upkeep, as Narcolepsy does). {U}{U}: Shuffle enchanted creature into
+/// its owner's library.
+pub fn dramatic_accusation() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    use crate::effect::{ActivatedAbility, LibraryPosition};
+    CardDefinition {
+        name: "Dramatic Accusation",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Seq(vec![
+            Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+            Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) },
+        ]),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), u()]),
+            effect: Effect::Move {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
+                    pos: LibraryPosition::Shuffled,
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 fn thopter_token() -> TokenDefinition {
     TokenDefinition {
         name: "Thopter".into(),

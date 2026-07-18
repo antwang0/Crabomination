@@ -6749,6 +6749,8 @@ static DECKS: &[Factory] = &[
     super::decks::cryptex,
     super::decks::detectives_satchel,
     super::decks::polygraph_orb,
+    super::decks::undergrowth_recon,
+    super::decks::dramatic_accusation,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
