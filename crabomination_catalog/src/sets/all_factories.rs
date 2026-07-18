@@ -6810,6 +6810,22 @@ static DECKS: &[Factory] = &[
     super::decks::atraxas_fall,
     super::decks::furnace_host_charger,
     super::decks::phyrexian_pegasus,
+    // recent265 — DMU/SNC/MID/NEO vanilla-ish + kicker/backup/anthem batch
+    super::decks::bonebreaker_giant,
+    super::decks::gnottvold_recluse,
+    super::decks::deathbloom_gardener,
+    super::decks::battlefly_swarm,
+    super::decks::duct_crawler,
+    super::decks::charismatic_vanguard,
+    super::decks::cabaretti_initiate,
+    super::decks::serpent_blade_assailant,
+    super::decks::rhox_pikemaster,
+    super::decks::witty_roastmaster,
+    super::decks::yavimaya_iconoclast,
+    super::decks::vineshaper_prodigy,
+    super::decks::shield_wall_sentinel,
+    super::decks::kami_of_industry,
+    super::decks::wingmantle_chaplain,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
