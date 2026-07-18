@@ -1293,6 +1293,11 @@ pub enum Predicate {
     /// stamped from `CardInstance.cast_via_waterbend`. Gates "if its additional
     /// cost was paid, …" riders (Katara, Seeking Revenge; Secret of Bloodbending).
     SpellWasWaterbend,
+    /// CR 701.59 — true iff this spell's "collect evidence N" additional cost
+    /// was paid. Reads `EffectContext.cast_collected_evidence`, stamped from
+    /// `CardInstance.cast_collected_evidence`. Gates "if evidence was collected,
+    /// …" branches (Behind the Mask, Analyze the Pollen).
+    SpellCollectedEvidence,
     /// CR 715 — true iff `ctx.controller` owns a card in exile that is on an
     /// Adventure (a creature card cast for its Adventure half, waiting in exile
     /// to be recast). Gates Howling Galefang's "has haste as long as you own a

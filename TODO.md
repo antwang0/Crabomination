@@ -3841,12 +3841,14 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 ## Suggested next-up tasks
 
 - ⏳ **recent239 (DSK/OTJ/MKM) deferred, each blocked on one primitive:**
-  - **Collect-evidence additional cost** (`AdditionalCastCost::CollectEvidence
-    { amount, optional }` + a `SpellCollectedEvidence` predicate for the
-    cost-reduction/branch riders). Unblocks Bite Down on Crime's real {2}-less
-    discount, Behind the Mask, Analyze the Pollen, and Axebane Ferox's
-    **Ward—Collect evidence 4**. `Effect::CollectEvidence` already exists for the
-    resolution-time action; this is the cast-cost sibling.
+  - ✅ ~~**Collect-evidence additional cost**~~ — shipped
+    (`AdditionalCastCost::CollectEvidence { amount, optional }` +
+    `Predicate::SpellCollectedEvidence` + `self_cost_reduction_if_collect_evidence`).
+    Bite Down on Crime (real {2}-less discount), Behind the Mask (4/3 vs 1/1),
+    and Analyze the Pollen (widened search) are wired; auto-collects when the
+    graveyard can afford it. Still open: **Axebane Ferox's Ward—Collect
+    evidence 4** (a ward cost, not a cast cost — needs ward-cost integration),
+    and an interactive collect prompt for UI casters (currently auto).
   - **"Whenever you manifest dread" trigger** (`EventKind::ManifestedDread` +
     `GameEvent::ManifestedDread { player, milled }` + wire mirror + subject
     binding to the milled card). Unblocks Paranormal Analyst ("put a card you

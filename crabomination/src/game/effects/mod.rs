@@ -150,6 +150,10 @@ pub struct EffectContext {
     /// 701.67). Stamped from `CardInstance.cast_via_waterbend`; read by
     /// `Predicate::SpellWasWaterbend`. Defaults to `false`.
     pub cast_via_waterbend: bool,
+    /// True if the resolving spell's "collect evidence" additional cost was paid
+    /// (CR 701.59). Stamped from `CardInstance.cast_collected_evidence`; read by
+    /// `Predicate::SpellCollectedEvidence`. Defaults to `false`.
+    pub cast_collected_evidence: bool,
     /// True if the resolving spell was entwined (CR 702.41): its
     /// `ChooseMode` runs every mode in order. Defaults to `false`.
     pub entwined: bool,
@@ -178,6 +182,7 @@ impl EffectContext {
             bargained: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
+            cast_collected_evidence: false,
             entwined: false,
             spree_modes: Vec::new(),
         }
@@ -260,6 +265,7 @@ impl EffectContext {
             bargained: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
+            cast_collected_evidence: false,
             entwined: false,
             spree_modes: Vec::new(),
         }
@@ -287,6 +293,7 @@ impl EffectContext {
             bargained: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
+            cast_collected_evidence: false,
             entwined: false,
             spree_modes: Vec::new(),
         }
@@ -313,6 +320,7 @@ impl EffectContext {
             bargained: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
+            cast_collected_evidence: false,
             entwined: false,
             spree_modes: Vec::new(),
         }

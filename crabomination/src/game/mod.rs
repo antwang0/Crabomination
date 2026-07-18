@@ -9335,6 +9335,7 @@ impl GameState {
                                 bargained: false,
                                 cast_via_mayhem: false,
                                 cast_via_waterbend: false,
+                                cast_collected_evidence: false,
                                 entwined: false,
                                 spree_modes: Vec::new(),
                             };
@@ -9780,6 +9781,7 @@ impl GameState {
                     bargained: false,
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
+                    cast_collected_evidence: false,
                     entwined: false,
                     spree_modes: Vec::new(),
                 };
@@ -12092,6 +12094,7 @@ impl GameState {
         ctx.bargained = card.bargained;
         ctx.cast_via_mayhem = card.cast_via_mayhem;
         ctx.cast_via_waterbend = card.cast_via_waterbend;
+        ctx.cast_collected_evidence = card.cast_collected_evidence;
         ctx.entwined = card.entwined;
         ctx.spree_modes = card.spree_modes.clone();
         ctx.mana_spent_by_color = card.cast_mana_spent_by_color.clone();

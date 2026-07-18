@@ -1585,6 +1585,10 @@ impl GameState {
                 // CR 701.67 — true iff this spell's optional waterbend cost was paid.
                 ctx.cast_via_waterbend
             }
+            Predicate::SpellCollectedEvidence => {
+                // CR 701.59 — true iff this spell's "collect evidence" cost was paid.
+                ctx.cast_collected_evidence
+            }
             Predicate::OwnExiledAdventureCard => {
                 // CR 715 — the controller owns a card in exile on an Adventure.
                 let owner = ctx.controller;

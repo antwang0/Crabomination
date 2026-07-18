@@ -4,9 +4,11 @@ use crabomination::card::{AdditionalCastCost, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::effect::{Effect, PlayerRef, Predicate};
+use crabomination::game::GameAction;
 use crabomination::game::effects::EffectContext;
-use crabomination::game::types::Target;
+use crabomination::game::types::{Target, TurnStep};
 use crabomination::game::{drain_stack, two_player_game};
+use crabomination::mana::Color;
 
 /// Betrayer's Bargain deals 5 and exiles the lethal creature instead of
 /// burying it, and carries the sacrifice-or-pay additional cost.
@@ -312,4 +314,111 @@ fn altanak_channel_returns_land_tapped() {
     g.resolve_effect(&effect, &ctx).unwrap();
     let l = g.battlefield_find(land).expect("land returned to battlefield");
     assert!(l.tapped, "enters tapped");
+}
+
+/// Bite Down on Crime collects evidence 6 for a {2} discount: with 6+ mana
+/// value in the graveyard the {3}{G} sorcery casts for {1}{G}, exiling the
+/// evidence, and its collect flag is stamped.
+#[test]
+fn bite_down_on_crime_evidence_discount() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); } // MV 2 × 3 = 6
+    let spell = g.add_card_to_hand(0, catalog::bite_down_on_crime());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1); // only {1}{G} — 2 short of {3}{G}
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: None,
+        x_value: None,
+    }).expect("collect-evidence discount pays for the cast");
+    drain_stack(&mut g);
+    // Evidence exiled (3 grizzlies) and the pumped 4/2 killed the 2/2.
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0).count(), 3, "evidence exiled");
+    assert!(g.battlefield_find(theirs).is_none(), "4-power hit killed the 2/2");
+}
+
+/// Without graveyard fuel the discount can't apply: {1}{G} is short of {3}{G}.
+#[test]
+fn bite_down_on_crime_no_evidence_no_discount() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::bite_down_on_crime());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: None,
+        x_value: None,
+    }).is_err(), "empty graveyard means the full three-generic-plus-green cost");
+}
+
+/// Behind the Mask makes the target 4/3 with no evidence, 1/1 with evidence.
+#[test]
+fn behind_the_mask_evidence_flips_pt() {
+    // No evidence → 4/3.
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::behind_the_mask());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Behind the Mask");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(target).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 3), "4/3 without evidence");
+
+    // Evidence collected → 1/1.
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); } // MV 6
+    let spell = g.add_card_to_hand(0, catalog::behind_the_mask());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Behind the Mask with evidence");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(target).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 1), "1/1 with evidence");
+}
+
+/// Analyze the Pollen fetches a basic land normally, but with evidence its
+/// `If` branch widens the search filter to creature-or-land — so a Grizzly
+/// Bears in the library becomes a legal pick.
+#[test]
+fn analyze_the_pollen_evidence_widens_search() {
+    use crabomination::effect::Effect;
+    // Evidence collected → creature is a legal search pick.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bear))]));
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.cast_collected_evidence = true;
+    g.resolve_effect(&catalog::analyze_the_pollen().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature fetched with evidence");
+
+    // Without evidence the same creature pick is illegal (basic-land only).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bear))]));
+    let else_ = match catalog::analyze_the_pollen().effect {
+        Effect::If { else_, .. } => *else_,
+        _ => panic!("not an If"),
+    };
+    g.resolve_effect(&else_, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.players[0].hand.iter().any(|c| c.id == bear), "creature is not a basic land");
 }

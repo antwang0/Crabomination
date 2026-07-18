@@ -2249,6 +2249,12 @@ pub struct CardDefinition {
     /// spell being cast, so `> 0` means a prior spell. `None` by default.
     #[serde(default)]
     pub self_cost_reduction_if_cast_spell: Option<u32>,
+    /// "This spell costs `{amount}` less to cast if evidence was collected"
+    /// (Bite Down on Crime, CR 701.59). Pairs with an
+    /// `AdditionalCastCost::CollectEvidence`; generic-only, clamped by the
+    /// caller. `None` by default.
+    #[serde(default)]
+    pub self_cost_reduction_if_collect_evidence: Option<u32>,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)
@@ -2737,6 +2743,18 @@ pub enum AdditionalCastCost {
     SacrificeOrPayLife {
         filter: SelectionRequirement,
         life: u32,
+    },
+    /// "As an additional cost, (you may) collect evidence N" (CR 701.59 — exile
+    /// cards with total mana value ≥ `amount` from your graveyard). When
+    /// `optional` the cost may be skipped; whether it was paid is read at
+    /// resolution via `Predicate::SpellCollectedEvidence` (Behind the Mask's
+    /// 1/1-instead branch) and can grant a `self_cost_reduction_if_collect_evidence`
+    /// discount (Bite Down on Crime). The auto-decider collects whenever the
+    /// graveyard can afford it.
+    CollectEvidence {
+        amount: u32,
+        #[serde(default)]
+        optional: bool,
     },
 }
 
@@ -3850,6 +3868,11 @@ pub struct CardInstance {
     /// additional cost was paid. Read by `Predicate::SpellWasWaterbend` for
     /// "if its additional cost was paid" riders. Cleared off the stack.
     pub cast_via_waterbend: bool,
+    /// CR 701.59 — true if this spell's "collect evidence N" additional cost was
+    /// paid at cast time. Read by `Predicate::SpellCollectedEvidence` so
+    /// "if evidence was collected" branches (Behind the Mask, Analyze the
+    /// Pollen) can fork at resolution. Cleared off the stack.
+    pub cast_collected_evidence: bool,
     /// True if this card was cast from exile on its current trip through the
     /// stack (suspend/foretell/plot/impulse free or alt-cost casts). Powers
     /// "whenever you cast a spell from exile" payoffs (Nassari, Dean of
@@ -4219,6 +4242,7 @@ impl CardInstance {
             cast_via_flashback: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
+            cast_collected_evidence: false,
             cast_from_exile: false,
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
@@ -4740,6 +4764,8 @@ struct CardInstanceWire {
     #[serde(default)]
     cast_via_waterbend: bool,
     #[serde(default)]
+    cast_collected_evidence: bool,
+    #[serde(default)]
     cast_from_exile: bool,
     #[serde(default)]
     may_cast_back_from_graveyard: bool,
@@ -4955,6 +4981,7 @@ impl serde::Serialize for CardInstance {
             cast_via_flashback: self.cast_via_flashback,
             cast_via_mayhem: self.cast_via_mayhem,
             cast_via_waterbend: self.cast_via_waterbend,
+            cast_collected_evidence: self.cast_collected_evidence,
             cast_from_exile: self.cast_from_exile,
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
@@ -5089,6 +5116,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_via_flashback = wire.cast_via_flashback;
         c.cast_via_mayhem = wire.cast_via_mayhem;
         c.cast_via_waterbend = wire.cast_via_waterbend;
+        c.cast_collected_evidence = wire.cast_collected_evidence;
         c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.chosen_number = wire.chosen_number;

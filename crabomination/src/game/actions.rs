@@ -568,6 +568,20 @@ pub fn cost_reduction_for_spell_zoned(
     {
         reduction = reduction.saturating_add(amount);
     }
+    // Card-intrinsic "costs {amount} less if evidence was collected" (Bite Down
+    // on Crime, CR 701.59). The collect is an optional additional cost announced
+    // during casting; the auto-decider collects whenever the graveyard can
+    // afford it, so mirror that here to keep cost-calc and payment consistent.
+    if let Some(amount) = card.definition.self_cost_reduction_if_collect_evidence
+        && card
+            .definition
+            .additional_cast_cost
+            .iter()
+            .any(|c| matches!(c, crate::card::AdditionalCastCost::CollectEvidence { amount, .. }
+                if state.graveyard_can_collect_evidence(caster, *amount)))
+    {
+        reduction = reduction.saturating_add(amount);
+    }
     // Card-intrinsic "costs {X} less, where X is the greatest power among
     // creatures you control" (The Great Henge) — a `SelfCostReducedByGreatest-
     // Power` static carried by the spell being cast. Generic-only, clamped by
@@ -5180,6 +5194,15 @@ impl GameState {
         // for "X = the sacrificed creature's power" riders (Tend the Pests).
         let mut sac_x = None;
         if !additional_costs.is_empty() {
+            // CR 701.59 — stamp whether the collect-evidence cost will be paid
+            // before payment mutates the graveyard (auto-collects when able), so
+            // `Predicate::SpellCollectedEvidence` reads it at resolution.
+            if additional_costs.iter().any(|c| matches!(c,
+                crate::card::AdditionalCastCost::CollectEvidence { amount, .. }
+                    if self.graveyard_can_collect_evidence(p, *amount)))
+            {
+                card.cast_collected_evidence = true;
+            }
             let (mut cost_events, power) =
                 self.pay_additional_costs(p, &additional_costs, chosen_sacrifices, chosen_discards);
             auto_events.append(&mut cost_events);
@@ -5401,7 +5424,23 @@ impl GameState {
                             )
                     })
             }
+            // Optional collect-evidence is always announceable (may skip);
+            // a mandatory one needs enough total MV in the graveyard.
+            A::CollectEvidence { amount, optional } => {
+                *optional || self.graveyard_can_collect_evidence(p, *amount)
+            }
         })
+    }
+
+    /// CR 701.59 — can `p`'s graveyard supply cards with total mana value ≥
+    /// `amount` (the requirement to collect evidence `amount`)?
+    pub(crate) fn graveyard_can_collect_evidence(&self, p: usize, amount: u32) -> bool {
+        let total: u32 = self.players[p]
+            .graveyard
+            .iter()
+            .map(|c| c.definition.cost.cmc())
+            .sum();
+        total >= amount
     }
 
     /// CR 601.2h — pay each additional cast cost immediately. Returns the
@@ -5740,6 +5779,36 @@ impl GameState {
                                 player: p,
                                 amount: (-applied) as u32,
                             });
+                        }
+                    }
+                }
+                A::CollectEvidence { amount, .. } => {
+                    // Auto-collect when the graveyard can afford it: exile the
+                    // cheapest set of cards summing to ≥ `amount` (keeps the
+                    // pricier cards). The `cast_collected_evidence` stamp is set
+                    // by the caller from the same graveyard-can-afford check.
+                    if self.graveyard_can_collect_evidence(p, *amount) {
+                        let mut gy: Vec<(CardId, u32)> = self.players[p]
+                            .graveyard
+                            .iter()
+                            .map(|c| (c.id, c.definition.cost.cmc()))
+                            .collect();
+                        gy.sort_by_key(|&(_, mv)| mv);
+                        let mut acc = 0u32;
+                        let mut to_exile = Vec::new();
+                        for (id, mv) in gy {
+                            if acc >= *amount {
+                                break;
+                            }
+                            acc += mv;
+                            to_exile.push(id);
+                        }
+                        for id in to_exile {
+                            if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
+                                self.exile.push(card);
+                                self.players[p].cards_exiled_this_turn += 1;
+                                events.push(GameEvent::PermanentExiled { card_id: id });
+                            }
                         }
                     }
                 }
@@ -6210,6 +6279,7 @@ impl GameState {
                     bargained: false,
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
+                    cast_collected_evidence: false,
                     entwined: false,
                     spree_modes: Vec::new(),
                 };
@@ -7435,6 +7505,7 @@ impl GameState {
                 bargained: false,
                 cast_via_mayhem: false,
                 cast_via_waterbend: false,
+                cast_collected_evidence: false,
                     entwined: false,
                     spree_modes: Vec::new(),
             };
@@ -8347,6 +8418,7 @@ impl GameState {
                     bargained: false,
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
+                    cast_collected_evidence: false,
                     entwined: false,
                     spree_modes: Vec::new(),
                 };
@@ -9988,6 +10060,7 @@ impl GameState {
                 bargained: false,
                 cast_via_mayhem: false,
                 cast_via_waterbend: false,
+                cast_collected_evidence: false,
                     entwined: false,
                     spree_modes: Vec::new(),
             };

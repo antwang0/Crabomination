@@ -342,15 +342,16 @@ pub fn tumbleweed_rising() -> CardDefinition {
     }
 }
 
-/// Bite Down on Crime — {3}{G} Sorcery. Target creature you control gets +2/+0,
-/// then deals damage equal to its power to target creature you don't control.
-/// (The optional "collect evidence 6 for {2} less" discount is not modeled —
-/// the engine has no collect-evidence additional cost.)
+/// Bite Down on Crime — {3}{G} Sorcery. Optional additional cost: collect
+/// evidence 6, for {2} less. Target creature you control gets +2/+0, then deals
+/// damage equal to its power to target creature you don't control.
 pub fn bite_down_on_crime() -> CardDefinition {
     CardDefinition {
         name: "Bite Down on Crime",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 6, optional: true }],
+        self_cost_reduction_if_collect_evidence: Some(2),
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
@@ -363,6 +364,60 @@ pub fn bite_down_on_crime() -> CardDefinition {
                 target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Behind the Mask — {U} Instant. Optional additional cost: collect evidence 6.
+/// Until end of turn, target artifact or creature becomes an artifact creature
+/// with base P/T 4/3 — or 1/1 instead if evidence was collected. (The added
+/// artifact type on a nonartifact target is approximated — `BecomeCreature`
+/// keeps its printed types and animates it.)
+pub fn behind_the_mask() -> CardDefinition {
+    let animate = |power| Effect::BecomeCreature {
+        what: Selector::TargetFiltered { slot: 0, filter: R::Artifact.or(R::Creature) },
+        power: Value::Const(power),
+        toughness: Value::Const(if power == 1 { 1 } else { 3 }),
+        creature_types: vec![],
+        keywords: vec![],
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Behind the Mask",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 6, optional: true }],
+        effect: Effect::If {
+            cond: Predicate::SpellCollectedEvidence,
+            then: Box::new(animate(1)),
+            else_: Box::new(animate(4)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Analyze the Pollen — {G} Sorcery. Optional additional cost: collect evidence
+/// 8. Search your library for a basic land card — or a creature or land card
+/// instead if evidence was collected — reveal it, put it into your hand, shuffle.
+pub fn analyze_the_pollen() -> CardDefinition {
+    CardDefinition {
+        name: "Analyze the Pollen",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 8, optional: true }],
+        effect: Effect::If {
+            cond: Predicate::SpellCollectedEvidence,
+            then: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Creature.or(R::Land),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            else_: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        },
         ..Default::default()
     }
 }
