@@ -798,3 +798,35 @@ fn freestrider_commando_counters_only_when_free() {
         _ => panic!("not a no-mana-spent gate"),
     }
 }
+
+/// Crimestopper Sprite's ETB taps a creature; with collect-evidence paid, it
+/// also stuns it. The self-ETB trigger reads the cast's collect-evidence flag.
+#[test]
+fn crimestopper_sprite_taps_and_conditionally_stuns() {
+    use crabomination::card::CardId;
+    // Evidence collected → tap + stun.
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let src = g.add_card_to_battlefield(0, catalog::crimestopper_sprite());
+    g.battlefield_find_mut(src).unwrap().cast_collected_evidence = true;
+    let etb = catalog::crimestopper_sprite().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext { targets: vec![Target::Permanent(victim)], ..EffectContext::for_trigger(src, 0, None, 0) };
+    // Stamp the flag on the trigger ctx as the engine's trigger driver does.
+    let mut ctx = ctx; ctx.cast_collected_evidence = true;
+    g.resolve_effect(&etb, &ctx).unwrap();
+    let c = g.battlefield_find(victim).unwrap();
+    assert!(c.tapped, "tapped by the ETB");
+    assert_eq!(c.counter_count(CounterType::Stun), 1, "stunned when evidence was collected");
+
+    // No evidence → tap only.
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let src = g.add_card_to_battlefield(0, catalog::crimestopper_sprite());
+    let _ = src;
+    let etb = catalog::crimestopper_sprite().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext { targets: vec![Target::Permanent(victim)], ..EffectContext::for_trigger(CardId(0), 0, None, 0) };
+    g.resolve_effect(&etb, &ctx).unwrap();
+    let c = g.battlefield_find(victim).unwrap();
+    assert!(c.tapped, "tapped");
+    assert_eq!(c.counter_count(CounterType::Stun), 0, "no stun without evidence");
+}

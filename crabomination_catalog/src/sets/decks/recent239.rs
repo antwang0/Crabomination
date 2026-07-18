@@ -767,6 +767,41 @@ pub fn freestrider_commando() -> CardDefinition {
     }
 }
 
+/// Crimestopper Sprite — {2}{U} Faerie Detective 2/2. Flying. Optional
+/// additional cost: collect evidence 6. ETB: tap target creature; if evidence
+/// was collected, also put a stun counter on it.
+pub fn crimestopper_sprite() -> CardDefinition {
+    CardDefinition {
+        name: "Crimestopper Sprite",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 6, optional: true }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Tap { what: target_filtered(R::Creature) },
+                Effect::If {
+                    cond: Predicate::SpellCollectedEvidence,
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::Stun,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Feed the Cycle — {1}{B} Instant. Additional cost: forage or pay {B} (folded
 /// as {1} generic). Destroy target creature or planeswalker.
 pub fn feed_the_cycle() -> CardDefinition {

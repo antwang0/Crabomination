@@ -12396,6 +12396,9 @@ impl GameState {
             // "Escapes with …" / cast-zone riders (Tizerus Charger) read
             // the source's cast zone through `Predicate::CastFromGraveyard`.
             ctx.cast_from_hand = src.cast_from_hand;
+            // CR 701.59 — a self-ETB trigger reads whether the collect-evidence
+            // cost was paid ("if evidence was collected" — Crimestopper Sprite).
+            ctx.cast_collected_evidence = src.cast_collected_evidence;
         }
         if let Some(ts) = trigger_source_ent {
             ctx.trigger_source = Some(ts);
