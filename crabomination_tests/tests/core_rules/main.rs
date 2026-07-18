@@ -21,4 +21,5 @@ mod misconceptions;
 mod multiplayer;
 mod quests;
 mod spree;
+mod cr_mkm_extra;
 mod xtra;
