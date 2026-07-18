@@ -335,12 +335,29 @@ factory doc comment:
   Whisperer still blocked only on the "target land becomes a 5/5 *for as long as
   this creature remains tapped*" conditional land-animation duration (a
   source-tapped-gated continuous grant — no primitive yet).
-- **MKM remaining gaps (~70 cards):** legends (Anzrag, Delney, Etrata, Teysa,
-  Judith, Rakdos, Kaya PW, …), the split cards (Cease // Desist, Flotsam //
+- **MKM remaining gaps (~65 cards):** legends (Anzrag, Delney, Etrata, Teysa,
+  Judith, Kaya PW, …), the split cards (Cease // Desist, Flotsam //
   Jetsam, …), Disguise/Cloak value (Coveted Falcon, Fugitive Codebreaker),
   modal spells (Deadly Complication, Expose the Culprit), and the remaining
-  lands/artifacts (Public Thoroughfare, Branch of Vitu-Ghazi, Cryptex,
-  Detective's Satchel, Polygraph Orb). `scripts/set_gaps.py mkm` lists them.
+  lands (Public Thoroughfare, Branch of Vitu-Ghazi). `scripts/set_gaps.py mkm`
+  lists them. Notable primitives still blocking specific cards:
+  - **Variable collect evidence** ("collect evidence X", X chosen) for Incinerator
+    of the Guilty — the engine's `Effect::CollectEvidence` takes a fixed amount;
+    add a variable form that reads the chosen exile total as X.
+  - **Reflexive gy-target return** (Blood Spatter Analysis) — "sacrifice this if
+    5+ bloodstain; when you do, return target creature card from your graveyard"
+    needs the return target chosen only when the sacrifice fires, not every death.
+  - **Tenth District Hero** — first ability is ready (`collect_evidence_cost` +
+    `BecomeCreature` sets 4/4 Detective + vigilance); second ability blocks on a
+    rename + "Other creatures you control have indestructible" anthem granted by
+    a self-becomes effect.
+  - **Sudden Setback** — "put target spell or nonland permanent on library, owner
+    chooses top/bottom" needs a spell-or-permanent target + a library-owner-choice
+    move effect.
+  - **Melek, Reforged Researcher** — needs a "twice the I/S cards in your
+    graveyard" DynamicPt and a "first I/S each turn costs {3} less" cost static.
+  - **Tin Street Gossip** — restricted mana (spend only to cast face-down spells
+    / turn creatures face up) needs a face-down-spell spend restriction.
 
 - **FDN/DSK gap cards shipped (`decks::recent202`–`recent205`, 20):** Rite of the
   Dragoncaller, Koma World-Eater, Niv-Mizzet Visionary, Perforating Artist, Kiora
