@@ -6679,6 +6679,12 @@ static DECKS: &[Factory] = &[
     super::decks::vengeful_tracker,
     super::decks::essence_of_antiquity,
     super::decks::drag_the_canal,
+    super::decks::case_of_the_shattered_pact,
+    super::decks::case_of_the_trampled_garden,
+    super::decks::case_of_the_crimson_pulse,
+    super::decks::case_of_the_filched_falcon,
+    super::decks::case_of_the_uneaten_feast,
+    super::decks::case_file_auditor,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

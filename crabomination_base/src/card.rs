@@ -2418,6 +2418,35 @@ pub struct CardDefinition {
     /// (`GameAction::UnlockRoomDoor`). Defaults to `None` for back-compat.
     #[serde(default)]
     pub room: Option<Box<RoomDoors>>,
+    /// MKM Case enchantments (Enchantment — Case). When `Some`, the card's own
+    /// `triggered_abilities` are its always-on abilities; `case.solved_*` are the
+    /// "Solved —" abilities, live only once solved. At the beginning of the
+    /// controller's end step an unsolved Case whose `case.to_solve` predicate
+    /// holds becomes solved (`CardInstance.case_solved` + `case_definition_solved`).
+    /// Defaults to `None` for back-compat.
+    #[serde(default)]
+    pub case: Option<Box<CaseData>>,
+}
+
+/// MKM Case enchantment data. The parent [`CardDefinition`] carries the Case's
+/// always-on abilities (its first line); this struct holds the "To solve"
+/// condition and the "Solved —" abilities that switch on once the Case is
+/// solved.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct CaseData {
+    /// "To solve —" condition, evaluated (source = the Case, controller = its
+    /// controller) at the beginning of the controller's end step. When it holds
+    /// and the Case is unsolved, the Case is solved.
+    pub to_solve: crate::effect::Predicate,
+    #[serde(default)]
+    pub solved_triggered: Vec<TriggeredAbility>,
+    #[serde(default)]
+    pub solved_activated: Vec<ActivatedAbility>,
+    // Skipped on the wire — a Case round-trips by name + `case_solved`, and the
+    // live definition is rebuilt from the catalog factory on load.
+    #[serde(skip)]
+    pub solved_static: Vec<StaticAbility>,
 }
 
 /// CR 709.5 — a Room's two door halves. The parent `CardDefinition` is the
@@ -3534,6 +3563,18 @@ impl CardDefinition {
         }
         d
     }
+    /// The live definition of a solved Case: the always-on abilities plus the
+    /// Case's "Solved —" abilities. A no-op clone for a non-Case.
+    pub fn case_definition_solved(&self) -> CardDefinition {
+        let Some(case) = self.case.as_deref() else {
+            return self.clone();
+        };
+        let mut d = self.clone();
+        d.triggered_abilities.extend(case.solved_triggered.iter().cloned());
+        d.activated_abilities.extend(case.solved_activated.iter().cloned());
+        d.static_abilities.extend(case.solved_static.iter().cloned());
+        d
+    }
     pub fn has_kicker(&self) -> Option<&ManaCost> {
         // Offspring (CR 702.166) is an optional additional cast cost that
         // reuses the Kicker pipeline (pay it → `SpellWasKicked` → ETB mints a
@@ -3820,6 +3861,9 @@ pub struct CardInstance {
     /// right). The live `definition` is rebuilt to the union of unlocked
     /// doors' abilities (`room_definition_with`).
     pub unlocked_doors: u8,
+    /// MKM Case — true once this Case has been solved. The live `definition` is
+    /// rebuilt to include the "Solved —" abilities (`case_definition_solved`).
+    pub case_solved: bool,
     pub is_token: bool,
     /// CR 606.3 — loyalty activations so far this turn (normally capped at
     /// one; two with `CardDefinition.loyalty_twice_each_turn`).
@@ -4240,6 +4284,7 @@ impl CardInstance {
             flipped: false,
             unflipped_def: None,
             unlocked_doors: 0,
+            case_solved: false,
             face_up_def: None,
             cloaked: false,
             is_token: false,
@@ -4445,6 +4490,36 @@ impl CardInstance {
             self.unlocked_doors = 0;
             self.definition = Arc::new(self.definition.room_definition_with(0));
         }
+    }
+
+    /// MKM — the solved designation is battlefield-only; clear it (and restore
+    /// the printed always-on definition) as a Case leaves the battlefield.
+    pub fn reset_case(&mut self) {
+        if self.case_solved && self.definition.case.is_some() {
+            self.case_solved = false;
+            // Rebuild from the case data on the current (solved) def by dropping
+            // the appended solved abilities: re-derive from the un-appended base.
+            // The base always-on abilities are those minus the solved set.
+            if let Some(case) = self.definition.case.clone() {
+                let mut d = (*self.definition).clone();
+                let (t, a, s) = (&mut d.triggered_abilities, &mut d.activated_abilities, &mut d.static_abilities);
+                t.truncate(t.len().saturating_sub(case.solved_triggered.len()));
+                a.truncate(a.len().saturating_sub(case.solved_activated.len()));
+                s.truncate(s.len().saturating_sub(case.solved_static.len()));
+                self.definition = Arc::new(d);
+            }
+        }
+    }
+
+    /// MKM — mark this Case solved and rebuild its live definition to switch on
+    /// the "Solved —" abilities. Returns false if not a Case or already solved.
+    pub fn solve_case(&mut self) -> bool {
+        if self.case_solved || self.definition.case.is_none() {
+            return false;
+        }
+        self.case_solved = true;
+        self.definition = Arc::new(self.definition.case_definition_solved());
+        true
     }
 
     /// CR 709.5c/f — give this Room permanent an unlocked-door designation
@@ -4733,6 +4808,10 @@ struct CardInstanceWire {
     /// back-compat; the live definition is rebuilt on load.
     #[serde(default)]
     unlocked_doors: u8,
+    /// MKM — Case solved flag. `#[serde(default)]` for back-compat; the live
+    /// definition is rebuilt on load.
+    #[serde(default)]
+    case_solved: bool,
     /// CR 708 — on the battlefield face down (morph / manifest). `name` stores
     /// the real card's name so the registry resolves it; on load the real
     /// definition is stashed and `definition` swapped to the vanilla 2/2.
@@ -4979,6 +5058,7 @@ impl serde::Serialize for CardInstance {
             bestowed: self.bestowed,
             face_down: self.face_down,
             unlocked_doors: self.unlocked_doors,
+            case_solved: self.case_solved,
             face_down_permanent: self.face_up_def.is_some(),
             cloaked: self.cloaked,
             transformed: self.transformed,
@@ -5117,6 +5197,11 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         if wire.unlocked_doors != 0 && c.definition.room.is_some() {
             c.unlocked_doors = wire.unlocked_doors;
             c.definition = Arc::new(c.definition.room_definition_with(wire.unlocked_doors));
+        }
+        // MKM — restore a solved Case (switch on its "Solved —" abilities).
+        if wire.case_solved && c.definition.case.is_some() {
+            c.case_solved = true;
+            c.definition = Arc::new(c.definition.case_definition_solved());
         }
         c.is_token = wire.is_token;
         c.loyalty_uses_this_turn = wire.loyalty_uses_this_turn;

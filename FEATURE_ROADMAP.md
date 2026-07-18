@@ -758,7 +758,12 @@ Each unblocks a large swath of cards.
 - ✅ **Adventure** (715) — `CardDefinition.adventure` + `CastAdventure` (Bonecrusher
   Giant, Brazen Borrower, Murderous Rider, …).
 - 🟡 **Classes / Cases / Backgrounds.** **Rooms ship** (709.5 — `room` +
-  `CastRoomDoor`/`UnlockRoomDoor`; Unholy Annex // Ritual Chamber).
+  `CastRoomDoor`/`UnlockRoomDoor`; Unholy Annex // Ritual Chamber). **Cases ship**
+  (MKM — `CardDefinition.case` + `CaseData.to_solve`/`solved_*` +
+  `CardInstance.case_solved`; solved at the controller's end step via
+  `process_case_solves`, `EventKind::CaseSolved` drives "whenever you solve a
+  Case"). Six Cases + Case File Auditor in `decks::recent242`. Remaining:
+  Classes (levels) and Backgrounds.
 - ✅ **Leveler cards** (702.87 — `level_bands`; Student of Warfare).
 - ✅ **Transforming DFCs** (712) — `Effect::Transform` toggles the active face in
   place, round-trips through serde/snapshot (Delver, Concealing Curtains).

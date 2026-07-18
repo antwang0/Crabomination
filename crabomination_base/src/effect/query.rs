@@ -583,6 +583,7 @@ impl Effect {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
+            Effect::GrantKeywords { what, .. } => sel_has_target(what),
             Effect::AnimateAsCreature { what, .. } => sel_has_target(what),
             Effect::SetBasePower { what, power, .. } => {
                 sel_has_target(what) || value_has_target(power)
@@ -949,6 +950,7 @@ impl Effect {
             Effect::AnimateAsCreature { what, .. } => sel_filter(what),
             Effect::SetBasePower { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. }
+            | Effect::GrantKeywords { what, .. }
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. } => sel_filter(what),
@@ -1126,6 +1128,9 @@ impl Effect {
             // Copying "target token you control" is friendly (Esika's Chariot).
             Effect::CreateTokenCopyOf { .. } | Effect::CreateTokenCopiesHasteSac { .. } => true,
             Effect::GrantKeyword { keyword, .. } => Self::keyword_is_friendly(keyword),
+            Effect::GrantKeywords { keywords, .. } => {
+                keywords.iter().any(Self::keyword_is_friendly)
+            }
             Effect::AddCounter { kind, .. } => matches!(kind, CounterType::PlusOnePlusOne),
             Effect::Seq(v) => v.iter().any(|e| e.prefers_friendly_target()),
             Effect::If { then, else_, .. } => {
@@ -1352,6 +1357,11 @@ impl Effect {
             }
             Effect::GrantKeyword { keyword, .. } => {
                 format!("grant {}", format!("{keyword:?}").to_lowercase())
+            }
+            Effect::GrantKeywords { keywords, .. } => {
+                let names: Vec<String> =
+                    keywords.iter().map(|k| format!("{k:?}").to_lowercase()).collect();
+                format!("grant {}", names.join(", "))
             }
             Effect::Draw { amount, .. } => match amount {
                 Value::Const(n) => {
@@ -1597,6 +1607,7 @@ impl Effect {
             | Effect::AnimateAsCreature { .. }
             | Effect::SetBasePower { .. }
             | Effect::GrantKeyword { .. }
+            | Effect::GrantKeywords { .. }
             | Effect::ResetCreature { .. }
             | Effect::BecomeBasicLand { .. }
             | Effect::Attach { .. }
@@ -1974,6 +1985,7 @@ impl Effect {
                 Effect::AnimateAsCreature { what, .. } => sel_find(what, slot),
                 Effect::SetBasePower { what, .. } => sel_find(what, slot),
                 Effect::GrantKeyword { what, .. }
+                | Effect::GrantKeywords { what, .. }
                 | Effect::GrantProtectionFromChosenColor { what, .. } => sel_find(what, slot),
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)

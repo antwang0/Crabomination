@@ -420,6 +420,9 @@ impl GameState {
                 // when the last is gone.
                 let mut imp = self.process_impending();
                 events.append(&mut imp);
+                // MKM — solve any Cases whose condition is now met (before end-step
+                // triggers so a Case File Auditor sees "whenever you solve a Case").
+                self.process_case_solves(&mut events);
                 self.fire_step_triggers(TurnStep::End);
                 self.give_priority_to_active();
             }
@@ -459,6 +462,44 @@ impl GameState {
         }
 
         Ok(events)
+    }
+
+    /// MKM — at the beginning of the active player's end step, each of their
+    /// unsolved Cases whose "To solve" condition holds becomes solved. Emits a
+    /// `GameEvent::CaseSolved` per newly-solved Case and dispatches "whenever
+    /// you solve a Case" triggers (Case File Auditor).
+    pub fn process_case_solves(&mut self, events: &mut Vec<GameEvent>) {
+        let active = self.active_player_idx;
+        let candidates: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == active && !c.case_solved && c.definition.case.is_some())
+            .map(|c| c.id)
+            .collect();
+        let mut solved_events = Vec::new();
+        for id in candidates {
+            let Some(pred) = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == id)
+                .and_then(|c| c.definition.case.as_ref().map(|d| d.to_solve.clone()))
+            else {
+                continue;
+            };
+            let ctx = crate::game::effects::EffectContext::for_trigger(id, active, None, 0);
+            if !self.evaluate_predicate(&pred, &ctx) {
+                continue;
+            }
+            if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                if card.solve_case() {
+                    solved_events.push(GameEvent::CaseSolved { case: id, controller: active });
+                }
+            }
+        }
+        if !solved_events.is_empty() {
+            self.dispatch_triggers_for_events(&solved_events);
+            events.extend(solved_events);
+        }
     }
 
     /// Push step-based triggers onto the stack for the given step.
@@ -3526,6 +3567,8 @@ impl GameState {
         card.revert_prototype();
         // CR 709.5c — Room unlocked designations are battlefield-only.
         card.reset_room_doors();
+        // MKM — a Case's solved designation is battlefield-only.
+        card.reset_case();
         // CR 707 — a temporary copy reverts as it leaves.
         self.revert_copy_on_leave(&mut card);
         match zone {

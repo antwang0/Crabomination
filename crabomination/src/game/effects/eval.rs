@@ -315,6 +315,18 @@ impl GameState {
                     .map(|cp| cp.toughness.max(0))
                     .sum()
             }
+            Value::TotalPowerControlled => {
+                let ids: Vec<_> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                ids.iter()
+                    .filter_map(|id| self.computed_permanent(*id))
+                    .map(|cp| cp.power.max(0))
+                    .sum()
+            }
             Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
             Value::MaxGraveyardSize => self
                 .players
@@ -633,6 +645,18 @@ impl GameState {
                     EntityRef::Player(_) => None,
                 })
                 .unwrap_or(0),
+            Value::DistinctColorsAmong(s) => {
+                let mut seen: std::collections::HashSet<crate::mana::Color> =
+                    std::collections::HashSet::new();
+                for ent in self.resolve_selector(s, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find(cid)
+                    {
+                        seen.extend(c.definition.printed_colors());
+                    }
+                }
+                seen.len() as i32
+            }
             Value::DistinctTypesInTopOfLibrary { who, count } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;

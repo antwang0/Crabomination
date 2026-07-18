@@ -1863,6 +1863,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
             if inner == "Activate" { "Process" } else { inner }
         }
         Effect::GrantKeyword { .. } => "Grant keyword",
+        Effect::GrantKeywords { .. } => "Grant keywords",
         Effect::AddPoison { .. } => "Add poison",
         Effect::RevealUntilFind { .. } => "Reveal until find",
         Effect::AddFirstSpellTax { .. } => "Cost tax",

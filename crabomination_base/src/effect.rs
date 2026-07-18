@@ -566,6 +566,11 @@ pub enum Value {
     /// "for each of its colors"). Reads printed colors; a colorless/devoid
     /// object counts 0. Breathe Your Last.
     ColorCountOf(Box<Selector>),
+    /// Number of distinct colors among the entities the selector resolves to,
+    /// unioned across all of them ("there are five colors among permanents you
+    /// control" — Case of the Shattered Pact). Contrast `ColorCountOf`, which
+    /// reads a single object's colors.
+    DistinctColorsAmong(Box<Selector>),
     /// Converge value: the number of distinct colors of mana spent on the
     /// spell's cost. Stashed on `StackItem::Spell` at cast time and read
     /// from `EffectContext.converged_value` here. Used by Prismatic
@@ -614,6 +619,9 @@ pub enum Value {
     /// Total (computed) toughness of all creatures the controller controls.
     /// Betor, Kin to All's tiered end-step check (10/20/40).
     TotalToughnessControlled,
+    /// Total (computed) power of all creatures the controller controls
+    /// (Case of the Trampled Garden's "total power 8 or greater" solve).
+    TotalPowerControlled,
     /// Number of differently-named lands the controller controls (All-Fates
     /// Scroll's "draw X cards, where X is the number of differently named
     /// lands you control").
@@ -771,8 +779,9 @@ impl Value {
 // ── Predicate ────────────────────────────────────────────────────────────────
 
 /// A boolean game-state condition (for `Effect::If` / cast-time checks).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Predicate {
+    #[default]
     True,
     False,
     Not(Box<Predicate>),
@@ -1906,6 +1915,10 @@ pub enum EventKind {
     /// `EventScope::YourControl` so the unlocker's permanents trigger. Matched
     /// to `GameEvent::RoomFullyUnlocked`.
     RoomFullyUnlocked,
+    /// MKM — "whenever you solve a Case" (Case File Auditor). Fired with the
+    /// solved Case as the subject; pair with `EventScope::YourControl` so the
+    /// solver's permanents trigger. Matched to `GameEvent::CaseSolved`.
+    CaseSolved,
     /// A **land card** was put into a graveyard from anywhere (death,
     /// sacrifice, mill, discard, spell resolution). Matched to
     /// `GameEvent::CardPutIntoGraveyard { is_land: true, .. }`. Not a
@@ -3566,6 +3579,11 @@ pub enum Effect {
     /// equal to the entering Dinosaur's power until end of turn).
     SetBasePower { what: Selector, power: Value, duration: Duration },
     GrantKeyword { what: Selector, keyword: Keyword, duration: Duration },
+    /// Grant several keywords at once to a single `what` (one target slot).
+    /// "Target creature gains flying, double strike, and vigilance until end of
+    /// turn" (Case of the Shattered Pact) — cleaner than a `Seq` of separate
+    /// `GrantKeyword`s, which would each declare their own target.
+    GrantKeywords { what: Selector, keywords: Vec<Keyword>, duration: Duration },
     /// Each permanent picked by `what` loses `keyword` until end of turn
     /// (CR 613.7 layer 6 — the removal outranks any earlier grant this
     /// turn). Shadowspear's "creatures your opponents control lose

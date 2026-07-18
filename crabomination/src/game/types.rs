@@ -1666,6 +1666,9 @@ pub enum GameEvent {
     /// open). `controller` is the unlocking player. Drives "whenever you fully
     /// unlock a Room" triggers.
     RoomFullyUnlocked { room: CardId, controller: usize },
+    /// MKM — `case` was just solved by `controller`. Drives "whenever you solve
+    /// a Case" triggers (Case File Auditor).
+    CaseSolved { case: CardId, controller: usize },
     PoisonAdded { player: usize, amount: u32 },
     /// CR 724 — `player` became the monarch.
     MonarchChanged { player: usize },

@@ -6828,6 +6828,31 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantKeywords { what, keywords, duration } => {
+                use crate::effect::Duration as EffectDur;
+                let is_eot =
+                    matches!(duration, EffectDur::EndOfTurn | EffectDur::EndOfCombat);
+                let ids: Vec<_> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for cid in ids {
+                    for keyword in keywords {
+                        if is_eot {
+                            self.grant_keyword_eot(cid, keyword.clone());
+                        } else if let Some(c) = self.battlefield_find_mut(cid)
+                            && !c.definition.keywords.contains(keyword)
+                        {
+                            std::sync::Arc::make_mut(&mut c.definition)
+                                .keywords
+                                .push(keyword.clone());
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::LoseKeywordThisTurn { what, keyword } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()

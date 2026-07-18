@@ -83,6 +83,7 @@ pub(crate) fn event_matches_spec(
             GameEvent::VehicleCrewed { .. } | GameEvent::MountSaddled { .. },
         ) => true,
         (EventKind::RoomFullyUnlocked, GameEvent::RoomFullyUnlocked { .. }) => true,
+        (EventKind::CaseSolved, GameEvent::CaseSolved { .. }) => true,
         (EventKind::PhasesIn, GameEvent::PermanentPhasedIn { .. }) => true,
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::Discovered, GameEvent::Discovered { .. }) => true,
@@ -517,6 +518,8 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // DSK Eerie — the unlocking player drives "whenever you fully unlock
         // a Room" (YourControl scope).
         GameEvent::RoomFullyUnlocked { controller, .. } => Some(*controller),
+        // MKM — the solving player drives "whenever you solve a Case".
+        GameEvent::CaseSolved { controller, .. } => Some(*controller),
         _ => None,
     }
 }
@@ -565,6 +568,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // was fully unlocked.
         GameEvent::TurnedFaceUp { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::RoomFullyUnlocked { room, .. } => Some(EntityRef::Permanent(*room)),
+        GameEvent::CaseSolved { case, .. } => Some(EntityRef::Permanent(*case)),
         // Enrage: the subject is the damaged permanent, so trigger bodies
         // referencing `Selector::TriggerSource` (and the implicit
         // SelfSource scope) bind to the creature that took the damage.
