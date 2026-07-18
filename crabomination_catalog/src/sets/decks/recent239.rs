@@ -433,14 +433,14 @@ pub fn leyline_of_hope() -> CardDefinition {
         opening_hand: Some(OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
         static_abilities: vec![
             StaticAbility {
-                description: "If you would gain life, gain that much plus 1 instead.".into(),
+                description: "If you would gain life, gain that much plus 1 instead.",
                 effect: StaticEffect::LifeGainBonus {
                     target: PlayerStaticTarget::Controller,
                     amount: 1,
                 },
             },
             StaticAbility {
-                description: "With 7+ life above starting, your creatures get +2/+2.".into(),
+                description: "With 7+ life above starting, your creatures get +2/+2.",
                 effect: StaticEffect::PumpTeamIf {
                     condition: Predicate::PlayerLifeAtLeastAboveStarting { who: PlayerRef::You, delta: 7 },
                     applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
