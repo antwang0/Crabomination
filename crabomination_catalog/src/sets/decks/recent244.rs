@@ -8,7 +8,56 @@ use crate::card::{
 use crate::card::{AdditionalCastCost, ArtifactSubtype, EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{investigate, target_filtered};
 use crate::effect::{Effect, PlayerRef, Predicate, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, u};
+use crate::mana::{b, cost, g, generic, r, u, x};
+
+/// Torch the Witness — {X}{R} Sorcery. Deal twice X damage to target creature.
+/// If excess damage was dealt this way, investigate.
+pub fn torch_the_witness() -> CardDefinition {
+    CardDefinition {
+        name: "Torch the Witness",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(2))),
+            },
+            Effect::If {
+                cond: Predicate::ExcessDamageDealtThisResolution,
+                then: Box::new(investigate(1)),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Extract a Confession — {1}{B} Sorcery. Optional additional cost: collect
+/// evidence 6. Each opponent sacrifices a creature of their choice — the
+/// greatest-power one if evidence was collected.
+pub fn extract_a_confession() -> CardDefinition {
+    CardDefinition {
+        name: "Extract a Confession",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 6, optional: true }],
+        effect: Effect::If {
+            cond: Predicate::SpellCollectedEvidence,
+            then: Box::new(Effect::SacrificeGreatestMV {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: R::Creature,
+                by_power: true,
+            }),
+            else_: Box::new(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: R::Creature,
+            }),
+        },
+        ..Default::default()
+    }
+}
 
 /// Vitu-Ghazi Inspector — {1}{G} Creature — Elf Detective 1/3, reach. Optional
 /// additional cost: collect evidence 6. ETB: if evidence was collected, put a

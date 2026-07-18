@@ -6700,6 +6700,8 @@ static DECKS: &[Factory] = &[
     super::decks::sharp_eyed_rookie,
     super::decks::curious_cadaver,
     super::decks::vitu_ghazi_inspector,
+    super::decks::torch_the_witness,
+    super::decks::extract_a_confession,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -12,6 +12,49 @@ fn clues(g: &crabomination::game::GameState, who: usize) -> usize {
     g.battlefield.iter().filter(|c| c.definition.name == "Clue" && c.controller == who).count()
 }
 
+/// Torch the Witness deals twice X and investigates when excess damage lands.
+#[test]
+fn torch_the_witness_double_x_and_excess_investigate() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::torch_the_witness());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3); // X = 3 → 6 damage
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cast Torch the Witness for X=3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "6 damage kills the 2/2");
+    assert_eq!(clues(&g, 0), 1, "excess damage investigated");
+}
+
+/// Extract a Confession edicts each opponent (greatest-power with evidence).
+#[test]
+fn extract_a_confession_edicts_opponent() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::extract_a_confession());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Extract a Confession");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed their creature");
+}
+
 /// Vitu-Ghazi Inspector rewards a collected evidence: +1/+1 on a creature and 2
 /// life. Without evidence, its ETB does nothing.
 #[test]
