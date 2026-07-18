@@ -6703,6 +6703,29 @@ static DECKS: &[Factory] = &[
     super::decks::torch_the_witness,
     super::decks::extract_a_confession,
     super::decks::wispdrinker_vampire,
+    // recent245 — Clue Equipment cycle + collect-evidence payoffs
+    super::decks::wrench,
+    super::decks::rope,
+    super::decks::knife,
+    super::decks::candlestick,
+    super::decks::thinking_cap,
+    super::decks::surveillance_monitor,
+    super::decks::evidence_examiner,
+    super::decks::unscrupulous_agent,
+    super::decks::furtive_courier,
+    super::decks::undercity_eliminator,
+    // recent246 — suspect payoffs + graveyard-matters + Aura value
+    super::decks::rune_brand_juggler,
+    super::decks::chalk_outline,
+    super::decks::soul_enervation,
+    super::decks::convenient_target,
+    super::decks::curious_inquiry,
+    super::decks::due_diligence,
+    // recent247 — lands, artifact value, wither commander
+    super::decks::magnifying_glass,
+    super::decks::escape_tunnel,
+    super::decks::scene_of_the_crime,
+    super::decks::massacre_girl_known_killer,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
