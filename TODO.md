@@ -3846,9 +3846,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     `Predicate::SpellCollectedEvidence` + `self_cost_reduction_if_collect_evidence`).
     Bite Down on Crime (real {2}-less discount), Behind the Mask (4/3 vs 1/1),
     and Analyze the Pollen (widened search) are wired; auto-collects when the
-    graveyard can afford it. Still open: **Axebane Ferox's Ward—Collect
-    evidence 4** (a ward cost, not a cast cost — needs ward-cost integration),
-    and an interactive collect prompt for UI casters (currently auto).
+    graveyard can afford it. Axebane Ferox's **Ward—Collect evidence 4** ships
+    too (`WardCost::CollectEvidence`). Still open: an interactive collect prompt
+    for UI casters (currently auto-collects).
   - ✅ ~~**"Whenever you manifest dread" trigger**~~ — shipped
     (`EventKind::ManifestedDread` + `GameEvent::ManifestedDread { player, milled }`
     + wire mirror + milled-card subject binding). Paranormal Analyst is wired.

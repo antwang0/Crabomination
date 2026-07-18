@@ -8387,6 +8387,42 @@ fn cr_702_21_fixed_ward_life_is_paid() {
     assert!(g.battlefield_find(sire).is_some(), "7/7 shrugs off the 3-damage bolt");
 }
 
+/// CR 702.21 + 701.59 — "Ward—Collect evidence N" counters an opponent's
+/// targeting spell unless they exile cards with total mana value ≥ N from their
+/// graveyard. Axebane Ferox — Ward—Collect evidence 4.
+#[test]
+fn cr_701_59_ward_collect_evidence_paid_or_countered() {
+    // Enough graveyard fuel: the ward is paid (evidence exiled) and the bolt
+    // resolves, marking damage on the 4/4.
+    let mut g = two_player_game();
+    let ferox = g.add_card_to_battlefield(0, catalog::axebane_ferox());
+    for _ in 0..2 { g.add_card_to_graveyard(1, catalog::grizzly_bears()); } // MV 2 × 2 = 4
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(ferox)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt at the warded creature");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 1).count(), 2, "evidence exiled to pay ward");
+    assert_eq!(g.battlefield_find(ferox).unwrap().damage, 3, "bolt resolved after ward paid");
+
+    // Empty graveyard: the ward can't be paid, so the bolt is countered and no
+    // damage is marked.
+    let mut g = two_player_game();
+    let ferox = g.add_card_to_battlefield(0, catalog::axebane_ferox());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(ferox)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ferox).unwrap().damage, 0, "bolt countered by unpaid ward");
+}
+
 // ── CR 502.1 — a "doesn't untap during your untap step" self-static ──────────
 /// A permanent with `StaticEffect::PreventUntap { This }` stays tapped through
 /// its controller's untap step every turn (not a one-shot lock). Slumbering

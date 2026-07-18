@@ -498,6 +498,9 @@ pub enum WardCost {
     /// "Ward—Blight N." (CR 701.68 — Auntie Ool, Cursewretch.) The warding
     /// player must put N -1/-1 counters on a creature they control.
     Blight(u32),
+    /// "Ward—Collect evidence N." (CR 701.59 — Axebane Ferox.) The warding
+    /// player must exile cards with total mana value ≥ N from their graveyard.
+    CollectEvidence(u32),
     SacrificeCreature,
     /// "Ward—Sacrifice N permanents." (Ulamog, the Defiler.)
     SacrificePermanents(u32),

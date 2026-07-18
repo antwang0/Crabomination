@@ -422,6 +422,22 @@ pub fn analyze_the_pollen() -> CardDefinition {
     }
 }
 
+/// Axebane Ferox — {2}{G}{G} Beast 4/4. Deathtouch, haste, Ward—Collect
+/// evidence 4.
+pub fn axebane_ferox() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        name: "Axebane Ferox",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Deathtouch, Keyword::Haste, Keyword::Ward(WardCost::CollectEvidence(4))],
+        ..Default::default()
+    }
+}
+
 /// Paranormal Analyst — {1}{U} Human Detective 1/3. Whenever you manifest
 /// dread, put the card you put into your graveyard this way into your hand.
 pub fn paranormal_analyst() -> CardDefinition {

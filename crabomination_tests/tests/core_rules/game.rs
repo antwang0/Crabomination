@@ -5678,6 +5678,7 @@ fn effect_untap_removes_stun_counter_instead_of_untapping() {
         bargained: false,
         cast_via_mayhem: false,
         cast_via_waterbend: false,
+        cast_collected_evidence: false,
         entwined: false,
         spree_modes: Vec::new(),
     };
@@ -5908,6 +5909,7 @@ fn cr_121_2b_draw_cap_truncates_draws() {
         bargained: false,
         cast_via_mayhem: false,
         cast_via_waterbend: false,
+        cast_collected_evidence: false,
         entwined: false,
         spree_modes: Vec::new(),
     };
@@ -6433,6 +6435,7 @@ fn cr_700_4_morbid_total_predicate_counts_deaths_across_players() {
         bargained: false,
         cast_via_mayhem: false,
         cast_via_waterbend: false,
+        cast_collected_evidence: false,
         entwined: false,
         spree_modes: Vec::new(),
     };

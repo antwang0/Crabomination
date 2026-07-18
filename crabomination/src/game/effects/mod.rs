@@ -8885,6 +8885,41 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::CollectEvidence(n) => {
+                        // Ward—Collect evidence N (CR 701.59): the warding player
+                        // exiles cards with total MV ≥ N from their graveyard.
+                        // Auto-pay exiles the cheapest qualifying set; unpayable
+                        // if the graveyard can't reach the threshold.
+                        if self.graveyard_can_collect_evidence(affected_controller, *n) {
+                            let mut gy: Vec<(CardId, u32)> = self.players[affected_controller]
+                                .graveyard
+                                .iter()
+                                .map(|c| (c.id, c.definition.cost.cmc()))
+                                .collect();
+                            gy.sort_by_key(|&(_, mv)| mv);
+                            let mut acc = 0u32;
+                            let mut to_exile = Vec::new();
+                            for (id, mv) in gy {
+                                if acc >= *n {
+                                    break;
+                                }
+                                acc += mv;
+                                to_exile.push(id);
+                            }
+                            for id in to_exile {
+                                if let Some(card) = Self::take_card(
+                                    &mut self.players[affected_controller].graveyard, id,
+                                ) {
+                                    self.exile.push(card);
+                                    self.players[affected_controller].cards_exiled_this_turn += 1;
+                                    events.push(GameEvent::PermanentExiled { card_id: id });
+                                }
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    }
                     WardCost::SacrificeCreature => {
                         let pick = self
                             .battlefield

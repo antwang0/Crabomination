@@ -6632,6 +6632,7 @@ static DECKS: &[Factory] = &[
     super::decks::behind_the_mask,
     super::decks::analyze_the_pollen,
     super::decks::paranormal_analyst,
+    super::decks::axebane_ferox,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

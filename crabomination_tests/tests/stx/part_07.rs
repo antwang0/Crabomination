@@ -2148,6 +2148,7 @@ fn move_counter_transfers_counters_between_permanents() {
         bargained: false,
         cast_via_mayhem: false,
         cast_via_waterbend: false,
+        cast_collected_evidence: false,
         entwined: false,
         spree_modes: Vec::new(),
     };
@@ -2194,6 +2195,7 @@ fn move_counter_clamps_at_source_pool() {
         bargained: false,
         cast_via_mayhem: false,
         cast_via_waterbend: false,
+        cast_collected_evidence: false,
         entwined: false,
         spree_modes: Vec::new(),
     };
