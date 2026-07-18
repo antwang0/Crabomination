@@ -1,0 +1,115 @@
+//! MKM (Murders at Karlov Manor) gap batch — Ravnica guild legends.
+//! Tests in `tests/recent_b/recent253.rs`.
+
+use crate::card::{CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, Subtypes, Supertype};
+use crate::effect::shortcut::{etb, investigate, target_filtered};
+use crate::effect::{
+    ActivatedAbility, Duration, Effect, EventKind, EventScope, EventSpec, Predicate, Selector, TriggeredAbility,
+};
+use crate::mana::{cost, g, generic, hybrid, u, w, Color};
+
+fn gw() -> crate::mana::ManaSymbol {
+    hybrid(Color::Green, Color::White)
+}
+
+/// Trostani, Three Whispers — {G}{G/W}{W} Legendary Creature — Dryad 4/4.
+/// {1}{G}: Target creature gains deathtouch until end of turn.
+/// {G/W}: Target creature gains vigilance until end of turn.
+/// {2}{W}: Target creature gains double strike until end of turn.
+pub fn trostani_three_whispers() -> CardDefinition {
+    let grant = |mana, kw| ActivatedAbility {
+        mana_cost: mana,
+        effect: Effect::GrantKeyword {
+            what: target_filtered(R::Creature),
+            keyword: kw,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Trostani, Three Whispers",
+        cost: cost(&[g(), gw(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dryad], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![
+            grant(cost(&[generic(1), g()]), Keyword::Deathtouch),
+            grant(cost(&[gw()]), Keyword::Vigilance),
+            grant(cost(&[generic(2), w()]), Keyword::DoubleStrike),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ezrim, Agency Chief — {1}{W}{W}{U}{U} Legendary Creature — Archon Detective
+/// 5/5, flying. When Ezrim enters, investigate twice. {1}, Sacrifice an
+/// artifact: Ezrim gains your choice of vigilance, lifelink, or hexproof until
+/// end of turn.
+pub fn ezrim_agency_chief() -> CardDefinition {
+    CardDefinition {
+        name: "Ezrim, Agency Chief",
+        cost: cost(&[generic(1), w(), w(), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Archon, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(investigate(2))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((R::Artifact.and(R::ControlledByYou), 1)),
+            effect: Effect::ChooseMode(vec![
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Agrus Kos, Spirit of Justice — {2}{R}{W} Legendary Creature — Spirit
+/// Detective 2/4, double strike, vigilance. Whenever Agrus Kos enters or
+/// attacks, choose up to one target creature. If it's suspected, exile it.
+/// Otherwise, suspect it.
+pub fn agrus_kos_spirit_of_justice() -> CardDefinition {
+    use crate::mana::r;
+    let interrogate = Effect::ApplyToTargets {
+        max_targets: 1,
+        min_targets: 0,
+        filter: R::Creature,
+        effect: Box::new(Effect::If {
+            cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::IsSuspected },
+            then: Box::new(Effect::Exile { what: Selector::Target(0) }),
+            else_: Box::new(Effect::Suspect { what: Selector::Target(0) }),
+        }),
+    };
+    CardDefinition {
+        name: "Agrus Kos, Spirit of Justice",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::DoubleStrike, Keyword::Vigilance],
+        triggered_abilities: vec![
+            etb(interrogate.clone()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+                effect: interrogate,
+            },
+        ],
+        ..Default::default()
+    }
+}

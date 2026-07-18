@@ -6751,6 +6751,10 @@ static DECKS: &[Factory] = &[
     super::decks::polygraph_orb,
     super::decks::undergrowth_recon,
     super::decks::dramatic_accusation,
+    // recent253 — Ravnica guild legends
+    super::decks::trostani_three_whispers,
+    super::decks::ezrim_agency_chief,
+    super::decks::agrus_kos_spirit_of_justice,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
