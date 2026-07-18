@@ -6779,6 +6779,8 @@ static DECKS: &[Factory] = &[
     // recent258 — MKM split cards
     super::decks::fuss_bother,
     super::decks::cease_desist,
+    // recent259 — empty-library Elemental
+    super::decks::living_conundrum,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
