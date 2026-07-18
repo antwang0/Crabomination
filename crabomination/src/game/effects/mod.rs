@@ -9901,13 +9901,19 @@ impl GameState {
             Effect::Cloak { who, amount } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                // Expose the cloaked permanents on `Selector::LastMoved` so a
+                // chained rider (Cryptic Coat's "then attach this to it") can
+                // reference them, mirroring ManifestDread.
+                let mut cloaked = Vec::new();
                 for _ in 0..n {
                     let Some(top_id) = self.players[p].library.first().map(|c| c.id) else { break };
                     if let Some(c) = self.players[p].library.iter_mut().find(|c| c.id == top_id) {
                         c.cloaked = true;
                     }
                     self.manifest_card(top_id, p, ctx, events);
+                    cloaked.push(top_id);
                 }
+                self.last_moved_cards = cloaked;
                 Ok(())
             }
 

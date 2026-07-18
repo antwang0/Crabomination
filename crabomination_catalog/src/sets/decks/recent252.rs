@@ -456,3 +456,72 @@ pub fn slime_against_humanity() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Magnetic Snuffler — {5} Artifact Creature — Construct 4/4. When it enters,
+/// return target Equipment card from your graveyard to the battlefield attached
+/// to this creature. Whenever you sacrifice an artifact, put a +1/+1 counter on
+/// this creature.
+pub fn magnetic_snuffler() -> CardDefinition {
+    CardDefinition {
+        name: "Magnetic Snuffler",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 4,
+        toughness: 5,
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::Attach { what: Selector::LastMoved, to: Selector::This },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                    .with_filter(crate::effect::Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Artifact,
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Cryptic Coat — {2}{U} Artifact — Equipment. When it enters, cloak the top
+/// card of your library, then attach this to it. Equipped creature gets +1/+0
+/// and can't be blocked. {1}{U}: Return this Equipment to its owner's hand.
+pub fn cryptic_coat() -> CardDefinition {
+    use crate::effect::ActivatedAbility;
+    CardDefinition {
+        name: "Cryptic Coat",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 0,
+            keywords: vec![Keyword::Unblockable],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Cloak { who: PlayerRef::You, amount: Value::ONE },
+            Effect::Attach { what: Selector::This, to: Selector::LastMoved },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

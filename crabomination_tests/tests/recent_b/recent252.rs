@@ -360,3 +360,47 @@ fn slime_against_humanity_scales_with_oozes() {
     let c = g.computed_permanent(ooze.id).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "0/0 + three +1/+1 counters");
 }
+
+/// Magnetic Snuffler reanimates an Equipment from the graveyard attached to
+/// itself, and grows when you sacrifice an artifact.
+#[test]
+fn magnetic_snuffler_reanimates_equipment_and_grows() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let snuffler = g.add_card_to_battlefield(0, catalog::magnetic_snuffler());
+    let equip = g.add_card_to_graveyard(0, catalog::bonesplitter()); // +2/+0 Equipment
+    let ctx = EffectContext::for_trigger(snuffler, 0, Some(Target::Permanent(equip)), 0);
+    let etb = catalog::magnetic_snuffler().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&etb, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(equip).unwrap().attached_to, Some(snuffler), "equipment attached");
+    // Sacrifice an artifact → +1/+1 counter.
+    let fodder = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let mut events = Vec::new();
+    g.sacrifice_one(fodder, 0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(snuffler).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        1,
+        "grew on artifact sacrifice",
+    );
+}
+
+/// Cryptic Coat cloaks the top card and attaches to it, granting unblockable.
+#[test]
+fn cryptic_coat_cloaks_and_attaches() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let coat = g.add_card_to_battlefield(0, catalog::cryptic_coat());
+    let ctx = EffectContext::for_trigger(coat, 0, None, 0);
+    let etb = catalog::cryptic_coat().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&etb, &ctx).unwrap();
+    drain_stack(&mut g);
+    // A face-down 2/2 was created and the coat attached to it.
+    let cloaked = g.battlefield_find(coat).unwrap().attached_to.expect("coat attached to the cloaked creature");
+    let c = g.computed_permanent(cloaked).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 2), "2/2 face-down + the coat's +1/+0");
+    assert!(c.keywords.contains(&Keyword::Unblockable), "equipped creature can't be blocked");
+}

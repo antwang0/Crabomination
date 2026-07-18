@@ -6630,6 +6630,7 @@ static DECKS: &[Factory] = &[
     super::decks::stubborn_burrowfiend,
     super::decks::kutzils_flanker,
     super::decks::behind_the_mask,
+    super::decks::analyze_the_pollen,
     super::decks::paranormal_analyst,
     super::decks::axebane_ferox,
     super::decks::oblivious_bookworm,
@@ -6752,6 +6753,8 @@ static DECKS: &[Factory] = &[
     super::decks::dramatic_accusation,
     super::decks::lamplight_phoenix,
     super::decks::slime_against_humanity,
+    super::decks::magnetic_snuffler,
+    super::decks::cryptic_coat,
     // recent253 — Ravnica guild legends
     super::decks::trostani_three_whispers,
     super::decks::ezrim_agency_chief,
