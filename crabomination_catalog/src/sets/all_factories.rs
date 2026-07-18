@@ -6826,6 +6826,12 @@ static DECKS: &[Factory] = &[
     super::decks::shield_wall_sentinel,
     super::decks::kami_of_industry,
     super::decks::wingmantle_chaplain,
+    // recent266 — small removal/token, lifelink dork, vanilla, power-matters, kicker pump
+    super::decks::fungal_infection,
+    super::decks::prakhata_pillar_bug,
+    super::decks::savai_sabertooth,
+    super::decks::territorial_boar,
+    super::decks::might_of_murasa,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
