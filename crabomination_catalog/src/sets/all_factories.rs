@@ -6788,6 +6788,8 @@ static DECKS: &[Factory] = &[
     // recent262 — Gruul X burn + land ramp, Izzet loot-and-burn
     super::decks::worldsouls_rage,
     super::decks::ill_timed_explosion,
+    // recent263 — TDM filtered reflexive discard
+    super::decks::glacial_dragonhunt,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];

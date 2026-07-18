@@ -1957,7 +1957,7 @@ impl Effect {
                 Effect::Destroy { what }
                 | Effect::DestroyAndRemember { what }
                 | Effect::DestroyNoRegen { what }
-                | Effect::ExileIfWouldDieThisTurn { what }
+                    | Effect::ExileIfWouldDieThisTurn { what }
                 | Effect::GrantFlashbackThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }
