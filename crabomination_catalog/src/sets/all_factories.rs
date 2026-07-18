@@ -6790,6 +6790,26 @@ static DECKS: &[Factory] = &[
     super::decks::ill_timed_explosion,
     // recent263 — TDM filtered reflexive discard
     super::decks::glacial_dragonhunt,
+    // recent264 — MOM/BRO vanilla-ish + simple triggers batch
+    super::decks::alabaster_host_sanctifier,
+    super::decks::nezumi_informant,
+    super::decks::preening_champion,
+    super::decks::knight_of_the_new_coalition,
+    super::decks::conscripted_infantry,
+    super::decks::burrowing_razormaw,
+    super::decks::hoarding_recluse,
+    super::decks::fallaji_chaindancer,
+    super::decks::iridescent_blademaster,
+    super::decks::air_marshal,
+    super::decks::onakke_javelineer,
+    super::decks::dreg_recycler,
+    super::decks::coming_in_hot,
+    super::decks::arachnoid_adaptation,
+    super::decks::cosmic_hunger,
+    super::decks::mirrodin_avenged,
+    super::decks::atraxas_fall,
+    super::decks::furnace_host_charger,
+    super::decks::phyrexian_pegasus,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
