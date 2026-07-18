@@ -11,7 +11,7 @@ use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, Value,
     ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaSymbol};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaSymbol};
 
 /// Trigger for "whenever you draw your second card each turn".
 fn on_second_draw(effect: Effect) -> TriggeredAbility {
@@ -222,6 +222,65 @@ pub fn forum_familiar() -> CardDefinition {
                 Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+/// Slice from the Shadows — {X}{B} Instant. Can't be countered. Target creature
+/// gets -X/-X until end of turn.
+pub fn slice_from_the_shadows() -> CardDefinition {
+    CardDefinition {
+        name: "Slice from the Shadows",
+        cost: cost(&[x(), b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::PumpPT {
+            what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            power: Value::Times(Box::new(Value::Const(-1)), Box::new(Value::XFromCost)),
+            toughness: Value::Times(Box::new(Value::Const(-1)), Box::new(Value::XFromCost)),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Cerebral Confiscation — {2}{B} Sorcery. Choose one — target opponent discards
+/// two cards; or reveal their hand and you choose a nonland card to discard.
+pub fn cerebral_confiscation() -> CardDefinition {
+    CardDefinition {
+        name: "Cerebral Confiscation",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Discard { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2), random: false },
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: R::Nonland,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Caught Red-Handed — {4}{R} Instant. Can't be countered. Gain control of
+/// target creature until end of turn, untap it, it gains haste, and suspect it.
+pub fn caught_red_handed() -> CardDefinition {
+    CardDefinition {
+        name: "Caught Red-Handed",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            Effect::Suspect { what: Selector::Target(0) },
+        ]),
         ..Default::default()
     }
 }

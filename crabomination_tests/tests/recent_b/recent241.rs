@@ -251,6 +251,58 @@ fn frantic_scapegoat_suspects_itself() {
     assert!(c.keywords.contains(&Keyword::Menace), "suspected -> menace");
 }
 
+/// Slice from the Shadows gives target creature -X/-X and can't be countered.
+#[test]
+fn slice_from_the_shadows_shrinks() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::avenger_of_zendikar()); // 5/5
+    let def = catalog::slice_from_the_shadows();
+    assert!(def.keywords.contains(&Keyword::CantBeCountered));
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(victim)],
+        ..EffectContext::for_spell(0, None, 0, 3)
+    };
+    g.resolve_effect(&def.effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    let c = g.computed_permanent(victim).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 2), "-3/-3 applied");
+}
+
+/// Cerebral Confiscation's first mode makes the opponent discard two cards.
+#[test]
+fn cerebral_confiscation_discards_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    let modes = match &catalog::cerebral_confiscation().effect {
+        crabomination::effect::Effect::ChooseMode(m) => m.clone(),
+        _ => panic!("not modal"),
+    };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let before = g.players[1].hand.len();
+    g.resolve_effect(&modes[0], &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), before - 2, "opponent discarded two");
+}
+
+/// Caught Red-Handed steals a creature for the turn and suspects it.
+#[test]
+fn caught_red_handed_steals_and_suspects() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(creature)],
+        ..EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.resolve_effect(&catalog::caught_red_handed().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    let c = g.computed_permanent(creature).unwrap();
+    assert_eq!(c.controller, 0, "control gained");
+    assert!(c.keywords.contains(&Keyword::Haste), "gains haste");
+    assert!(c.keywords.contains(&Keyword::Menace), "suspected -> menace");
+}
+
 /// Snarling Gorehound surveils when a small creature you control enters.
 #[test]
 fn snarling_gorehound_surveils_on_small_creature() {
