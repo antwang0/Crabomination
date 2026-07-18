@@ -159,6 +159,22 @@ fn sanguine_savior_grants_lifelink() {
     assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Lifelink));
 }
 
+/// Mistway Spy, once turned face up, investigates whenever a creature you
+/// control deals combat damage to a player this turn.
+#[test]
+fn mistway_spy_investigates_on_combat_damage() {
+    let mut g = two_player_game();
+    let spy = g.add_card_to_battlefield(0, catalog::mistway_spy());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let effect = catalog::mistway_spy().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext::for_ability(spy, 0, None);
+    g.resolve_effect(&effect, &ctx).unwrap();
+    // A creature you control deals combat damage to player 1.
+    g.fire_combat_damage_to_player_triggers(attacker, 1, 2);
+    drain_stack(&mut g);
+    assert_eq!(clues(&g, 0), 1, "investigated on the combat damage");
+}
+
 /// Glint Weaver distributes three +1/+1 counters and gains life for greatest
 /// toughness.
 #[test]

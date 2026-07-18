@@ -4978,6 +4978,15 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// "Until end of turn, whenever a creature you control deals combat damage
+    /// to a player, [body]." Registers a turn-scoped delayed trigger (CR 603.4)
+    /// that fires per qualifying combat-damage event; the dealing creature is
+    /// exposed to `body` as `Selector::TriggerSource`. Expires at cleanup.
+    /// Used by Mistway Spy's turn-face-up grant.
+    CreaturesYouControlDealingCombatDamageThisTurn {
+        body: Box<Effect>,
+    },
+
     /// "Whenever you cast a spell this turn, [body]" — like
     /// `OnYourNextSpellCastThisTurn` but repeating until cleanup
     /// (Rediscover the Way chapter III; gate the body with an

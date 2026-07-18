@@ -711,6 +711,7 @@ impl Effect {
             // Registers a turn-scoped delayed trigger; no cast-time target.
             Effect::CreaturesYouControlEnteringThisTurn { .. } => false,
             Effect::CreaturesYouControlDyingThisTurn { .. } => false,
+            Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::PayOrLoseGame { .. } => false,
             Effect::SacrificeAndRemember { .. } => false,
             Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),

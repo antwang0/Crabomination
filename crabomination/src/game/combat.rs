@@ -2440,6 +2440,28 @@ impl GameState {
         if let Some(c) = self.battlefield_find(source) {
             let controller = c.controller;
             self.players[controller].dealt_combat_damage_to_player_this_turn = true;
+            // CR 603.4 — turn-scoped "whenever a creature you control deals
+            // combat damage to a player" delayed triggers (Mistway Spy).
+            let watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| {
+                    dt.controller == controller
+                        && matches!(
+                            dt.kind,
+                            crate::game::types::DelayedKind::CreatureYouControlDealsCombatDamageThisTurn
+                        )
+                })
+                .cloned()
+                .collect();
+            for dt in watchers {
+                self.stack.push(
+                    TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                        .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
+                        .event_amount(damage_amount)
+                        .build(),
+                );
+            }
         }
         self.fire_combat_damage_triggers(
             source,

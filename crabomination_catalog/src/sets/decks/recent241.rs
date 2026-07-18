@@ -296,6 +296,31 @@ fn may_loot() -> Effect {
     }
 }
 
+/// Mistway Spy — {U} Merfolk Detective 1/1, flying. Disguise {1}{U}. When turned
+/// face up, until end of turn, whenever a creature you control deals combat
+/// damage to a player, investigate.
+pub fn mistway_spy() -> CardDefinition {
+    CardDefinition {
+        name: "Mistway Spy",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Disguise(cost(&[generic(1), u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::CreaturesYouControlDealingCombatDamageThisTurn {
+                body: Box::new(investigate(1)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Glint Weaver — {5}{G}{G} Spider 3/3, reach. ETB: distribute three +1/+1
 /// counters among up to three target creatures, then gain life equal to the
 /// greatest toughness among creatures you control.

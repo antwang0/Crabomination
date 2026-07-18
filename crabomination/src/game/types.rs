@@ -692,6 +692,10 @@ pub enum DelayedKind {
     /// `DelayedTrigger.controller` that dies for the rest of the turn; the dead
     /// creature is the trigger source. Expires at cleanup. Powers Waltz of Rage.
     CreatureYouControlDiesThisTurn,
+    /// "Until end of turn, whenever a creature you control deals combat damage
+    /// to a player, …" (CR 603.4). Fires per qualifying combat-damage event; the
+    /// dealing creature is the trigger source. Expires at cleanup. Mistway Spy.
+    CreatureYouControlDealsCombatDamageThisTurn,
     /// "When you cast your next spell this turn, …" (CR 603.7e). Fires once
     /// on the controller's next spell cast, with the cast spell bound as the
     /// trigger source; expires at cleanup if no spell was cast. Codie.

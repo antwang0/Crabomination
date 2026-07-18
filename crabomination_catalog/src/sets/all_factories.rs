@@ -6670,6 +6670,7 @@ static DECKS: &[Factory] = &[
     super::decks::slice_from_the_shadows,
     super::decks::cerebral_confiscation,
     super::decks::caught_red_handed,
+    super::decks::mistway_spy,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

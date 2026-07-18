@@ -2311,6 +2311,7 @@ impl GameState {
                 crate::game::types::DelayedKind::WhenCardDies(_)
                     | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
                     | crate::game::types::DelayedKind::CreatureYouControlDiesThisTurn
+                    | crate::game::types::DelayedKind::CreatureYouControlDealsCombatDamageThisTurn
                     | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
                     | crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
                     | crate::game::types::DelayedKind::EachCombatThisTurn
