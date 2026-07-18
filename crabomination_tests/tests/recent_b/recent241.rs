@@ -180,6 +180,46 @@ fn sample_collector_collects_and_counters() {
     assert_eq!(after, base + 1, "a +1/+1 counter landed on a creature you control");
 }
 
+/// Harried Dronesmith makes a hasty Thopter at the beginning of combat.
+#[test]
+fn harried_dronesmith_makes_hasty_thopter() {
+    let mut g = two_player_game();
+    let smith = g.add_card_to_battlefield(0, catalog::harried_dronesmith());
+    let effect = catalog::harried_dronesmith().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext::for_ability(smith, 0, None);
+    g.resolve_effect(&effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    let thopter = g.battlefield.iter().find(|c| c.definition.name == "Thopter").expect("thopter minted");
+    assert!(thopter.definition.keywords.contains(&Keyword::Haste), "thopter has haste");
+}
+
+/// Vengeful Tracker pings an opponent who sacrifices an artifact.
+#[test]
+fn vengeful_tracker_pings_on_opponent_sacrifice() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vengeful_tracker());
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let life = g.players[1].life;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentSacrificed { card_id: art, who: 1 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "2 damage to the sacrificing opponent");
+}
+
+/// Essence of Antiquity untaps your team and grants hexproof when turned up.
+#[test]
+fn essence_of_antiquity_protects_team() {
+    let mut g = two_player_game();
+    let essence = g.add_card_to_battlefield(0, catalog::essence_of_antiquity());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(ally).unwrap().tapped = true;
+    let effect = catalog::essence_of_antiquity().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext::for_ability(essence, 0, None);
+    g.resolve_effect(&effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(ally).unwrap().tapped, "team untapped");
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Hexproof), "team hexproof");
+}
+
 /// Meddling Youths' investigate trigger is gated on attacking with 3+ creatures.
 #[test]
 fn meddling_youths_gated_on_three_attackers() {

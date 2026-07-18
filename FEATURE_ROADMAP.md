@@ -16,7 +16,7 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **recent240–241 (DSK + MKM gap batch, 23 cards):** CR 603.4 turn-scoped
+- **recent240–241 (DSK + MKM gap batch, 30 cards):** CR 603.4 turn-scoped
   delayed triggers — `Effect::CreaturesYouControlDyingThisTurn` (Waltz of Rage)
   and `CreaturesYouControlDealingCombatDamageThisTurn` (Mistway Spy), plus
   `Value::CardsExiledWithSourceCount` (Veteran Survivor's exile-with-count

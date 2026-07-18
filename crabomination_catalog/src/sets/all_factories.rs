@@ -6675,6 +6675,9 @@ static DECKS: &[Factory] = &[
     super::decks::private_eye,
     super::decks::gadget_technician,
     super::decks::meddling_youths,
+    super::decks::harried_dronesmith,
+    super::decks::vengeful_tracker,
+    super::decks::essence_of_antiquity,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -11,6 +11,7 @@ use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, StaticEffect,
     Value, ZoneDest,
 };
+use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaSymbol};
 
 /// Trigger for "whenever you draw your second card each turn".
@@ -293,6 +294,90 @@ fn may_loot() -> Effect {
             Effect::Draw { who: Selector::You, amount: Value::ONE },
             Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
         ])),
+    }
+}
+
+/// Harried Dronesmith — {3}{R} Human Artificer 2/3. At the beginning of combat
+/// on your turn, create a 1/1 colorless Thopter with flying and haste; sacrifice
+/// it at the beginning of your next end step.
+pub fn harried_dronesmith() -> CardDefinition {
+    CardDefinition {
+        name: "Harried Dronesmith",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: crate::card::TokenDefinition {
+                        name: "Thopter".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Artifact, CardType::Creature],
+                        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+                        keywords: vec![Keyword::Flying, Keyword::Haste],
+                        ..Default::default()
+                    },
+                },
+                Effect::SacrificeLastCreatedTokensAtNextEndStep,
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vengeful Tracker — {1}{R} Human Detective 2/2. Whenever an opponent
+/// sacrifices an artifact, it deals 2 damage to them. (Modeled as each opponent,
+/// faithful in 1v1.)
+pub fn vengeful_tracker() -> CardDefinition {
+    CardDefinition {
+        name: "Vengeful Tracker",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact }),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Essence of Antiquity — {3}{W}{W} Artifact Creature — Golem 1/10. Disguise
+/// {2}{W}. When turned face up, creatures you control gain hexproof until end of
+/// turn and untap.
+pub fn essence_of_antiquity() -> CardDefinition {
+    let team = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Essence of Antiquity",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 1,
+        toughness: 10,
+        keywords: vec![Keyword::Disguise(cost(&[generic(2), w()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword { what: team(), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+                Effect::Untap { what: team(), up_to: None },
+            ]),
+        }],
+        ..Default::default()
     }
 }
 
