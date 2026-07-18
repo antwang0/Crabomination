@@ -1613,6 +1613,13 @@ fn cr_601_2c_every_catalog_target_filter_is_surfaced() {
                     if k == "Spree" || k == "Tiered" {
                         continue;
                     }
+                    // CR 603.7 — a `Reflexive` "when you do" payoff chooses its
+                    // targets at resolution (after the gating cost), not at
+                    // cast time, so its slots are intentionally opaque to the
+                    // cast-time surfacing walk (Glacial Dragonhunt's bolt).
+                    if k == "Reflexive" {
+                        continue;
+                    }
                     collect_slots(v, out);
                 }
             }
