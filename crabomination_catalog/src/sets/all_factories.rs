@@ -6635,6 +6635,7 @@ static DECKS: &[Factory] = &[
     super::decks::axebane_ferox,
     super::decks::oblivious_bookworm,
     super::decks::monstrous_emergence,
+    super::decks::leyline_of_hope,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

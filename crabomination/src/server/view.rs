@@ -1143,6 +1143,23 @@ fn project_permanent(
                 _ => None,
             }
         }).unwrap_or(0),
+        ward_label: card.definition.keywords.iter().find_map(|kw| {
+            use crate::card::WardCost as W;
+            let crate::card::Keyword::Ward(w) = kw else { return None };
+            Some(match w {
+                // Plain generic-mana Ward is already carried by `ward_cost`.
+                W::Mana(_) => return None,
+                W::ManaAndLife(c, n) => format!("Ward—{{{}}}, pay {n} life", c.cmc()),
+                W::Life(n) => format!("Ward—pay {n} life"),
+                W::Discard(n) => format!("Ward—discard {n}"),
+                W::Blight(n) => format!("Ward—Blight {n}"),
+                W::CollectEvidence(n) => format!("Ward—Collect evidence {n}"),
+                W::SacrificeCreature => "Ward—sacrifice a creature".to_string(),
+                W::SacrificePermanents(n) => format!("Ward—sacrifice {n} permanents"),
+                W::GenericSourcePower => "Ward—{X} (this creature's power)".to_string(),
+                W::LifeSourcePower => "Ward—pay life equal to this creature's power".to_string(),
+            })
+        }).unwrap_or_default(),
         mana_value: card.definition.cost.cmc(),
         is_legendary: card.definition.supertypes.contains(&crate::card::Supertype::Legendary),
         has_plus_one_counters: card.counter_count(crate::card::CounterType::PlusOnePlusOne) > 0,

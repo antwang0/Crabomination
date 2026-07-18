@@ -1351,6 +1351,12 @@ pub struct PermanentView {
     /// Ward cost (generic mana) on this permanent, if any. 0 means no Ward.
     #[serde(default)]
     pub ward_cost: u32,
+    /// Human-readable Ward description for non-mana Ward costs (Blight,
+    /// Collect evidence, Discard, Sacrifice, pay-life-equal-to-power, …), so the
+    /// client can show a Ward chip even when `ward_cost` (mana only) is 0.
+    /// Empty when the permanent has no Ward or a plain generic-mana Ward.
+    #[serde(default)]
+    pub ward_label: String,
     /// Mana value (converted mana cost) of the card. Useful for UI display
     /// and for client-side filtering/sorting.
     #[serde(default)]

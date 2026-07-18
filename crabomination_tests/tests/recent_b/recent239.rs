@@ -508,3 +508,25 @@ fn monstrous_emergence_needs_a_creature() {
         additional_targets: vec![], mode: None, x_value: None,
     }).is_err(), "no creature to choose or reveal");
 }
+
+/// Leyline of Hope may begin in play, boosts life gain by 1, and anthems your
+/// team once you're 7+ life above your starting total.
+#[test]
+fn leyline_of_hope_lifegain_and_anthem() {
+    use crabomination::effect::OpeningHandEffect;
+    let def = catalog::leyline_of_hope();
+    assert!(matches!(def.opening_hand, Some(OpeningHandEffect::StartInPlay { .. })));
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_hope());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    // Life gain of 3 becomes 4 (bonus +1).
+    let start = g.players[0].life;
+    g.adjust_life(0, 3);
+    assert_eq!(g.players[0].life, start + 4, "life gain boosted by 1");
+    // Below the +7 threshold the team isn't pumped.
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "no anthem yet");
+    // Push to 7+ above starting → +2/+2 anthem.
+    g.players[0].life = g.players[0].starting_life + 7;
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "anthem online at 7+ above starting");
+}

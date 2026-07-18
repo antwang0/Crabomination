@@ -4,14 +4,14 @@
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Keyword, MayPlayDuration, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility,
+    Keyword, MayPlayDuration, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{animate_land, deal, target_filtered};
 use crate::game::types::TurnStep;
 use crate::effect::{
-    DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
-    Selector, SpreeMode, Value, ZoneDest,
+    DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, OpeningHandEffect,
+    PlayerRef, PlayerStaticTarget, Predicate, Selector, SpreeMode, StaticEffect, Value, ZoneDest,
 };
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
 
@@ -418,6 +418,38 @@ pub fn analyze_the_pollen() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
         },
+        ..Default::default()
+    }
+}
+
+/// Leyline of Hope — {2}{W}{W} Enchantment. May begin the game in play. Your
+/// life gain is boosted by 1; while you have 7+ life above your starting total,
+/// creatures you control get +2/+2.
+pub fn leyline_of_hope() -> CardDefinition {
+    CardDefinition {
+        name: "Leyline of Hope",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        opening_hand: Some(OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
+        static_abilities: vec![
+            StaticAbility {
+                description: "If you would gain life, gain that much plus 1 instead.".into(),
+                effect: StaticEffect::LifeGainBonus {
+                    target: PlayerStaticTarget::Controller,
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "With 7+ life above starting, your creatures get +2/+2.".into(),
+                effect: StaticEffect::PumpTeamIf {
+                    condition: Predicate::PlayerLifeAtLeastAboveStarting { who: PlayerRef::You, delta: 7 },
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    power: 2,
+                    toughness: 2,
+                    keywords: vec![],
+                },
+            },
+        ],
         ..Default::default()
     }
 }

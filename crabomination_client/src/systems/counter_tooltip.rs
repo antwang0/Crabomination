@@ -865,6 +865,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             }
             crabomination::card::WardCost::Discard(n) => format!("Ward—Discard {n}"),
             crabomination::card::WardCost::Blight(n) => format!("Ward—Blight {n}"),
+            crabomination::card::WardCost::CollectEvidence(n) => {
+                format!("Ward—Collect evidence {n}")
+            }
             crabomination::card::WardCost::SacrificeCreature => "Ward—Sacrifice a creature".into(),
             crabomination::card::WardCost::SacrificePermanents(n) => {
                 format!("Ward—Sacrifice {n} permanents")
