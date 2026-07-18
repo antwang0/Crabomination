@@ -6651,6 +6651,8 @@ static DECKS: &[Factory] = &[
     super::decks::fear_of_abduction,
     super::decks::say_its_name,
     super::decks::veteran_survivor,
+    super::decks::coordinated_clobbering,
+    super::decks::waltz_of_rage,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

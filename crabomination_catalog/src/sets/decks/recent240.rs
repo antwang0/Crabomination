@@ -10,7 +10,7 @@ use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, Predicate, Selector, StaticEffect, Value,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{cost, g, generic, w};
+use crate::mana::{cost, g, generic, r, w};
 
 /// "Survival — At the beginning of your second main phase, if this creature is
 /// tapped, [effect]."
@@ -58,6 +58,55 @@ pub fn say_its_name() -> CardDefinition {
             Effect::Mill { who: Selector::You, amount: Value::Const(3) },
             Effect::ReturnGraveyardCardsToHand { filter: R::Creature.or(R::Land), max: Value::Const(1) },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Coordinated Clobbering — {G} Sorcery. Tap one or two target untapped
+/// creatures you control; each deals damage equal to its power to target
+/// creature an opponent controls.
+pub fn coordinated_clobbering() -> CardDefinition {
+    let mine = R::Creature.and(R::ControlledByYou).and(R::Untapped);
+    let theirs = R::Creature.and(R::ControlledByOpponent);
+    CardDefinition {
+        name: "Coordinated Clobbering",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        // Slots: 0 = your creature (req), 1 = opponent's creature (req),
+        // 2 = your second creature (optional — "one or two").
+        effect: Effect::OptionalTargets {
+            min: 2,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: mine.clone() } },
+                Effect::DealDamageEqualToPower {
+                    source: Selector::Target(0),
+                    target: Selector::TargetFiltered { slot: 1, filter: theirs },
+                },
+                Effect::Tap { what: Selector::TargetFiltered { slot: 2, filter: mine } },
+                Effect::DealDamageEqualToPower {
+                    source: Selector::Target(2),
+                    target: Selector::Target(1),
+                },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Waltz of Rage — {3}{R}{R} Sorcery. Target creature you control deals damage
+/// equal to its power to each other creature. (The delayed "creatures you
+/// control that die exile the top card" rider is dropped — needs a temporary
+/// triggered-ability grant.)
+pub fn waltz_of_rage() -> CardDefinition {
+    CardDefinition {
+        name: "Waltz of Rage",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageEqualToPowerToEach {
+            source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            targets: Selector::EachPermanent(R::Creature),
+            each_opponent: false,
+        },
         ..Default::default()
     }
 }

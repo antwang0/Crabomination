@@ -3,7 +3,9 @@
 use crabomination::card::AdditionalCastCost;
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+use crabomination::effect::Effect;
 use crabomination::game::effects::EffectContext;
+use crabomination::game::types::Target;
 use crabomination::game::{drain_stack, two_player_game};
 
 /// Fear of Abduction exiles an opponent's creature until it leaves, then hands
@@ -65,4 +67,46 @@ fn veteran_survivor_buffs_at_three_exiled() {
     let c = g.computed_permanent(vet).unwrap();
     assert_eq!((c.power, c.toughness), (5, 4), "+3/+3 at three exiled");
     assert!(c.keywords.contains(&Keyword::Hexproof), "hexproof at three exiled");
+}
+
+/// Coordinated Clobbering taps both chosen creatures and makes each deal its
+/// power to the opponent's creature.
+#[test]
+fn coordinated_clobbering_two_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let opp = g.add_card_to_battlefield(1, catalog::avenger_of_zendikar()); // 5/5
+    // Slots: 0 = a, 1 = opp, 2 = b.
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(a), Target::Permanent(opp), Target::Permanent(b)],
+        ..EffectContext::for_spell(0, None, 0, 0)
+    };
+    let body = match &catalog::coordinated_clobbering().effect {
+        Effect::OptionalTargets { body, .. } => (**body).clone(),
+        _ => panic!("not OptionalTargets"),
+    };
+    g.resolve_effect(&body, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped, "first creature tapped");
+    assert!(g.battlefield_find(b).unwrap().tapped, "second creature tapped");
+    assert_eq!(g.battlefield_find(opp).unwrap().damage, 4, "2 + 2 damage dealt");
+}
+
+/// Waltz of Rage's chosen creature deals its power to every other creature.
+#[test]
+fn waltz_of_rage_radiates() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::avenger_of_zendikar()); // 5/5
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(hero)],
+        ..EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.resolve_effect(&catalog::waltz_of_rage().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hero).is_some(), "source is not hit by itself");
+    assert!(g.battlefield_find(ally).is_none(), "friendly creature took 5 and died");
+    assert!(g.battlefield_find(enemy).is_none(), "enemy creature took 5 and died");
 }
