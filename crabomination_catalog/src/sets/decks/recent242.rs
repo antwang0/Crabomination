@@ -221,6 +221,41 @@ pub fn case_of_the_uneaten_feast() -> CardDefinition {
     }
 }
 
+/// Case of the Gateway Express — {1}{W} Enchantment — Case. ETB: choose target
+/// creature you don't control; each creature you control deals 1 damage to it.
+/// Solve: three or more creatures attacked this turn. Solved: creatures you
+/// control get +1/+0.
+pub fn case_of_the_gateway_express() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Case of the Gateway Express",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: case_subtypes(),
+        triggered_abilities: vec![etb(Effect::EachControlledCreatureDealsDamage {
+            to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            amount: Value::ONE,
+        })],
+        case: Some(Box::new(CaseData {
+            to_solve: Predicate::ValueAtLeast(
+                Value::CreaturesAttackedWithThisTurn(PlayerRef::You),
+                Value::Const(3),
+            ),
+            solved_static: vec![StaticAbility {
+                description: "Creatures you control get +1/+0.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    power: 1,
+                    toughness: 0,
+                },
+            }],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
 /// Case File Auditor — {2}{W} Creature — Human Detective 1/4. On ETB and
 /// whenever you solve a Case, look at the top six cards; you may reveal an
 /// enchantment card and put it into your hand, rest to the bottom at random.

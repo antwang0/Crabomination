@@ -2643,6 +2643,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachControlledCreatureDealsDamage { to, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                let targets = self.resolve_selector(to, ctx);
+                if amt == 0 || targets.is_empty() { return Ok(()); }
+                let sources: Vec<_> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                for src in sources {
+                    for ent in &targets {
+                        self.deal_damage_to_from(*ent, amt, Some(src), events);
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             // CR 120.10 — deal `amount` to a creature; damage past its
             // remaining toughness (lethal) spills onto its controller.
             Effect::DealDamageExcessToController { to, amount } => {

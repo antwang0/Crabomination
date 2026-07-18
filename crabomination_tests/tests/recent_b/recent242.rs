@@ -203,6 +203,34 @@ fn uneaten_feast_gains_life_and_solves() {
     assert!(is_solved(&g, case), "gaining 5 life this turn solves the Case");
 }
 
+// ── Case of the Gateway Express ──────────────────────────────────────────────
+
+/// ETB: each creature you control pings the chosen enemy creature. Solved: your
+/// creatures get +1/+0.
+#[test]
+fn gateway_express_pings_and_anthems() {
+    let mut g = two_player_game();
+    // Two 2/2s ping the enemy 0/4 for 2 total on ETB.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_omens());
+    let case = g.add_card_to_battlefield(0, catalog::case_of_the_gateway_express());
+    let effect = catalog::case_of_the_gateway_express().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        case,
+        0,
+        Some(crabomination::game::types::Target::Permanent(wall)),
+    );
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.battlefield.iter().find(|c| c.id == wall).unwrap().damage, 2, "two pings");
+    // Solve via three attackers this turn, then the anthem applies.
+    g.players[0].creatures_attacked_this_turn = 3;
+    solve_now(&mut g);
+    assert!(is_solved(&g, case));
+    let bear = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").unwrap().id;
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+0 anthem while solved");
+}
+
 // ── Case File Auditor ────────────────────────────────────────────────────────
 
 /// "Whenever you solve a Case" fires the Auditor's look-six.

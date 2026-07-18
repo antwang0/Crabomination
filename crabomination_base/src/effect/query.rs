@@ -395,7 +395,10 @@ impl Effect {
             Effect::IfRevealFromHand { then, else_, .. } => {
                 then.requires_target() || else_.requires_target()
             }
-            Effect::DealDamage { to, amount } => sel_has_target(to) || value_has_target(amount),
+            Effect::DealDamage { to, amount }
+            | Effect::EachControlledCreatureDealsDamage { to, amount } => {
+                sel_has_target(to) || value_has_target(amount)
+            }
             Effect::DealDamageExcessToController { to, amount } => {
                 sel_has_target(to) || value_has_target(amount)
             }
@@ -832,10 +835,13 @@ impl Effect {
         match self {
             // Prefer the damage target's own filter; fall back to a filter
             // hidden in the damage amount (Rabid Bite: `PowerOf(slot 0)`).
-            Effect::DealDamage { to, amount } => sel_filter(to).or_else(|| match amount {
-                Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s) => sel_filter(s),
-                _ => None,
-            }),
+            Effect::DealDamage { to, amount }
+            | Effect::EachControlledCreatureDealsDamage { to, amount } => {
+                sel_filter(to).or_else(|| match amount {
+                    Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s) => sel_filter(s),
+                    _ => None,
+                })
+            }
             Effect::CreateTokenBlocking { filter, .. }
             | Effect::DealDamageDivided { filter, .. }
             | Effect::DealDamageDividedEvenly { filter, .. }
@@ -1871,6 +1877,7 @@ impl Effect {
                     .iter()
                     .find_map(|(_, _, e)| eff_find(e, slot, mode, kicked)),
                 Effect::DealDamage { to, amount }
+                | Effect::EachControlledCreatureDealsDamage { to, amount }
                 | Effect::DealDamageExcessToController { to, amount } => {
                     sel_find(to, slot).or_else(|| val_find(amount, slot))
                 }

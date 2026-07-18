@@ -2445,6 +2445,11 @@ pub enum Effect {
 
     // ── Damage / life ────────────────────────────────────────────────────────
     DealDamage { to: Selector, amount: Value },
+    /// Each creature the controller controls deals `amount` damage to the `to`
+    /// target — each damage is sourced from that creature (so its deathtouch /
+    /// lifelink apply). "Each creature you control deals 1 damage to that
+    /// creature" — Case of the Gateway Express.
+    EachControlledCreatureDealsDamage { to: Selector, amount: Value },
     /// Deal `amount` damage to a target creature; any damage beyond what's
     /// lethal (its remaining toughness) is dealt to that creature's
     /// controller (CR 120.10, trample-like). Flame Spill.
