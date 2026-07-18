@@ -6760,6 +6760,8 @@ static DECKS: &[Factory] = &[
     super::decks::ezrim_agency_chief,
     super::decks::agrus_kos_spirit_of_justice,
     super::decks::aurelia_the_law_above,
+    super::decks::rakdos_patron_of_chaos,
+    super::decks::voja_jaws_of_the_conclave,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

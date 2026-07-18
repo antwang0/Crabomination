@@ -151,3 +151,79 @@ pub fn aurelia_the_law_above() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rakdos, Patron of Chaos — {4}{B}{R} Legendary Creature — Demon 6/6, flying,
+/// trample. At the beginning of your end step, target opponent may sacrifice
+/// two nonland, nontoken permanents of their choice. If they don't, you draw
+/// two cards. (Modeled via `Effect::Punisher`: the opponent sacrifices when
+/// able, otherwise you draw.)
+pub fn rakdos_patron_of_chaos() -> CardDefinition {
+    use crate::game::TurnStep;
+    use crate::mana::b;
+    CardDefinition {
+        name: "Rakdos, Patron of Chaos",
+        cost: cost(&[generic(4), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::Punisher {
+                chooser: Selector::Player(PlayerRef::EachOpponent),
+                options: vec![Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(2),
+                    filter: R::Nonland.and(R::NotToken),
+                }],
+                otherwise: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Voja, Jaws of the Conclave — {2}{R}{G}{W} Legendary Creature — Wolf 5/5,
+/// vigilance, trample, ward {3}. Whenever Voja attacks, put X +1/+1 counters on
+/// each creature you control, where X is the number of Elves you control; then
+/// draw a card for each Wolf you control.
+pub fn voja_jaws_of_the_conclave() -> CardDefinition {
+    use crate::card::WardCost;
+    use crate::mana::r;
+    let elves = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(R::Any)),
+        filter: R::HasCreatureType(CreatureType::Elf).and(R::ControlledByYou),
+    };
+    let wolves = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(R::Any)),
+        filter: R::HasCreatureType(CreatureType::Wolf).and(R::ControlledByYou),
+    };
+    CardDefinition {
+        name: "Voja, Jaws of the Conclave",
+        cost: cost(&[generic(2), r(), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![
+            Keyword::Vigilance,
+            Keyword::Trample,
+            Keyword::Ward(WardCost::Mana(cost(&[generic(3)]))),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: elves,
+                },
+                Effect::Draw { who: Selector::You, amount: wolves },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

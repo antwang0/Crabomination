@@ -101,3 +101,53 @@ fn aurelia_law_above_attack_triggers() {
     assert_eq!(g.players[1].life, foe_life - 3, "opponent took 3 from the 5+ trigger");
     assert_eq!(g.players[0].life, my_life + 3, "gained 3 from the 5+ trigger");
 }
+
+/// Rakdos draws two when the opponent has nothing to sacrifice at your end step.
+#[test]
+fn rakdos_patron_draws_when_no_sacrifice() {
+    use crabomination::game::TurnStep;
+    let mut g = two_player_game();
+    let rakdos = g.add_card_to_battlefield(0, catalog::rakdos_patron_of_chaos());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    // Opponent controls only a token (nontoken required) → can't pay.
+    use crabomination::card::{CardType, CreatureType, Subtypes, TokenDefinition};
+    let tok = TokenDefinition {
+        name: "Bird".into(),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 1, toughness: 1, ..Default::default()
+    };
+    g.add_token_to_battlefield(1, &tok);
+    let hand_before = g.players[0].hand.len();
+    let ctx = EffectContext::for_trigger(rakdos, 0, None, 0);
+    let trig = catalog::rakdos_patron_of_chaos().triggered_abilities[0].effect.clone();
+    g.step = TurnStep::End;
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew two (no sacrifice available)");
+}
+
+/// Voja pumps each creature by the Elf count and draws per Wolf on attack.
+#[test]
+fn voja_attack_counters_and_draw() {
+    use crabomination::card::{CardType, CreatureType, Subtypes, TokenDefinition};
+    let mut g = two_player_game();
+    let voja = g.add_card_to_battlefield(0, catalog::voja_jaws_of_the_conclave()); // a Wolf
+    let elf = TokenDefinition {
+        name: "Elf".into(),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 1, toughness: 1, ..Default::default()
+    };
+    let e1 = g.add_token_to_battlefield(0, &elf);
+    g.add_token_to_battlefield(0, &elf);
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    let hand_before = g.players[0].hand.len();
+    let ctx = EffectContext::for_trigger(voja, 0, None, 0);
+    let trig = catalog::voja_jaws_of_the_conclave().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    // Two Elves → +2 counters on each creature; one Wolf (Voja) → draw 1.
+    assert_eq!(g.battlefield_find(e1).unwrap().counters.get(&crabomination::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0), 2, "each creature got 2 counters");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew one per Wolf");
+}
