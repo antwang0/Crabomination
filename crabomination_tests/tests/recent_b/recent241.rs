@@ -159,6 +159,41 @@ fn sanguine_savior_grants_lifelink() {
     assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Lifelink));
 }
 
+/// Sample Collector collects evidence on attack and counters a creature.
+#[test]
+fn sample_collector_collects_and_counters() {
+    let mut g = two_player_game();
+    let sample = g.add_card_to_battlefield(0, catalog::sample_collector());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Graveyard fuel: two 2-MV cards (total 4 ≥ 3) to collect evidence 3.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // The collect is a "may" — accept it; the counter then auto-targets a creature.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let base: i32 = g.computed_permanent(sample).unwrap().power + g.computed_permanent(ally).unwrap().power;
+    let effect = catalog::sample_collector().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext::for_ability(sample, 0, None);
+    g.resolve_effect(&effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.exile.len(), 2, "collected evidence exiled graveyard cards");
+    let after: i32 = g.computed_permanent(sample).unwrap().power + g.computed_permanent(ally).unwrap().power;
+    assert_eq!(after, base + 1, "a +1/+1 counter landed on a creature you control");
+}
+
+/// Meddling Youths' investigate trigger is gated on attacking with 3+ creatures.
+#[test]
+fn meddling_youths_gated_on_three_attackers() {
+    use crabomination::effect::{EventKind, Predicate};
+    let def = catalog::meddling_youths();
+    assert!(def.keywords.contains(&Keyword::Haste));
+    let ta = &def.triggered_abilities[0];
+    assert_eq!(ta.event.kind, EventKind::YouAttack);
+    assert!(matches!(
+        ta.event.filter,
+        Some(Predicate::AttackedWithCountAtLeast { at_least: 3, .. })
+    ));
+}
+
 /// Gleaming Geardrake investigates on ETB.
 #[test]
 fn gleaming_geardrake_investigates() {

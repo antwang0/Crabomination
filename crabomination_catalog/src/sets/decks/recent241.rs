@@ -296,6 +296,57 @@ fn may_loot() -> Effect {
     }
 }
 
+/// Sample Collector — {2}{G} Troll Detective 2/3. Whenever it attacks, collect
+/// evidence 3; when you do, put a +1/+1 counter on target creature you control.
+pub fn sample_collector() -> CardDefinition {
+    CardDefinition {
+        name: "Sample Collector",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Troll, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CollectEvidence {
+                amount: Value::Const(3),
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Meddling Youths — {3}{R}{W} Human Detective 4/5, haste. Whenever you attack
+/// with three or more creatures, investigate.
+pub fn meddling_youths() -> CardDefinition {
+    CardDefinition {
+        name: "Meddling Youths",
+        cost: cost(&[generic(3), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource)
+                .with_filter(Predicate::AttackedWithCountAtLeast { who: PlayerRef::You, at_least: 3 }),
+            effect: investigate(1),
+        }],
+        ..Default::default()
+    }
+}
+
 /// A "whenever you sacrifice an artifact, put a +1/+1 counter on this" trigger.
 fn sac_artifact_counter() -> TriggeredAbility {
     TriggeredAbility {
