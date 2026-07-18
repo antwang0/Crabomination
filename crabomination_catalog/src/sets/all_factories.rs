@@ -6771,6 +6771,9 @@ static DECKS: &[Factory] = &[
     super::decks::case_of_the_ransacked_lab,
     super::decks::case_of_the_stashed_skeleton,
     super::decks::case_of_the_pilfered_proof,
+    // recent256 — Golgari graveyard engine + Azorius top-of-library
+    super::decks::insidious_roots,
+    super::decks::assemble_the_players,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
