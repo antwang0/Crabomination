@@ -3,7 +3,7 @@
 
 use crabomination::card::CounterType;
 use crabomination::catalog;
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{GameAction, TurnStep};
 use crabomination::game::{drain_stack, two_player_game, GameEvent};
 use crabomination::mana::Color;
 
