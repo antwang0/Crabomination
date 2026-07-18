@@ -327,7 +327,14 @@ factory doc comment:
   TriggerSource)` in the trigger **body** resolves empty (the LKI subject is only
   set for the dying creature's own die-triggers). Prefer filter-gating such cards
   until the resolving-LKI-subject plumbing covers cross-permanent watchers.
-- **MKM remaining gaps (~99 cards):** legends (Anzrag, Delney, Etrata, Teysa,
+- **Collect evidence as an activated-ability cost:** `AdditionalCastCost::
+  CollectEvidence` covers spells, but `ActivatedAbility` has no collect-evidence
+  cost field, so Forensic Researcher's "{T}, Collect evidence 3: Tap target
+  creature you don't control" and Hedge Whisperer's land-animation ability ship
+  with the collect-evidence half dropped. Add an `ActivatedAbility.collect_evidence`
+  cost (mirror `sac_other_filter`) paid through the same graveyard-exile path,
+  emitting `GameEvent::EvidenceCollected`.
+- **MKM remaining gaps (~90 cards):** legends (Anzrag, Delney, Etrata, Teysa,
   Judith, Rakdos, Kaya PW, …), the split cards (Cease // Desist, Flotsam //
   Jetsam, …), Disguise/Cloak value (Coveted Falcon, Fugitive Codebreaker),
   modal spells (Deadly Complication, Expose the Culprit), and the remaining
