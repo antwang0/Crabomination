@@ -6736,6 +6736,9 @@ static DECKS: &[Factory] = &[
     // recent250 — control + protection Auras
     super::decks::coerced_to_kill,
     super::decks::airtight_alibi,
+    // recent251 — token hate + Merfolk untapper
+    super::decks::kraul_whipcracker,
+    super::decks::forensic_researcher,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
