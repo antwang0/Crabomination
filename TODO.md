@@ -199,8 +199,6 @@ Storm** (new `StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn` in
 `scale_damage_to`). Still open, each needing a new primitive:
 - **Reverberating Summons** — spell-count self-animate (3/3 Monk EOT) + the
   discard-hand+sac activated ability (`discard_hand_cost` exists).
-- **Glacial Dragonhunt** — needs a filtered reflexive discard ("when you discard
-  a *nonland* card this way, …"); `Effect::MayDiscard` has no filter field yet.
 - **Sidisi, Regent of the Mire** — a sacrificed-MV → target-MV+1 reanimate link.
   (The Sibsig Ceremony shipped via new `Predicate::TriggerSourceEnteredByCast`
   + `CardInstance.entered_by_cast`.)
@@ -1869,6 +1867,14 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Noticed this run (recent264 MOM/BRO batch):**
+  - **Tapped token creation** — `Effect::CreateToken` has no `enters_tapped`
+    flag (only `CreateTokenCopyOf` does), so "create a *tapped* Powerstone"
+    (Argothian Opportunist, Koilos Roc) and similar tapped-token cards can't be
+    modeled faithfully. Add a `tapped` field to `Effect::CreateToken`.
+  - **Three-way library split on look** — `Effect::LookPickToHand` bottoms OR
+    graveyards the rest, not "one to hand, one to graveyard, one to bottom"
+    (Moment of Truth). Wants a per-pile routing look effect.
 - ⏳ **Noticed this run (recent80 primitive batch):**
   - **Champion** (`Effect::Champion`) auto-picks the lowest-power creature to
     exile; the printed "you may instead sacrifice this" decline + a `wants_ui`
