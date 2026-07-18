@@ -29,17 +29,18 @@ exercising each) was elided in a compaction pass; recover it from
   Cerebral Confiscation, Caught Red-Handed). Tests in `tests/recent_b/recent240`
   / `recent241` + CR 603.4/701.13/701.60 conformance.
 
-- **MKM Case mechanic + recent242–244 (20 cards):** the **Case** enchantment
+- **MKM Case mechanic + recent242–244 (23 cards):** the **Case** enchantment
   (`CardDefinition.case` + `CaseData.to_solve`/`solved_*` +
   `CardInstance.case_solved`; solved at the controller's end step via
   `process_case_solves`, `EventKind::CaseSolved` → Case File Auditor). New
   primitives: `Effect::GrantKeywords`, `Effect::EachControlledCreatureDealsDamage`,
   `Value::TotalPowerControlled`, `Value::DistinctColorsAmong`, `Predicate: Default`.
-  Six Cases (Shattered Pact, Trampled Garden, Crimson Pulse, Filched Falcon,
-  Uneaten Feast, Gateway Express) + Case File Auditor, plus 13 gap cards
-  (The Chase Is On, Galvanize, Red Herring, Vengeful Creeper, Rubblebelt Maverick,
-  Leering Onlooker, Tunnel Tipster, Gravestone Strider, They Went This Way,
-  Undercover Crocodelf, Sharp-Eyed Rookie, Curious Cadaver, Vitu-Ghazi Inspector).
+  Eight Cases (Shattered Pact, Trampled Garden, Crimson Pulse, Filched Falcon,
+  Uneaten Feast, Gateway Express, Locked Hothouse) + Case File Auditor, plus 15
+  gap cards (The Chase Is On, Galvanize, Red Herring, Vengeful Creeper, Rubblebelt
+  Maverick, Leering Onlooker, Tunnel Tipster, Gravestone Strider, They Went This
+  Way, Undercover Crocodelf, Sharp-Eyed Rookie, Curious Cadaver, Vitu-Ghazi
+  Inspector, Torch the Witness, Extract a Confession).
   Client board-glance Case/Solved chip. Tests in `tests/recent_b/recent242`–`244`
   + `core_rules/cr_solve_mkm` (Solve, CR 702.2c multi-source deathtouch, CR 613.7).
 
