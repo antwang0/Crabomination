@@ -225,6 +225,7 @@ impl Effect {
             Effect::AttackDespiteDefenderThisTurn { .. } => false,
             Effect::LookTopExileOneMayPlay { .. } => false,
             Effect::LookTopDeployLandOrHand { .. } => false,
+            Effect::LookTopMayDeployLand { .. } => false,
             // Targets are chosen at resolution (Decision::ChooseCards), so no
             // cast-time target slot is demanded.
             Effect::TapUpToValue { .. } => false,

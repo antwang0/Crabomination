@@ -1811,9 +1811,7 @@ static DECKS: &[Factory] = &[
     super::decks::monastery_mentor,
     super::decks::pillar_of_flame,
     super::decks::merfolk_secretkeeper,
-    super::decks::outcaster_trailblazer,
     super::decks::lovestruck_beast,
-    super::decks::slickshot_show_off,
     super::decks::tuinvale_treefolk,
     super::decks::curious_pair,
     super::decks::queen_of_ice,
@@ -4828,7 +4826,6 @@ static DECKS: &[Factory] = &[
     super::decks::rambling_possum,
     super::decks::quick_draw,
     super::decks::deserts_due,
-    super::decks::prickly_pair,
     super::decks::the_weatherseed_treaty,
     super::decks::nezumi_linkbreaker,
     super::decks::gold_rush,
@@ -6543,7 +6540,6 @@ static DECKS: &[Factory] = &[
     super::decks::valgavoths_lair,
     super::decks::pitiless_carnage,
     super::decks::sandstorm_salvager,
-    super::decks::nightdrinker_moroii,
     super::decks::wojek_investigator,
     super::decks::sandstorm_verge,
     super::decks::doorkeeper_thrull,
@@ -6962,6 +6958,10 @@ static DECKS: &[Factory] = &[
     // recent288 — OTJ gap batch
     super::decks::doc_aurlock_grizzled_genius,
     super::decks::fortune_loyal_steed,
+    // recent289 — OTJ gap batch (Vehicles)
+    super::decks::luxurious_locomotive,
+    super::decks::mobile_homestead,
+    super::decks::wylie_duke_atiin_hero,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

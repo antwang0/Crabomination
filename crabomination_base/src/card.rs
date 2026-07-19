@@ -4215,6 +4215,10 @@ pub struct CardInstance {
     /// creature that saddled it this turn" (Fortune, Loyal Steed). Cleared with
     /// `saddled`.
     pub saddled_by: Vec<CardId>,
+    /// CR 702.9 — the creatures that have crewed this Vehicle this turn. Read by
+    /// `Value::SourceCrewerCount` for "for each creature that crewed it this
+    /// turn" (Luxurious Locomotive). Cleared at end of turn / on leaving play.
+    pub crewed_by: Vec<CardId>,
     /// CR 709 — which half of a split card this spell is being cast as while
     /// on the stack: `None`/`0` = left (default cast path), `1` = right
     /// (`CastSplitRight`), `2` = fused (`CastSplitFused`). Drives effect
@@ -4406,6 +4410,7 @@ impl CardInstance {
             cast_as_prototype: false,
             saddled: false,
             saddled_by: Vec::new(),
+            crewed_by: Vec::new(),
             split_cast: None,
             entered_turn: None,
             battlefield_timestamp: 0,
@@ -4765,6 +4770,7 @@ impl CardInstance {
         // CR 702.171 — "saddled until end of turn" ends here.
         self.saddled = false;
         self.saddled_by.clear();
+        self.crewed_by.clear();
     }
 
     /// The flashback cost this card can currently be cast with from a
@@ -5034,6 +5040,8 @@ struct CardInstanceWire {
     /// CR 702.171 — riders that saddled this permanent this turn.
     #[serde(default)]
     saddled_by: Vec<CardId>,
+    #[serde(default)]
+    crewed_by: Vec<CardId>,
     /// CR 709 split-half marker. `#[serde(default)]` so older snapshots load
     /// as `None`.
     #[serde(default)]
@@ -5188,6 +5196,7 @@ impl serde::Serialize for CardInstance {
             cast_as_prototype: self.cast_as_prototype,
             saddled: self.saddled,
             saddled_by: self.saddled_by.clone(),
+            crewed_by: self.crewed_by.clone(),
             split_cast: self.split_cast,
             exiled_by: self.exiled_by,
             exiled_with: self.exiled_with,
@@ -5343,6 +5352,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         }
         c.saddled = wire.saddled;
         c.saddled_by = wire.saddled_by;
+        c.crewed_by = wire.crewed_by;
         c.split_cast = wire.split_cast;
         c.exiled_by = wire.exiled_by;
         c.exiled_with = wire.exiled_with;

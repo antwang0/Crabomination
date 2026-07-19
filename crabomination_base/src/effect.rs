@@ -644,6 +644,9 @@ pub enum Value {
     /// Total (computed) power of all creatures the controller controls
     /// (Case of the Trampled Garden's "total power 8 or greater" solve).
     TotalPowerControlled,
+    /// CR 702.9 — number of creatures that crewed the source this turn
+    /// (`CardInstance.crewed_by`; Luxurious Locomotive).
+    SourceCrewerCount,
     /// Number of differently-named lands the controller controls (All-Fates
     /// Scroll's "draw X cards, where X is the number of differently named
     /// lands you control").
@@ -3124,6 +3127,10 @@ pub enum Effect {
     /// Genesis. Resolution prefers ramp: deploys a land if one is revealed,
     /// otherwise takes the highest-mana-value card to hand.
     LookTopDeployLandOrHand { count: Value },
+    /// "Look at the top card of your library. If it's a land card, you may put
+    /// it onto the battlefield (tapped if `tapped`)." A non-land — or a decline —
+    /// stays on top (unlike the bottoming look-top variants). Mobile Homestead.
+    LookTopMayDeployLand { tapped: bool },
     /// Cabal Therapy: choose a nonland card name; target player discards
     /// every card with that name from their hand.
     NameCardTargetDiscardsMatching,

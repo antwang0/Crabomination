@@ -8786,6 +8786,15 @@ impl GameState {
                 crate::card::CardType::Creature,
             ),
         });
+        // Remember the crew for "each creature that crewed it this turn"
+        // payoffs (Luxurious Locomotive).
+        if let Some(v) = self.battlefield.iter_mut().find(|c| c.id == vehicle) {
+            for &cid in crew_creatures {
+                if !v.crewed_by.contains(&cid) {
+                    v.crewed_by.push(cid);
+                }
+            }
+        }
         events.push(GameEvent::VehicleCrewed { vehicle, crew: crew_creatures.to_vec() });
         Ok(events)
     }

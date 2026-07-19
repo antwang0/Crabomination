@@ -11331,6 +11331,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LookTopMayDeployLand { tapped } => {
+                let p = ctx.controller;
+                let Some(top) = self.players[p].library.first() else { return Ok(()); };
+                if top.definition.is_land() {
+                    let land_id = top.id;
+                    let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: *tapped };
+                    self.move_card_to(land_id, &dest, ctx, events);
+                }
+                // A non-land (or a decline) is left on top.
+                Ok(())
+            }
+
             Effect::LookTopPutMatchingOntoBattlefield { count, filter, then, max, tapped } => {
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;

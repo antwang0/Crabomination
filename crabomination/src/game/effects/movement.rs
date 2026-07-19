@@ -1099,6 +1099,7 @@ impl GameState {
                 // riders (Fortune, Loyal Steed returning after its own blink).
                 card.saddled = false;
                 card.saddled_by.clear();
+                card.crewed_by.clear();
                 // Not a cast: reanimation / blink / put-onto-battlefield clears
                 // the "if you cast it" flag (CR 400.7 new object).
                 card.entered_by_cast = false;
