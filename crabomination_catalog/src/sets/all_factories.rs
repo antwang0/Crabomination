@@ -6904,6 +6904,11 @@ static DECKS: &[Factory] = &[
     super::decks::commune_with_spirits,
     super::decks::case_the_joint,
     super::decks::buy_your_silence,
+    // recent279 — day/night creatures, land-ramp dig, modal Vampire pump
+    super::decks::sunrise_cavalier,
+    super::decks::celestus_sanctifier,
+    super::decks::cartographers_survey,
+    super::decks::markov_retribution,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
