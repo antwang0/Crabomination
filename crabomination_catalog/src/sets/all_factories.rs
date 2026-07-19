@@ -6860,6 +6860,9 @@ static DECKS: &[Factory] = &[
     super::decks::phantasmal_shieldback,
     super::decks::battlefield_butcher,
     super::decks::razorgrass_invoker,
+    // recent270 — Treasure-engine Cat, kicker reanimator
+    super::decks::black_market_tycoon,
+    super::decks::balduvian_atrocity,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
