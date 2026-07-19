@@ -6924,6 +6924,10 @@ static DECKS: &[Factory] = &[
     super::decks::escape_from_orthanc,
     super::decks::gimlis_fury,
     super::decks::east_mark_cavalier,
+    // recent282 — LTR scry-cantrip, indestructible Eagle, double-bounce
+    super::decks::elven_farsight,
+    super::decks::eagle_of_deliverance,
+    super::decks::horses_of_the_bruinen,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
