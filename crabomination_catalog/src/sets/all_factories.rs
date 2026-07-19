@@ -5598,7 +5598,6 @@ static DECKS: &[Factory] = &[
     super::decks::arcane_epiphany,
     super::decks::agate_assault,
     super::decks::bark_knuckle_boxer,
-    super::decks::brambleguard_veteran,
     super::decks::attack_in_the_box,
     super::decks::arbiter_of_woe,
     // recent119 — simple BLB creatures
@@ -6938,6 +6937,9 @@ static DECKS: &[Factory] = &[
     super::decks::argivian_cavalier,
     // recent284 — permanent Gift (Predicate::SourceGiftPromised)
     super::decks::scrapshooter,
+    // recent285 — two Bloomburrow Gift spells
+    super::decks::parting_gust,
+    super::decks::starfall_invocation,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
