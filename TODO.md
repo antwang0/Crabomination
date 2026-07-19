@@ -247,9 +247,10 @@ shipped via the new `EventKind::Foraged`.
 **OTJ (`decks::recent124-126`)** is a rich remaining source — 176 gaps. Shipped
 this run: ward/toughness pump, flash -2/-2, mill, ping, off-turn discount,
 conditional Defender, Mounts (Saddle), outlaw Treasure, commit-crime drain, Plot.
-Next-up primitives to unblock more OTJ: `Value::OtherSpellsCastThisTurn` (Thunder
-Salvo), a "committed a crime this turn" gate on activated abilities (Blood
-Hustler), and Spree-on-instant modal costs (Metamorphic Blast, Getaway Glamer).
+Next-up primitives to unblock more OTJ: a "committed a crime this turn" gate on
+activated abilities (Blood Hustler), and Spree-on-instant modal costs
+(Metamorphic Blast, Getaway Glamer). (`Value::OtherSpellsCastThisTurn` shipped —
+Thunder Salvo now uses it directly.)
 
 `decks::recent149-152` shipped ~27 BLB/DSK/OTJ/WOE cards (modal removal, surveil-
 riders, conditional threaten/exile-until-leaves, impulse Plotter, manifest-dread
