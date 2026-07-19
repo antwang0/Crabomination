@@ -6936,6 +6936,8 @@ static DECKS: &[Factory] = &[
     super::decks::ambitious_dragonborn,
     super::decks::jolly_gerbils,
     super::decks::argivian_cavalier,
+    // recent284 — permanent Gift (Predicate::SourceGiftPromised)
+    super::decks::scrapshooter,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

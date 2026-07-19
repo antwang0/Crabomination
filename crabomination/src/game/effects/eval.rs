@@ -1684,6 +1684,12 @@ impl GameState {
                 // CR 701.59 — true iff this spell's "collect evidence" cost was paid.
                 ctx.cast_collected_evidence
             }
+            Predicate::SourceGiftPromised => {
+                // CR 702.165 — read the source permanent's persisted gift flag.
+                ctx.source
+                    .and_then(|s| self.battlefield_find(s))
+                    .is_some_and(|c| c.gift_promised)
+            }
             Predicate::LastDiscardedManaValueAtMost(n) => {
                 // A discard must have happened this resolution and its MV ≤ n.
                 self.last_discarded_mana_value.is_some_and(|mv| mv <= *n)

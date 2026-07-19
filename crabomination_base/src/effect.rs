@@ -1341,6 +1341,11 @@ pub enum Predicate {
     /// `CardInstance.cast_collected_evidence`. Gates "if evidence was collected,
     /// …" branches (Behind the Mask, Analyze the Pollen).
     SpellCollectedEvidence,
+    /// CR 702.165 — true iff the effect's source permanent was cast with its
+    /// Gift promised (reads `CardInstance.gift_promised`, which persists onto
+    /// the battlefield). Gates a permanent-gift card's "if the gift was
+    /// promised, …" ETB (Scrapshooter, Starforged Sword).
+    SourceGiftPromised,
     /// True if the most recently discarded card this resolution had mana value
     /// ≤ `n`. Reads `GameState.last_discarded_mana_value` (Hollow Marauder's
     /// "draw unless they discarded a card with mana value 4 or greater").

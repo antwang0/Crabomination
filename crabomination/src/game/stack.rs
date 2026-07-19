@@ -1196,6 +1196,16 @@ impl GameState {
 
                     events.push(GameEvent::PermanentEntered { card_id });
 
+                    // CR 702.165 — a permanent spell cast with its Gift promised
+                    // gives the gift as it enters. Emit once for "whenever you
+                    // give a gift" payoffs (Jolly Gerbils).
+                    if self
+                        .battlefield_find(card_id)
+                        .is_some_and(|c| c.gift_promised && c.definition.gift.is_some())
+                    {
+                        events.push(GameEvent::GiftGiven { player: caster });
+                    }
+
                     // CR 702.146e — a daybound permanent entering while it's
                     // neither day nor night makes it day.
                     if self.day_night.is_none()
