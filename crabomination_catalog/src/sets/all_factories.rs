@@ -6937,6 +6937,7 @@ static DECKS: &[Factory] = &[
     super::decks::argivian_cavalier,
     // recent284 — permanent Gift (Predicate::SourceGiftPromised)
     super::decks::scrapshooter,
+    super::decks::kitnap,
     // recent285 — two Bloomburrow Gift spells
     super::decks::parting_gust,
     super::decks::starfall_invocation,

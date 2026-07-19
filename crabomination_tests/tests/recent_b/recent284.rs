@@ -52,3 +52,27 @@ fn scrapshooter_no_gift_no_effect() {
     assert!(g.battlefield.iter().any(|c| c.id == art), "artifact survives (no gift)");
     assert_eq!(g.players[1].hand.len(), opp_hand, "opponent didn't draw (no gift)");
 }
+
+/// Kitnap (no gift) steals a creature, taps it, and applies three stun counters.
+#[test]
+fn kitnap_no_gift_steals_and_stuns() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let kit = g.add_card_to_hand(0, catalog::kitnap());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: kit, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Kitnap");
+    drain_stack(&mut g);
+    let v = g.battlefield_find(victim).unwrap();
+    assert_eq!(v.controller, 0, "control stolen");
+    assert!(v.tapped, "enchanted creature tapped");
+    assert_eq!(
+        v.counters.get(&crabomination::card::CounterType::Stun).copied().unwrap_or(0),
+        3,
+        "three stun counters (no gift)",
+    );
+}
