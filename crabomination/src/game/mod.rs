@@ -4890,17 +4890,31 @@ impl GameState {
         // path, so there's no double application.
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
-                // CR 716.2 — unwrap a level-gated Class static to its inner
-                // effect (Blacksmith's Talent's level-3 equipped-creature grant).
-                let eff = match &sa.effect {
-                    crate::effect::StaticEffect::WhileClassLevelAtLeast { n, inner } => {
-                        if card.class_level < *n {
-                            continue;
+                // CR 716.2 / 720 — peel level- and turn-gated Class wrappers to
+                // the inner grant (Blacksmith's Talent's level-3 "during your
+                // turn, equipped creatures … have double strike and haste").
+                let mut eff = &sa.effect;
+                let mut gated_out = false;
+                loop {
+                    match eff {
+                        crate::effect::StaticEffect::WhileClassLevelAtLeast { n, inner } => {
+                            if card.class_level < *n {
+                                gated_out = true;
+                            }
+                            eff = inner;
                         }
-                        &**inner
+                        crate::effect::StaticEffect::WhileYourTurn { inner } => {
+                            if self.active_player_idx != card.controller {
+                                gated_out = true;
+                            }
+                            eff = inner;
+                        }
+                        _ => break,
                     }
-                    other => other,
-                };
+                }
+                if gated_out {
+                    continue;
+                }
                 let crate::effect::StaticEffect::GrantKeyword { applies_to, keyword } = eff
                 else {
                     continue;
@@ -12957,6 +12971,13 @@ fn static_effect_to_effects(
                 } else {
                     vec![]
                 }
+            }
+            // The turn gate needs game state, so on this pure path just recurse:
+            // the only `WhileYourTurn` grants in the catalog use live-resolution
+            // filters (IsEquipped), which are applied by the stateful path that
+            // does check `active_player`; here `selector_to_affected` yields None.
+            StaticEffect::WhileYourTurn { inner } => {
+                static_effect_to_effects(inner, card, timestamp)
             }
             StaticEffect::PumpPT { applies_to, power, toughness } => {
                 match selector_to_affected(applies_to, card) {

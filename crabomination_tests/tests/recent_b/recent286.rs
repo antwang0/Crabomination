@@ -407,3 +407,54 @@ fn class_level_survives_serde_roundtrip() {
     let g2: GameState = serde_json::from_str(&json).expect("deserialize");
     assert_eq!(g2.battlefield_find(class).unwrap().class_level, 3, "class_level round-trips");
 }
+
+/// Blacksmith's Talent mints a Sword Equipment at level 1; its level-2 combat
+/// trigger attaches it to a creature you control, granting +1/+1.
+#[test]
+fn blacksmiths_talent_mints_sword_and_attaches() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::blacksmiths_talent());
+    drain_stack(&mut g); // resolve the level-1 ETB (mint Sword)
+    let sword = g.battlefield.iter().find(|c| c.definition.name == "Sword").expect("Sword minted");
+    assert!(sword.definition.is_equipment(), "Sword is an Equipment");
+    let sword_id = sword.id;
+    let bear = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+    // Resolve the level-2 attach: slot 0 = Sword, slot 1 = bear.
+    let mut ctx = EffectContext::for_trigger(class, 0, Some(Target::Permanent(sword_id)), 0);
+    ctx.targets.push(Target::Permanent(bear));
+    let attach = crabomination::catalog::blacksmiths_talent().triggered_abilities[1].effect.clone();
+    g.resolve_effect(&attach, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(sword_id).unwrap().attached_to, Some(bear), "Sword attached");
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "equipped bear gets +1/+1");
+}
+
+/// Level 3 grants double strike + haste to equipped creatures you control, but
+/// only at level 3 and only during your turn (CR 716.2 / 720).
+#[test]
+fn blacksmiths_talent_level_3_your_turn_grant() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::blacksmiths_talent());
+    drain_stack(&mut g);
+    let sword = g.battlefield.iter().find(|c| c.definition.name == "Sword").unwrap().id;
+    let bear = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_trigger(class, 0, Some(Target::Permanent(sword)), 0);
+    ctx.targets.push(Target::Permanent(bear));
+    let attach = crabomination::catalog::blacksmiths_talent().triggered_abilities[1].effect.clone();
+    g.resolve_effect(&attach, &ctx).unwrap();
+    let has = |g: &crabomination::game::GameState, kw| {
+        g.computed_permanent(bear).unwrap().keywords.contains(kw)
+    };
+    // Level 1: no grant.
+    g.active_player_idx = 0;
+    assert!(!has(&g, &Keyword::DoubleStrike), "no double strike at level 1");
+    // Level 3, your turn: both granted.
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 3;
+    assert!(has(&g, &Keyword::DoubleStrike), "double strike at level 3 on your turn");
+    assert!(has(&g, &Keyword::Haste), "haste at level 3 on your turn");
+    // Opponent's turn: grant switches off (CR 720 — "during your turn").
+    g.active_player_idx = 1;
+    assert!(!has(&g, &Keyword::DoubleStrike), "no double strike on opponent's turn");
+}

@@ -7,9 +7,9 @@
 //! Tests in `tests/recent_b/recent286.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    Keyword, SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility,
-    Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    EnchantmentSubtype, EquipBonus, Keyword, SelectionRequirement as R, StaticAbility, Subtypes,
+    TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{cast_is_instant_or_sorcery, target_filtered};
 use crate::effect::{
@@ -17,7 +17,7 @@ use crate::effect::{
     ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, u, w, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Convenience: an `Enchantment — Class` subtype block.
 fn class_subtypes() -> Subtypes {
@@ -456,6 +456,84 @@ pub fn warlock_class() -> CardDefinition {
         activated_abilities: vec![
             level_up(&[generic(1), b()], 1),
             level_up(&[generic(6), b()], 2),
+        ],
+        ..Default::default()
+    }
+}
+
+/// The "Sword" Equipment token Blacksmith's Talent mints at level 1:
+/// colorless artifact, equip {2}, "Equipped creature gets +1/+1".
+fn sword_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Sword".into(),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Blacksmith's Talent — {R} Enchantment — Class.
+/// L1: create a Sword Equipment token (equip {2}, +1/+1). L2: at the beginning
+/// of combat on your turn, attach target Equipment you control to target
+/// creature you control. L3: during your turn, equipped creatures you control
+/// have double strike and haste.
+pub fn blacksmiths_talent() -> CardDefinition {
+    // L3 grant: double strike + haste to your equipped creatures, gated on
+    // level 3 and your turn (CR 716.2 / 720).
+    let equipped = R::Creature.and(R::ControlledByYou).and(R::IsEquipped);
+    let while_l3_your_turn = |kw: Keyword| StaticAbility {
+        description: "During your turn, equipped creatures you control have double strike and haste.",
+        effect: StaticEffect::WhileClassLevelAtLeast {
+            n: 3,
+            inner: Box::new(StaticEffect::WhileYourTurn {
+                inner: Box::new(StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(equipped.clone()),
+                    keyword: kw,
+                }),
+            }),
+        },
+    };
+    CardDefinition {
+        name: "Blacksmith's Talent",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: class_subtypes(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: sword_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
+                    .with_filter(Predicate::SourceClassLevelAtLeast(2)),
+                effect: Effect::Attach {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou),
+                    },
+                    to: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::ControlledByYou),
+                    },
+                },
+            },
+        ],
+        static_abilities: vec![
+            while_l3_your_turn(Keyword::DoubleStrike),
+            while_l3_your_turn(Keyword::Haste),
+        ],
+        activated_abilities: vec![
+            level_up(&[generic(2), r()], 1),
+            level_up(&[generic(3), r()], 2),
         ],
         ..Default::default()
     }

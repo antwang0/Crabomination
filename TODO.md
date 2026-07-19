@@ -6,12 +6,13 @@ Items are grouped by area and roughly ordered by impact within each group.
 **Shipped (recent286 — Class enchantments, CR 716):** the level-up mechanic
 (`CardInstance.class_level`, `Effect::AdvanceClassLevel`,
 `Predicate::SourceClassLevelIs`/`SourceClassLevelAtLeast`,
-`StaticEffect::WhileClassLevelAtLeast`, `EventKind`/`GameEvent::ClassLevelReached`,
+`StaticEffect::WhileClassLevelAtLeast`, `StaticEffect::WhileYourTurn` (CR 720
+turn-gate wrapper), `EventKind`/`GameEvent::ClassLevelReached`,
 `Value::OpponentsWithHandSizeAtMost`; server view + client "Lvl N" chip surface
 the level). Cards: the Bloomburrow Talent cycle (Stormchaser's / Gossip's /
-Hunter's / Scavenger's / Bandit's) + AFR Wizard / Cleric / Warlock Class.
-**Still open (Class cards):** Blacksmith's Talent (needs an Equipment-token
-mint + an "attach target Equipment to target creature" effect); Artist's Talent
+Hunter's / Scavenger's / Bandit's / **Blacksmith's**) + AFR Wizard / Cleric /
+Warlock Class.
+**Still open (Class cards):** Artist's Talent
 and AFR Paladin/Druid (level-2/3 cost-reduction, damage-replacement, and
 extra-land-permission are statics read outside the layer system, so
 `WhileClassLevelAtLeast` can't gate them — needs level-gating on the
@@ -38,7 +39,8 @@ Rat/Snail conditional token), Dragonhawk / The Infamous Cruelclaw (impulse +
 delayed "for each still-exiled" damage / discard-to-cast alt-cost),
 "Season of …" sorceries (delayed multi-turn modal). Starforged Sword (gift
 Equipment) needs the permanent-gift ETB + self-attach. (Class/level-up now
-ships — 5 of 7 Talents done; see the CR 716 note above for the two remaining.)
+ships — 6 of 7 Talents done, only Artist's Talent remains; see the CR 716 note
+above.)
 
 **Shipped (recent235–238, DSK/OTJ gap batch — 20 cards):** manifest-dread now
 exposes the manifested creature on `Selector::LastMoved` (Slimy Aquarium, Weight
