@@ -55,16 +55,11 @@ Entryway, Derelict Attic, Funeral Room, Painter's Studio, Ticket Booth,
 Restricted Office, Bottomless Pool-half work. Server surfaces
 `avg_decisive_turns`/`avg_draw_turns`; client match summary tracks life lost.
 
-**DSK/OTJ still open (each needs one primitive):** Prairie Dog's from-hand
-tracker + Emergent Haunting share `NoSpellCastFromHandThisTurn` — Emergent
-Haunting also needs an end-step "becomes a 3/3 creature" self-animate;
-Veteran Survivor (static gated on "≥3 cards exiled with this" — needs a
-`cards-exiled-with-source ≥ N` predicate); Getaway Glamer / Trial of Agony
-(needs a *global* greatest-power target filter, not the controller-only
-`GreatestPowerControlledMatching`); Miasma Demon (ApplyToTargets with a
-runtime `Value` max, not a `u8`); Come Back Wrong (destroy-then-reanimate-the-
-destroyed-card — needs a `Selector::LastDestroyed`); Freestrider Commando /
-Plot free-casts (a "no mana spent to cast" instance flag).
+**DSK/OTJ still open:** Miasma Demon (discard any number, then it deals damage
+to up to that many target creatures — needs `Effect::ApplyToTargets` with a
+runtime `Value` max, not a `u8`). (Emergent Haunting, Come Back Wrong, Veteran
+Survivor, Getaway Glamer, Trial of Agony, Freestrider Commando all shipped —
+recent239/240/274.)
 
 **Shipped (recent267–270 gap batches — 26 cards + primitives):**
 `ActivatedAbility.cost_reduction_per_graveyard` ("costs {1} less per [filter]
