@@ -1396,6 +1396,10 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         // `CastSpell` resolves them as a no-op. They get their own candidate
         // block below.
         .filter(|c| !matches!(c.definition.effect, Effect::Spree { .. }))
+        // A gift card whose base effect is empty (a permanent gift — the payoff
+        // is a `SourceGiftPromised`-gated ETB) is wasted by a plain cast; it
+        // gets a `CastGift` candidate in the gift block below instead.
+        .filter(|c| !(c.definition.gift.is_some() && matches!(c.definition.effect, Effect::Noop)))
         .filter(|c| can_afford_in_state(state, seat, c))
         .flat_map(|c| {
             // For modal effects (ChooseMode), enumerate each mode so the
@@ -1491,6 +1495,46 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             mode: None,
             x_value: None,
             delve_cards,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
+    // Gift (CR 702.165): a spell/permanent with a gift can be cast via
+    // `CastGift`, promising the gift to resolve its enhanced `gifted_effect`
+    // (or, for permanent gifts, unlock a `SourceGiftPromised`-gated ETB). A
+    // plain `CastSpell` only ever gets the base effect, so gift-payoff cards
+    // (Scrapshooter, Starfall Invocation) would otherwise be wasted. Offer the
+    // promised variant alongside; the gifted effect's target slots are picked
+    // from `gifted_effect`, and `would_accept` is the final gate.
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.gift.is_some())
+        .filter(|c| can_afford_in_state(state, seat, c))
+    {
+        let gifted = &c.definition.gift.as_ref().unwrap().gifted_effect;
+        // The ETB payoff of a permanent gift lives on the creature, not the
+        // gifted_effect, so target off the base effect there; for spell gifts
+        // the gifted_effect carries the (possibly broader) target.
+        let target_effect =
+            if gifted.requires_target() { gifted } else { &c.definition.effect };
+        let (target, additional_targets) = if target_effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(target_effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastGift {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
         };
         if state.would_accept(action.clone()) {
             castable.push(action);
@@ -4134,6 +4178,26 @@ mod tests {
         assert!(
             matches!(action, GameAction::CastSpellKicked { card_id, .. } if card_id == recruit),
             "bot cast Pawpatch Recruit with Offspring paid, got {action:?}"
+        );
+    }
+
+    /// The bot promises a gift (CR 702.165) when the gifted line is the point
+    /// of the card — Scrapshooter's ETB destroy only fires on a promised gift,
+    /// so the chosen cast must be `CastGift`, not a plain `CastSpell`.
+    #[test]
+    fn bot_promises_gift_for_scrapshooter() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        let scrap = g.add_card_to_hand(0, catalog::scrapshooter()); // {1}{G}{G}
+        g.add_card_to_battlefield(1, catalog::sol_ring()); // a legal ETB destroy target
+        g.add_card_to_library(1, catalog::forest()); // the gift draw
+        g.players[0].mana_pool.add(Color::Green, 2);
+        g.players[0].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 0;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            matches!(action, GameAction::CastGift { card_id, .. } if card_id == scrap),
+            "bot promised Scrapshooter's gift, got {action:?}"
         );
     }
 

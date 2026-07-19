@@ -27,6 +27,9 @@ pub struct MatchStats {
     pub milled: HashMap<usize, u32>,
     pub sacrificed: HashMap<usize, u32>,
     pub poison: HashMap<usize, u32>,
+    /// Promised gifts given (CR 702.165) — a Bloomburrow-flavored situational
+    /// counter surfaced only when nonzero.
+    pub gifts: HashMap<usize, u32>,
 }
 
 impl MatchStats {
@@ -50,6 +53,7 @@ impl MatchStats {
             (&self.milled, "milled"),
             (&self.sacrificed, "sacrificed"),
             (&self.poison, "poison"),
+            (&self.gifts, "gifts given"),
         ] {
             let n = get(map);
             if n > 0 {
@@ -110,6 +114,9 @@ pub fn track_match_stats(events: Res<LatestServerEvents>, mut stats: ResMut<Matc
             GameEventWire::PoisonAdded { player, amount } => {
                 *stats.poison.entry(*player).or_default() += amount;
             }
+            GameEventWire::GiftGiven { player } => {
+                *stats.gifts.entry(*player).or_default() += 1;
+            }
             _ => {}
         }
     }
@@ -154,5 +161,13 @@ mod tests {
             s.seat_line(1, "P1"),
             "P1 — 0 drawn · 0 spells · 0 lands · 0 dmg taken · 0 life gained · 2 discarded · 3 poison",
         );
+    }
+
+    #[test]
+    fn gifts_given_surfaced_only_when_nonzero() {
+        let mut s = MatchStats::default();
+        *s.gifts.entry(0).or_default() += 2;
+        assert!(s.seat_line(0, "P0").contains("2 gifts given"));
+        assert!(!s.seat_line(1, "P1").contains("gifts given"), "no gifts → omitted");
     }
 }
