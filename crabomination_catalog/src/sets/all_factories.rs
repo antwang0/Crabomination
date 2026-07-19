@@ -6892,6 +6892,10 @@ static DECKS: &[Factory] = &[
     super::decks::coastal_bulwark,
     super::decks::emergency_weld,
     super::decks::burning_suns_fury,
+    // recent277 — graveyard nuke, Incubator-flip Flyer, descend-modal removal
+    super::decks::calamitys_wake,
+    super::decks::attentive_skywarden,
+    super::decks::molten_collapse,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];

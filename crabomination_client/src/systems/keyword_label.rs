@@ -306,6 +306,7 @@ fn board_status_strip(
     keywords: &[Keyword],
     summoning_sick: bool,
     suspected: bool,
+    goaded: bool,
     case_solved: Option<bool>,
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
@@ -319,6 +320,13 @@ fn board_status_strip(
     // Suspected reads at a glance — it's *why* the creature shows Men/NoBlk.
     if suspected {
         parts.push("Susp".to_string());
+    }
+    // Goaded (CR 701.38) — the creature must attack a player other than the
+    // goader if able. A combat compulsion imposed by an opponent, so it belongs
+    // next to the MustAttack ("Atk!") read; surfaced from the view's goaded flag
+    // rather than a keyword since goad is a status, not a printed keyword.
+    if goaded {
+        parts.push("Goad".to_string());
     }
     // Summoning sickness gets a board-visible tag — skipped when Haste lifts it.
     if summoning_sick && !keywords.contains(&Keyword::Haste) {
@@ -373,8 +381,13 @@ pub fn sync_keyword_labels(
             if !p.is_creature() && p.case_solved.is_none() {
                 continue;
             }
-            let strip =
-                board_status_strip(&p.keywords, p.summoning_sick, p.suspected, p.case_solved);
+            let strip = board_status_strip(
+                &p.keywords,
+                p.summoning_sick,
+                p.suspected,
+                p.goaded,
+                p.case_solved,
+            );
             if !strip.is_empty() {
                 desired_cache.insert(p.id, strip);
             }
@@ -615,22 +628,32 @@ mod tests {
     fn board_status_prefixes_suspected_and_sick() {
         // A suspected creature shows "Susp" ahead of its (injected) Men/NoBlk.
         assert_eq!(
-            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true, None),
+            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true, false, None),
             "Susp Men NoBlk",
         );
         // Summoning sickness tags "Zzz"; Haste suppresses it.
-        assert_eq!(board_status_strip(&[], true, false, None), "Zzz");
-        assert_eq!(board_status_strip(&[Keyword::Haste], true, false, None), "Hst");
+        assert_eq!(board_status_strip(&[], true, false, false, None), "Zzz");
+        assert_eq!(board_status_strip(&[Keyword::Haste], true, false, false, None), "Hst");
         // Both statuses stack, suspected first.
-        assert_eq!(board_status_strip(&[], true, true, None), "Susp Zzz");
-        assert_eq!(board_status_strip(&[], false, false, None), "");
+        assert_eq!(board_status_strip(&[], true, true, false, None), "Susp Zzz");
+        assert_eq!(board_status_strip(&[], false, false, false, None), "");
+    }
+
+    #[test]
+    fn board_status_surfaces_goaded() {
+        // A goaded creature flags "Goad" after suspected, before its keywords.
+        assert_eq!(board_status_strip(&[], false, false, true, None), "Goad");
+        assert_eq!(
+            board_status_strip(&[Keyword::Menace], false, true, true, None),
+            "Susp Goad Men",
+        );
     }
 
     #[test]
     fn board_status_shows_case_solve_state() {
         // An unsolved Case reads "Case"; a solved one reads "Solved".
-        assert_eq!(board_status_strip(&[], false, false, Some(false)), "Case");
-        assert_eq!(board_status_strip(&[], false, false, Some(true)), "Solved");
+        assert_eq!(board_status_strip(&[], false, false, false, Some(false)), "Case");
+        assert_eq!(board_status_strip(&[], false, false, false, Some(true)), "Solved");
     }
 
     #[test]
