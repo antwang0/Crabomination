@@ -6858,6 +6858,7 @@ static DECKS: &[Factory] = &[
     super::decks::hearts_on_fire,
     super::decks::hungry_megasloth,
     super::decks::phantasmal_shieldback,
+    super::decks::battlefield_butcher,
     super::decks::razorgrass_invoker,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,

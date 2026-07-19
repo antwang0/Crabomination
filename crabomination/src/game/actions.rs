@@ -10833,6 +10833,18 @@ impl GameState {
                 effective_mana_cost.reduce_generic(count);
             }
         }
+        // "Costs {1} less for each [filter] card in your graveyard"
+        // (Battlefield Butcher).
+        if let Some(filter) = &ability.cost_reduction_per_graveyard {
+            let count = self.players[p]
+                .graveyard
+                .iter()
+                .filter(|c| crate::game::layers::requirement_matches_card(filter, c, p))
+                .count() as u32;
+            if count > 0 {
+                effective_mana_cost.reduce_generic(count);
+            }
+        }
         // Zirda — non-mana activated abilities cost {N} less (generic only),
         // floored at one mana of the printed cost.
         if !is_mana_ability(&ability.effect) && !effective_mana_cost.symbols.is_empty() {

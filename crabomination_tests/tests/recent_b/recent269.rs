@@ -109,6 +109,31 @@ fn phantasmal_shieldback_sacs_when_targeted() {
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "drew on death");
 }
 
+/// Battlefield Butcher's activation cost drops {1} per creature card in the
+/// graveyard (new `cost_reduction_per_graveyard` primitive).
+#[test]
+fn battlefield_butcher_graveyard_discount() {
+    let mut g = two_player_game();
+    let butcher = g.add_card_to_battlefield(0, catalog::battlefield_butcher());
+    g.clear_sickness(butcher);
+    // Two creature cards + a noncreature in the graveyard → {5} - {2} = {3}.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: butcher,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activated for the reduced {3}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "opponent lost 2 life");
+}
+
 /// Razorgrass Invoker pumps itself and one other creature.
 #[test]
 fn razorgrass_invoker_pumps_pair() {

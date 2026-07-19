@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{cost, g, generic, r, u, Color};
+use crate::mana::{b, cost, g, generic, r, u, Color};
 
 /// Gilded Scuttler — {2}{U} 1/3 Crab artifact creature. Can't be blocked. ETB:
 /// tap target creature an opponent controls and put a stun counter on it.
@@ -126,6 +126,34 @@ pub fn phantasmal_shieldback() -> CardDefinition {
                 effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Battlefield Butcher — {2}{B} 1/4 Human Soldier. {5}, {T}: each opponent
+/// loses 2 life. This ability costs {1} less to activate for each creature card
+/// in your graveyard.
+pub fn battlefield_butcher() -> CardDefinition {
+    CardDefinition {
+        name: "Battlefield Butcher",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            tap_cost: true,
+            cost_reduction_per_graveyard: Some(R::Creature),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
