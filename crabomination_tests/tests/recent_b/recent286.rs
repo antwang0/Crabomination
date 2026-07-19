@@ -271,3 +271,90 @@ fn bandits_talent_level_3_draw_scales() {
     g2.resolve_effect(&draw, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
     assert_eq!(g2.players[0].hand.len(), before2, "no draw when the opponent has two cards");
 }
+
+/// Wizard Class draws two on reaching level 2, and at level 3 puts a +1/+1
+/// counter on a creature whenever you draw.
+#[test]
+fn wizard_class_levels() {
+    let mut g = two_player_game();
+    let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::wizard_class());
+    drain_stack(&mut g);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    for _ in 0..6 {
+        g.add_card_to_library(0, crabomination::catalog::forest());
+    }
+    // Level up to 2 → draw two.
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: class, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("level up to 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew two on becoming level 2");
+
+    // Level up to 3, then a draw grows a creature.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: class, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("level up to 3");
+    drain_stack(&mut g);
+    let bear = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+    let mut evs = vec![];
+    g.draw_one(0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne),
+        1,
+        "drawing at level 3 adds a +1/+1 counter",
+    );
+}
+
+/// Cleric Class's level-1 static adds 1 to life gained; at level 2 gaining life
+/// grows a creature.
+#[test]
+fn cleric_class_life_gain() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::cleric_class());
+    drain_stack(&mut g);
+    let bear = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+    let life_before = g.players[0].life;
+
+    // Level 1: gaining 2 life actually gains 3 (LifeGainBonus +1).
+    g.resolve_effect(
+        &Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(2) },
+        &EffectContext::for_spell(0, None, 0, 0),
+    )
+    .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 3, "gained 2 + 1 bonus");
+    // No counter yet — the level-2 trigger isn't online.
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne),
+        0,
+    );
+
+    // Force level 2, gain again → a +1/+1 counter lands.
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 2;
+    let evs = g
+        .resolve_effect(
+            &Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(1) },
+            &EffectContext::for_spell(0, None, 0, 0),
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne),
+        1,
+        "level-2 lifegain trigger grew the creature",
+    );
+}

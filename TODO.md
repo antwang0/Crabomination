@@ -7,13 +7,17 @@ Items are grouped by area and roughly ordered by impact within each group.
 (`CardInstance.class_level`, `Effect::AdvanceClassLevel`,
 `Predicate::SourceClassLevelIs`/`SourceClassLevelAtLeast`,
 `StaticEffect::WhileClassLevelAtLeast`, `EventKind`/`GameEvent::ClassLevelReached`,
-`Value::OpponentsWithHandSizeAtMost`; server view surfaces the level). Cards:
-Stormchaser's / Gossip's / Hunter's / Scavenger's / Bandit's Talent.
-**Still open (Talent cycle):** Blacksmith's Talent (needs an Equipment-token
-mint + an "attach target Equipment to target creature" effect) and Artist's
-Talent (level-2 noncreature cost-reduction + level-3 noncombat-damage-plus-2 are
-statics read outside the layer system, so `WhileClassLevelAtLeast` can't gate
-them — needs level-gating on the cost/replacement paths).
+`Value::OpponentsWithHandSizeAtMost`; server view + client "Lvl N" chip surface
+the level). Cards: the Bloomburrow Talent cycle (Stormchaser's / Gossip's /
+Hunter's / Scavenger's / Bandit's) + AFR Wizard / Cleric Class.
+**Still open (Class cards):** Blacksmith's Talent (needs an Equipment-token
+mint + an "attach target Equipment to target creature" effect); Artist's Talent
+and AFR Paladin/Druid (level-2/3 cost-reduction, damage-replacement, and
+extra-land-permission are statics read outside the layer system, so
+`WhileClassLevelAtLeast` can't gate them — needs level-gating on the
+cost/replacement/land-play paths); AFR Barbarian/Bard/Sorcerer (dice-roll
+replacement statics). Warlock/Ranger/Rogue/Fighter/Monk are mostly wireable on
+existing primitives next.
 
 **Shipped (recent283–285, 8 cards + primitives):** `EventKind::GiftGiven`
 (spell + permanent gifts; Jolly Gerbils), `Predicate::SourceGiftPromised`

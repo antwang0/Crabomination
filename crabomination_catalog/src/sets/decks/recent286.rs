@@ -1,20 +1,23 @@
-//! Bloomburrow Talent Class cards (CR 716) — Stormchaser's, Gossip's, Hunter's,
-//! and Scavenger's Talent. Each is an Enchantment — Class that enters at level 1
-//! and gains levels at sorcery speed via its `{cost}: Level N` activated
-//! abilities (`Effect::AdvanceClassLevel`, gated on
-//! `Predicate::SourceClassLevelIs`). Higher-level abilities are gated on
-//! `Predicate::SourceClassLevelAtLeast`. Tests in `tests/recent_b/recent286.rs`.
+//! Class enchantment cards (CR 716) — the Bloomburrow Talent cycle
+//! (Stormchaser's, Gossip's, Hunter's, Scavenger's, Bandit's) plus AFR's Wizard
+//! and Cleric Class. Each is an Enchantment — Class that enters at level 1 and gains levels
+//! at sorcery speed via its `{cost}: Level N` activated abilities
+//! (`Effect::AdvanceClassLevel`, gated on `Predicate::SourceClassLevelIs`).
+//! Higher-level abilities are gated on `Predicate::SourceClassLevelAtLeast`.
+//! Tests in `tests/recent_b/recent286.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    Keyword, SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Keyword, SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility,
+    Value,
 };
 use crate::effect::shortcut::{cast_is_instant_or_sorcery, target_filtered};
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, ZoneDest,
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, StaticEffect,
+    ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, u, Color};
+use crate::mana::{b, cost, g, generic, u, w, Color};
 
 /// Convenience: an `Enchantment — Class` subtype block.
 fn class_subtypes() -> Subtypes {
@@ -319,6 +322,93 @@ pub fn bandits_talent() -> CardDefinition {
         activated_abilities: vec![
             level_up(&[b()], 1),
             level_up(&[generic(3), b()], 2),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wizard Class — {U} Enchantment — Class (AFR, CR 716).
+/// L1: you have no maximum hand size. L2: when this becomes level 2, draw two
+/// cards. L3: whenever you draw a card, put a +1/+1 counter on target creature
+/// you control.
+pub fn wizard_class() -> CardDefinition {
+    CardDefinition {
+        name: "Wizard Class",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: class_subtypes(),
+        static_abilities: vec![StaticAbility {
+            description: "You have no maximum hand size",
+            effect: StaticEffect::NoMaximumHandSize,
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::ClassLevelReached, EventScope::SelfSource)
+                    .with_filter(Predicate::SourceClassLevelIs(2)),
+                effect: Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::Const(2) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                    .with_filter(Predicate::SourceClassLevelAtLeast(3)),
+                effect: Effect::AddCounter {
+                    what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        activated_abilities: vec![
+            level_up(&[generic(2), u()], 1),
+            level_up(&[generic(4), u()], 2),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Cleric Class — {W} Enchantment — Class (AFR, CR 716).
+/// L1: if you would gain life, gain that much plus 1. L2: whenever you gain
+/// life, put a +1/+1 counter on target creature you control. L3: when this
+/// becomes level 3, return target creature card from your graveyard to the
+/// battlefield and gain life equal to its toughness.
+pub fn cleric_class() -> CardDefinition {
+    use crate::effect::PlayerStaticTarget;
+    CardDefinition {
+        name: "Cleric Class",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: class_subtypes(),
+        static_abilities: vec![StaticAbility {
+            description: "Life gain is increased by 1",
+            effect: StaticEffect::LifeGainBonus { target: PlayerStaticTarget::Controller, amount: 1 },
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl)
+                    .with_filter(Predicate::SourceClassLevelAtLeast(2)),
+                effect: Effect::AddCounter {
+                    what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::ClassLevelReached, EventScope::SelfSource)
+                    .with_filter(Predicate::SourceClassLevelIs(3)),
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::GainLife {
+                        who: Selector::Player(PlayerRef::You),
+                        amount: Value::ToughnessOf(Box::new(Selector::LastMoved)),
+                    },
+                ]),
+            },
+        ],
+        activated_abilities: vec![
+            level_up(&[generic(3), w()], 1),
+            level_up(&[generic(4), w()], 2),
         ],
         ..Default::default()
     }

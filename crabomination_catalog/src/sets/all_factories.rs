@@ -6948,6 +6948,8 @@ static DECKS: &[Factory] = &[
     super::decks::hunters_talent,
     super::decks::scavengers_talent,
     super::decks::bandits_talent,
+    super::decks::wizard_class,
+    super::decks::cleric_class,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
