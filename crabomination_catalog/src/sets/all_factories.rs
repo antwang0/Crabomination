@@ -6874,6 +6874,10 @@ static DECKS: &[Factory] = &[
     // recent272 — modified-matters pump, tuck + decayed Zombie
     super::decks::ambitious_assault,
     super::decks::revenge_of_the_drowned,
+    // recent273 — magecraft-loot Wall, kicker wheel Bird, death-dig Elf
+    super::decks::academy_wall,
+    super::decks::battlewing_mystic,
+    super::decks::brazen_upstart,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
