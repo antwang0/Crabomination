@@ -10,16 +10,17 @@ Items are grouped by area and roughly ordered by impact within each group.
 turn-gate wrapper), `EventKind`/`GameEvent::ClassLevelReached`,
 `Value::OpponentsWithHandSizeAtMost`; server view + client "Lvl N" chip surface
 the level). Cards: the Bloomburrow Talent cycle (Stormchaser's / Gossip's /
-Hunter's / Scavenger's / Bandit's / **Blacksmith's**) + AFR Wizard / Cleric /
-Warlock Class.
-**Still open (Class cards):** Artist's Talent
-and AFR Paladin/Druid (level-2/3 cost-reduction, damage-replacement, and
-extra-land-permission are statics read outside the layer system, so
+Hunter's / Scavenger's / Bandit's / **Blacksmith's** / **Builder's** /
+**Caretaker's**) + AFR Wizard / Cleric / Warlock Class.
+**Still open (Class cards):** Artist's Talent, Innkeeper's Talent (L3 counter-
+doubling), and AFR Paladin/Druid (level-2/3 cost-reduction, damage-replacement,
+and extra-land-permission are statics read outside the layer system, so
 `WhileClassLevelAtLeast` can't gate them — needs level-gating on the
-cost/replacement/land-play paths); AFR Barbarian/Bard/Sorcerer (dice-roll
-replacement statics). Ranger/Rogue/Fighter/Monk each have one cost/permission/
-play-from-exile level that needs the same level-gating on non-layer static paths
-(Rogue L2's "menace anthem" is already a clean `WhileClassLevelAtLeast` case).
+cost/replacement/land-play/counter-replacement paths); AFR Barbarian/Bard/
+Sorcerer (dice-roll replacement statics). Ranger/Rogue/Fighter/Monk each have
+one cost/permission/play-from-exile level that needs the same level-gating on
+non-layer static paths (Rogue L2's "menace anthem" is already a clean
+`WhileClassLevelAtLeast` case).
 
 **Shipped (recent283–285, 8 cards + primitives):** `EventKind::GiftGiven`
 (spell + permanent gifts; Jolly Gerbils), `Predicate::SourceGiftPromised`

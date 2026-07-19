@@ -538,3 +538,120 @@ pub fn blacksmiths_talent() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// A 0/4 white Wall with defender (Builder's Talent's level-1 token).
+fn wall_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Wall".into(),
+        power: 0,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        keywords: vec![Keyword::Defender],
+        ..Default::default()
+    }
+}
+
+/// Builder's Talent — {1}{W} Enchantment — Class.
+/// L1: create a 0/4 Wall. L2: whenever a noncreature, nonland permanent you
+/// control enters, put a +1/+1 counter on target creature you control. L3:
+/// on becoming level 3, return target noncreature, nonland permanent card from
+/// your graveyard to the battlefield.
+pub fn builders_talent() -> CardDefinition {
+    let noncreature_nonland =
+        R::Permanent.and(R::HasCardType(CardType::Creature).negate()).and(R::Land.negate());
+    CardDefinition {
+        name: "Builder's Talent",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: class_subtypes(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: wall_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::All(vec![
+                        Predicate::SourceClassLevelAtLeast(2),
+                        Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: noncreature_nonland.clone(),
+                        },
+                    ])),
+                effect: Effect::AddCounter {
+                    what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::ClassLevelReached, EventScope::SelfSource)
+                    .with_filter(Predicate::SourceClassLevelIs(3)),
+                effect: Effect::Move {
+                    what: target_filtered(noncreature_nonland.and(R::InYourGraveyard)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            },
+        ],
+        activated_abilities: vec![level_up(&[w()], 1), level_up(&[generic(4), w()], 2)],
+        ..Default::default()
+    }
+}
+
+/// Caretaker's Talent — {2}{W} Enchantment — Class.
+/// L1: whenever one or more tokens you control enter, draw a card (once each
+/// turn). L2: on becoming level 2, create a token copy of target token you
+/// control. L3: creature tokens you control get +2/+2.
+pub fn caretakers_talent() -> CardDefinition {
+    CardDefinition {
+        name: "Caretaker's Talent",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: class_subtypes(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TokenCreated, EventScope::YourControl)
+                    .once_per_turn(),
+                effect: Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::ClassLevelReached, EventScope::SelfSource)
+                    .with_filter(Predicate::SourceClassLevelIs(2)),
+                effect: Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: target_filtered(R::IsToken.and(R::ControlledByYou)),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                },
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "Creature tokens you control get +2/+2.",
+            effect: StaticEffect::WhileClassLevelAtLeast {
+                n: 3,
+                inner: Box::new(StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::IsToken),
+                    ),
+                    power: 2,
+                    toughness: 2,
+                }),
+            },
+        }],
+        activated_abilities: vec![level_up(&[w()], 1), level_up(&[generic(3), w()], 2)],
+        ..Default::default()
+    }
+}

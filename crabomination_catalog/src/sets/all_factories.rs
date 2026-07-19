@@ -6952,6 +6952,8 @@ static DECKS: &[Factory] = &[
     super::decks::cleric_class,
     super::decks::warlock_class,
     super::decks::blacksmiths_talent,
+    super::decks::builders_talent,
+    super::decks::caretakers_talent,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

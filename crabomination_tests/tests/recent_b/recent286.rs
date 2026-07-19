@@ -458,3 +458,38 @@ fn blacksmiths_talent_level_3_your_turn_grant() {
     g.active_player_idx = 1;
     assert!(!has(&g, &Keyword::DoubleStrike), "no double strike on opponent's turn");
 }
+
+/// Builder's Talent mints a 0/4 Wall at level 1; its level-3 "becomes level 3"
+/// returns a noncreature, nonland permanent card from the graveyard.
+#[test]
+fn builders_talent_wall_and_level_3_reanimate() {
+    let mut g = two_player_game();
+    let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::builders_talent());
+    drain_stack(&mut g);
+    let wall = g.battlefield.iter().find(|c| c.definition.name == "Wall").expect("Wall minted");
+    assert_eq!((wall.definition.power, wall.definition.toughness), (0, 4), "0/4 Wall");
+    // Seed a noncreature nonland permanent in the graveyard and reach level 3.
+    let relic = g.add_card_to_graveyard(0, crabomination::catalog::bonesplitter()); // Artifact
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 2;
+    use crabomination::game::effects::EffectContext;
+    let l3 = crabomination::catalog::builders_talent().triggered_abilities[2].effect.clone();
+    let ctx = EffectContext::for_trigger(class, 0, Some(Target::Permanent(relic)), 0);
+    g.resolve_effect(&l3, &ctx).unwrap();
+    assert!(g.battlefield_find(relic).is_some(), "artifact returned to the battlefield");
+}
+
+/// Caretaker's Talent's level-3 static pumps creature tokens you control +2/+2
+/// (and only at level 3).
+#[test]
+fn caretakers_talent_level_3_token_anthem() {
+    let mut g = two_player_game();
+    let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::caretakers_talent());
+    drain_stack(&mut g);
+    let bear = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().is_token = true;
+    // Level 1: a nontoken-style anthem doesn't apply yet.
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "no anthem below level 3");
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 3;
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "creature token gets +2/+2 at level 3");
+}
