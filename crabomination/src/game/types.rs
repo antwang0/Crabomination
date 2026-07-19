@@ -731,6 +731,9 @@ pub enum DelayedKind {
     /// not fire once, expires at cleanup. Registered by
     /// `Effect::AtEachCombatThisTurn` (Full Throttle).
     EachCombatThisTurn,
+    /// "At end of combat, …" — fires once at the current turn's end-of-combat
+    /// step (`Effect::DelayUntil { kind: EndOfCombat }`; Fortune, Loyal Steed).
+    EndOfCombat,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

@@ -3414,6 +3414,12 @@ pub enum Effect {
     /// the untapped sibling of `ReturnSelfTapped` (Presumed Dead's granted
     /// die-trigger). No-op if the source isn't in a graveyard.
     ReturnSelf,
+    /// CR 702.171 — "Exile the source and up to one creature that saddled it
+    /// this turn (`CardInstance.saddled_by`), then return those cards to the
+    /// battlefield under their owners' control." A same-resolution flicker
+    /// (Fortune, Loyal Steed). Bots/tests take one saddler; the source is
+    /// always included. No-op for anything not on the battlefield.
+    ExileAndReturnSelfWithSaddler,
     /// Bronzehide Lion — "when this creature dies, return it to the
     /// battlefield [as its `back_face` Aura] attached to a creature you
     /// control" (auto-pick: greatest power). No-op if the source isn't in a
@@ -5516,6 +5522,9 @@ pub struct SpreeMode {
 pub enum DelayedTriggerKind {
     YourNextUpkeep,
     NextEndStep,
+    /// "At end of combat, …" — fires once at the current turn's end-of-combat
+    /// step (Fortune, Loyal Steed's saddle blink).
+    EndOfCombat,
     /// "At the beginning of your next pre-combat main phase, …" Used by
     /// Chancellor of the Tangle's opening-hand reveal — the mana ritual
     /// fires on main rather than upkeep so the {G} doesn't empty out of

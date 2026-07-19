@@ -6961,6 +6961,7 @@ static DECKS: &[Factory] = &[
     super::decks::skyserpent_seeker,
     // recent288 — OTJ gap batch
     super::decks::doc_aurlock_grizzled_genius,
+    super::decks::fortune_loyal_steed,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

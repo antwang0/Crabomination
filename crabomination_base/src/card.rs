@@ -4209,6 +4209,12 @@ pub struct CardInstance {
     /// to gate "whenever this attacks while saddled" triggers. Cleared by
     /// `clear_end_of_turn_effects`.
     pub saddled: bool,
+    /// CR 702.171 — the creatures that have saddled this permanent this turn
+    /// (the riders tapped by a Saddle activation). Read by
+    /// `Effect::ExileAndReturnSelfWithSaddler` for "exile it and up to one
+    /// creature that saddled it this turn" (Fortune, Loyal Steed). Cleared with
+    /// `saddled`.
+    pub saddled_by: Vec<CardId>,
     /// CR 709 — which half of a split card this spell is being cast as while
     /// on the stack: `None`/`0` = left (default cast path), `1` = right
     /// (`CastSplitRight`), `2` = fused (`CastSplitFused`). Drives effect
@@ -4399,6 +4405,7 @@ impl CardInstance {
             omen_casting: false,
             cast_as_prototype: false,
             saddled: false,
+            saddled_by: Vec::new(),
             split_cast: None,
             entered_turn: None,
             battlefield_timestamp: 0,
@@ -4757,6 +4764,7 @@ impl CardInstance {
         self.regeneration_shields = 0;
         // CR 702.171 — "saddled until end of turn" ends here.
         self.saddled = false;
+        self.saddled_by.clear();
     }
 
     /// The flashback cost this card can currently be cast with from a
@@ -5023,6 +5031,9 @@ struct CardInstanceWire {
     /// load as `false`.
     #[serde(default)]
     saddled: bool,
+    /// CR 702.171 — riders that saddled this permanent this turn.
+    #[serde(default)]
+    saddled_by: Vec<CardId>,
     /// CR 709 split-half marker. `#[serde(default)]` so older snapshots load
     /// as `None`.
     #[serde(default)]
@@ -5176,6 +5187,7 @@ impl serde::Serialize for CardInstance {
             omen_casting: self.omen_casting,
             cast_as_prototype: self.cast_as_prototype,
             saddled: self.saddled,
+            saddled_by: self.saddled_by.clone(),
             split_cast: self.split_cast,
             exiled_by: self.exiled_by,
             exiled_with: self.exiled_with,
@@ -5330,6 +5342,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             c.cast_as_prototype = true;
         }
         c.saddled = wire.saddled;
+        c.saddled_by = wire.saddled_by;
         c.split_cast = wire.split_cast;
         c.exiled_by = wire.exiled_by;
         c.exiled_with = wire.exiled_with;

@@ -6989,6 +6989,42 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileAndReturnSelfWithSaddler => {
+                let Some(src) = ctx.source else { return Ok(()); };
+                // Only blink a source still on the battlefield.
+                let Some(fortune) = self.battlefield_find(src) else { return Ok(()); };
+                // "up to one creature that saddled it this turn" — take the
+                // first still-present saddler (auto-pick for bots/tests).
+                let saddler = fortune
+                    .saddled_by
+                    .iter()
+                    .copied()
+                    .find(|&cid| self.battlefield_find(cid).is_some());
+                let mut ids = vec![src];
+                ids.extend(saddler);
+                // Exile all, then return each to the battlefield under its
+                // owner's control (a same-resolution flicker).
+                for &id in &ids {
+                    let owner =
+                        self.battlefield_find(id).map(|c| c.owner).unwrap_or(ctx.controller);
+                    let ret_ctx = EffectContext::for_ability(id, owner, None);
+                    self.move_card_to(id, &ZoneDest::Exile, &ret_ctx, events);
+                }
+                for &id in &ids {
+                    let owner = self
+                        .exile
+                        .iter()
+                        .find(|c| c.id == id)
+                        .map(|c| c.owner)
+                        .unwrap_or(ctx.controller);
+                    let dest =
+                        ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false };
+                    let ret_ctx = EffectContext::for_ability(id, owner, None);
+                    self.move_card_to(id, &dest, &ret_ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::ReturnTopCreatureFromGraveyard { who } => {
                 use crate::card::CardType;
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()); };

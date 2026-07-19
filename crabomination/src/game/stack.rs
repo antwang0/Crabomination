@@ -627,6 +627,7 @@ impl GameState {
                 (DelayedKind::EachCombatThisTurn, TurnStep::BeginCombat) => {
                     dt.controller == active
                 }
+                (DelayedKind::EndOfCombat, TurnStep::EndCombat) => true,
                 _ => false,
             };
             if matches {

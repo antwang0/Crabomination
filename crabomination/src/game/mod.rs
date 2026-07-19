@@ -8851,6 +8851,13 @@ impl GameState {
         }
         if let Some(m) = self.battlefield.iter_mut().find(|c| c.id == mount) {
             m.saddled = true;
+            // CR 702.171 — remember the riders for "a creature that saddled it
+            // this turn" payoffs (Fortune, Loyal Steed).
+            for &cid in creatures {
+                if !m.saddled_by.contains(&cid) {
+                    m.saddled_by.push(cid);
+                }
+            }
         }
         events.push(GameEvent::MountSaddled { mount, riders: creatures.to_vec() });
         Ok(events)
