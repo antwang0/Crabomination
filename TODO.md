@@ -3,6 +3,30 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+**Noticed this run (recent287 batch), each blocked on one primitive:**
+- Satoru, the Infiltrator (OTJ) — "creatures enter without being cast / no mana
+  spent → draw"; needs a batched entered-not-cast trigger predicate (per-creature
+  `Not(SourceWasCast)` misses the "no mana spent" free-cast case + the and/or
+  batch semantics).
+- Kambal, Profiteering Mayor (OTJ) — needs a "for each token that entered this
+  batch, create a tapped copy of it" effect (the token-enter drain half is a
+  clean `TokenCreated` trigger already).
+- Doc Aurlock (OTJ) — needs cost reduction for *exile* casts and *plot* casts
+  (graveyard-cast reduction ships via `GraveyardCastCostReduction`).
+- Fortune, Loyal Steed (OTJ) — ETB scry + Saddle ship; the "attacks while
+  saddled → exile it and up to one saddler, return them" blink needs a
+  saddled-by tracker.
+- Artist's Talent (BLB) — last unshipped Talent; needs level-gated
+  cost-reduction + noncombat-damage-replacement on the non-layer static paths.
+
+**Tooling — client build in headless/CI:** the GUI crate needs `libwayland-dev`,
+`libasound2-dev`, and `libudev-dev` (plus `libxkbcommon-dev`) to compile; without
+them `cargo build/test -p crabomination_client` fails in wayland-sys/alsa-sys/
+libudev build scripts. A SessionStart hook that `apt-get install`s these would let
+client unit tests (e.g. `keyword_label`, `counter_tooltip`) run in web sessions —
+they currently never compile there, which is how the `class_level`-missing
+`PermanentView` test literal (fixed this run) went unnoticed.
+
 **Shipped (recent286 — Class enchantments, CR 716):** the level-up mechanic
 (`CardInstance.class_level`, `Effect::AdvanceClassLevel`,
 `Predicate::SourceClassLevelIs`/`SourceClassLevelAtLeast`,
