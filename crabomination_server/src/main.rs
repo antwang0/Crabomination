@@ -886,6 +886,22 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn turn_count_mode_bucket_names_the_common_band() {
+        let mut s = MatchStats::default();
+        assert_eq!(s.turn_count_mode_bucket(), None, "no matches → None");
+        // Three games at 6-8 turns, one at 13-20: the modal band is "6-8".
+        for t in [7u32, 8, 6, 15] {
+            s.observe_turns(t);
+        }
+        assert_eq!(s.turn_count_mode_bucket(), Some("6-8"));
+        // A tie resolves to the shorter (earlier) band.
+        let mut s = MatchStats::default();
+        s.observe_turns(2); // bucket "1-2"
+        s.observe_turns(4); // bucket "3-5"
+        assert_eq!(s.turn_count_mode_bucket(), Some("1-2"));
+    }
+
+    #[test]
     pub(crate) fn duration_stddev_measures_spread() {
         let mut s = MatchStats::default();
         assert_eq!(s.duration_stddev(), Duration::ZERO, "no matches → 0");

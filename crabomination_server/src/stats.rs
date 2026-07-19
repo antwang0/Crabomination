@@ -726,6 +726,24 @@ impl MatchStats {
         }
         (self.turn_count_stddev() as f64 * 100.0 / mean as f64).round() as u64
     }
+    /// Label of the most-populated turn-length bucket — the *modal* game
+    /// length. Unlike the mean or the percentiles it names the single most
+    /// common length band, which is the readout that survives a bimodal
+    /// "fast concession vs. long grind" split (where the mean lands in an
+    /// empty valley between the two humps). Returns `None` before any match
+    /// has recorded a turn count; ties resolve to the shorter band (first
+    /// bucket wins).
+    pub(crate) fn turn_count_mode_bucket(&self) -> Option<&'static str> {
+        // Fold keeping the FIRST bucket on ties (strictly-greater replaces),
+        // so equal-count bands resolve to the shorter game length.
+        let mut best: Option<(usize, u32)> = None;
+        for (i, &c) in self.turn_buckets.iter().enumerate() {
+            if best.is_none_or(|(_, bc)| c > bc) {
+                best = Some((i, c));
+            }
+        }
+        best.filter(|&(_, c)| c > 0).map(|(i, _)| Self::turn_bucket_label(i))
+    }
     /// Population standard deviation of final turn counts, computed from
     /// the running `Σ turns` and `Σ turns²` accumulators (σ = √(E[x²] −
     /// E[x]²)). Returns 0.0 when no matches have completed. A small σ next

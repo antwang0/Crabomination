@@ -55,6 +55,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"avg_turns\":{},\"avg_decisive_turns\":{},\"avg_draw_turns\":{},\
          \"min_turns\":{},\"max_turns\":{},\"turn_stddev\":{:.2},\
          \"median_turns\":{},\"turn_p10\":{},\"turn_p90\":{},\"turn_iqr\":{},\
+         \"modal_turn_band\":\"{}\",\
          \"inconclusive\":{},\"inconclusive_pct\":{},\"decisive_pct\":{},\"draw_pct\":{},\
          \"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
          \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
@@ -81,6 +82,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.turn_percentile(0.1),
         st.turn_percentile(0.9),
         st.turn_count_iqr(),
+        st.turn_count_mode_bucket().unwrap_or("n/a"),
         st.inconclusive,
         st.inconclusive_pct(),
         st.decisive_pct(),

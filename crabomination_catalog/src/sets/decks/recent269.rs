@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, Color};
+use crate::mana::{b, cost, g, generic, r, u};
 
 /// Gilded Scuttler — {2}{U} 1/3 Crab artifact creature. Can't be blocked. ETB:
 /// tap target creature an opponent controls and put a stun counter on it.
