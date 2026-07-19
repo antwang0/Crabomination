@@ -27,6 +27,34 @@ runtime `Value` max, not a `u8`); Come Back Wrong (destroy-then-reanimate-the-
 destroyed-card — needs a `Selector::LastDestroyed`); Freestrider Commando /
 Plot free-casts (a "no mana spent to cast" instance flag).
 
+**Shipped (recent267–270 gap batches — 26 cards + primitives):**
+`ActivatedAbility.cost_reduction_per_graveyard` ("costs {1} less per [filter]
+card in your graveyard" — Battlefield Butcher). Cards on existing primitives:
+Akki Scrapchomper, Argothian Opportunist, Ashnod's Intervention, Gnawing
+Crescendo, Angelic Intervention, Alabaster Host Intercessor, Aether Channeler,
+Aggressive Sabotage, Argivian Phalanx, Artillery Blast, Automatic Librarian,
+Antagonize, Attended Socialite, Backup Agent, Angelic Observer, Armor of
+Shadows, Arms of Hadar, A Little Chat, Gilded Scuttler, Go Forth, Hearts on
+Fire, Hungry Megasloth, Phantasmal Shieldback, Razorgrass Invoker, Black Market
+Tycoon, Balduvian Atrocity. Also fixed a **client build break** (CounterType::
+Unlock was unhandled in `counter_tooltip.rs`) and added a server
+`turn_count_mode_bucket` stat (modal game length).
+
+**Noticed this run (recent267–270), each blocked on one primitive:**
+- **Enlist (CR 702.152)** — Argivian Cavalier and other DMU/SNC cards need the
+  as-attacks "tap a nonattacking creature, add its power" declaration.
+- **Gift-given event** — Jolly Gerbils ("whenever you give a gift, draw") needs
+  an `EventKind::GiftGiven`.
+- **Distinct mana values in graveyard** — Aven Heartstabber's static gates on
+  "5+ mana values among cards in your graveyard" (no such `Value`/predicate).
+- **Greatest power incl. graveyard** — Ambitious Dragonborn enters with X = the
+  greatest power among your creatures *and creature cards in your graveyard*;
+  today only the battlefield-only `GreatestPowerControlledMatching` exists.
+- **Damage-to-you replacement → mill** — Angel of Suffering (prevent damage to
+  you, mill twice that many) needs a player-damage replacement hook.
+- **"Second time this ability resolved this turn"** — Harvestrite Host needs a
+  per-turn per-ability resolution counter.
+
 **Resolved (recent176):** ETB *triggered abilities* now thread the cast's X.
 `CardInstance.cast_x_value` is stamped at resolution and the auto-target picker
 concretizes `{X}`-from-cost filters via `auto_target_for_effect_avoiding_set_x`,
