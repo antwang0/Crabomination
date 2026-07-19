@@ -78,7 +78,7 @@ mod recent193 {
 
 mod recent194 {
     use crabomination::catalog;
-    use crabomination::game::types::Target;
+    
     use crabomination::game::*;
     use crabomination::game::{drain_stack, two_player_game};
     use crabomination::mana::Color;
@@ -444,7 +444,7 @@ mod recent198 {
 }
 
 mod recent199 {
-    use crabomination::card::CounterType;
+    
     use crabomination::catalog;
     use crabomination::game::*;
     use crabomination::game::{drain_stack, two_player_game};

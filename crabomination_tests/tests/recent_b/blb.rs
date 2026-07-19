@@ -1,5 +1,6 @@
 //! Tests for `blb` (consolidated).
 
+#[allow(clippy::module_inception)]
 mod blb {
     use crabomination::card::{ArtifactSubtype, CardType};
     use crabomination::catalog;

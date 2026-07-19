@@ -2,8 +2,8 @@
 
 mod recent163 {
     use crabomination::catalog;
-    use crabomination::card::CounterType;
-    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    
+    use crabomination::game::types::TurnStep;
     use crabomination::game::*;
     use crabomination::mana::Color;
 

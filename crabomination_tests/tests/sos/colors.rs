@@ -1,4 +1,7 @@
 #![allow(unused_imports)]
+// The parametrized card tables carry many columns by design (cost, P/T,
+// keyword, expected deltas); a `type` alias per table would hurt readability.
+#![allow(clippy::type_complexity)]
 use crabomination::card::{CardType, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
@@ -108,7 +111,7 @@ fn pump_spells_grant_stats_keywords_draw_and_life() {
         for c in *colored {
             g.players[0].mana_pool.add(*c, 1);
         }
-        g.players[0].mana_pool.add_colorless(*colorless);
+        g.players[0].mana_pool.add_colorless(*colorless as u32);
         let hand_before = g.players[0].hand.len();
         let life_before = g.players[0].life;
 
@@ -127,7 +130,7 @@ fn pump_spells_grant_stats_keywords_draw_and_life() {
         // Cantrips: -1 cast +1 draw = unchanged; otherwise -1.
         let expect_hand = if *draws { hand_before } else { hand_before - 1 };
         assert_eq!(g.players[0].hand.len(), expect_hand, "{} hand delta", ctor().name);
-        assert_eq!(g.players[0].life, life_before + lifegain, "{} lifegain", ctor().name);
+        assert_eq!(g.players[0].life, life_before + *lifegain as i32, "{} lifegain", ctor().name);
     }
 }
 

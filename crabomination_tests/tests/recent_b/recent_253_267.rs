@@ -591,11 +591,11 @@ mod recent260 {
 
 mod recent261 {
     use crabomination::catalog;
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    
     use crabomination::game::effects::EffectContext;
-    use crabomination::game::types::{GameAction, Target};
-    use crabomination::game::{drain_stack, two_player_game};
-    use crabomination::mana::Color;
+    use crabomination::game::types::Target;
+    use crabomination::game::two_player_game;
+    
 
     /// The ETB exiles a nonland permanent an opponent controls until the Aura leaves.
     #[test]

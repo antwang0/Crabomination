@@ -22,15 +22,54 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   creature-dies` → `MayPay {1}` → `Move(TriggerSource → battlefield tapped,
   You)` + `BecomeTreasure(LastMoved)`. The reanimate-the-dying-creature
   mechanism is the same one Witherbloom Necromancer/Minion's Return use.
-- Geralf/Breeches — "cast your second/Nth spell each turn" needs an Nth-spell-cast
-  trigger event (only the cost-reduction `CostReductionNthSpell` static exists).
+- Geralf/Breeches — "cast your second/Nth spell each turn" is actually already
+  expressible: a `SpellCast` trigger + `Predicate::SpellsCastThisTurnEquals`
+  (Cori-Steel Cutter's Flurry uses exactly this). Breeches still needs the
+  "exile top of each opponent's library, you may play them, any color" impulse
+  primitive; Geralf still needs batch-ETB (below).
 - Artist's Talent (BLB) — last unshipped Talent; needs level-gated
   cost-reduction + noncombat-damage-replacement on the non-layer static paths.
+
+**Noticed this run (recent290), deferred each on one primitive:**
+- **Undead Sprinter** (BR 2/2, cast from graveyard if a *non-Zombie* creature
+  died this turn, enters with a +1/+1 counter) — needs (a) a typed per-turn
+  death tally (`creature_types_died_this_turn` + a `NonTypeCreatureDiedThisTurn`
+  predicate; only aggregate `creatures_died_this_turn` counts exist) and (b) a
+  conditional own-cost graveyard-cast keyword for a *creature* (Flashback exiles
+  on resolution, so it's wrong for a permanent; Escape needs the exile cost).
+- **Tarrian's Journal // The Tomb of Aclazotz** — a Book↔Cave transforming DFC
+  with a graveyard-cast grant on the land back; no Book/Cave transform-to-land
+  primitive.
+- **Rotisserie Elemental** (skewer-counter impulse), **Sentinel of Lost Lore**
+  (exile-Adventure modal) — still deferred (see WOE section).
+
+**⚠️ Pre-existing: the `stx` integration-test binary does not compile.** It has
+been broken since before the modern_decks run (confirmed at branch tip
+`44e930d`), so `cargo test -p crabomination_tests` / `--all-targets` clippy fail
+on it. It's stale against a P/T-→-i32 + visibility refactor and some renamed
+factories. (The sibling `sos` binary had the same P/T-i32 rot — **fixed this
+run**: `colors.rs` `add_colorless(*colorless as u32)` + `life_before +
+*lifegain as i32`; 595 tests green. `stx` is left because its failures run
+deeper — see below.) The `stx` compile fix is mechanical (~10 min):
+- `crabomination::game::Game` → `::game::GameState` (part_03/05/07/09/11/12/18).
+- `crabomination::game::types::CardInstance` → `crabomination::game::CardInstance`
+  (part_12 — `CardInstance` is private under `game::types`).
+- `catalog::quandrix_wavelock_b180` → `quandrix_wavelock_b174` (part_22).
+- `power()`/`toughness()`/`life` are now `i32`; cast the `u32`/`i64` sides of the
+  comparisons in part_10 (`counter_count(..) as i32`), part_13, part_17
+  (`g.players[i].life as i64`).
+Once it compiles, ~20 tests fail on **stale expected values** for fabricated
+STX bodies (e.g. Silverquill Editorialist's magecraft now gains 1 life vs an
+expected +0) — regenerate those assertions (`scripts/regen_test_assertions.py`)
+or delete the fabricated-body data-tables. Left untouched this run to avoid a
+half-fixed red binary; the fix wasn't in scope for the card/functionality work.
 
 **Client change unverified in this environment:** the `Crew×N` board chip
 (`keyword_label::board_status_strip` + `PermanentView.crewed_count`) was added
 but the client crate can't compile headless (see the tooling note below), so
-its unit tests weren't run here — verify with a local build.
+its unit tests weren't run here — verify with a local build. (This run installed
+the libs and DID run the client tests — the `Stun N` chip + a stale
+`PermanentView` literal fix are verified.)
 
 **Tooling — client build in headless/CI:** the GUI crate needs `libwayland-dev`,
 `libasound2-dev`, and `libudev-dev` (plus `libxkbcommon-dev`) to compile; without

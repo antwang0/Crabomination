@@ -1,4 +1,5 @@
 #![allow(unused_imports)]
+#![allow(clippy::type_complexity)]
 use crabomination::card::{CardType, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};

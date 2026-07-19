@@ -880,7 +880,7 @@ mod recent230 {
 mod recent231 {
     use crabomination::card::CounterType;
     use crabomination::catalog;
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    
     use crabomination::game::effects::EffectContext;
     use crabomination::game::types::Target;
     use crabomination::game::{drain_stack, two_player_game};
@@ -939,9 +939,9 @@ mod recent231 {
 mod recent232 {
     use crabomination::card::{CardType, Keyword};
     use crabomination::catalog;
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    
     use crabomination::game::effects::EffectContext;
-    use crabomination::game::{drain_stack, two_player_game};
+    use crabomination::game::two_player_game;
 
     /// Haunted Screen taps for W or B.
     #[test]
@@ -975,7 +975,7 @@ mod recent233 {
     use crabomination::effect::{Effect, SpreeMode};
     use crabomination::game::effects::EffectContext;
     use crabomination::game::types::Target;
-    use crabomination::game::{drain_stack, two_player_game};
+    use crabomination::game::two_player_game;
 
     fn spree_modes(def: &crabomination::card::CardDefinition) -> Vec<SpreeMode> {
         match &def.effect {

@@ -96,7 +96,7 @@ mod recent239 {
     use crabomination::card::{AdditionalCastCost, CounterType, Keyword};
     use crabomination::catalog;
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-    use crabomination::effect::{Effect, PlayerRef, Predicate};
+    use crabomination::effect::{Effect, Predicate};
     use crabomination::game::GameAction;
     use crabomination::game::effects::EffectContext;
     use crabomination::game::types::{Target, TurnStep};
@@ -1731,7 +1731,7 @@ mod recent242 {
 }
 
 mod recent243 {
-    use crabomination::card::{CardType, Keyword};
+    use crabomination::card::Keyword;
     use crabomination::catalog;
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     use crabomination::game::effects::EffectContext;
