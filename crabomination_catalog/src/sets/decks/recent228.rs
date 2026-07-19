@@ -326,7 +326,10 @@ pub fn thunder_salvo() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
-            amount: Value::Sum(vec![Value::Const(1), Value::SpellsCastThisTurn(PlayerRef::You)]),
+            amount: Value::Sum(vec![
+                Value::Const(2),
+                Value::OtherSpellsCastThisTurn(PlayerRef::You),
+            ]),
         },
         ..Default::default()
     }

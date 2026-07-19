@@ -149,6 +149,18 @@ fn thunder_salvo_burns_a_creature() {
     assert!(!g.battlefield.iter().any(|c| c.id == enemy), "0/1 dies to the salvo");
 }
 
+/// Thunder Salvo scales: base 2 plus each *other* spell cast this turn. With
+/// the Salvo itself counted (spells_cast_this_turn = 3 → two others) it deals 4.
+#[test]
+fn thunder_salvo_scales_with_other_spells() {
+    let mut g = two_player_game();
+    let enemy = g.add_card_to_battlefield(1, catalog::academy_wall()); // 0/5, survives 4
+    g.players[0].spells_cast_this_turn = 3; // Salvo + two others
+    let ctx = EffectContext { targets: vec![Target::Permanent(enemy)], ..EffectContext::for_spell(0, None, 0, 0) };
+    g.resolve_effect(&catalog::thunder_salvo().effect.clone(), &ctx).unwrap();
+    assert_eq!(g.battlefield_find(enemy).unwrap().damage, 4, "2 + 2 other spells");
+}
+
 /// Fledgling Dragon grows to 5/5 with threshold active.
 #[test]
 fn fledgling_dragon_grows_with_threshold() {

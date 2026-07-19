@@ -406,6 +406,11 @@ pub enum Value {
     /// players). Backed by `Player.spells_cast_this_turn` — Narset, Jeskai
     /// Waymaster draws this many after discarding her hand.
     SpellsCastThisTurn(PlayerRef),
+    /// Spells `who` has cast this turn **other than** the source spell/ability
+    /// itself — `spells_cast_this_turn` minus one, clamped at 0. The current
+    /// spell is already counted at cast time, so subtracting one yields "the
+    /// number of other spells you've cast this turn" (Thunder Salvo).
+    OtherSpellsCastThisTurn(PlayerRef),
     /// Creatures `who` declared as attackers this turn (max over resolved
     /// players). Creatures *put onto the battlefield attacking* don't count,
     /// matching the Windbrisk Heights ruling on "attacked with N creatures".

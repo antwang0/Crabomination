@@ -6878,6 +6878,9 @@ static DECKS: &[Factory] = &[
     super::decks::academy_wall,
     super::decks::battlewing_mystic,
     super::decks::brazen_upstart,
+    // recent274 — spell-hush self-animator, Treasure-attack Mercenary
+    super::decks::emergent_haunting,
+    super::decks::jolene_plundering_pugilist,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
