@@ -16,6 +16,18 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Class enchantments (CR 716) — recent286:** `CardInstance.class_level`
+  (enters at level 1, battlefield-only), level-up modelled as sorcery-speed
+  activated abilities (`Effect::AdvanceClassLevel`) gated on
+  `Predicate::SourceClassLevelIs`; higher-level abilities gated on
+  `Predicate::SourceClassLevelAtLeast` (triggers/activateds) and
+  `StaticEffect::WhileClassLevelAtLeast` (layer statics, incl. live-recomputed
+  grants). `EventKind`/`GameEvent::ClassLevelReached` drives "when this becomes
+  level N" (Stormchaser's Talent). `Value::OpponentsWithHandSizeAtMost`. Class
+  level surfaced in the server card view. Cards: Stormchaser's / Gossip's /
+  Hunter's / Scavenger's / Bandit's Talent. Tests in `recent_b/recent286` +
+  `core_rules/cr_recent2` (CR 716.2 level-gated statics).
+
 - **MKM recent254–261 (14 cards) + primitives:** `Effect::CollectEvidenceX`
   (choose-your-X collect evidence; threads the exiled total via `ctx.x_value` —
   Incinerator of the Guilty), `DynamicPt::InstantSorceryCardsInControllerGraveyard`

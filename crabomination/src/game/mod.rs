@@ -4890,7 +4890,18 @@ impl GameState {
         // path, so there's no double application.
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::GrantKeyword { applies_to, keyword } = &sa.effect
+                // CR 716.2 — unwrap a level-gated Class static to its inner
+                // effect (Blacksmith's Talent's level-3 equipped-creature grant).
+                let eff = match &sa.effect {
+                    crate::effect::StaticEffect::WhileClassLevelAtLeast { n, inner } => {
+                        if card.class_level < *n {
+                            continue;
+                        }
+                        &**inner
+                    }
+                    other => other,
+                };
+                let crate::effect::StaticEffect::GrantKeyword { applies_to, keyword } = eff
                 else {
                     continue;
                 };
@@ -12938,6 +12949,15 @@ fn static_effect_to_effects(
 
     {
         match effect {
+            // CR 716.2 — a level-gated Class static: emit its inner effect
+            // only while the source Class is at level `n` or higher.
+            StaticEffect::WhileClassLevelAtLeast { n, inner } => {
+                if card.class_level >= *n {
+                    static_effect_to_effects(inner, card, timestamp)
+                } else {
+                    vec![]
+                }
+            }
             StaticEffect::PumpPT { applies_to, power, toughness } => {
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => vec![ContinuousEffect {

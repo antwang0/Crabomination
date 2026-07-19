@@ -3484,6 +3484,11 @@ impl CardDefinition {
     pub fn is_aura(&self) -> bool {
         self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura)
     }
+    /// CR 716 — a Class enchantment (enters at level 1, gains levels at
+    /// sorcery speed via its `Level N` activated abilities).
+    pub fn is_class(&self) -> bool {
+        self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Class)
+    }
 
     /// The "enchant ___" restriction an Aura attaches under, recovered from
     /// its resolution `Effect::Attach { to: TargetFiltered { filter, .. } }`
@@ -3904,6 +3909,12 @@ pub struct CardInstance {
     /// MKM Case — true once this Case has been solved. The live `definition` is
     /// rebuilt to include the "Solved —" abilities (`case_definition_solved`).
     pub case_solved: bool,
+    /// CR 716.2 — a Class enchantment's current level (0 for non-Class cards;
+    /// a Class enters at level 1). Its level-2/3 abilities are gated on this
+    /// via `Predicate::SourceClassLevelIs`/`SourceClassLevelAtLeast` and
+    /// `StaticEffect::WhileClassLevelAtLeast`, so no definition rebuild is
+    /// needed.
+    pub class_level: u8,
     pub is_token: bool,
     /// CR 606.3 — loyalty activations so far this turn (normally capped at
     /// one; two with `CardDefinition.loyalty_twice_each_turn`).
@@ -4325,6 +4336,7 @@ impl CardInstance {
             unflipped_def: None,
             unlocked_doors: 0,
             case_solved: false,
+            class_level: 0,
             face_up_def: None,
             cloaked: false,
             is_token: false,
@@ -4530,6 +4542,12 @@ impl CardInstance {
             self.unlocked_doors = 0;
             self.definition = Arc::new(self.definition.room_definition_with(0));
         }
+    }
+
+    /// CR 716.2 — the Class level is battlefield-only; clear it as a Class
+    /// leaves the battlefield so it re-enters at level 1.
+    pub fn reset_class_level(&mut self) {
+        self.class_level = 0;
     }
 
     /// MKM — the solved designation is battlefield-only; clear it (and restore
@@ -4852,6 +4870,9 @@ struct CardInstanceWire {
     /// definition is rebuilt on load.
     #[serde(default)]
     case_solved: bool,
+    /// CR 716.2 — Class level. `#[serde(default)]` (0) for back-compat.
+    #[serde(default)]
+    class_level: u8,
     /// CR 708 — on the battlefield face down (morph / manifest). `name` stores
     /// the real card's name so the registry resolves it; on load the real
     /// definition is stashed and `definition` swapped to the vanilla 2/2.
@@ -5099,6 +5120,7 @@ impl serde::Serialize for CardInstance {
             face_down: self.face_down,
             unlocked_doors: self.unlocked_doors,
             case_solved: self.case_solved,
+            class_level: self.class_level,
             face_down_permanent: self.face_up_def.is_some(),
             cloaked: self.cloaked,
             transformed: self.transformed,
@@ -5243,6 +5265,9 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             c.case_solved = true;
             c.definition = Arc::new(c.definition.case_definition_solved());
         }
+        // CR 716.2 — Class level round-trips as a plain field (abilities are
+        // predicate-gated, so no definition rebuild is needed).
+        c.class_level = wire.class_level;
         c.is_token = wire.is_token;
         c.loyalty_uses_this_turn = wire.loyalty_uses_this_turn;
         c.loyalty_twice_this_turn = wire.loyalty_twice_this_turn;

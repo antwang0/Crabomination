@@ -373,6 +373,10 @@ pub enum Value {
     /// Nemesis −9.
     HighestLifeTotal,
     HandSizeOf(PlayerRef),
+    /// The number of the source controller's opponents who have `n` or fewer
+    /// cards in hand. Powers "draw an additional card for each opponent who
+    /// has one or fewer cards in hand" (Bandit's Talent, level 3).
+    OpponentsWithHandSizeAtMost(u32),
     /// Life `who` has gained so far this turn (CR 119.3). Backed by
     /// `Player.life_gained_this_turn`. Used by Accomplished Alchemist's
     /// "{T}: Add X mana of any one color, where X is the amount of life
@@ -1243,6 +1247,16 @@ pub enum Predicate {
     /// [kind] counters on it, …" intervening-`if` riders (Charitable Levy's
     /// three-collection-counter sacrifice threshold).
     SourceHasCountersAtLeast { counter: crate::card::CounterType, n: u32 },
+    /// CR 716.2 — true when `ctx.source` (a Class enchantment) is exactly at
+    /// level `n`. Gates a Class's `{cost}: Level N` activated ability (its
+    /// `condition` is `SourceClassLevelIs(N-1)`) and its "when this Class
+    /// becomes level N" trigger (a `ClassLevelReached` trigger filtered on
+    /// `SourceClassLevelIs(N)`).
+    SourceClassLevelIs(u8),
+    /// CR 716.2 — true when `ctx.source` (a Class enchantment) is at level `n`
+    /// or higher. Gates a Class's level-`n` triggered abilities so they only
+    /// fire once the Class has reached that level.
+    SourceClassLevelAtLeast(u8),
     /// True if the just-cast spell's total mana spent is **strictly
     /// greater than** the source permanent's power or toughness. Used
     /// by SOS's Increment keyword payoff: "Whenever you cast a spell,
@@ -1810,6 +1824,12 @@ pub enum EventKind {
     /// `EventSpec.filter` as `Predicate::ExpendReached(n)` so the trigger
     /// fires only when the turn's spell-mana total first reaches N.
     Expend,
+    /// CR 716.2 — a Class enchantment gained a level (`GameEvent::
+    /// ClassLevelReached`). Scoped to the leveling Class itself
+    /// (`EventScope::This`) and filtered on `Predicate::SourceClassLevelIs(N)`
+    /// so a "when this Class becomes level N" trigger fires only on that
+    /// level. The Class is the trigger source.
+    ClassLevelReached,
     /// A player lost life.
     LifeLost,
     /// The game entered a particular step.
@@ -4164,6 +4184,11 @@ pub enum Effect {
     /// token they control (their choice; AutoDecider keeps the highest-power
     /// one). No-op if they control no creature token.
     Populate { who: PlayerRef },
+    /// CR 716.2 — advance the source Class enchantment by one level, emitting a
+    /// `GameEvent::ClassLevelReached` (so "when this Class becomes level N"
+    /// triggers fire). The resolution effect of a `{cost}: Level N` activated
+    /// ability. No-op if the source isn't a Class on the battlefield.
+    AdvanceClassLevel,
     /// CR 707.2 — `what` becomes a copy of the permanent resolved by
     /// `source`: its copiable characteristics (name, mana cost, card
     /// types, subtypes, abilities, P/T, loyalty) are overwritten with a

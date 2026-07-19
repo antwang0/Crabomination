@@ -1545,6 +1545,11 @@ pub enum GameEvent {
     /// CR 702.165 — `player` gave a promised gift as a spell/ability with Gift
     /// resolved. Powers "whenever you give a gift" (Jolly Gerbils).
     GiftGiven { player: usize },
+    /// CR 716.2 — the Class `source` (controlled by `player`) gained a level,
+    /// reaching `level`. Powers "when this Class becomes level N" triggers
+    /// (`EventKind::ClassLevelReached`, `EventScope::This`, filtered on
+    /// `Predicate::SourceClassLevelIs(N)`).
+    ClassLevelReached { source: CardId, player: usize, level: u8 },
     /// CR 700.14 — `player` paid a spell cost, bringing their running
     /// total of mana spent to cast spells this turn to `total`. "Whenever
     /// you expend N" triggers (`EventKind::Expend` + `Predicate::

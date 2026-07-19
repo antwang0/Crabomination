@@ -8587,6 +8587,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AdvanceClassLevel => {
+                // CR 716.2 — the resolution of a `{cost}: Level N` ability:
+                // bump the source Class's level by one and announce it so
+                // "when this Class becomes level N" triggers fire (the caller
+                // dispatches the returned events).
+                let Some(src) = ctx.source else { return Ok(()); };
+                let Some(card) = self.battlefield.iter_mut().find(|c| c.id == src) else {
+                    return Ok(());
+                };
+                if !card.definition.is_class() {
+                    return Ok(());
+                }
+                card.class_level = card.class_level.saturating_add(1);
+                let level = card.class_level;
+                let player = card.controller;
+                events.push(GameEvent::ClassLevelReached { source: src, player, level });
+                Ok(())
+            }
+
             Effect::CounterSpell { what } => {
                 // With only a single stack target, we pop the top of the
                 // stack if it's a spell (matching by target id when

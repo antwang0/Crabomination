@@ -61,6 +61,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::Foraged, GameEvent::Foraged { .. }) => true,
         (EventKind::EvidenceCollected, GameEvent::EvidenceCollected { .. }) => true,
         (EventKind::GiftGiven, GameEvent::GiftGiven { .. }) => true,
+        (EventKind::ClassLevelReached, GameEvent::ClassLevelReached { .. }) => true,
         (EventKind::PoisonAdded, GameEvent::PoisonAdded { .. }) => true,
         (EventKind::RingTempted, GameEvent::RingTempted { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
@@ -218,6 +219,12 @@ pub(crate) fn event_matches_spec(
             // from the graveyard off the card itself (Emrakul).
             event,
             GameEvent::CardPutIntoGraveyard { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // CR 716.2 — "When this Class becomes level N" fires off the
+            // Class itself; the specific level is checked by the trigger's
+            // `Predicate::SourceClassLevelIs(N)` filter.
+            event,
+            GameEvent::ClassLevelReached { source: cid, .. } if *cid == source.id
         ) || matches!(
             // CR 702.108 Inspired — "Whenever this becomes untapped."
             event,
@@ -478,6 +485,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::Foraged { player }
         | GameEvent::EvidenceCollected { player }
         | GameEvent::GiftGiven { player }
+        | GameEvent::ClassLevelReached { player, .. }
         | GameEvent::PoisonAdded { player, .. }
         | GameEvent::CardMilled { player, .. }
         | GameEvent::ManifestedDread { player, .. }

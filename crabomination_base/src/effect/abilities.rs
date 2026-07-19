@@ -136,6 +136,12 @@ pub enum StaticEffect {
     SetBaseToughnessForMatching { applies_to: Selector, toughness: i32 },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
+    /// CR 716.2 — a static ability that only applies while the source Class
+    /// enchantment is at level `n` or higher. Wraps `inner`; its continuous
+    /// effects are emitted only while `CardInstance.class_level >= n`. Powers a
+    /// Class's higher-level static abilities (a level-gated anthem or granted
+    /// keyword).
+    WhileClassLevelAtLeast { n: u8, inner: Box<StaticEffect> },
     /// CR 702.122e / 702.171 — "crews Vehicles and saddles Mounts as though
     /// its power were N greater." Adds `amount` to each affected creature's
     /// power *only* when summing crew / saddle totals (it is not a real P/T

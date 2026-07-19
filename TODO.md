@@ -3,6 +3,18 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+**Shipped (recent286 — Class enchantments, CR 716):** the level-up mechanic
+(`CardInstance.class_level`, `Effect::AdvanceClassLevel`,
+`Predicate::SourceClassLevelIs`/`SourceClassLevelAtLeast`,
+`StaticEffect::WhileClassLevelAtLeast`, `EventKind`/`GameEvent::ClassLevelReached`,
+`Value::OpponentsWithHandSizeAtMost`; server view surfaces the level). Cards:
+Stormchaser's / Gossip's / Hunter's / Scavenger's / Bandit's Talent.
+**Still open (Talent cycle):** Blacksmith's Talent (needs an Equipment-token
+mint + an "attach target Equipment to target creature" effect) and Artist's
+Talent (level-2 noncreature cost-reduction + level-3 noncombat-damage-plus-2 are
+statics read outside the layer system, so `WhileClassLevelAtLeast` can't gate
+them — needs level-gating on the cost/replacement paths).
+
 **Shipped (recent283–285, 8 cards + primitives):** `EventKind::GiftGiven`
 (spell + permanent gifts; Jolly Gerbils), `Predicate::SourceGiftPromised`
 (permanent-gift ETB gate; Scrapshooter, Kitnap), `Value::
@@ -18,10 +30,10 @@ edict-or-discard), Vren the Relentless (per-turn "creatures exiled under
 opponents' control" counter feeding an end-step token generator),
 Muerra/Camellia/Wick (first-main mana-per-Raccoon trigger; forage payoffs;
 Rat/Snail conditional token), Dragonhawk / The Infamous Cruelclaw (impulse +
-delayed "for each still-exiled" damage / discard-to-cast alt-cost), the eight
-BLB "Talent" **Class** enchantments (no Class/level-up mechanic yet),
+delayed "for each still-exiled" damage / discard-to-cast alt-cost),
 "Season of …" sorceries (delayed multi-turn modal). Starforged Sword (gift
-Equipment) needs the permanent-gift ETB + self-attach.
+Equipment) needs the permanent-gift ETB + self-attach. (Class/level-up now
+ships — 5 of 7 Talents done; see the CR 716 note above for the two remaining.)
 
 **Shipped (recent235–238, DSK/OTJ gap batch — 20 cards):** manifest-dread now
 exposes the manifested creature on `Selector::LastMoved` (Slimy Aquarium, Weight

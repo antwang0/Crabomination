@@ -750,6 +750,8 @@ impl GameState {
             card.reset_room_doors();
             // MKM — a Case's solved designation is battlefield-only.
             card.reset_case();
+            // CR 716.2 — a Class's level is battlefield-only.
+            card.reset_class_level();
             // CR 707 — a temporary copy reverts as it leaves.
             self.revert_copy_on_leave(&mut card);
             card.damage = 0;
@@ -1153,6 +1155,10 @@ impl GameState {
                 let entered_from_hand = card.cast_from_hand;
                 let mut card = card;
                 card.controller = self.apply_etb_control_replacement(&card, card.controller);
+                // CR 716.2 — a Class enters the battlefield at level 1.
+                if card.definition.is_class() {
+                    card.class_level = 1;
+                }
                 self.battlefield.push(card);
                 // CR 122.1 — Solemnity drops the enters-with-counters too.
                 let mut counter_specs: Vec<(crate::card::CounterType, crate::effect::Value)> =

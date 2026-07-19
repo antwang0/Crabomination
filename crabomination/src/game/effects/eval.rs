@@ -235,6 +235,17 @@ impl GameState {
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::PlayerSpeed(p) => self.resolve_player(p, ctx).map(|p| self.players[p].speed as i32).unwrap_or(0),
             Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
+            Value::OpponentsWithHandSizeAtMost(n) => {
+                let me = ctx.controller;
+                let teammates = self.teammates(me);
+                self.players
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, pl)| {
+                        *i != me && !teammates.contains(i) && pl.hand.len() <= *n as usize
+                    })
+                    .count() as i32
+            }
             Value::LifeGainedThisTurn(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life_gained_this_turn as i32).unwrap_or(0),
             // Max over the resolved set, so `EachOpponent` reads "the most
             // life any opponent lost this turn" (Spinerock Knoll).
@@ -1533,6 +1544,16 @@ impl GameState {
                 .source
                 .and_then(|cid| self.battlefield_find(cid))
                 .map(|c| c.counter_count(*counter) >= *n)
+                .unwrap_or(false),
+            Predicate::SourceClassLevelIs(n) => ctx
+                .source
+                .and_then(|cid| self.battlefield_find(cid))
+                .map(|c| c.class_level == *n)
+                .unwrap_or(false),
+            Predicate::SourceClassLevelAtLeast(n) => ctx
+                .source
+                .and_then(|cid| self.battlefield_find(cid))
+                .map(|c| c.class_level >= *n)
                 .unwrap_or(false),
             Predicate::CastSpellFromExile => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {

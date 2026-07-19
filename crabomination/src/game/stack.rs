@@ -1454,6 +1454,13 @@ impl GameState {
                         self.saga_enter_advance(card_id);
                     }
 
+                    // CR 716.2 — a Class enters the battlefield at level 1.
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        && c.definition.is_class()
+                    {
+                        c.class_level = 1;
+                    }
+
                     // AnotherOfYours creature-ETB triggers are dispatched
                     // by the unified event pipeline (`dispatch_triggers_
                     // for_events` reading the `PermanentEntered` event).

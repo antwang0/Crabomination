@@ -308,8 +308,14 @@ fn board_status_strip(
     suspected: bool,
     goaded: bool,
     case_solved: Option<bool>,
+    class_level: Option<u8>,
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
+    // CR 716 Class: show the current level. Leads the strip so the level reads
+    // at a glance on the non-creature enchantment.
+    if let Some(n) = class_level {
+        parts.push(format!("Lvl {n}"));
+    }
     // MKM Case (CR — Solve): show whether it's solved yet. Leads the strip so the
     // solve state reads at a glance on the non-creature enchantment.
     match case_solved {
@@ -376,9 +382,9 @@ pub fn sync_keyword_labels(
     if view.is_changed() {
         desired_cache.clear();
         for p in &cv.battlefield {
-            // Creatures get the keyword/status strip; Cases (non-creatures) get a
-            // solve-state chip.
-            if !p.is_creature() && p.case_solved.is_none() {
+            // Creatures get the keyword/status strip; Cases and Classes
+            // (non-creatures) get a state chip.
+            if !p.is_creature() && p.case_solved.is_none() && p.class_level.is_none() {
                 continue;
             }
             let strip = board_status_strip(
@@ -387,6 +393,7 @@ pub fn sync_keyword_labels(
                 p.suspected,
                 p.goaded,
                 p.case_solved,
+                p.class_level,
             );
             if !strip.is_empty() {
                 desired_cache.insert(p.id, strip);
@@ -628,23 +635,23 @@ mod tests {
     fn board_status_prefixes_suspected_and_sick() {
         // A suspected creature shows "Susp" ahead of its (injected) Men/NoBlk.
         assert_eq!(
-            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true, false, None),
+            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true, false, None, None),
             "Susp Men NoBlk",
         );
         // Summoning sickness tags "Zzz"; Haste suppresses it.
-        assert_eq!(board_status_strip(&[], true, false, false, None), "Zzz");
-        assert_eq!(board_status_strip(&[Keyword::Haste], true, false, false, None), "Hst");
+        assert_eq!(board_status_strip(&[], true, false, false, None, None), "Zzz");
+        assert_eq!(board_status_strip(&[Keyword::Haste], true, false, false, None, None), "Hst");
         // Both statuses stack, suspected first.
-        assert_eq!(board_status_strip(&[], true, true, false, None), "Susp Zzz");
-        assert_eq!(board_status_strip(&[], false, false, false, None), "");
+        assert_eq!(board_status_strip(&[], true, true, false, None, None), "Susp Zzz");
+        assert_eq!(board_status_strip(&[], false, false, false, None, None), "");
     }
 
     #[test]
     fn board_status_surfaces_goaded() {
         // A goaded creature flags "Goad" after suspected, before its keywords.
-        assert_eq!(board_status_strip(&[], false, false, true, None), "Goad");
+        assert_eq!(board_status_strip(&[], false, false, true, None, None), "Goad");
         assert_eq!(
-            board_status_strip(&[Keyword::Menace], false, true, true, None),
+            board_status_strip(&[Keyword::Menace], false, true, true, None, None),
             "Susp Goad Men",
         );
     }
@@ -652,8 +659,15 @@ mod tests {
     #[test]
     fn board_status_shows_case_solve_state() {
         // An unsolved Case reads "Case"; a solved one reads "Solved".
-        assert_eq!(board_status_strip(&[], false, false, false, Some(false)), "Case");
-        assert_eq!(board_status_strip(&[], false, false, false, Some(true)), "Solved");
+        assert_eq!(board_status_strip(&[], false, false, false, Some(false), None), "Case");
+        assert_eq!(board_status_strip(&[], false, false, false, Some(true), None), "Solved");
+    }
+
+    #[test]
+    fn board_status_shows_class_level() {
+        // A Class enchantment reads "Lvl N".
+        assert_eq!(board_status_strip(&[], false, false, false, None, Some(1)), "Lvl 1");
+        assert_eq!(board_status_strip(&[], false, false, false, None, Some(3)), "Lvl 3");
     }
 
     #[test]

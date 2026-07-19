@@ -1,11 +1,106 @@
 //! Comprehensive-Rules conformance for behaviours exercised by the recent274–276
 //! batches: layer-changing self-animation (CR 613 / 711), once-only Renown
 //! (CR 702.112), and Deathtouch making any nonzero damage lethal (CR 702.2c).
+//! Plus CR 716 (Class enchantments) level-gated statics.
 
 use crabomination::card::{CardType, Keyword};
 use crabomination::catalog;
 use crabomination::game::effects::EffectContext;
 use crabomination::game::{two_player_game, Target};
+
+/// CR 716.2 — a Class's `StaticEffect::WhileClassLevelAtLeast` anthem applies
+/// only while the Class has reached that level. A level-2 "creatures you
+/// control have flying" grant is inert at level 1 and live at level 2.
+#[test]
+fn cr_716_2_level_gated_static_applies_only_at_level() {
+    use crabomination::card::{
+        CardDefinition, EnchantmentSubtype, SelectionRequirement as R, StaticAbility, Subtypes,
+    };
+    use crabomination::effect::{Selector, StaticEffect};
+
+    let class_def = CardDefinition {
+        name: "Test Class",
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Class],
+            ..Default::default()
+        },
+        static_abilities: vec![StaticAbility {
+            description: "L2: creatures you control have flying",
+            effect: StaticEffect::WhileClassLevelAtLeast {
+                n: 2,
+                inner: Box::new(StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    keyword: Keyword::Flying,
+                }),
+            },
+        }],
+        ..Default::default()
+    };
+
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let class = g.add_card_to_battlefield(0, class_def);
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 1;
+    assert!(
+        !g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        "no flying at level 1",
+    );
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 2;
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        "flying at level 2",
+    );
+}
+
+/// CR 716.2 — the level gate also wraps a *live-recomputed* grant (a selector
+/// mentioning `IsModified`, resolved per layer pass), not just static-selector
+/// anthems.
+#[test]
+fn cr_716_2_level_gate_wraps_live_grant() {
+    use crabomination::card::{
+        CardDefinition, CounterType, EnchantmentSubtype, SelectionRequirement as R, StaticAbility,
+        Subtypes,
+    };
+    use crabomination::effect::{Selector, StaticEffect};
+
+    let class_def = CardDefinition {
+        name: "Test Class",
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Class],
+            ..Default::default()
+        },
+        static_abilities: vec![StaticAbility {
+            description: "L2: modified creatures you control have trample",
+            effect: StaticEffect::WhileClassLevelAtLeast {
+                n: 2,
+                inner: Box::new(StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::IsModified),
+                    ),
+                    keyword: Keyword::Trample,
+                }),
+            },
+        }],
+        ..Default::default()
+    };
+
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let class = g.add_card_to_battlefield(0, class_def);
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 1;
+    assert!(
+        !g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+        "no trample at level 1",
+    );
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 2;
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+        "trample at level 2 (live-recomputed grant)",
+    );
+}
 
 /// CR 613 / 711.2 — when a noncreature enchantment becomes a creature it is a
 /// creature *in addition to* its other types. Emergent Haunting keeps its

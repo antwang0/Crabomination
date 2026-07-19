@@ -1316,6 +1316,11 @@ pub struct PermanentView {
     /// badge Cases with their solve state. Populated by `project_permanent`.
     #[serde(default)]
     pub case_solved: Option<bool>,
+    /// CR 716.2 — a Class enchantment's current level. `None` for non-Classes.
+    /// A UI hint so the client can badge a Class with its level. Populated by
+    /// `project_permanent`.
+    #[serde(default)]
+    pub class_level: Option<u8>,
     /// True when this permanent is detained (CR 701.35) — a UI hint so the
     /// client can badge it as "can't attack/block/activate." Populated by
     /// `project_permanent`.
@@ -2112,6 +2117,9 @@ pub enum GameEventWire {
     /// Wire mirror of `GameEvent::PlayerConceded` (CR 104.3a). Lets client
     /// UIs log "Player N conceded" distinctly from a life-loss game end.
     PlayerConceded { player: usize },
+    /// Wire mirror of `GameEvent::ClassLevelReached` (CR 716.2). Lets client
+    /// UIs log a Class levelling up.
+    ClassLevelReached { player: usize, card_id: CardId, level: u8 },
     GameOver { winner: Option<usize> },
 }
 
@@ -2414,6 +2422,13 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PlayerConceded { player } => {
                 GameEventWire::PlayerConceded { player: *player }
             }
+            GameEvent::ClassLevelReached { source, player, level } => {
+                GameEventWire::ClassLevelReached {
+                    player: *player,
+                    card_id: *source,
+                    level: *level,
+                }
+            }
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
         }
     }
@@ -2616,6 +2631,9 @@ impl GameEventWire {
             }
             E::Expended { player, total } => format!("{} expended (spell-mana {total})", pn(*player)),
             E::PlayerConceded { player } => format!("{} conceded", pn(*player)),
+            E::ClassLevelReached { player, card_id, level } => {
+                format!("{}'s {} became level {level}", pn(*player), name(*card_id))
+            }
             E::GameOver { winner } => match winner {
                 Some(p) => format!("Game over — {} wins", pn(*p)),
                 None => "Game over — draw".into(),

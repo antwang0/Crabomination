@@ -6942,6 +6942,12 @@ static DECKS: &[Factory] = &[
     // recent285 — two Bloomburrow Gift spells
     super::decks::parting_gust,
     super::decks::starfall_invocation,
+    // recent286 — Bloomburrow Talent Class enchantments (CR 716)
+    super::decks::stormchasers_talent,
+    super::decks::gossips_talent,
+    super::decks::hunters_talent,
+    super::decks::scavengers_talent,
+    super::decks::bandits_talent,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
