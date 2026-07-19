@@ -6886,6 +6886,12 @@ static DECKS: &[Factory] = &[
     super::decks::axgard_artisan,
     super::decks::bloated_processor,
     super::decks::harvestrite_host,
+    // recent276 — incubate body, graveyard hate, Island Wall, gy welder, convoke pump
+    super::decks::converter_beast,
+    super::decks::carrion_locust,
+    super::decks::coastal_bulwark,
+    super::decks::emergency_weld,
+    super::decks::burning_suns_fury,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
