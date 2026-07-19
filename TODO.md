@@ -127,8 +127,9 @@ Unlock was unhandled in `counter_tooltip.rs`) and added a server
 **Noticed this run (recent267–270), each blocked on one primitive:**
 - **Damage-to-you replacement → mill** — Angel of Suffering (prevent damage to
   you, mill twice that many) needs a player-damage replacement hook.
-- **"Second time this ability resolved this turn"** — Harvestrite Host needs a
-  per-turn per-ability resolution counter.
+- ✅ ~~**"Second time this ability resolved this turn"**~~ — Harvestrite Host
+  ships via `Effect::NthResolutionThisTurn { branches }` over the per-turn
+  `GameState.ability_resolutions_this_turn` tally (recent275).
 
 Shipped (recent283): Enlist was already wired (`shortcut::enlist()` — Argivian
 Cavalier); `EventKind::GiftGiven` (Jolly Gerbils);

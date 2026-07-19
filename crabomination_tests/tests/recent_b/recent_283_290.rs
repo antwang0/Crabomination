@@ -1069,4 +1069,26 @@ mod recent290 {
         g.resolve_effect(&catalog::ego_drain().effect, &ctx).unwrap();
         assert_eq!(g.players[0].hand.len(), hand_before, "no self-exile with a Faerie out");
     }
+
+    /// Zoyowa Lava-Tongue burns an opponent who can't discard or sacrifice, but
+    /// only if you descended this turn.
+    #[test]
+    fn zoyowa_burns_the_helpless_opponent_after_descending() {
+        use crabomination::game::TurnStep;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::zoyowa_lava_tongue());
+        g.active_player_idx = 0;
+        // Opponent has no cards and no permanents → no dodge available.
+        g.players[1].hand.clear();
+        // No descend yet → the end-step trigger does nothing.
+        let life0 = g.players[1].life;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, life0, "no descend → no punisher");
+        // Descend, then the opponent takes 3.
+        g.players[0].descended_this_turn = true;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, life0 - 3, "helpless opponent takes 3");
+    }
 }

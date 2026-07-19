@@ -11,7 +11,8 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Effect, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic};
+use crate::game::types::TurnStep;
+use crate::mana::{b, cost, g, generic, r};
 
 /// Krosan Restorer — {2}{G} 1/2 Human Druid. {T}: Untap target land.
 /// Threshold — {T}: Untap up to three target lands (activate with 7+ cards in
@@ -81,6 +82,51 @@ pub fn vraska_the_silencer() -> CardDefinition {
                     Effect::BecomeTreasure { what: Selector::LastMoved },
                 ])),
                 else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zoyowa Lava-Tongue — {B}{R} Legendary Goblin Warlock 2/2. Deathtouch. At your
+/// end step, if you descended this turn, each opponent may discard a card or
+/// sacrifice a permanent; Zoyowa deals 3 damage to each who didn't. (The 3
+/// damage targets each opponent — exact in 1v1; in multiplayer the punisher
+/// payoff can't yet single out only the defaulting opponent.)
+pub fn zoyowa_lava_tongue() -> CardDefinition {
+    CardDefinition {
+        name: "Zoyowa Lava-Tongue",
+        cost: cost(&[b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                .with_filter(Predicate::DescendedThisTurn { who: PlayerRef::You }),
+            effect: Effect::Punisher {
+                chooser: Selector::Player(PlayerRef::EachOpponent),
+                options: vec![
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::You),
+                        amount: Value::ONE,
+                        random: false,
+                    },
+                    Effect::Sacrifice {
+                        who: Selector::Player(PlayerRef::You),
+                        count: Value::ONE,
+                        filter: R::Permanent,
+                    },
+                ],
+                otherwise: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                }),
             },
         }],
         ..Default::default()
