@@ -6975,6 +6975,8 @@ static DECKS: &[Factory] = &[
     super::decks::discerning_financier,
     super::decks::grove_rumbler,
     super::decks::blister_beetle,
+    super::decks::swift_response,
+    super::decks::might_beyond_reason,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

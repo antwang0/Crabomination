@@ -3,11 +3,12 @@
 //! the `TriggerSource` reanimate + `Effect::BecomeTreasure` mechanism), a
 //! descend punisher (Zoyowa Lava-Tongue), control-donation of a Treasure
 //! (Discerning Financier, via `GainControl { to: Some(..) }`), landfall pump
-//! (Grove Rumbler), and an ETB -1/-1 (Blister Beetle).
+//! (Grove Rumbler), an ETB -1/-1 (Blister Beetle), tapped-only removal (Swift
+//! Response), and delirium-scaled counters (Might Beyond Reason).
 //! Tests in `recent_b/recent290`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
     Subtypes, Supertype, TriggeredAbility, Value,
 };
@@ -215,6 +216,37 @@ pub fn blister_beetle() -> CardDefinition {
             toughness: Value::Const(-1),
             duration: Duration::EndOfTurn,
         })],
+        ..Default::default()
+    }
+}
+
+/// Swift Response — {1}{W} Instant. Destroy target tapped creature.
+pub fn swift_response() -> CardDefinition {
+    CardDefinition {
+        name: "Swift Response",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy { what: target_filtered(R::Creature.and(R::Tapped)) },
+        ..Default::default()
+    }
+}
+
+/// Might Beyond Reason — {3}{G} Instant. Put two +1/+1 counters on target
+/// creature — three instead with delirium (4+ card types in your graveyard).
+pub fn might_beyond_reason() -> CardDefinition {
+    CardDefinition {
+        name: "Might Beyond Reason",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::AddCounter {
+            what: target_filtered(R::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::IfPred {
+                pred: Box::new(Predicate::DeliriumActive { who: PlayerRef::You }),
+                then: Box::new(Value::Const(3)),
+                else_: Box::new(Value::Const(2)),
+            },
+        },
         ..Default::default()
     }
 }

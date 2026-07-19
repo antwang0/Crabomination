@@ -1151,6 +1151,54 @@ mod recent290 {
         assert_eq!((cp.power, cp.toughness), (1, 1), "2/2 → 1/1 until end of turn");
     }
 
+    /// Swift Response destroys a tapped creature. Casting it only accepts a
+    /// tapped target (the `Tapped` filter is enforced at cast time).
+    #[test]
+    fn swift_response_destroys_tapped_creature() {
+        let mut g = two_player_game();
+        let tapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let untapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield_find_mut(tapped).unwrap().tapped = true;
+        // Cast at the untapped creature is rejected (not a legal target).
+        let spell = g.add_card_to_hand(0, catalog::swift_response());
+        g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        assert!(g.perform_action(GameAction::CastSpell {
+            card_id: spell, target: Some(Target::Permanent(untapped)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).is_err(), "untapped creature isn't a legal target");
+        // Cast at the tapped creature destroys it.
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell, target: Some(Target::Permanent(tapped)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("tapped is legal");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(tapped).is_none(), "tapped creature destroyed");
+    }
+
+    /// Might Beyond Reason adds two counters, or three with delirium.
+    #[test]
+    fn might_beyond_reason_scales_with_delirium() {
+        let counters = |deliriumize: bool| -> u32 {
+            let mut g = two_player_game();
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            if deliriumize {
+                // Four card types in the graveyard → delirium.
+                g.add_card_to_graveyard(0, catalog::grizzly_bears()); // creature
+                g.add_card_to_graveyard(0, catalog::lightning_bolt()); // instant
+                g.add_card_to_graveyard(0, catalog::forest()); // land
+                g.add_card_to_graveyard(0, catalog::sol_ring()); // artifact
+            }
+            let ctx = EffectContext::for_ability(c, 0, Some(Target::Permanent(c)));
+            g.resolve_effect(&catalog::might_beyond_reason().effect, &ctx).unwrap();
+            g.battlefield_find(c).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne)
+        };
+        assert_eq!(counters(false), 2, "two counters without delirium");
+        assert_eq!(counters(true), 3, "three with delirium");
+    }
+
     /// No upkeep Treasure when you aren't behind on lands.
     #[test]
     fn discerning_financier_idle_when_not_behind_on_lands() {
