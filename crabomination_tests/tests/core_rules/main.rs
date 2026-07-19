@@ -8,6 +8,7 @@ mod classic;
 mod combat_keywords;
 mod counters;
 mod cr_rules;
+mod cr_recent;
 mod cr_solve_mkm;
 mod echo;
 mod energy;
