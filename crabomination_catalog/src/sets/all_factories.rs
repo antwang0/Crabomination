@@ -6896,6 +6896,14 @@ static DECKS: &[Factory] = &[
     super::decks::calamitys_wake,
     super::decks::attentive_skywarden,
     super::decks::molten_collapse,
+    // recent278 — kicker payoffs, attack-untapper, alliance grower, digs, exile-for-Treasure
+    super::decks::bog_badger,
+    super::decks::colossal_growth,
+    super::decks::civic_gardener,
+    super::decks::celebrity_fencer,
+    super::decks::commune_with_spirits,
+    super::decks::case_the_joint,
+    super::decks::buy_your_silence,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
