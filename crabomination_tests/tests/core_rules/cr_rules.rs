@@ -5395,6 +5395,60 @@ fn cr_702_171_saddle_enables_attack_trigger() {
     assert_eq!((cp.power, cp.toughness), (6, 6), "attacks-while-saddled gave +2/+2");
 }
 
+/// CR 702.171 — a Saddle activation records the riders on the Mount
+/// (`saddled_by`) for "a creature that saddled it this turn" payoffs, and CR
+/// 400.7 clears that record when the Mount leaves the battlefield.
+#[test]
+fn cr_702_171_saddle_records_riders_reset_on_leave() {
+    let mut g = two_player_game();
+    let mount = g.add_card_to_battlefield(0, catalog::alacrian_jaguar());
+    let rider = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mount);
+    g.clear_sickness(rider);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Saddle { mount, creatures: vec![rider] }).expect("saddle");
+    assert_eq!(g.battlefield_find(mount).unwrap().saddled_by, vec![rider]);
+    // Bounce and replay the Mount → CR 400.7 fresh object, no riders remembered.
+    g.move_card_to_battlefield_for_test(0, catalog::alacrian_jaguar());
+    let fresh = g.battlefield.iter().rev().find(|c| c.definition.name == "Alacrian Jaguar").unwrap();
+    assert!(fresh.saddled_by.is_empty(), "a fresh Mount object remembers no riders");
+}
+
+/// CR 702.9 — a Crew activation records the crewers on the Vehicle
+/// (`crewed_by`) so "for each creature that crewed it this turn" payoffs
+/// (Luxurious Locomotive) can count them.
+#[test]
+fn cr_702_9_crew_records_crewers() {
+    let mut g = two_player_game();
+    let veh = g.add_card_to_battlefield(0, catalog::broadcast_rambler()); // Crew 1
+    let crewer = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(crewer);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: veh, crew_creatures: vec![crewer] }).expect("crew");
+    assert_eq!(g.battlefield_find(veh).unwrap().crewed_by, vec![crewer]);
+}
+
+/// CR 702.108 — Inspired: "whenever this becomes untapped" fires off a
+/// `PermanentUntapped` event (the untap-step turn-based action or any untap
+/// effect), the untap sibling of Wylie Duke's tap trigger.
+#[test]
+fn cr_702_108_inspired_fires_on_untap() {
+    let mut g = two_player_game();
+    let tromper = g.add_card_to_battlefield(0, catalog::pheres_band_tromper());
+    g.battlefield_find_mut(tromper).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentUntapped { card_id: tromper }]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(tromper).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Inspired put a +1/+1 counter on untap",
+    );
+}
+
 // ── CR 702.179 — Start your engines! ─────────────────────────────────────────
 
 /// CR 702.179a — a "Start your engines!" permanent entering sets its
