@@ -12603,6 +12603,42 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealUntilLandsToBattlefield { count, tapped } => {
+                use rand::seq::SliceRandom;
+                let p = ctx.controller;
+                let need = self.evaluate_value(count, ctx).max(0) as u32;
+                let mut found = 0u32;
+                let mut lands: Vec<CardInstance> = Vec::new();
+                let mut rest: Vec<CardInstance> = Vec::new();
+                while found < need && !self.players[p].library.is_empty() {
+                    let card = self.players[p].library.remove(0);
+                    if card.definition.is_land() {
+                        found += 1;
+                        lands.push(card);
+                    } else {
+                        rest.push(card);
+                    }
+                }
+                // Bottom the non-land reveals in a random order (CR — the player
+                // saw them, so a deterministic bottom would be known info).
+                rest.shuffle(&mut rand::rng());
+                for c in rest {
+                    self.players[p].library.push(c);
+                }
+                // Put the revealed lands onto the battlefield through the shared
+                // placement funnel so land-ETB triggers fire.
+                let dest = ZoneDest::Battlefield {
+                    controller: PlayerRef::Seat(p),
+                    tapped: *tapped,
+                };
+                for land in lands {
+                    self.place_card_in_dest(land, p, &dest, events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::RevealUntilNonlandDamage { to } => {
                 let p = ctx.controller;
                 let mut mv = 0u32;

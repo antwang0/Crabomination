@@ -70,3 +70,34 @@ fn vadmir_crime_counters_and_keyword_threshold() {
     assert!(c.keywords.contains(&Keyword::Menace), "menace at 4+ counters");
     assert!(c.keywords.contains(&Keyword::Lifelink), "lifelink at 4+ counters");
 }
+
+/// Skyserpent Seeker's exhaust ability reveals until two lands, puts them onto
+/// the battlefield tapped, and grows itself with a +1/+1 counter.
+#[test]
+fn skyserpent_seeker_ramps_two_lands() {
+    use crabomination::card::CounterType;
+    use crabomination::catalog;
+    use crabomination::game::{drain_stack, effects::EffectContext};
+    let mut g = two_player_game();
+    let snake = g.add_card_to_battlefield(0, catalog::skyserpent_seeker());
+    // Library top → bottom: a nonland, then two Forests.
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let ability = catalog::skyserpent_seeker().activated_abilities[0].effect.clone();
+    let ctx = EffectContext::for_ability(snake, 0, None);
+    g.resolve_effect(&ability, &ctx).unwrap();
+    drain_stack(&mut g);
+    let forests = g.battlefield.iter().filter(|c| c.definition.name == "Forest").count();
+    assert_eq!(forests, 2, "two Forests put onto the battlefield");
+    assert!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Forest").all(|c| c.tapped),
+        "the revealed lands enter tapped",
+    );
+    assert_eq!(
+        g.battlefield_find(snake).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Skyserpent grows a +1/+1 counter",
+    );
+}

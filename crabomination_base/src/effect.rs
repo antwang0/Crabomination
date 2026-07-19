@@ -4640,6 +4640,11 @@ pub enum Effect {
     /// damage equal to that card's mana value to `to`, and bottom the
     /// reveals in a random order.
     RevealUntilNonlandDamage { to: Selector },
+    /// Skyserpent Seeker-style ramp: reveal from the top of your library until
+    /// you reveal `count` land cards; put those lands onto the battlefield
+    /// (`tapped`), and put the rest on the bottom of your library in a random
+    /// order. Stops early if the library runs out.
+    RevealUntilLandsToBattlefield { count: Value, tapped: bool },
     /// "Until your next turn, whenever a creature attacks you or a
     /// planeswalker you control, [body]" — registers a floating trigger;
     /// the attacker is bound as `Selector::TriggerSource`. Tamiyo +2.

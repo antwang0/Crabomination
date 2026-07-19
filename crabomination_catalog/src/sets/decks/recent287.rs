@@ -1,15 +1,16 @@
-//! OTJ gap batch — Miriam (turn-gated Mount/Vehicle hexproof via the new
+//! OTJ/DFT gap batch — Miriam (turn-gated Mount/Vehicle hexproof via the new
 //! `StaticEffect::WhileYourTurn`), Vadmir (crime counters + counter-gated
-//! keywords). Tests in `recent_b/recent287`.
+//! keywords), Skyserpent Seeker (`Effect::RevealUntilLandsToBattlefield` ramp).
+//! Tests in `recent_b/recent287`.
 
 use crate::card::{
-    ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Keyword,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Keyword,
     SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, Predicate, Selector, StaticEffect,
 };
-use crate::mana::{b, cost, g, generic, w};
+use crate::mana::{b, cost, g, generic, u, w};
 
 fn legendary_creature(types: Vec<CreatureType>) -> Subtypes {
     Subtypes { creature_types: types, ..Default::default() }
@@ -83,6 +84,36 @@ pub fn vadmir_new_blood() -> CardDefinition {
             },
         }],
         static_abilities: vec![counter_gated(Keyword::Menace), counter_gated(Keyword::Lifelink)],
+        ..Default::default()
+    }
+}
+
+/// Skyserpent Seeker — {G}{U} Creature — Snake 1/1 (DFT).
+/// Flying, deathtouch. Exhaust — {4}: reveal cards from the top of your library
+/// until you reveal two lands, put them onto the battlefield tapped and the rest
+/// on the bottom in a random order, then put a +1/+1 counter on this creature.
+pub fn skyserpent_seeker() -> CardDefinition {
+    CardDefinition {
+        name: "Skyserpent Seeker",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            exhaust: true,
+            effect: Effect::Seq(vec![
+                Effect::RevealUntilLandsToBattlefield { count: Value::Const(2), tapped: true },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

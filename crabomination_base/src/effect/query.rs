@@ -727,6 +727,8 @@ impl Effect {
             Effect::PayLifeDraw { .. } => false,
             Effect::RevealUntilLandDamage { to, .. } => sel_has_target(to),
             Effect::RevealUntilNonlandDamage { to } => sel_has_target(to),
+            // Reveals from your own library — no target slot.
+            Effect::RevealUntilLandsToBattlefield { .. } => false,
             Effect::ClashWithOpponent { .. } => false,
             Effect::OnAttackedUntilYourNextTurn { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
