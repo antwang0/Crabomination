@@ -223,18 +223,31 @@ pub fn diminisher_witch() -> CardDefinition {
 }
 
 /// Ego Drain — {B} Sorcery. Target opponent reveals their hand; you choose a
-/// nonland card and they discard it. (The "if you don't control a Faerie, exile
-/// a card from your hand" downside is dropped.)
+/// nonland card and they discard it. If you don't control a Faerie, exile a
+/// card from your hand.
 pub fn ego_drain() -> CardDefinition {
+    let controls_faerie = Predicate::ValueAtLeast(
+        Value::CountOf(Box::new(Selector::EachPermanent(
+            R::HasCreatureType(CreatureType::Faerie).and(R::ControlledByYou),
+        ))),
+        Value::ONE,
+    );
     CardDefinition {
         name: "Ego Drain",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DiscardChosen {
-            from: Selector::Player(PlayerRef::EachOpponent),
-            count: Value::ONE,
-            filter: R::Nonland,
-        },
+        effect: Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: R::Nonland,
+            },
+            Effect::If {
+                cond: Predicate::Not(Box::new(controls_faerie)),
+                then: Box::new(Effect::ExileFromHand { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

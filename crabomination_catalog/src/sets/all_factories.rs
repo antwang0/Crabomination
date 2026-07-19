@@ -6967,6 +6967,9 @@ static DECKS: &[Factory] = &[
     super::decks::mobile_homestead,
     super::decks::wylie_duke_atiin_hero,
     super::decks::bruse_tarl_roving_rancher,
+    // recent290 — modern gap batch (threshold untap, dies-steal-as-Treasure)
+    super::decks::krosan_restorer,
+    super::decks::vraska_the_silencer,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

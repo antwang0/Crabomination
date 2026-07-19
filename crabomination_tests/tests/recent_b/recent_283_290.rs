@@ -1,4 +1,4 @@
-//! Tests for recentN card batches 283-289 (merged from per-batch micro-files).
+//! Tests for recentN card batches 283-290 (merged from per-batch micro-files).
 
 mod recent283 {
     use crabomination::card::CounterType;
@@ -960,5 +960,113 @@ mod recent289 {
         let bears = g.exile.iter().find(|c| c.definition.name == "Grizzly Bears").expect("nonland exiled");
         assert!(bears.may_play_until.is_some(), "the nonland is castable from exile");
         assert!(g.battlefield.iter().all(|c| c.definition.name != "Ox"), "no Ox token for a nonland");
+    }
+}
+
+mod recent290 {
+    use crabomination::card::{ArtifactSubtype, CardType, CreatureType};
+    use crabomination::catalog;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::{drain_stack, two_player_game, GameAction, Target};
+    use crabomination::mana::Color;
+
+    /// Krosan Restorer's {T} ability untaps a single target land.
+    #[test]
+    fn krosan_restorer_untaps_target_land() {
+        let mut g = two_player_game();
+        let bill = g.add_card_to_battlefield(0, catalog::krosan_restorer());
+        g.clear_sickness(bill);
+        let land = g.add_card_to_battlefield(0, catalog::forest());
+        g.battlefield_find_mut(land).unwrap().tapped = true;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: bill, ability_index: 0, target: Some(Target::Permanent(land)),
+            additional_targets: vec![], x_value: None,
+        }).expect("untap");
+        drain_stack(&mut g);
+        assert!(!g.battlefield_find(land).unwrap().tapped, "the target land is untapped");
+    }
+
+    /// The threshold ability untaps up to three lands once seven cards sit in the
+    /// graveyard.
+    #[test]
+    fn krosan_restorer_threshold_untaps_three() {
+        let mut g = two_player_game();
+        let bill = g.add_card_to_battlefield(0, catalog::krosan_restorer());
+        g.clear_sickness(bill);
+        for _ in 0..7 {
+            g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        }
+        let lands: Vec<_> = (0..3)
+            .map(|_| {
+                let l = g.add_card_to_battlefield(0, catalog::forest());
+                g.battlefield_find_mut(l).unwrap().tapped = true;
+                l
+            })
+            .collect();
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: bill, ability_index: 1, target: None,
+            additional_targets: vec![], x_value: None,
+        }).expect("threshold untap");
+        drain_stack(&mut g);
+        assert!(lands.iter().all(|&l| !g.battlefield_find(l).unwrap().tapped), "three lands untapped");
+    }
+
+    /// Vraska, the Silencer steals an opponent's dying creature as a tapped
+    /// Treasure when you pay {1}.
+    #[test]
+    fn vraska_steals_dying_creature_as_treasure() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::vraska_the_silencer());
+        let fodder = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.players[0].mana_pool.add_colorless(1);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        // P0 bolts P1's fodder; it dies and Vraska's trigger fires.
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Permanent(fodder)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("bolt");
+        drain_stack(&mut g);
+        let stolen = g.battlefield_find(fodder).expect("returned to the battlefield");
+        assert_eq!(stolen.controller, 0, "under your control");
+        assert!(stolen.tapped, "enters tapped");
+        let cp = g.computed_permanent(fodder).unwrap();
+        assert!(cp.card_types.contains(&CardType::Artifact), "it's an artifact");
+        assert!(cp.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Treasure), "…a Treasure");
+        assert!(!cp.card_types.contains(&CardType::Creature), "loses its creature type");
+    }
+
+    /// Ego Drain's downside: with no Faerie, its caster exiles a card from hand.
+    #[test]
+    fn ego_drain_exiles_without_faerie() {
+        let mut g = two_player_game();
+        let src = g.add_card_to_hand(0, catalog::ego_drain());
+        g.add_card_to_hand(0, catalog::grizzly_bears()); // the card to exile
+        g.add_card_to_hand(1, catalog::grizzly_bears()); // discard fodder
+        let ctx = EffectContext::for_ability(src, 0, None);
+        let hand_before = g.players[0].hand.len();
+        let exile_before = g.exile.len();
+        g.resolve_effect(&catalog::ego_drain().effect, &ctx).unwrap();
+        assert_eq!(g.players[0].hand.len(), hand_before - 1, "caster exiled a card");
+        assert_eq!(g.exile.len(), exile_before + 1, "a card moved to exile");
+    }
+
+    /// Controlling a Faerie skips Ego Drain's exile clause.
+    #[test]
+    fn ego_drain_keeps_hand_with_faerie() {
+        let mut g = two_player_game();
+        let src = g.add_card_to_hand(0, catalog::ego_drain());
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+        // A Faerie on the battlefield spares the caster's hand.
+        let mut faerie = catalog::grizzly_bears();
+        faerie.subtypes.creature_types = vec![CreatureType::Faerie];
+        g.add_card_to_battlefield(0, faerie);
+        let ctx = EffectContext::for_ability(src, 0, None);
+        let hand_before = g.players[0].hand.len();
+        g.resolve_effect(&catalog::ego_drain().effect, &ctx).unwrap();
+        assert_eq!(g.players[0].hand.len(), hand_before, "no self-exile with a Faerie out");
     }
 }

@@ -18,9 +18,10 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   entered this turn" (needs a zombies-entered-this-turn batch count).
 
 **Other OTJ legends still open (each needs one primitive):**
-- Vraska, the Silencer — "opponent's nontoken creature dies → may pay {1},
-  return that card under your control as a Treasure" needs a reanimate-the-
-  dying-creature-under-your-control effect composed with `BecomeTreasure`.
+- ✅ ~~Vraska, the Silencer~~ — shipped (recent290): `on-opponent's-nontoken-
+  creature-dies` → `MayPay {1}` → `Move(TriggerSource → battlefield tapped,
+  You)` + `BecomeTreasure(LastMoved)`. The reanimate-the-dying-creature
+  mechanism is the same one Witherbloom Necromancer/Minion's Return use.
 - Geralf/Breeches — "cast your second/Nth spell each turn" needs an Nth-spell-cast
   trigger event (only the cost-reduction `CostReductionNthSpell` static exists).
 - Artist's Talent (BLB) — last unshipped Talent; needs level-gated
@@ -4164,8 +4165,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Young Hero Role toughness gate** — the granted attack trigger fires
     unconditionally; the printed "if its toughness is 3 or less" wants a
     trigger-source toughness predicate.
-  - **Ego Drain** drops the "if you don't control a Faerie, exile a card from
-    your hand" downside.
+  - ✅ ~~**Ego Drain**~~ — the "if you don't control a Faerie, exile a card from
+    your hand" downside now fires (recent290; `Not(control-a-Faerie)` gate over
+    `ExileFromHand`).
   - **Boneyard Desecrator** — the effect-path sacrifice (`SacrificeAndRemember`)
     doesn't stamp `sacrificed_was_outlaw` (only the activated `sac_other_filter`
     path does); wire the tuple if a spell ever needs it.
