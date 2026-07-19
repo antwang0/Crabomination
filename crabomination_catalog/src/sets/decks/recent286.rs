@@ -484,7 +484,7 @@ fn sword_token() -> TokenDefinition {
 /// have double strike and haste.
 pub fn blacksmiths_talent() -> CardDefinition {
     // L3 grant: double strike + haste to your equipped creatures, gated on
-    // level 3 and your turn (CR 716.2 / 720).
+    // level 3 and your turn (CR 716.2 / 611.2).
     let equipped = R::Creature.and(R::ControlledByYou).and(R::IsEquipped);
     let while_l3_your_turn = |kw: Keyword| StaticAbility {
         description: "During your turn, equipped creatures you control have double strike and haste.",

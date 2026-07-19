@@ -25,3 +25,4 @@ mod quests;
 mod spree;
 mod cr_mkm_extra;
 mod xtra;
+mod cr_recent3;

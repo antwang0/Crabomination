@@ -454,7 +454,7 @@ fn blacksmiths_talent_level_3_your_turn_grant() {
     g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 3;
     assert!(has(&g, &Keyword::DoubleStrike), "double strike at level 3 on your turn");
     assert!(has(&g, &Keyword::Haste), "haste at level 3 on your turn");
-    // Opponent's turn: grant switches off (CR 720 — "during your turn").
+    // Opponent's turn: grant switches off (CR 611.2 — "during your turn").
     g.active_player_idx = 1;
     assert!(!has(&g, &Keyword::DoubleStrike), "no double strike on opponent's turn");
 }

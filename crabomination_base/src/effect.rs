@@ -2211,9 +2211,10 @@ pub enum Effect {
     /// runs for that die. Mirrors `FlipCoin`'s shape for the die
     /// equivalent. Used by Goblin Goliath, Wand of the Elements, and
     /// future Krark / Aether Sphere Harvester-style "roll N dice with
-    /// a results table" cards. CR 706.1 + 706.3 covered; CR 706.2
-    /// result modifiers are now applied via `modifier` (reroll /
-    /// 706.2b is still engine-wide ⏳).
+    /// a results table" cards. CR 706.1 + 706.3 covered; CR 706.2 result
+    /// modifiers via `modifier`; per-card 706.2b reroll via `reroll_at_most`.
+    /// (An *engine-wide* reroll granted by a separate source — a global "you may
+    /// reroll" replacement — is still ⏳.)
     RollDie {
         /// Number of sides on each die (e.g. 6 for d6, 20 for d20).
         /// Must be at least 2.

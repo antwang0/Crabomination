@@ -29,7 +29,7 @@ exercising each) was elided in a compaction pass; recover it from
   Scavenger's / Bandit's / Blacksmith's) + AFR Wizard / Cleric / Warlock Class.
   Tests in `recent_b/recent286` + `core_rules/cr_recent2` (CR 716.2 level-gated
   statics). Blacksmith's L3 "during your turn" grant rides the new
-  `StaticEffect::WhileYourTurn` (CR 720) turn-gate wrapper.
+  `StaticEffect::WhileYourTurn` (CR 611.2) turn-gate wrapper.
   Remaining AFR/Talent Classes (Artist, Paladin, Druid, …) need
   level-gating on the cost/replacement/land-permission paths (`WhileClassLevelAtLeast`
   only gates layer statics) — see TODO.md.
@@ -790,7 +790,9 @@ Each unblocks a large swath of cards.
   keyword loss (`LoseKeyword` — Nowhere to Run); live-recompute `GrantKeyword`
   **and `PumpPT`** statics over combat state (`IsAttacking`/`IsModified` —
   Bone-Cairn Butcher's "attacking tokens have deathtouch" and Orcish
-  Oriflamme's "attacking creatures you control get +1/+0"). Remaining: broader
+  Oriflamme's "attacking creatures you control get +1/+0"); turn-gated statics
+  (`StaticEffect::WhileYourTurn`, CR 611.2 — general on both the live and pure
+  gather paths; Blacksmith's Talent L3). Remaining: broader
   "you may play", devotion-gated non-type states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1). Life-loss
   doubling (`OpponentLifeLossDoubledDuringYourTurn` — Bloodletter) and scoped

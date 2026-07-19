@@ -4468,7 +4468,8 @@ impl GameState {
             // CR 613.7a — static-ability effects carry the source object's
         // timestamp (entry-stamped; id-order fallback for unstamped objects).
         let ts = card.object_timestamp();
-            let mut effects = static_ability_to_effects(card, ts);
+            let mut effects =
+                static_ability_to_effects(card, ts, self.active_player_idx == card.controller);
             // Team-aware static abilities: `static_ability_to_effects` is a
             // free function with no GameState handle, so it can't fill in
             // `AllOpponents.friendly_seats` itself. Patch them now using
@@ -4512,7 +4513,9 @@ impl GameState {
                 let sid = CardId(u32::MAX - (seat as u32 * 256 + ei as u32));
                 let mut synth = CardInstance::new(sid, synth_def, seat);
                 synth.controller = seat;
-                for mut e in static_ability_to_effects(&synth, sid.0 as u64) {
+                for mut e in
+                    static_ability_to_effects(&synth, sid.0 as u64, self.active_player_idx == seat)
+                {
                     e.duration = EffectDuration::Indefinite;
                     if let AffectedPermanents::AllOpponents {
                         source_controller,
@@ -6433,7 +6436,12 @@ impl GameState {
                 }
                 // CR 721.2a — static abilities granted by the band.
                 for se in &band.statics {
-                    all_effects.extend(static_effect_to_effects(se, card, card.object_timestamp()));
+                    all_effects.extend(static_effect_to_effects(
+                        se,
+                        card,
+                        card.object_timestamp(),
+                        self.active_player_idx == card.controller,
+                    ));
                 }
             }
         }
@@ -12942,21 +12950,27 @@ pub(crate) fn effective_loyalty_abilities(
 
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
 /// Takes the full `CardInstance` so Equipment/Aura abilities can use `attached_to`.
-fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<ContinuousEffect> {
+fn static_ability_to_effects(
+    card: &CardInstance,
+    timestamp: u64,
+    your_turn: bool,
+) -> Vec<ContinuousEffect> {
     card.definition
         .static_abilities
         .iter()
-        .flat_map(|sa| static_effect_to_effects(&sa.effect, card, timestamp))
+        .flat_map(|sa| static_effect_to_effects(&sa.effect, card, timestamp, your_turn))
         .collect()
 }
 
 /// Convert a single `StaticEffect` from `card` into layer continuous effects.
 /// Split out of `static_ability_to_effects` so charge-gated Station bands
-/// (CR 721.2a) can reuse the same conversion.
+/// (CR 721.2a) can reuse the same conversion. `your_turn` is true when the
+/// source's controller is the active player (CR 611.2 turn gate).
 fn static_effect_to_effects(
     effect: &crate::effect::StaticEffect,
     card: &CardInstance,
     timestamp: u64,
+    your_turn: bool,
 ) -> Vec<ContinuousEffect> {
     use crate::effect::StaticEffect;
     let source = card.id;
@@ -12967,17 +12981,21 @@ fn static_effect_to_effects(
             // only while the source Class is at level `n` or higher.
             StaticEffect::WhileClassLevelAtLeast { n, inner } => {
                 if card.class_level >= *n {
-                    static_effect_to_effects(inner, card, timestamp)
+                    static_effect_to_effects(inner, card, timestamp, your_turn)
                 } else {
                     vec![]
                 }
             }
-            // The turn gate needs game state, so on this pure path just recurse:
-            // the only `WhileYourTurn` grants in the catalog use live-resolution
-            // filters (IsEquipped), which are applied by the stateful path that
-            // does check `active_player`; here `selector_to_affected` yields None.
+            // CR 611.2 — the turn gate: emit the inner effect only during the
+            // source controller's turn. (Live-filter grants such as Blacksmith's
+            // IsEquipped case yield None from `selector_to_affected` here and are
+            // instead applied — turn-gated — by the stateful gather path.)
             StaticEffect::WhileYourTurn { inner } => {
-                static_effect_to_effects(inner, card, timestamp)
+                if your_turn {
+                    static_effect_to_effects(inner, card, timestamp, your_turn)
+                } else {
+                    vec![]
+                }
             }
             StaticEffect::PumpPT { applies_to, power, toughness } => {
                 match selector_to_affected(applies_to, card) {

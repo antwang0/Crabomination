@@ -6,7 +6,7 @@ Items are grouped by area and roughly ordered by impact within each group.
 **Shipped (recent286 — Class enchantments, CR 716):** the level-up mechanic
 (`CardInstance.class_level`, `Effect::AdvanceClassLevel`,
 `Predicate::SourceClassLevelIs`/`SourceClassLevelAtLeast`,
-`StaticEffect::WhileClassLevelAtLeast`, `StaticEffect::WhileYourTurn` (CR 720
+`StaticEffect::WhileClassLevelAtLeast`, `StaticEffect::WhileYourTurn` (CR 611.2
 turn-gate wrapper), `EventKind`/`GameEvent::ClassLevelReached`,
 `Value::OpponentsWithHandSizeAtMost`; server view + client "Lvl N" chip surface
 the level). Cards: the Bloomburrow Talent cycle (Stormchaser's / Gossip's /
