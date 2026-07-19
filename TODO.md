@@ -572,6 +572,12 @@ factory doc comment:
   the discard count (CR 601.2 — can't choose a cost you can't pay), so a
   hand-empty opponent takes the penalty instead of "discarding" nothing
   (Perforating Artist's Raid, and every "loses N unless … or discards a card").
+- ✅ **Punisher per-defaulter payoff target (CR 601.2b)** — the `otherwise`
+  branch now binds the defaulting chooser as `PlayerRef::Triggerer`, so a
+  per-chooser payoff ("deals 3 damage to each opponent who didn't") hits only
+  the player who failed to pay, not every opponent — correct in multiplayer, not
+  just 1v1 (Zoyowa Lava-Tongue; recent290). Cards whose chooser already *is* the
+  triggerer (Painful Quandary) are unchanged.
 - ✅ **`Value::DistinctManaValuesAmongControlledNonland`** — count of distinct MVs
   among nonland permanents you control (Lunar Insight).
 - ✅ **`YourControl` self-death event-amount** — the SBA `die_triggers` push now
