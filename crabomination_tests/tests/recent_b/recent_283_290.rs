@@ -1124,6 +1124,33 @@ mod recent290 {
         assert_eq!(g.players[0].hand.len(), hand_before + 1, "you drew a card");
     }
 
+    /// Grove Rumbler grows +2/+2 whenever a land you control enters.
+    #[test]
+    fn grove_rumbler_grows_on_landfall() {
+        use crabomination::game::TurnStep;
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        let rumbler = g.add_card_to_battlefield(0, catalog::grove_rumbler());
+        assert_eq!(g.computed_permanent(rumbler).unwrap().power, 3, "base 3/3");
+        let forest = g.add_card_to_hand(0, catalog::forest());
+        g.perform_action(GameAction::PlayLand(forest)).expect("play land");
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(rumbler).unwrap().power, 5, "+2/+2 after a landfall");
+    }
+
+    /// Blister Beetle shrinks a target creature by 1/1 on entry.
+    #[test]
+    fn blister_beetle_weakens_a_creature() {
+        let mut g = two_player_game();
+        let beetle = g.add_card_to_battlefield(0, catalog::blister_beetle());
+        let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let etb = catalog::blister_beetle().triggered_abilities[0].effect.clone();
+        g.resolve_effect(&etb, &EffectContext::for_ability(beetle, 0, Some(Target::Permanent(victim)))).unwrap();
+        let cp = g.computed_permanent(victim).unwrap();
+        assert_eq!((cp.power, cp.toughness), (1, 1), "2/2 → 1/1 until end of turn");
+    }
+
     /// No upkeep Treasure when you aren't behind on lands.
     #[test]
     fn discerning_financier_idle_when_not_behind_on_lands() {

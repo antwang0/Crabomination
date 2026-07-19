@@ -6968,11 +6968,13 @@ static DECKS: &[Factory] = &[
     super::decks::wylie_duke_atiin_hero,
     super::decks::bruse_tarl_roving_rancher,
     // recent290 — modern gap batch (threshold untap, dies-steal-as-Treasure,
-    // descend punisher, Treasure control-donation)
+    // descend punisher, Treasure control-donation, landfall pump, ETB -1/-1)
     super::decks::krosan_restorer,
     super::decks::vraska_the_silencer,
     super::decks::zoyowa_lava_tongue,
     super::decks::discerning_financier,
+    super::decks::grove_rumbler,
+    super::decks::blister_beetle,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

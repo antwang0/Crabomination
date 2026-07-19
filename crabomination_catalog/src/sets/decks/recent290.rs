@@ -1,8 +1,9 @@
 //! A modern gap batch reusing existing primitives: threshold-gated untap
 //! (Krosan Restorer), dies-reanimate-as-Treasure (Vraska, the Silencer, via
 //! the `TriggerSource` reanimate + `Effect::BecomeTreasure` mechanism), a
-//! descend punisher (Zoyowa Lava-Tongue), and control-donation of a Treasure
-//! (Discerning Financier, via `GainControl { to: Some(..) }`).
+//! descend punisher (Zoyowa Lava-Tongue), control-donation of a Treasure
+//! (Discerning Financier, via `GainControl { to: Some(..) }`), landfall pump
+//! (Grove Rumbler), and an ETB -1/-1 (Blister Beetle).
 //! Tests in `recent_b/recent290`.
 
 use crate::card::{
@@ -10,7 +11,7 @@ use crate::card::{
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
     Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::target_filtered;
+use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
 use crate::game::effects::treasure_token;
 use crate::game::types::TurnStep;
@@ -170,6 +171,50 @@ pub fn discerning_financier() -> CardDefinition {
             ]),
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Grove Rumbler — {2}{R}{G} 3/3 Elemental. Trample. Landfall — whenever a land
+/// you control enters, it gets +2/+2 until end of turn.
+pub fn grove_rumbler() -> CardDefinition {
+    CardDefinition {
+        name: "Grove Rumbler",
+        cost: cost(&[generic(2), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blister Beetle — {1}{B} 1/1 Insect. When it enters, target creature gets
+/// -1/-1 until end of turn.
+pub fn blister_beetle() -> CardDefinition {
+    CardDefinition {
+        name: "Blister Beetle",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        })],
         ..Default::default()
     }
 }
