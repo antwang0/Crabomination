@@ -3,6 +3,26 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+**Shipped (recent283–285, 8 cards + primitives):** `EventKind::GiftGiven`
+(spell + permanent gifts; Jolly Gerbils), `Predicate::SourceGiftPromised`
+(permanent-gift ETB gate; Scrapshooter, Kitnap), `Value::
+DistinctManaValuesInGraveyard` (Aven Heartstabber), `Value::
+GreatestPowerControlledAndGraveyard` (Ambitious Dragonborn), `Hamster` type.
+Cards: Aven Heartstabber, Ambitious Dragonborn, Jolly Gerbils, Argivian
+Cavalier, Scrapshooter, Kitnap, Parting Gust, Starfall Invocation. Bot now
+promises gifts (`CastGift` candidates); client recap surfaces "gifts given".
+
+**Discovered — Bloomburrow legends backlog (each needs new engine work):**
+Rottenmouth Viper (variable additional-sac cost reduction + per-blight-counter
+edict-or-discard), Vren the Relentless (per-turn "creatures exiled under
+opponents' control" counter feeding an end-step token generator),
+Muerra/Camellia/Wick (first-main mana-per-Raccoon trigger; forage payoffs;
+Rat/Snail conditional token), Dragonhawk / The Infamous Cruelclaw (impulse +
+delayed "for each still-exiled" damage / discard-to-cast alt-cost), the eight
+BLB "Talent" **Class** enchantments (no Class/level-up mechanic yet),
+"Season of …" sorceries (delayed multi-turn modal). Starforged Sword (gift
+Equipment) needs the permanent-gift ETB + self-attach.
+
 **Shipped (recent235–238, DSK/OTJ gap batch — 20 cards):** manifest-dread now
 exposes the manifested creature on `Selector::LastMoved` (Slimy Aquarium, Weight
 Room); `Effect::TapAnyNumberThenPumpPerTapped` (Orphans of the Wheat);

@@ -47,7 +47,7 @@ fn cartographers_survey_ramps_lands() {
     let bf = g.battlefield.len();
     g.resolve_effect(&catalog::cartographers_survey().effect.clone(), &EffectContext::for_spell(0, None, 0, 0)).unwrap();
     let lands_in = g.battlefield.len() - bf;
-    assert!(lands_in >= 1 && lands_in <= 2, "put up to two lands onto the battlefield");
+    assert!((1..=2).contains(&lands_in), "put up to two lands onto the battlefield");
     assert!(g.battlefield.iter().filter(|c| c.definition.name == "Forest").all(|c| c.tapped), "entered tapped");
 }
 
