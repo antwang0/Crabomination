@@ -6909,6 +6909,15 @@ static DECKS: &[Factory] = &[
     super::decks::celestus_sanctifier,
     super::decks::cartographers_survey,
     super::decks::markov_retribution,
+    // recent280 — LTR Food/loot/scry/Ring-tempt/Amass batch
+    super::decks::brandywine_farmer,
+    super::decks::captain_of_umbar,
+    super::decks::chance_met_elves,
+    super::decks::cirith_ungol_patrol,
+    super::decks::claim_the_precious,
+    super::decks::deceive_the_messenger,
+    super::decks::dreadful_as_the_storm,
+    super::decks::breaking_of_the_fellowship,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];

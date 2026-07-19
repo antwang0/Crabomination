@@ -326,6 +326,27 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
+- **New primitives that would unblock batches of gap cards (recent274–279 run):**
+  - **Enlist** (CR 702.148) — no keyword yet; blocks the DMU Enlist commons
+    (Barkweave Crusher, Coalition Warbrute, Argivian Cavalier, …). `Effect::Enlist`
+    exists but no `Keyword::Enlist` + attack-time tap-a-nonattacker wiring.
+  - **Backup N** (CR 702.164) — no keyword; blocks the MOM Backup commons
+    (Chomping Kavu, Consuming Aetherborn, Cragsmasher Yeti, Archpriest of Shadows).
+    Needs an ETB "put N +1/+1 counters on target; if another creature, it gains
+    this creature's abilities until EOT" primitive.
+  - **Player-curse Auras** — `PlayerStaticTarget::EnchantedPlayer` + a battlefield
+    permanent→player attachment link so an Aura's static/trigger can scope to the
+    enchanted player. Blocks Grievous Wound (can't-gain-life + damage→lose-half).
+  - **Move a battlefield permanent to owner's library top/bottom (owner choice)** —
+    `ZoneDest::OwnerLibraryTopOrBottom` is a countered-spell zone only; no
+    permanent-move dest. Blocks Desynchronize, Diver Skaab's exploit rider.
+  - **Edict-exile (target opponent exiles a permanent of a type, their choice)** —
+    blocks Debt to the Kami's modal.
+  - **"If you didn't put a card into your hand this way, gain N life"** — the
+    inverse of `LookPickToHand.gain_life_if_pick`. Blocks Blossom Prancer.
+  - **Blitz** field exists on `CardDefinition`; wire Caldaia Strongarm-style
+    creatures (ETB counters + Blitz {cost}) once verified end-to-end.
+
 - **Single-primitive cards scoped this run (each unblocks one card):**
   - Miasma Demon (DSK) — reflexive "discard any number; when you do, up to that
     many target creatures get -2/-2" (`Reflexive` + target count = cards
