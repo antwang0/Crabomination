@@ -444,6 +444,17 @@ impl MatchStats {
         self.win_life_delta_percentile(0.75)
             .saturating_sub(self.win_life_delta_percentile(0.25))
     }
+    /// Share (percent) of margin-tracked wins that were nail-biters — a final
+    /// life margin of 3 or less (delta buckets 0–1). The blowout-insensitive
+    /// companion to the mean/σ/IQR margin readouts: a high value means most
+    /// wins came down to the wire even when σ is inflated by a few runaway
+    /// stomps. Returns 0 with no margin samples.
+    pub(crate) fn close_win_pct(&self) -> u64 {
+        let total: u64 = self.win_life_delta_buckets.iter().map(|&n| n as u64).sum();
+        let close =
+            self.win_life_delta_buckets[0] as u64 + self.win_life_delta_buckets[1] as u64;
+        close.saturating_mul(100).checked_div(total).unwrap_or(0)
+    }
     /// Classify one clean win as a damage win or an "alternate" win
     /// (deckout / poison / mill / win-the-game). Prefers the outcome's
     /// precise per-seat `loss_reasons`; if any losing seat died to
@@ -1115,6 +1126,19 @@ mod tests {
     #[test]
     fn percentile_bucket_empty_is_none() {
         assert_eq!(MatchStats::percentile_bucket(&[0; 6], 0.5), None);
+    }
+
+    #[test]
+    fn close_win_pct_counts_the_two_tightest_buckets() {
+        // No margin samples → 0, never a divide-by-zero.
+        assert_eq!(MatchStats::default().close_win_pct(), 0);
+        // Feed four wins: margins 0 and 2 are nail-biters (buckets 0/1),
+        // margins 8 and 20 are blowouts (buckets 3/5). Half are close.
+        let mut s = MatchStats::default();
+        for (w, life) in [(0, [20, 20]), (0, [20, 18]), (0, [20, 12]), (0, [20, 0])] {
+            s.observe_win_life_delta(w, &life);
+        }
+        assert_eq!(s.close_win_pct(), 50);
     }
 
     #[test]
