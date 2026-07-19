@@ -6930,6 +6930,12 @@ static DECKS: &[Factory] = &[
     super::decks::horses_of_the_bruinen,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
+    // recent283 — engine-unblocked: gy mana-value scaler, gy-power scaler,
+    // gift payoff, Enlist Orc
+    super::decks::aven_heartstabber,
+    super::decks::ambitious_dragonborn,
+    super::decks::jolly_gerbils,
+    super::decks::argivian_cavalier,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -1542,6 +1542,9 @@ pub enum GameEvent {
     /// `Effect::CollectEvidence`). Powers "whenever you collect evidence"
     /// payoffs (Surveillance Monitor, Evidence Examiner).
     EvidenceCollected { player: usize },
+    /// CR 702.165 — `player` gave a promised gift as a spell/ability with Gift
+    /// resolved. Powers "whenever you give a gift" (Jolly Gerbils).
+    GiftGiven { player: usize },
     /// CR 700.14 — `player` paid a spell cost, bringing their running
     /// total of mana spent to cast spells this turn to `total`. "Whenever
     /// you expend N" triggers (`EventKind::Expend` + `Predicate::

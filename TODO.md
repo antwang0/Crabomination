@@ -41,19 +41,16 @@ Unlock was unhandled in `counter_tooltip.rs`) and added a server
 `turn_count_mode_bucket` stat (modal game length).
 
 **Noticed this run (recent267–270), each blocked on one primitive:**
-- **Enlist (CR 702.152)** — Argivian Cavalier and other DMU/SNC cards need the
-  as-attacks "tap a nonattacking creature, add its power" declaration.
-- **Gift-given event** — Jolly Gerbils ("whenever you give a gift, draw") needs
-  an `EventKind::GiftGiven`.
-- **Distinct mana values in graveyard** — Aven Heartstabber's static gates on
-  "5+ mana values among cards in your graveyard" (no such `Value`/predicate).
-- **Greatest power incl. graveyard** — Ambitious Dragonborn enters with X = the
-  greatest power among your creatures *and creature cards in your graveyard*;
-  today only the battlefield-only `GreatestPowerControlledMatching` exists.
 - **Damage-to-you replacement → mill** — Angel of Suffering (prevent damage to
   you, mill twice that many) needs a player-damage replacement hook.
 - **"Second time this ability resolved this turn"** — Harvestrite Host needs a
   per-turn per-ability resolution counter.
+
+Shipped (recent283): Enlist was already wired (`shortcut::enlist()` — Argivian
+Cavalier); `EventKind::GiftGiven` (Jolly Gerbils);
+`Value::DistinctManaValuesInGraveyard` (Aven Heartstabber);
+`Value::GreatestPowerControlledAndGraveyard` (Ambitious Dragonborn); `Hamster`
+creature type.
 
 **Resolved (recent176):** ETB *triggered abilities* now thread the cast's X.
 `CardInstance.cast_x_value` is stamped at resolution and the auto-target picker

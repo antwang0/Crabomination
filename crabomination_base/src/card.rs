@@ -115,7 +115,7 @@ pub enum CreatureType {
     // Eldraine Peasant subtype (Curious Pair, Giant Killer).
     Peasant,
     // Bloomburrow (2024) animal-folk subtypes.
-    Rabbit, Raccoon, Mouse, Wolverine, Mole, Possum, Skunk,
+    Rabbit, Raccoon, Mouse, Wolverine, Mole, Possum, Skunk, Hamster,
     // The Last Airbender (2026).
     Lemur, Kangaroo, Seal,
     // The Lost Caverns of Ixalan (2023).

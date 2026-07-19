@@ -563,6 +563,14 @@ pub enum Value {
     /// controls. Lunar Insight ("draw a card for each different mana value among
     /// nonland permanents you control").
     DistinctManaValuesAmongControlledNonland,
+    /// Number of *distinct* mana values among cards in `who`'s graveyard.
+    /// Aven Heartstabber ("five or more mana values among cards in your
+    /// graveyard").
+    DistinctManaValuesInGraveyard(PlayerRef),
+    /// Greatest power among creatures the controller controls *and* creature
+    /// cards in the controller's graveyard (0 if none). Ambitious Dragonborn
+    /// enters with X +1/+1 counters equal to this.
+    GreatestPowerControlledAndGraveyard,
     /// Mana value (CMC) of the first card the selector resolves to.
     /// Looks the card up across the battlefield, graveyards, exile, and
     /// hands. Used by Wrath of the Skies (destroy each nonland with mana
@@ -1779,6 +1787,10 @@ pub enum EventKind {
     /// collecting player is the event actor. "Whenever you collect evidence"
     /// (Surveillance Monitor, Evidence Examiner).
     EvidenceCollected,
+    /// A player gave a promised gift (CR 702.165; `GameEvent::GiftGiven`). The
+    /// gifting player is the event actor. "Whenever you give a gift" (Jolly
+    /// Gerbils).
+    GiftGiven,
     /// A player got one or more poison counters (`GameEvent::PoisonAdded`) —
     /// the player half of All Will Be One's "counters on a permanent or
     /// player". Event amount = counters added.

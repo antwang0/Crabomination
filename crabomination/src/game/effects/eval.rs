@@ -540,6 +540,31 @@ impl GameState {
                 mvs.dedup();
                 mvs.len() as i32
             }
+            Value::DistinctManaValuesInGraveyard(who) => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                let mut mvs: Vec<u32> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .map(|c| c.definition.cost.cmc())
+                    .collect();
+                mvs.sort_unstable();
+                mvs.dedup();
+                mvs.len() as i32
+            }
+            Value::GreatestPowerControlledAndGraveyard => {
+                let p = ctx.controller;
+                let bf = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power));
+                let gy = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| c.definition.power);
+                bf.chain(gy).max().unwrap_or(0)
+            }
             Value::PermanentsDestroyedThisResolution => {
                 self.permanents_destroyed_this_resolution as i32
             }

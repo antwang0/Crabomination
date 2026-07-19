@@ -12067,6 +12067,7 @@ impl GameState {
         mana_spent: u32,
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        let is_initial_pass = override_effect.is_none();
         let effect = override_effect.unwrap_or_else(|| {
             if let Some(half) = card.alt_spell_half() {
                 // CR 715 / 702.183 — resolve the Adventure/Omen half's effect,
@@ -12212,6 +12213,12 @@ impl GameState {
         let res = self.resolve_effect(&effect, &ctx);
         self.resolving_source = prev_src;
         let mut events = res?;
+        // CR 702.165 — a promised gift is given as the spell resolves its
+        // gifted effect. Emit once on the initial pass so "whenever you give a
+        // gift" payoffs (Jolly Gerbils) can trigger.
+        if is_initial_pass && card.gift_promised && card.definition.gift.is_some() {
+            events.push(GameEvent::GiftGiven { player: caster });
+        }
         // CR 709 / 702.102 — a fused split cast resolves its right half in a
         // second pass, reading its target from `additional_targets` slot 0
         // (the left half consumed `target`). Fusable halves are single-target.
