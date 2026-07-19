@@ -6918,6 +6918,12 @@ static DECKS: &[Factory] = &[
     super::decks::deceive_the_messenger,
     super::decks::dreadful_as_the_storm,
     super::decks::breaking_of_the_fellowship,
+    // recent281 — LTR Ring-tempt Ent, death cantrip, combat tricks, Orc-slayer
+    super::decks::enraged_huorn,
+    super::decks::ithilien_kingfisher,
+    super::decks::escape_from_orthanc,
+    super::decks::gimlis_fury,
+    super::decks::east_mark_cavalier,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
