@@ -358,3 +358,39 @@ fn cleric_class_life_gain() {
         "level-2 lifegain trigger grew the creature",
     );
 }
+
+/// Warlock Class: at level 1 the end-step drain only fires if a creature died;
+/// at level 3 each opponent loses life equal to what they lost this turn.
+#[test]
+fn warlock_class_end_step_drains() {
+    let mut g = two_player_game();
+    let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::warlock_class());
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+
+    // No creature died → level-1 drain does nothing.
+    let life = g.players[1].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life, "no drain without a death");
+
+    // A creature dies → level-1 drain costs the opponent 1.
+    let bear = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+    let mut evs = vec![];
+    g.sacrifice_one(bear, 0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "level-1 drain after a death");
+
+    // At level 3, the opponent additionally loses what they lost this turn.
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 3;
+    g.players[1].life_lost_this_turn = 5;
+    let life = g.players[1].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    // Level-1 (creature died earlier) drains 1, level-3 drains the 5 lost.
+    assert!(g.players[1].life <= life - 5, "level-3 mirror drain applied");
+}

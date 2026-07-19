@@ -26,7 +26,7 @@ exercising each) was elided in a compaction pass; recover it from
   level N" (Stormchaser's Talent). `Value::OpponentsWithHandSizeAtMost`. Class
   level surfaced in the server card view + a client "Lvl N" board chip. Cards:
   the Bloomburrow Talent cycle (Stormchaser's / Gossip's / Hunter's /
-  Scavenger's / Bandit's) + AFR Wizard / Cleric Class. Tests in
+  Scavenger's / Bandit's) + AFR Wizard / Cleric / Warlock Class. Tests in
   `recent_b/recent286` + `core_rules/cr_recent2` (CR 716.2 level-gated statics).
   Remaining AFR/Talent Classes (Blacksmith, Artist, Paladin, Druid, …) need
   level-gating on the cost/replacement/land-permission paths (`WhileClassLevelAtLeast`

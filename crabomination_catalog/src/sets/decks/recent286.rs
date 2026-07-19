@@ -1,6 +1,6 @@
 //! Class enchantment cards (CR 716) — the Bloomburrow Talent cycle
-//! (Stormchaser's, Gossip's, Hunter's, Scavenger's, Bandit's) plus AFR's Wizard
-//! and Cleric Class. Each is an Enchantment — Class that enters at level 1 and gains levels
+//! (Stormchaser's, Gossip's, Hunter's, Scavenger's, Bandit's) plus AFR's Wizard,
+//! Cleric, and Warlock Class. Each is an Enchantment — Class that enters at level 1 and gains levels
 //! at sorcery speed via its `{cost}: Level N` activated abilities
 //! (`Effect::AdvanceClassLevel`, gated on `Predicate::SourceClassLevelIs`).
 //! Higher-level abilities are gated on `Predicate::SourceClassLevelAtLeast`.
@@ -409,6 +409,53 @@ pub fn cleric_class() -> CardDefinition {
         activated_abilities: vec![
             level_up(&[generic(3), w()], 1),
             level_up(&[generic(4), w()], 2),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Warlock Class — {B} Enchantment — Class (AFR, CR 716).
+/// L1: at your end step, if a creature died this turn, each opponent loses 1
+/// life. L2: when this becomes level 2, look at the top three cards of your
+/// library, put one into your hand and the rest into your graveyard. L3: at
+/// your end step, each opponent loses life equal to the life they lost this
+/// turn.
+pub fn warlock_class() -> CardDefinition {
+    CardDefinition {
+        name: "Warlock Class",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: class_subtypes(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                    .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE }),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::ClassLevelReached, EventScope::SelfSource)
+                    .with_filter(Predicate::SourceClassLevelIs(2)),
+                effect: Effect::LookTopKeepOneRestToGraveyard {
+                    count: Value::Const(3),
+                    who: None,
+                    exile_rest: false,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                    .with_filter(Predicate::SourceClassLevelAtLeast(3)),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::LifeLostThisTurn(PlayerRef::EachOpponent),
+                },
+            },
+        ],
+        activated_abilities: vec![
+            level_up(&[generic(1), b()], 1),
+            level_up(&[generic(6), b()], 2),
         ],
         ..Default::default()
     }
