@@ -6954,6 +6954,9 @@ static DECKS: &[Factory] = &[
     super::decks::blacksmiths_talent,
     super::decks::builders_talent,
     super::decks::caretakers_talent,
+    // recent287 — OTJ gap batch
+    super::decks::miriam_herd_whisperer,
+    super::decks::vadmir_new_blood,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
