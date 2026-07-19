@@ -61,7 +61,10 @@
 //! life (CR 702.71), Harmonize tapping a creature to reduce the cost by its
 //! power (CR 702.180b), "until end of turn" grants ending at cleanup (CR 514.2
 //! — a granted harmonize), and a one-sided damage doubler sparing the
-//! controller's own side (CR 614.5).
+//! controller's own side (CR 614.5), a permanent Gift given as it enters
+//! (CR 702.165 — Scrapshooter firing Jolly Gerbils), conditional self-pump
+//! stacking on +1/+1 counters in layer 7 (CR 613.7c — Aven Heartstabber), and
+//! {X} in a card's cost counting as 0 outside the stack (CR 202.3b).
 
 use crabomination::catalog;
 use crabomination::card::CounterType;
@@ -9690,4 +9693,67 @@ fn cr_608_2b_conditional_destroy_gated_by_greatest_power() {
     g.resolve_effect(&destroy, &ctx_big).unwrap();
     drain_stack(&mut g);
     assert!(g.battlefield_find(big).is_none(), "greatest-power creature destroyed");
+}
+
+// ── CR 702.165 — a permanent Gift is given as it enters ──────────────────────
+
+/// CR 702.165 — casting a creature with its Gift promised gives the gift as the
+/// permanent enters, firing "whenever you give a gift" payoffs (Jolly Gerbils).
+#[test]
+fn cr_702_165_permanent_gift_fires_give_a_gift_payoff() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::jolly_gerbils());
+    g.add_card_to_library(0, catalog::forest()); // Jolly Gerbils' draw
+    g.add_card_to_library(1, catalog::forest()); // Scrapshooter's gift draw
+    g.add_card_to_battlefield(1, catalog::sol_ring()); // a legal ETB destroy target
+    let scrap = g.add_card_to_hand(0, catalog::scrapshooter());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastGift {
+        card_id: scrap, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Scrapshooter with gift");
+    drain_stack(&mut g);
+    // hand: -1 for the creature spell, +1 for Jolly Gerbils = net hand.
+    assert_eq!(g.players[0].hand.len(), hand, "the permanent gift fired Jolly Gerbils");
+}
+
+// ── CR 613.7c — conditional self-pump stacks on counters in layer 7 ──────────
+
+/// CR 613.7c — a +1/+1 counter and a conditional +2/+2 (Aven Heartstabber) both
+/// apply in layer 7 and stack additively on the printed 1/1.
+#[test]
+fn cr_613_7c_counter_and_conditional_pump_stack() {
+    let mut g = two_player_game();
+    let aven = g.add_card_to_battlefield(0, catalog::aven_heartstabber());
+    g.battlefield_find_mut(aven).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    // Five distinct mana values in the graveyard switch on the +2/+2.
+    for c in [catalog::forest(), catalog::grizzly_bears(), catalog::sol_ring(),
+              catalog::horses_of_the_bruinen(), catalog::eagle_of_deliverance()] {
+        g.add_card_to_graveyard(0, c);
+    }
+    assert_eq!(g.computed_permanent(aven).unwrap().power, 4, "1 base + 1 counter + 2 pump");
+    assert_eq!(g.computed_permanent(aven).unwrap().toughness, 4);
+}
+
+// ── CR 202.3b — {X} in a card's cost is 0 outside the stack ──────────────────
+
+/// CR 202.3b — a card with {X} in its graveyard is mana value = its non-X part,
+/// so Aven Heartstabber's distinct-mana-value count treats Fireball ({X}{R}) as
+/// MV 1.
+#[test]
+fn cr_202_3b_x_cost_is_zero_in_graveyard() {
+    let mut g = two_player_game();
+    let aven = g.add_card_to_battlefield(0, catalog::aven_heartstabber());
+    // MV set {1 (Fireball), 0 (Forest), 2 (Bears), 1 (Sol Ring), 6 (Eagle)} →
+    // distinct {0,1,2,6} = 4 values, one short of the five-value threshold.
+    for c in [catalog::fireball(), catalog::forest(), catalog::grizzly_bears(),
+              catalog::sol_ring(), catalog::eagle_of_deliverance()] {
+        g.add_card_to_graveyard(0, c);
+    }
+    assert_eq!(g.computed_permanent(aven).unwrap().power, 1, "only four distinct MVs (X counts as 0)");
+    // A fifth distinct value (MV 5) flips it on.
+    g.add_card_to_graveyard(0, catalog::horses_of_the_bruinen()); // {3}{U}{U} = 5
+    assert_eq!(g.computed_permanent(aven).unwrap().power, 3, "five distinct MVs → +2/+2");
 }
