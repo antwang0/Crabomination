@@ -1451,6 +1451,12 @@ pub struct PermanentView {
     /// `project_permanent`; defaults false.
     #[serde(default)]
     pub saddled: bool,
+    /// Number of creatures that have crewed this Vehicle this turn (CR 702.9).
+    /// Lets the client badge crew-count payoffs (Luxurious Locomotive's "a
+    /// Treasure for each creature that crewed it this turn"). Populated by
+    /// `project_permanent`; defaults 0.
+    #[serde(default)]
+    pub crewed_count: u32,
     /// True when this creature's marked damage is already lethal (≥ its
     /// current toughness) and it isn't indestructible — i.e. it will die
     /// at the next state-based-action check. Lets the client grey out /

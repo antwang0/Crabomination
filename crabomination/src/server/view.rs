@@ -1180,6 +1180,7 @@ fn project_permanent(
         crew_value: card.definition.crew_cost().unwrap_or(0),
         crew_power_bonus: crew_saddle_power_bonus_in(card.id, battlefield),
         saddled: card.saddled,
+        crewed_count: card.crewed_by.len() as u32,
         marked_lethal: {
             let tough = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
             let indestructible = cp

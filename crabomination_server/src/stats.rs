@@ -765,6 +765,17 @@ impl MatchStats {
         let fast = self.turn_buckets[0] as u64 + self.turn_buckets[1] as u64;
         fast.saturating_mul(100).checked_div(total).unwrap_or(0)
     }
+    /// Share (percent) of completed matches that ran thirteen turns or longer
+    /// (`turn_buckets` 4–5). The grind-tail complement of
+    /// [`fast_game_pct`](Self::fast_game_pct): a high value flags a
+    /// control-/stall-dominated ladder where games routinely reach the late
+    /// game, which the mean/mode can hide behind a fast-concession spike.
+    /// Returns 0 with no completed matches.
+    pub(crate) fn slow_game_pct(&self) -> u64 {
+        let total: u64 = self.turn_buckets.iter().map(|&n| n as u64).sum();
+        let slow = self.turn_buckets[4] as u64 + self.turn_buckets[5] as u64;
+        slow.saturating_mul(100).checked_div(total).unwrap_or(0)
+    }
     /// Population standard deviation of final turn counts, computed from
     /// the running `Σ turns` and `Σ turns²` accumulators (σ = √(E[x²] −
     /// E[x]²)). Returns 0.0 when no matches have completed. A small σ next
@@ -1163,6 +1174,17 @@ mod tests {
             s.observe_turns(turns);
         }
         assert_eq!(s.fast_game_pct(), 50);
+    }
+
+    #[test]
+    fn slow_game_pct_counts_grind_matches() {
+        assert_eq!(MatchStats::default().slow_game_pct(), 0);
+        // 2 and 5 turns are fast; 15 and 25 turns land in buckets 4/5 (≥13t).
+        let mut s = MatchStats::default();
+        for turns in [2, 5, 15, 25] {
+            s.observe_turns(turns);
+        }
+        assert_eq!(s.slow_game_pct(), 50);
     }
 
     #[test]
