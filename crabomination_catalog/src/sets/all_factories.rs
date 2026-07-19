@@ -6881,6 +6881,11 @@ static DECKS: &[Factory] = &[
     // recent274 — spell-hush self-animator, Treasure-attack Mercenary
     super::decks::emergent_haunting,
     super::decks::jolene_plundering_pugilist,
+    // recent275 — X-dig sorcery, counter-Treasure Dwarf, Phyrexian sac engine, Rabbit pump
+    super::decks::stargaze,
+    super::decks::axgard_artisan,
+    super::decks::bloated_processor,
+    super::decks::harvestrite_host,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
