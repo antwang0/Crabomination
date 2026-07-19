@@ -6852,6 +6852,13 @@ static DECKS: &[Factory] = &[
     super::decks::armor_of_shadows,
     super::decks::arms_of_hadar,
     super::decks::a_little_chat,
+    // recent269 — stun Crab, modal ramp, one-or-two pump, Sloth sink, Illusion, Elf
+    super::decks::gilded_scuttler,
+    super::decks::go_forth,
+    super::decks::hearts_on_fire,
+    super::decks::hungry_megasloth,
+    super::decks::phantasmal_shieldback,
+    super::decks::razorgrass_invoker,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
