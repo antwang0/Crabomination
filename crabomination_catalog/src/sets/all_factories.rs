@@ -6871,6 +6871,9 @@ static DECKS: &[Factory] = &[
     super::decks::battle_rage_blessing,
     super::decks::benalish_sleeper,
     super::decks::argivian_avenger,
+    // recent272 — modified-matters pump, tuck + decayed Zombie
+    super::decks::ambitious_assault,
+    super::decks::revenge_of_the_drowned,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
