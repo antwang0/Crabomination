@@ -16,6 +16,15 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **OTJ gap batch (recent288–289):** `StaticEffect::{ExileCastCostReduction,
+  PlotCostReduction}` (exile-cast reduction threads foretell + adventure-creature
+  paths that previously applied none — Doc Aurlock); `CardInstance.saddled_by` +
+  `Effect::ExileAndReturnSelfWithSaddler` + `DelayedKind::EndOfCombat` (Fortune,
+  Loyal Steed's saddle blink); `CardInstance.crewed_by` + `Value::SourceCrewerCount`
+  (Luxurious Locomotive); `Effect::LookTopMayDeployLand` (Mobile Homestead, leaves
+  a non-land on top). Cards: Doc Aurlock, Fortune, Luxurious Locomotive, Mobile
+  Homestead, Wylie Duke. Server: `slow_game_pct`. Client: `Crew×N` board chip.
+
 - **Class enchantments (CR 716) — recent286:** `CardInstance.class_level`
   (enters at level 1, battlefield-only), level-up modelled as sorcery-speed
   activated abilities (`Effect::AdvanceClassLevel`) gated on

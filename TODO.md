@@ -3,21 +3,45 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-**Noticed this run (recent287 batch), each blocked on one primitive:**
-- Satoru, the Infiltrator (OTJ) — "creatures enter without being cast / no mana
-  spent → draw"; needs a batched entered-not-cast trigger predicate (per-creature
-  `Not(SourceWasCast)` misses the "no mana spent" free-cast case + the and/or
-  batch semantics).
-- Kambal, Profiteering Mayor (OTJ) — needs a "for each token that entered this
-  batch, create a tapped copy of it" effect (the token-enter drain half is a
-  clean `TokenCreated` trigger already).
-- Doc Aurlock (OTJ) — needs cost reduction for *exile* casts and *plot* casts
-  (graveyard-cast reduction ships via `GraveyardCastCostReduction`).
-- Fortune, Loyal Steed (OTJ) — ETB scry + Saddle ship; the "attacks while
-  saddled → exile it and up to one saddler, return them" blink needs a
-  saddled-by tracker.
+**Batched-ETB infrastructure (blocks several OTJ legends):** "whenever one or
+more [creatures/tokens] enter" triggers currently fire per-permanent, not
+once per simultaneous batch. A real batch-ETB dispatch (dedup at trigger
+dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
+- Satoru, the Infiltrator (OTJ) — "Satoru and/or nontoken creatures you control
+  enter, if none were cast or no mana was spent → draw"; needs the batch plus a
+  per-batch "none were cast / no mana spent" predicate (per-creature
+  `Not(SourceWasCast)` misses the free-cast "no mana spent" case).
+- Kambal, Profiteering Mayor (OTJ) — "one or more tokens you control enter →
+  drain 1" (once per batch, not per token) + "opponents' tokens enter → copy
+  each as a tapped token, once each turn".
+- Geralf, the Fleshwright (OTJ) — "Zombie enters → +1/+1 per other Zombie that
+  entered this turn" (needs a zombies-entered-this-turn batch count).
+
+**Other OTJ legends still open (each needs one primitive):**
+- Bruse Tarl, Roving Rancher — Oxen double-strike anthem ships via
+  `AnthemForFilter`; the ETB/attacks "exile top: land → Ox token, else may-cast
+  until end of your next turn" needs a reveal-top-conditional (land-branch token
+  vs. impulse-branch may-play).
+- Vraska, the Silencer — "opponent's nontoken creature dies → may pay {1},
+  return that card under your control as a Treasure" needs a reanimate-the-
+  dying-creature-under-your-control effect composed with `BecomeTreasure`.
+- Geralf/Breeches — "cast your second/Nth spell each turn" needs an Nth-spell-cast
+  trigger event (only the cost-reduction `CostReductionNthSpell` static exists).
 - Artist's Talent (BLB) — last unshipped Talent; needs level-gated
   cost-reduction + noncombat-damage-replacement on the non-layer static paths.
+
+**Client change unverified in this environment:** the `Crew×N` board chip
+(`keyword_label::board_status_strip` + `PermanentView.crewed_count`) was added
+but the client crate can't compile headless (see the tooling note below), so
+its unit tests weren't run here — verify with a local build.
+
+**Tooling — client build in headless/CI:** the GUI crate needs `libwayland-dev`,
+`libasound2-dev`, and `libudev-dev` (plus `libxkbcommon-dev`) to compile; without
+them `cargo build/test -p crabomination_client` fails in wayland-sys/alsa-sys/
+libudev build scripts. A SessionStart hook that `apt-get install`s these would let
+client unit tests (e.g. `keyword_label`, `counter_tooltip`) run in web sessions —
+they currently never compile there, which is how the `class_level`-missing
+`PermanentView` test literal (fixed a prior run) went unnoticed.
 
 **Tooling — client build in headless/CI:** the GUI crate needs `libwayland-dev`,
 `libasound2-dev`, and `libudev-dev` (plus `libxkbcommon-dev`) to compile; without
