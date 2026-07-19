@@ -6839,6 +6839,19 @@ static DECKS: &[Factory] = &[
     super::decks::gnawing_crescendo,
     super::decks::angelic_intervention,
     super::decks::alabaster_host_intercessor,
+    // recent268 — DMU/SNC gap batch (modal ETB, kicker, affinity, domain, tricks)
+    super::decks::aether_channeler,
+    super::decks::aggressive_sabotage,
+    super::decks::argivian_phalanx,
+    super::decks::artillery_blast,
+    super::decks::automatic_librarian,
+    super::decks::antagonize,
+    super::decks::attended_socialite,
+    super::decks::backup_agent,
+    super::decks::angelic_observer,
+    super::decks::armor_of_shadows,
+    super::decks::arms_of_hadar,
+    super::decks::a_little_chat,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
