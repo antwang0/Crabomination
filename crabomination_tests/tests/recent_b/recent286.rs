@@ -394,3 +394,16 @@ fn warlock_class_end_step_drains() {
     // Level-1 (creature died earlier) drains 1, level-3 drains the 5 lost.
     assert!(g.players[1].life <= life - 5, "level-3 mirror drain applied");
 }
+
+/// CR 716.2 — a Class's level survives a full-state snapshot round-trip.
+#[test]
+fn class_level_survives_serde_roundtrip() {
+    use crabomination::game::GameState;
+    let mut g = two_player_game();
+    let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::wizard_class());
+    drain_stack(&mut g);
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 3;
+    let json = serde_json::to_string(&g).expect("serialize");
+    let g2: GameState = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(g2.battlefield_find(class).unwrap().class_level, 3, "class_level round-trips");
+}
