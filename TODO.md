@@ -18,10 +18,6 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   entered this turn" (needs a zombies-entered-this-turn batch count).
 
 **Other OTJ legends still open (each needs one primitive):**
-- Bruse Tarl, Roving Rancher — Oxen double-strike anthem ships via
-  `AnthemForFilter`; the ETB/attacks "exile top: land → Ox token, else may-cast
-  until end of your next turn" needs a reveal-top-conditional (land-branch token
-  vs. impulse-branch may-play).
 - Vraska, the Silencer — "opponent's nontoken creature dies → may pay {1},
   return that card under your control as a Treasure" needs a reanimate-the-
   dying-creature-under-your-control effect composed with `BecomeTreasure`.

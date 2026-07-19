@@ -4567,6 +4567,13 @@ pub enum Effect {
         uncast_penalty: Option<Box<Effect>>,
     },
 
+    /// "Exile the top card of your library. If it's a land, create `token`.
+    /// Otherwise, you may play it until the end of your next turn (paying its
+    /// own cost)." The exiled land stays exiled. Bruse Tarl, Roving Rancher.
+    ExileTopLandTokenElseMayPlay {
+        token: TokenDefinition,
+    },
+
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
     /// Each player picked by `who` sacrifices **all** permanents they control

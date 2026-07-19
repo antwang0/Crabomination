@@ -78,3 +78,36 @@ fn wylie_duke_draws_on_tap() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
     assert_eq!(g.players[0].life, life_before + 1, "gained 1 life");
 }
+
+/// Bruse Tarl exiles the top card on ETB: a land makes an Ox token; a nonland
+/// gets a play-until-end-of-next-turn grant.
+#[test]
+fn bruse_tarl_reveals_land_makes_ox() {
+    let mut g = two_player_game();
+    // Land on top → Ox token, and Oxen get double strike from Bruse Tarl.
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::forest());
+    let bruse = g.add_card_to_battlefield(0, catalog::bruse_tarl_roving_rancher());
+    g.fire_self_etb_triggers(bruse, 0);
+    drain_stack(&mut g);
+    let ox = g.battlefield.iter().find(|c| c.definition.name == "Ox").expect("Ox token created");
+    assert!(
+        g.computed_permanent(ox.id).unwrap().keywords.contains(&crabomination::card::Keyword::DoubleStrike),
+        "the Ox has double strike from Bruse Tarl's anthem",
+    );
+    assert!(g.exile.iter().any(|c| c.definition.name == "Forest"), "the land stays exiled");
+}
+
+/// A nonland on top instead grants Bruse Tarl's controller a may-play.
+#[test]
+fn bruse_tarl_reveals_nonland_grants_may_play() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let bruse = g.add_card_to_battlefield(0, catalog::bruse_tarl_roving_rancher());
+    g.fire_self_etb_triggers(bruse, 0);
+    drain_stack(&mut g);
+    let bears = g.exile.iter().find(|c| c.definition.name == "Grizzly Bears").expect("nonland exiled");
+    assert!(bears.may_play_until.is_some(), "the nonland is castable from exile");
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Ox"), "no Ox token for a nonland");
+}

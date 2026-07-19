@@ -804,6 +804,7 @@ impl Effect {
             Effect::GainHexproofUntilYourNextTurn { who } => player_has_target(who),
             Effect::CantCastNoncreatureThisTurn { who } => sel_has_target(who),
             Effect::ExileTopAndGrantMayPlay { .. } => false,
+            Effect::ExileTopLandTokenElseMayPlay { .. } => false,
             Effect::AddEnergy(amount) => value_has_target(amount),
             Effect::AddExperience(amount) => value_has_target(amount),
             Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => then.requires_target(),

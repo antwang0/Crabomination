@@ -6966,6 +6966,7 @@ static DECKS: &[Factory] = &[
     super::decks::luxurious_locomotive,
     super::decks::mobile_homestead,
     super::decks::wylie_duke_atiin_hero,
+    super::decks::bruse_tarl_roving_rancher,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

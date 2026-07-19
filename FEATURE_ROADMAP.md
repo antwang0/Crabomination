@@ -22,8 +22,10 @@ exercising each) was elided in a compaction pass; recover it from
   `Effect::ExileAndReturnSelfWithSaddler` + `DelayedKind::EndOfCombat` (Fortune,
   Loyal Steed's saddle blink); `CardInstance.crewed_by` + `Value::SourceCrewerCount`
   (Luxurious Locomotive); `Effect::LookTopMayDeployLand` (Mobile Homestead, leaves
-  a non-land on top). Cards: Doc Aurlock, Fortune, Luxurious Locomotive, Mobile
-  Homestead, Wylie Duke. Server: `slow_game_pct`. Client: `Crew×N` board chip.
+  a non-land on top); `Effect::ExileTopLandTokenElseMayPlay` (Bruse Tarl —
+  land→token / nonland→impulse). Cards: Doc Aurlock, Fortune, Luxurious
+  Locomotive, Mobile Homestead, Wylie Duke, Bruse Tarl. Server: `slow_game_pct`.
+  Client: `Crew×N` board chip.
 
 - **Class enchantments (CR 716) — recent286:** `CardInstance.class_level`
   (enters at level 1, battlefield-only), level-up modelled as sorcery-speed

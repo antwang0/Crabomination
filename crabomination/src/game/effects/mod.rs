@@ -14570,6 +14570,44 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopLandTokenElseMayPlay { token } => {
+                let p = ctx.controller;
+                let Some(top_id) = self.players[p].library.first().map(|c| c.id) else {
+                    return Ok(());
+                };
+                let is_land =
+                    self.players[p].library.first().is_some_and(|c| c.definition.is_land());
+                self.move_card_to(top_id, &crate::effect::ZoneDest::Exile, ctx, events);
+                if is_land {
+                    // Land branch: create the token; the land stays exiled.
+                    self.run_effect(
+                        &Effect::CreateToken {
+                            who: crate::effect::PlayerRef::You,
+                            count: crate::effect::Value::ONE,
+                            definition: token.clone(),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                } else if let Some(card) = {
+                    let granted_turn = self.turn_number;
+                    self.find_card_anywhere_mut(top_id).map(|c| (c, granted_turn))
+                } {
+                    let (card, granted_turn) = card;
+                    // Nonland branch: impulse may-play (pay its own cost) until
+                    // the end of the controller's next turn.
+                    card.may_play_until = Some(crate::card::MayPlayPermission {
+                        player: p,
+                        granted_turn,
+                        duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                        exile_after: false,
+                        miracle: false,
+                    });
+                    card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
+                }
+                Ok(())
+            }
+
             Effect::AtNextEndStep { body } => {
                 // Capture the current targets so `Selector::Target(n)` in the
                 // body re-resolves at fire time. DelayedTrigger carries one

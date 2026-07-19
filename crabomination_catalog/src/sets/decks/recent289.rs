@@ -5,13 +5,14 @@
 
 use crate::card::{
     ArtifactSubtype, CardDefinition, CardType, CreatureType, Keyword,
-    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
+    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, StaticEffect,
 };
 use crate::game::effects::treasure_token;
-use crate::mana::{cost, g, generic, w};
+use crate::mana::{cost, g, generic, r, w, Color};
 
 fn vehicle() -> Subtypes {
     Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() }
@@ -93,6 +94,58 @@ pub fn wylie_duke_atiin_hero() -> CardDefinition {
                 Effect::Draw { who: Selector::You, amount: Value::ONE },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+fn ox_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Ox".to_string(),
+        colors: vec![Color::White],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ox], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
+/// Bruse Tarl, Roving Rancher — {2}{R}{W} Legendary Creature — Human Warrior
+/// 4/3. Oxen you control have double strike. When Bruse Tarl enters or attacks,
+/// exile the top card of your library; if it's a land, create a 2/2 white Ox,
+/// otherwise you may play it until the end of your next turn.
+pub fn bruse_tarl_roving_rancher() -> CardDefinition {
+    let reveal = |kind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::SelfSource),
+        effect: Effect::ExileTopLandTokenElseMayPlay { token: ox_token() },
+    };
+    CardDefinition {
+        name: "Bruse Tarl, Roving Rancher",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Oxen you control have double strike.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::HasCreatureType(CreatureType::Ox).and(R::ControlledByYou),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::DoubleStrike],
+                opponents: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        triggered_abilities: vec![
+            reveal(EventKind::EntersBattlefield),
+            reveal(EventKind::Attacks),
+        ],
         ..Default::default()
     }
 }
