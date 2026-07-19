@@ -1418,26 +1418,8 @@ fn cr_702_25_flanking_shrinks_nonflanking_blocker() {
     assert_eq!(g.battlefield_find(atk).unwrap().damage, 0, "flanker took no damage back");
 }
 
-/// CR 702.23 — Rampage N: +N/+N for each blocker beyond the first.
-#[test]
-fn cr_702_23_rampage_pumps_per_extra_blocker() {
-    let mut g = two_player_game();
-    let atk = g.add_card_to_battlefield(0, body_kw("Rampager", 2, 2, vec![Keyword::Rampage(2)]));
-    let b1 = g.add_card_to_battlefield(1, body_kw("B1", 1, 4, vec![]));
-    let b2 = g.add_card_to_battlefield(1, body_kw("B2", 1, 4, vec![]));
-    g.clear_sickness(atk);
-    advance_to(&mut g, TurnStep::DeclareAttackers);
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: atk, target: AttackTarget::Player(1),
-    }])).expect("attack");
-    drain_stack(&mut g);
-    advance_to(&mut g, TurnStep::DeclareBlockers);
-    g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk), (b2, atk)])).expect("block");
-    drain_stack(&mut g);
-    // Two blockers → one "beyond the first" → +2/+2 → a 4/4.
-    assert_eq!(g.computed_permanent(atk).unwrap().power, 4, "Rampage 2 for one extra blocker");
-    assert_eq!(g.computed_permanent(atk).unwrap().toughness, 4);
-}
+// CR 702.23 — Rampage: covered by cr_702_23_rampage_pumps_per_extra_blocker in
+// cr_rules.rs (same mechanic/assertion, using the real Craw Giant).
 
 /// CR 702.45 — Bushido N: +N/+N when this creature blocks or becomes blocked.
 #[test]

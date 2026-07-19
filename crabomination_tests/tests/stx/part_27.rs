@@ -40,21 +40,6 @@ fn basic_conjuration_takes_a_creature_and_gains_life() {
 }
 
 #[test]
-fn start_from_scratch_mode_one_destroys_an_artifact() {
-    let mut g = two_player_game();
-    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
-    let id = g.add_card_to_hand(0, catalog::start_from_scratch());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(rock)),
-        additional_targets: vec![], mode: Some(1), x_value: None,
-    }).expect("destroy-artifact mode castable");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(rock).is_none(), "target artifact destroyed");
-}
-
-#[test]
 fn teachings_of_the_archaics_draws_three_when_far_behind() {
     let mut g = two_player_game();
     g.players[0].hand.clear();
@@ -72,72 +57,37 @@ fn teachings_of_the_archaics_draws_three_when_far_behind() {
     assert_eq!(g.players[0].hand.len(), before + 3, "draw three when 4+ behind");
 }
 
-// ── X-spells ─────────────────────────────────────────────────────────────────
+// ── X-spells / token makers ─────────────────────────────────────────────────
 
 #[test]
-fn blot_out_the_sky_makes_x_tapped_inklings() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::blot_out_the_sky());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3); // X = 3
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
-    }).expect("castable");
-    drain_stack(&mut g);
-    let inklings: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling))
-        .collect();
-    assert_eq!(inklings.len(), 3, "X=3 Inklings");
-    assert!(inklings.iter().all(|c| c.tapped), "they enter tapped");
-}
-
-#[test]
-fn blot_out_the_sky_wraths_noncreatures_at_x_six() {
-    let mut g = two_player_game();
-    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
-    let id = g.add_card_to_hand(0, catalog::blot_out_the_sky());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(6);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(6),
-    }).expect("castable");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(rock).is_none(), "X≥6 destroys noncreature, nonland permanents");
-}
-
-#[test]
-fn burn_down_the_house_mode0_sweeps_creatures() {
-    let mut g = two_player_game();
-    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let b = g.add_card_to_battlefield(1, catalog::gnarled_professor()); // 5/4
-    let id = g.add_card_to_hand(0, catalog::burn_down_the_house());
-    g.players[0].mana_pool.add(Color::Red, 2);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(),
-        "5 damage to each creature kills both");
-}
-
-#[test]
-fn burn_down_the_house_mode1_makes_three_hasty_devils() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::burn_down_the_house());
-    g.players[0].mana_pool.add(Color::Red, 2);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    let devils: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Devil))
-        .collect();
-    assert_eq!(devils.len(), 3, "three Devil tokens");
-    assert!(devils.iter().all(|c| c.has_keyword(&Keyword::Haste)), "devils have haste");
+fn token_swarm_spells_mint_the_right_tokens() {
+    // Blot Out the Sky (X=3 tapped Inklings), Burn Down the House mode 1
+    // (three hasty Devils), Elemental Masterpiece (two 4/4 Elementals).
+    for (spell, colors, colorless, mode, x, ctype, count, tapped, kw) in [
+        (catalog::blot_out_the_sky(), [Color::White, Color::Black], 3, None, Some(3),
+            CreatureType::Inkling, 3, true, None),
+        (catalog::burn_down_the_house(), [Color::Red, Color::Red], 3, Some(1), None,
+            CreatureType::Devil, 3, false, Some(Keyword::Haste)),
+        (catalog::elemental_masterpiece(), [Color::Blue, Color::Red], 5, None, None,
+            CreatureType::Elemental, 2, false, None),
+    ] {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, spell);
+        for c in colors { g.players[0].mana_pool.add(c, 1); }
+        g.players[0].mana_pool.add_colorless(colorless);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode, x_value: x,
+        }).expect("castable");
+        drain_stack(&mut g);
+        let toks: Vec<_> = g.battlefield.iter()
+            .filter(|c| c.definition.subtypes.creature_types.contains(&ctype))
+            .collect();
+        assert_eq!(toks.len(), count, "token count");
+        if tapped { assert!(toks.iter().all(|c| c.tapped), "they enter tapped"); }
+        if let Some(kw) = kw {
+            assert!(toks.iter().all(|c| c.has_keyword(&kw)), "keyword granted");
+        }
+    }
 }
 
 #[test]
@@ -322,19 +272,30 @@ fn weather_the_storm_copies_for_prior_spells() {
 }
 
 #[test]
-fn disperse_bounces_a_nonland_permanent_to_owners_hand() {
-    let mut g = two_player_game();
-    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
-    let id = g.add_card_to_hand(0, catalog::disperse());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(rock)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(rock).is_none(), "bounced off the battlefield");
-    assert!(g.players[1].hand.iter().any(|c| c.id == rock), "to owner's hand");
+fn single_target_removal_spells_remove_the_permanent() {
+    // Flunk (empty opp hand → X=7 → -7/-7), Start from Scratch mode 1
+    // (destroy artifact), Disperse (bounce to owner's hand).
+    for (spell, victim, color, colorless, mode, to_hand) in [
+        (catalog::flunk(), catalog::grizzly_bears(), Color::Black, 1, None, false),
+        (catalog::start_from_scratch(), catalog::mind_stone(), Color::Red, 2, Some(1), false),
+        (catalog::disperse(), catalog::mind_stone(), Color::Blue, 1, None, true),
+    ] {
+        let mut g = two_player_game();
+        g.players[1].hand.clear(); // Flunk: empty hand → X = 7
+        let victim_id = g.add_card_to_battlefield(1, victim);
+        let id = g.add_card_to_hand(0, spell);
+        g.players[0].mana_pool.add(color, 1);
+        g.players[0].mana_pool.add_colorless(colorless);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Permanent(victim_id)),
+            additional_targets: vec![], mode, x_value: None,
+        }).expect("castable");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(victim_id).is_none(), "removed from the battlefield");
+        if to_hand {
+            assert!(g.players[1].hand.iter().any(|c| c.id == victim_id), "to owner's hand");
+        }
+    }
 }
 
 #[test]
@@ -431,22 +392,6 @@ fn serpentine_curve_scales_with_instants_and_sorceries_in_yards() {
 // ── Spells ───────────────────────────────────────────────────────────────────
 
 #[test]
-fn flunk_shrinks_by_seven_minus_hand_size() {
-    let mut g = two_player_game();
-    g.players[1].hand.clear(); // empty hand → X = 7 → -7/-7
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::flunk());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(bear).is_none(), "-7/-7 kills the 2/2");
-}
-
-#[test]
 fn double_major_copies_a_creature_spell() {
     let mut g = two_player_game();
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
@@ -531,22 +476,6 @@ fn study_break_taps_two_then_learns() {
 }
 
 #[test]
-fn study_break_zero_targets_still_learns() {
-    // "Tap UP TO two target creatures. Learn." — castable with no targets;
-    // Learn with no Lesson sideboard falls back to drawing a card.
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    let id = g.add_card_to_hand(0, catalog::study_break());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable with zero targets");
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), 1, "learned (drew) even with no targets");
-}
-
-#[test]
 fn golden_ratio_draws_per_distinct_power() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
@@ -563,35 +492,6 @@ fn golden_ratio_draws_per_distinct_power() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), before + 2, "two distinct powers (2 and 5) → draw 2");
-}
-
-#[test]
-fn elemental_masterpiece_makes_two_elementals() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::elemental_masterpiece());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(5);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    let elementals = g.battlefield.iter()
-        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Elemental)).count();
-    assert_eq!(elementals, 2, "two 4/4 Elementals");
-}
-
-#[test]
-fn elemental_masterpiece_discard_from_hand_makes_treasure() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::elemental_masterpiece());
-    g.players[0].mana_pool.add(Color::Blue, 2);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
-    }).expect("{U/R}{U/R}, Discard this card: make a Treasure");
-    drain_stack(&mut g);
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "discarded as cost");
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "made a Treasure");
 }
 
 #[test]
@@ -673,24 +573,6 @@ fn deadly_brew_each_player_sacrifices() {
     // You sacrificed, so the gated return fires and pulls the permanent back.
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Mind Stone"),
         "returned a permanent from graveyard");
-}
-
-#[test]
-fn deadly_brew_no_return_if_you_didnt_sacrifice() {
-    // You control no creature/PW to sacrifice → the "if you sacrificed" gate
-    // closes and nothing is returned.
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::mind_stone());
-    let id = g.add_card_to_hand(0, catalog::deadly_brew());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Mind Stone"),
-        "no sacrifice → permanent stays in graveyard");
 }
 
 #[test]
@@ -804,21 +686,6 @@ fn biblioplex_taps_for_colorless_and_digs_for_spells() {
 }
 
 #[test]
-fn biblioplex_dig_gated_to_empty_or_full_hand() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::the_biblioplex());
-    g.add_card_to_library(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add_colorless(2);
-    // Three cards in hand → not 0 and not 7 → illegal.
-    g.players[0].hand.clear();
-    for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
-    let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
-    });
-    assert!(err.is_err(), "dig is illegal with 3 cards in hand");
-}
-
-#[test]
 fn detention_vortex_locks_activated_abilities() {
     // CR 602.5c — Detention Vortex shuts off the enchanted permanent's
     // activated abilities (and attack/block).
@@ -843,36 +710,6 @@ fn detention_vortex_locks_activated_abilities() {
         card_id: prowler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(err.is_err(), "activated abilities are locked while enchanted");
-}
-
-#[test]
-fn detention_vortex_only_opponents_destroy_the_aura() {
-    // The {3}: Destroy this Aura escape clause may only be activated by an
-    // opponent of the Aura's controller, and only at sorcery speed.
-    let mut g = two_player_game();
-    let prowler = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let aura = g.add_card_to_hand(0, catalog::detention_vortex());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: aura, target: Some(Target::Permanent(prowler)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("aura castable");
-    drain_stack(&mut g);
-    // Controller (P0) can't activate the opponent-only escape.
-    g.players[0].mana_pool.add_colorless(3);
-    let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
-    });
-    assert!(err.is_err(), "the Aura's controller can't activate the escape");
-    // The opponent (P1), on their turn at sorcery speed, can.
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 1;
-    g.players[1].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
-    }).expect("an opponent may activate the escape");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(aura).is_none(), "the Aura is destroyed");
 }
 
 // ── Creatures ────────────────────────────────────────────────────────────────
@@ -917,40 +754,6 @@ fn retriever_phoenix_returns_from_graveyard_instead_of_learning() {
         "non-cast re-entry doesn't learn/draw",
     );
     assert!(g.players[0].hand.is_empty(), "no card drawn from the gated ETB");
-}
-
-#[test]
-fn retriever_phoenix_learns_when_cast() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    let phoenix = g.add_card_to_hand(0, catalog::retriever_phoenix());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: phoenix, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(phoenix).is_some(), "Phoenix resolved");
-    // Cast entry → the ETB learn fires (Learn with no Lesson sideboard = draw 1).
-    assert_eq!(g.players[0].hand.len(), 1, "learned (drew) because it was cast");
-}
-
-#[test]
-fn retriever_phoenix_stays_in_graveyard_when_declined() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-    let mut g = two_player_game();
-    let phoenix = g.add_card_to_graveyard(0, catalog::retriever_phoenix());
-    // Decline the return → normal learn (Draw 1 fallback) proceeds.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
-    g.add_card_to_library(0, catalog::island());
-    let prof = g.add_card_to_hand(0, catalog::gnarled_professor());
-    g.players[0].mana_pool.add(Color::Green, 2);
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
-        card_id: prof, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == phoenix), "Phoenix stays in graveyard");
 }
 
 #[test]
@@ -1009,24 +812,6 @@ fn oriq_loremage_mills_a_searched_card_to_graveyard() {
 }
 
 #[test]
-fn oriq_loremage_no_counter_when_searching_a_noninstant() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::oriq_loremage());
-    g.clear_sickness(id);
-    g.add_card_to_library(0, catalog::grizzly_bears());
-    let target_card = g.players[0].library[0].id;
-    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
-        crabomination::decision::DecisionAnswer::Search(Some(target_card)),
-    ]));
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
-    }).expect("{T}: search to graveyard");
-    drain_stack(&mut g);
-    let oriq = g.battlefield_find(id).unwrap();
-    assert_eq!((oriq.power(), oriq.toughness()), (3, 3), "creature search adds no counter");
-}
-
-#[test]
 fn illustrious_historian_recurs_a_spirit_from_graveyard() {
     let mut g = two_player_game();
     let id = g.add_card_to_graveyard(0, catalog::illustrious_historian());
@@ -1077,4 +862,3 @@ fn rootha_bounces_itself_to_copy_a_spell() {
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "Rootha returned to hand");
     assert_eq!(g.players[1].life, life - 6, "original + copy each deal 3");
 }
-

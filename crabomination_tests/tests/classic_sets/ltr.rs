@@ -2,7 +2,7 @@
 //! Ring mechanic (CR 701.54 — `Effect::RingTempts`, per-player temptation
 //! level + Ring-bearer designation).
 
-use crabomination::card::CreatureType;
+use crabomination::card::{CreatureType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, Target, TurnStep};
@@ -13,6 +13,16 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
     while g.step != step {
         g.perform_action(GameAction::PassPriority).expect("pass priority");
     }
+}
+
+type CardFn = fn() -> crabomination::card::CardDefinition;
+
+/// Fill player 0's pool with plenty of every color so any table row can pay.
+fn add_generous_mana(g: &mut GameState) {
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 3);
+    }
+    g.players[0].mana_pool.add_colorless(8);
 }
 
 // ── The Ring engine (CR 701.54) ─────────────────────────────────────────────
@@ -135,16 +145,23 @@ fn ring_temptations_cap_at_four() {
 
 // ── LTR cards ────────────────────────────────────────────────────────────
 
-/// Birthday Escape draws a card and tempts.
+/// Cards that tempt (ring_temptations == 1) when cast / on ETB.
 #[test]
-fn birthday_escape_draws_and_tempts() {
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.add_card_to_library(0, catalog::forest());
-    let id = g.add_card_to_hand(0, catalog::birthday_escape());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    cast(&mut g, id);
-    assert_eq!(g.players[0].ring_temptations, 1, "tempted once");
+fn cards_tempt_on_cast() {
+    let cases: &[(&str, CardFn)] = &[
+        ("Birthday Escape", catalog::birthday_escape),
+        ("Uruk-hai Berserker", catalog::uruk_hai_berserker),
+        ("Frodo Baggins", catalog::frodo_baggins),
+    ];
+    for (name, card) in cases {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+        let id = g.add_card_to_hand(0, card());
+        add_generous_mana(&mut g);
+        cast(&mut g, id);
+        assert_eq!(g.players[0].ring_temptations, 1, "{name}: tempted once");
+    }
 }
 
 /// The Black Breath gives opponents' creatures -1/-1 and tempts.
@@ -161,15 +178,21 @@ fn the_black_breath_shrinks_opponents_and_tempts() {
     assert_eq!(g.players[0].ring_temptations, 1);
 }
 
-/// Rohirrim Lancer tempts when it dies.
+/// Cards that tempt when they die.
 #[test]
-fn rohirrim_lancer_tempts_on_death() {
-    let mut g = two_player_game();
-    let lancer = g.add_card_to_battlefield(0, catalog::rohirrim_lancer());
-    let ev = g.remove_to_graveyard_with_triggers(lancer);
-    g.dispatch_triggers_for_events(&ev);
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].ring_temptations, 1, "tempted on death");
+fn cards_tempt_on_death() {
+    let cases: &[(&str, CardFn)] = &[
+        ("Rohirrim Lancer", catalog::rohirrim_lancer),
+        ("Took Reaper", catalog::took_reaper),
+    ];
+    for (name, card) in cases {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, card());
+        let ev = g.remove_to_graveyard_with_triggers(id);
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].ring_temptations, 1, "{name}: tempted on death");
+    }
 }
 
 /// Bilbo tempts on ETB and makes a Treasure on combat damage.
@@ -213,17 +236,31 @@ fn call_of_the_ring_upkeep_tempt_and_draw() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
 }
 
-/// Easterling Vanguard amasses Orcs 1 when it dies.
+/// Cards that amass Orcs — on death or on cast.
 #[test]
-fn easterling_vanguard_amasses_on_death() {
-    let mut g = two_player_game();
-    let v = g.add_card_to_battlefield(0, catalog::easterling_vanguard());
-    let ev = g.remove_to_graveyard_with_triggers(v);
-    g.dispatch_triggers_for_events(&ev);
-    drain_stack(&mut g);
-    let army = g.battlefield.iter().find(|c| c.controller == 0
-        && c.definition.subtypes.creature_types.contains(&CreatureType::Army));
-    assert!(army.is_some(), "Orc Army token created");
+fn cards_amass() {
+    let cases: &[(&str, CardFn, bool)] = &[
+        ("Easterling Vanguard", catalog::easterling_vanguard, true), // on death
+        ("Dunland Crebain", catalog::dunland_crebain, false),        // on ETB
+        ("Mordor Muster", catalog::mordor_muster, false),            // spell
+    ];
+    for (name, card, on_death) in cases {
+        let mut g = two_player_game();
+        for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+        if *on_death {
+            let id = g.add_card_to_battlefield(0, card());
+            let ev = g.remove_to_graveyard_with_triggers(id);
+            g.dispatch_triggers_for_events(&ev);
+            drain_stack(&mut g);
+        } else {
+            let id = g.add_card_to_hand(0, card());
+            add_generous_mana(&mut g);
+            cast(&mut g, id);
+        }
+        assert!(g.battlefield.iter().any(|c| c.controller == 0
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Army)),
+            "{name}: Orc Army amassed");
+    }
 }
 
 /// Mirkwood Bats drains each opponent when you create a token.
@@ -323,17 +360,6 @@ fn wizards_rockets_sac_for_mana_draws() {
     assert!(g.battlefield_find(rockets).is_none(), "sacrificed");
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew on death");
     assert!(g.players[0].mana_pool.total() >= 1, "mana added");
-}
-
-/// Took Reaper tempts on death.
-#[test]
-fn took_reaper_tempts_on_death() {
-    let mut g = two_player_game();
-    let r = g.add_card_to_battlefield(0, catalog::took_reaper());
-    let ev = g.remove_to_graveyard_with_triggers(r);
-    g.dispatch_triggers_for_events(&ev);
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].ring_temptations, 1);
 }
 
 /// Erebor Flamesmith pings each opponent when you cast an instant.
@@ -628,17 +654,6 @@ fn bitter_downfall_destroys_and_drains() {
     assert_eq!(g.players[1].life, life - 2, "controller lost 2 life");
 }
 
-/// Uruk-hai Berserker tempts on ETB.
-#[test]
-fn uruk_hai_berserker_tempts_on_etb() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::uruk_hai_berserker());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    cast(&mut g, id);
-    assert_eq!(g.players[0].ring_temptations, 1);
-}
-
 /// Ranger's Firebrand burns and tempts.
 #[test]
 fn rangers_firebrand_burns_and_tempts() {
@@ -844,17 +859,6 @@ fn rising_of_the_day_haste_and_legendary_anthem() {
     let l = cp.iter().find(|c| c.id == legend).unwrap();
     assert!(l.keywords.contains(&crabomination::card::Keyword::Haste), "haste granted");
     assert_eq!((l.power, l.toughness), (2, 3), "legendary +1/+0");
-}
-
-/// Frodo tempts you when a legendary creature you control enters.
-#[test]
-fn frodo_tempts_on_legendary_enter() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::frodo_baggins());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    cast(&mut g, id); // Frodo itself is legendary → tempts on its own ETB
-    assert_eq!(g.players[0].ring_temptations, 1, "tempted on legendary enter");
 }
 
 /// Samwise mints a Food when a nontoken creature enters and can sac three to

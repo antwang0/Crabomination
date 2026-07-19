@@ -11,52 +11,140 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
     }
 }
 
-/// Alesha's Legacy grants deathtouch + indestructible to your creature.
-#[test]
-fn aleshas_legacy_grants_two_keywords() {
-    let mut g = two_player_game();
-    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let spell = g.add_card_to_hand(0, catalog::aleshas_legacy());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.priority.player_with_priority = 0;
-    g.step = TurnStep::PreCombatMain;
-    g.perform_action(GameAction::CastSpell {
-        card_id: spell,
-        target: Some(Target::Permanent(mine)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("cast Alesha's Legacy");
-    drain_stack(&mut g);
-    let kws = g.computed_permanent(mine).unwrap().keywords;
-    assert!(kws.contains(&Keyword::Deathtouch), "gained deathtouch");
-    assert!(kws.contains(&Keyword::Indestructible), "gained indestructible");
+type Catalog = fn() -> crabomination::card::CardDefinition;
+
+/// Fill player 0's pool with ample mana of every color.
+fn add_ample_mana(g: &mut GameState) {
+    g.players[0].mana_pool.add_colorless(8);
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 2);
+    }
 }
 
-/// Fire-Rim Form pumps +2/+0 and grants first strike on enter.
+/// Spells cast at your own 2/2 bear: check resulting P/T and keywords.
+/// Covers Alesha's Legacy, Fire-Rim Form, Fresh Start, Bewilder.
 #[test]
-fn fire_rim_form_pumps_and_grants_first_strike() {
-    let mut g = two_player_game();
-    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
-    let aura = g.add_card_to_hand(0, catalog::fire_rim_form());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.priority.player_with_priority = 0;
-    g.step = TurnStep::PreCombatMain;
-    g.perform_action(GameAction::CastSpell {
-        card_id: aura,
-        target: Some(Target::Permanent(creature)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("cast Fire-Rim Form");
-    drain_stack(&mut g);
-    let cp = g.computed_permanent(creature).unwrap();
-    assert_eq!(cp.power, 4, "+2/+0 → 4 power");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike), "ETB granted first strike");
+fn targeted_pt_and_keyword_spells() {
+    let rows: &[(&str, Catalog, i64, i64, &[Keyword], bool)] = &[
+        (
+            "Alesha's Legacy",
+            catalog::aleshas_legacy,
+            2,
+            2,
+            &[Keyword::Deathtouch, Keyword::Indestructible],
+            false,
+        ),
+        ("Fire-Rim Form", catalog::fire_rim_form, 4, 2, &[Keyword::FirstStrike], false),
+        ("Fresh Start", catalog::fresh_start, -3, 2, &[], true),
+        ("Bewilder", catalog::bewilder, -1, 2, &[], false),
+    ];
+    for &(name, make, p, t, kws, expect_no_kws) in rows {
+        let mut g = two_player_game();
+        let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let spell = g.add_card_to_hand(0, make());
+        g.add_card_to_library(0, catalog::grizzly_bears()); // in case of a cantrip
+        add_ample_mana(&mut g);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: Some(Target::Permanent(creature)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .unwrap_or_else(|e| panic!("cast {name}: {e:?}"));
+        drain_stack(&mut g);
+        let cp = g.computed_permanent(creature).unwrap();
+        assert_eq!((cp.power as i64, cp.toughness as i64), (p, t), "{name}: P/T");
+        for kw in kws {
+            assert!(cp.keywords.contains(kw), "{name}: expected {kw:?}");
+        }
+        if expect_no_kws {
+            assert!(cp.keywords.is_empty(), "{name}: abilities removed");
+        }
+    }
+}
+
+/// One-target/no-target sorcery outcomes: victim leaves the battlefield
+/// (optionally to exile) and/or named tokens are minted. Covers Kin-Tree
+/// Severance, Dragon's Prey, Salt Road Skirmish, Revival of the Ancestors.
+#[test]
+fn removal_and_token_spells() {
+    let rows: &[(&str, Catalog, Option<Catalog>, bool, Option<(&str, usize)>)] = &[
+        ("Kin-Tree Severance", catalog::kin_tree_severance, Some(catalog::serra_angel), true, None),
+        ("Dragon's Prey", catalog::dragons_prey, Some(catalog::grizzly_bears), false, None),
+        (
+            "Salt Road Skirmish",
+            catalog::salt_road_skirmish,
+            Some(catalog::grizzly_bears),
+            false,
+            Some(("Warrior", 2)),
+        ),
+        (
+            "Revival of the Ancestors",
+            catalog::revival_of_the_ancestors,
+            None,
+            false,
+            Some(("Spirit", 3)),
+        ),
+    ];
+    for &(name, make, victim_def, exiled, token) in rows {
+        let mut g = two_player_game();
+        let victim = victim_def.map(|d| g.add_card_to_battlefield(1, d()));
+        let spell = g.add_card_to_hand(0, make());
+        add_ample_mana(&mut g);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: victim.map(Target::Permanent),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .unwrap_or_else(|e| panic!("cast {name}: {e:?}"));
+        drain_stack(&mut g);
+        if let Some(v) = victim {
+            assert!(g.battlefield_find(v).is_none(), "{name}: target removed");
+            if exiled {
+                assert!(g.exile.iter().any(|c| c.id == v), "{name}: went to exile");
+            }
+        }
+        if let Some((tok, n)) = token {
+            let count = g
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == 0 && c.definition.name == tok)
+                .count();
+            assert_eq!(count, n, "{name}: {tok} tokens");
+        }
+    }
+}
+
+/// Pure printed stat/keyword checks. Covers Jeskai Brushmaster and
+/// Rot-Curse Rakshasa.
+#[test]
+fn definition_stats_and_keywords() {
+    let rows: &[(&str, Catalog, i64, i64, &[Keyword])] = &[
+        (
+            "Jeskai Brushmaster",
+            catalog::jeskai_brushmaster,
+            2,
+            4,
+            &[Keyword::DoubleStrike, Keyword::Prowess],
+        ),
+        ("Rot-Curse Rakshasa", catalog::rot_curse_rakshasa, 5, 5, &[Keyword::Trample, Keyword::Decayed]),
+    ];
+    for &(name, make, p, t, kws) in rows {
+        let d = make();
+        assert_eq!((d.power as i64, d.toughness as i64), (p, t), "{name}: P/T");
+        for kw in kws {
+            assert!(d.keywords.contains(kw), "{name}: expected {kw:?}");
+        }
+    }
 }
 
 /// Jade-Cast Sentinel bottoms a graveyard card.

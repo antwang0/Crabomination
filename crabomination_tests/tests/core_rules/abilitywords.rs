@@ -23,13 +23,20 @@ fn resolve_spell(g: &mut GameState, def: crabomination::card::CardDefinition, ta
 
 // ── Threshold ────────────────────────────────────────────────────────────────
 
+/// Table-driven: threshold static pump kicks in at 7 cards in the graveyard.
 #[test]
-fn springing_tiger_threshold_pump() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::springing_tiger());
-    assert_eq!(g.computed_permanent(id).unwrap().power, 3, "no threshold → base 3/3");
-    fill_gy(&mut g, 0, 7);
-    assert_eq!(g.computed_permanent(id).unwrap().power, 5, "threshold → +2/+2");
+fn threshold_static_pump() {
+    let cases: Vec<(&str, crabomination::card::CardDefinition, i32, i32)> = vec![
+        ("Springing Tiger", catalog::springing_tiger(), 3, 5),
+        ("Nimble Mongoose", catalog::nimble_mongoose(), 1, 3),
+    ];
+    for (name, card, base, pumped) in cases {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, card);
+        assert_eq!(g.computed_permanent(id).unwrap().power, base, "{name}: no threshold → base power");
+        fill_gy(&mut g, 0, 7);
+        assert_eq!(g.computed_permanent(id).unwrap().power, pumped, "{name}: threshold pump");
+    }
 }
 
 #[test]
@@ -261,13 +268,4 @@ fn temur_battle_rage_double_strike_and_ferocious_trample() {
     let cp = g.computed_permanent(mine).unwrap();
     assert!(cp.keywords.contains(&Keyword::DoubleStrike));
     assert!(cp.keywords.contains(&Keyword::Trample), "ferocious grants trample");
-}
-
-#[test]
-fn nimble_mongoose_threshold_pump() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::nimble_mongoose());
-    assert_eq!(g.computed_permanent(id).unwrap().power, 1, "no threshold → 1/1");
-    fill_gy(&mut g, 0, 7);
-    assert_eq!(g.computed_permanent(id).unwrap().power, 3, "threshold → 3/3");
 }

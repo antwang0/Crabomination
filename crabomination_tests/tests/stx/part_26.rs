@@ -2,6 +2,9 @@
 //! Strixhaven cards (Campus lands, keyword creatures, spells, Equipment,
 //! payoff creatures) wired against existing primitives plus the new
 //! `Effect::PayManaOrElse`.
+//!
+//! Consolidated: near-identical per-card tests are merged into multi-block
+//! or table-driven tests; every catalog card is still exercised.
 
 use crabomination::card::{CounterType, CreatureType, Keyword};
 use crabomination::game::types::Target;
@@ -13,13 +16,13 @@ use super::*;
 // ── Lands ───────────────────────────────────────────────────────────────────
 
 #[test]
-fn campus_land_enters_tapped_and_taps_for_both_colors() {
+fn campus_lands_enter_tapped_tap_for_colors_and_scry() {
+    // Lorehold Campus: enters tapped, taps for either color.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_campus());
     g.perform_action(GameAction::PlayLand(id)).expect("campus playable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).unwrap().tapped, "Campus enters tapped");
-    // Untap it and verify both mana abilities produce their colors.
     g.battlefield_find_mut(id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
@@ -30,10 +33,8 @@ fn campus_land_enters_tapped_and_taps_for_both_colors() {
         card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tap for W");
     assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
-}
 
-#[test]
-fn campus_land_scry_ability_taps_and_is_payable() {
+    // Quandrix Campus: the {4},{T}: Scry 1 ability is payable and taps.
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_battlefield(0, catalog::quandrix_campus());
@@ -87,8 +88,6 @@ fn archway_commons_kept_when_paid_sacrificed_otherwise() {
 
 #[test]
 fn keyword_creatures_have_their_printed_keywords() {
-    let g = two_player_game();
-    let _ = &g;
     let karok = catalog::moldering_karok();
     assert!(karok.keywords.contains(&Keyword::Trample) && karok.keywords.contains(&Keyword::Lifelink));
     let drake = catalog::needlethorn_drake();
@@ -100,7 +99,8 @@ fn keyword_creatures_have_their_printed_keywords() {
 }
 
 #[test]
-fn springmane_cervin_gains_two_life_on_etb() {
+fn etb_creatures_gain_life_mint_pest_and_grow_fractal() {
+    // Springmane Cervin: ETB gain 2 life.
     let mut g = two_player_game();
     let life = g.players[0].life;
     let id = g.add_card_to_hand(0, catalog::springmane_cervin());
@@ -111,10 +111,8 @@ fn springmane_cervin_gains_two_life_on_etb() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 2, "ETB gains 2 life");
-}
 
-#[test]
-fn professor_of_zoomancy_mints_a_pest_on_etb() {
+    // Professor of Zoomancy: ETB mints a Pest.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::professor_of_zoomancy());
     g.players[0].mana_pool.add(Color::Green, 1);
@@ -127,6 +125,21 @@ fn professor_of_zoomancy_mints_a_pest_on_etb() {
         g.battlefield.iter().any(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Pest)),
         "a Pest token entered",
     );
+
+    // Biomathematician: ETB makes a Fractal and puts a counter on it.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::biomathematician());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter()
+        .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))
+        .expect("a Fractal token");
+    assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 1, "Fractal got a +1/+1 counter");
 }
 
 #[test]
@@ -144,24 +157,9 @@ fn scurrid_colony_grows_with_eight_lands() {
 }
 
 #[test]
-fn wormhole_serpent_grants_target_unblockable() {
+fn spellcast_triggers_mage_hunter_drains_and_lightscribe_pumps() {
+    // Mage Hunter (opponent's side): caster loses 1 when casting an instant.
     let mut g = two_player_game();
-    let serpent = g.add_card_to_battlefield(0, catalog::wormhole_serpent());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: serpent, ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
-    }).expect("{3}{U}: unblockable");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(bear).unwrap().granted_keywords_eot.contains(&Keyword::Unblockable));
-}
-
-#[test]
-fn mage_hunter_drains_when_opponent_casts_instant() {
-    let mut g = two_player_game();
-    // Mage Hunter on seat 1; the active player (seat 0) is its opponent.
     g.add_card_to_battlefield(1, catalog::mage_hunter());
     let life = g.players[0].life;
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -172,10 +170,8 @@ fn mage_hunter_drains_when_opponent_casts_instant() {
     }).expect("active player casts Bolt");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life - 1, "the caster loses 1 to Mage Hunter");
-}
 
-#[test]
-fn leonin_lightscribe_pumps_team_on_magecraft() {
+    // Leonin Lightscribe: magecraft pumps the team.
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::leonin_lightscribe());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -227,30 +223,13 @@ fn arrogant_poet_may_pay_life_for_flying_on_attack() {
 }
 
 #[test]
-fn biomathematician_makes_a_fractal_and_grows_it() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::biomathematician());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    let fractal = g.battlefield.iter()
-        .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))
-        .expect("a Fractal token");
-    assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 1, "Fractal got a +1/+1 counter");
-}
-
-#[test]
-fn campus_guide_puts_basic_land_on_top() {
+fn etb_creatures_put_cards_on_top_of_library() {
+    // Campus Guide: fetch a basic land to the top.
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::grizzly_bears());
     let forest = g.add_card_to_library(0, catalog::forest());
     let id = g.add_card_to_hand(0, catalog::campus_guide());
     g.players[0].mana_pool.add_colorless(2);
-    // Fetch the Forest to the top of the library.
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
         vec![crabomination::decision::DecisionAnswer::Search(Some(forest))],
     ));
@@ -259,10 +238,8 @@ fn campus_guide_puts_basic_land_on_top() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.first().map(|c| c.id), Some(forest), "Forest on top");
-}
 
-#[test]
-fn biblioplex_assistant_returns_instant_from_graveyard_to_top() {
+    // Biblioplex Assistant: return an instant from the graveyard to the top.
     let mut g = two_player_game();
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::biblioplex_assistant());
@@ -275,7 +252,8 @@ fn biblioplex_assistant_returns_instant_from_graveyard_to_top() {
 }
 
 #[test]
-fn overgrown_arch_gains_life_and_learns() {
+fn tap_ability_creatures_overgrown_arch_and_oggyar() {
+    // Overgrown Arch: {T}: gain 1 life (and learn).
     let mut g = two_player_game();
     let arch = g.add_card_to_battlefield(0, catalog::overgrown_arch());
     g.clear_sickness(arch);
@@ -286,6 +264,18 @@ fn overgrown_arch_gains_life_and_learns() {
     }).expect("{T}: gain 1");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 1, "gains 1 life");
+
+    // Oggyar Battle-Seer: haste, and {T}: Scry 1.
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_battlefield(0, catalog::oggyar_battle_seer());
+    assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::Haste));
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("{T}: Scry 1 activatable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "scry ability taps Oggyar");
 }
 
 // ── Spells ───────────────────────────────────────────────────────────────────
@@ -325,7 +315,8 @@ fn crushing_disappointment_drains_all_and_draws_two() {
 }
 
 #[test]
-fn essence_infusion_adds_counters_and_lifelink() {
+fn targeted_combat_tricks_and_debuffs() {
+    // Essence Infusion: two +1/+1 counters and lifelink EOT.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::essence_infusion());
@@ -339,10 +330,8 @@ fn essence_infusion_adds_counters_and_lifelink() {
     let c = g.battlefield_find(bear).unwrap();
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2, "two +1/+1 counters");
     assert!(c.granted_keywords_eot.contains(&Keyword::Lifelink), "gains lifelink EOT");
-}
 
-#[test]
-fn professors_warning_indestructible_mode() {
+    // Professor's Warning: indestructible mode.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::professors_warning());
@@ -353,10 +342,8 @@ fn professors_warning_indestructible_mode() {
     }).expect("indestructible mode");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).unwrap().granted_keywords_eot.contains(&Keyword::Indestructible));
-}
 
-#[test]
-fn sudden_breakthrough_pumps_and_makes_treasure() {
+    // Sudden Breakthrough: +2/+0, first strike, and a Treasure.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let pwr = g.battlefield_find(bear).unwrap().power();
@@ -375,10 +362,8 @@ fn sudden_breakthrough_pumps_and_makes_treasure() {
         g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
         "a Treasure token was created",
     );
-}
 
-#[test]
-fn arcane_subtraction_shrinks_power() {
+    // Arcane Subtraction: -4/-0 shrinks power below zero.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     let id = g.add_card_to_hand(0, catalog::arcane_subtraction());
@@ -453,6 +438,10 @@ fn cr_509_wormhole_grant_makes_attacker_unblockable() {
         target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None,
     }).expect("grant unblockable");
     drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(attacker).unwrap().granted_keywords_eot.contains(&Keyword::Unblockable),
+        "target gains can't-be-blocked this turn",
+    );
     while g.step != crabomination::game::types::TurnStep::DeclareAttackers {
         g.perform_action(GameAction::PassPriority).expect("advance");
     }
@@ -497,38 +486,29 @@ fn infuse_with_vitality_returns_creature_on_death() {
 // ── extras_15 — equipment + payoff creatures ─────────────────────────────────
 
 #[test]
-fn poets_quill_equips_for_plus_one_one_and_lifelink() {
-    let mut g = two_player_game();
-    let quill = g.add_card_to_battlefield(0, catalog::poets_quill());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::Equip { equipment: quill, target: bear }).expect("equip {1}{B}");
-    let cp = g.computed_permanent(bear).unwrap();
-    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-    assert!(cp.keywords.contains(&Keyword::Lifelink), "grants lifelink");
-}
-
-#[test]
-fn team_pennant_grants_vigilance_and_trample() {
-    let mut g = two_player_game();
-    let pennant = g.add_card_to_battlefield(0, catalog::team_pennant());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::Equip { equipment: pennant, target: bear }).expect("equip {3}");
-    let cp = g.computed_permanent(bear).unwrap();
-    assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Trample));
-}
-
-#[test]
-fn zephyr_boots_grants_flying() {
-    let mut g = two_player_game();
-    let boots = g.add_card_to_battlefield(0, catalog::zephyr_boots());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Equip { equipment: boots, target: bear }).expect("equip {2}");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+fn equipment_grants_stats_and_keywords() {
+    // (equipment, colored mana, colorless mana, expected P/T, granted keywords)
+    for (equip, color, colorless, pt, kws) in [
+        (catalog::poets_quill(), Some(Color::Black), 1, Some((3, 3)), vec![Keyword::Lifelink]),
+        (catalog::team_pennant(), None, 3, Some((3, 3)), vec![Keyword::Vigilance, Keyword::Trample]),
+        (catalog::zephyr_boots(), None, 2, None, vec![Keyword::Flying]),
+    ] {
+        let name = equip.name.clone();
+        let mut g = two_player_game();
+        let eq = g.add_card_to_battlefield(0, equip);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        if let Some(c) = color { g.players[0].mana_pool.add(c, 1); }
+        g.players[0].mana_pool.add_colorless(colorless);
+        g.perform_action(GameAction::Equip { equipment: eq, target: bear })
+            .unwrap_or_else(|e| panic!("equip {name}: {e:?}"));
+        let cp = g.computed_permanent(bear).unwrap();
+        if let Some((p, t)) = pt {
+            assert_eq!((cp.power, cp.toughness), (p, t), "{name} stat boost");
+        }
+        for kw in kws {
+            assert!(cp.keywords.contains(&kw), "{name} grants {kw:?}");
+        }
+    }
 }
 
 #[test]
@@ -543,7 +523,8 @@ fn leech_fanatic_has_lifelink_only_on_your_turn() {
 }
 
 #[test]
-fn stonerise_spirit_grants_flying_by_exiling_graveyard_card() {
+fn activated_abilities_with_costs_stonerise_and_dissector() {
+    // Stonerise Spirit: {4}, exile a graveyard card → target gains flying.
     let mut g = two_player_game();
     let spirit = g.add_card_to_battlefield(0, catalog::stonerise_spirit());
     g.clear_sickness(spirit);
@@ -557,10 +538,8 @@ fn stonerise_spirit_grants_flying_by_exiling_graveyard_card() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == fodder), "graveyard card exiled as cost");
     assert!(g.battlefield_find(bear).unwrap().granted_keywords_eot.contains(&Keyword::Flying));
-}
 
-#[test]
-fn novice_dissector_sacrifices_to_add_counter() {
+    // Novice Dissector: {1}, sacrifice a creature → +1/+1 counter.
     let mut g = two_player_game();
     let dissector = g.add_card_to_battlefield(0, catalog::novice_dissector());
     g.clear_sickness(dissector);
@@ -603,7 +582,8 @@ fn blood_age_general_pumps_attacking_spirits() {
 // ── extras_15 batch 3 — graveyard hate, draw, evasion-payoff ─────────────────
 
 #[test]
-fn go_blank_discards_two_and_exiles_graveyard() {
+fn player_targeting_sorceries_go_blank_and_secret_rendezvous() {
+    // Go Blank: discard two and exile the graveyard.
     let mut g = two_player_game();
     g.add_card_to_hand(1, catalog::grizzly_bears());
     g.add_card_to_hand(1, catalog::island());
@@ -618,10 +598,8 @@ fn go_blank_discards_two_and_exiles_graveyard() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), 0, "discarded both cards");
     assert!(g.players[1].graveyard.is_empty(), "graveyard exiled");
-}
 
-#[test]
-fn secret_rendezvous_draws_for_both() {
+    // Secret Rendezvous: both players draw three.
     let mut g = two_player_game();
     for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
     for _ in 0..4 { g.add_card_to_library(1, catalog::island()); }
@@ -713,18 +691,4 @@ fn thrilling_discovery_gains_life_and_optionally_loots_two_for_three() {
     assert_eq!(g.players[0].graveyard.iter().filter(|c| c.id == d1 || c.id == d2).count(), 2,
         "discarded both bears (Thrilling Discovery itself also in the bin)");
     assert_eq!(g.players[0].hand.len(), 3, "drew three cards");
-}
-
-#[test]
-fn oggyar_battle_seer_has_haste_and_taps_to_scry() {
-    let mut g = two_player_game();
-    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
-    let id = g.add_card_to_battlefield(0, catalog::oggyar_battle_seer());
-    assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::Haste));
-    g.clear_sickness(id);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
-    }).expect("{T}: Scry 1 activatable");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(id).unwrap().tapped, "scry ability taps Oggyar");
 }

@@ -21,34 +21,20 @@ fn cast_and_resolve(card: crabomination::card::CardDefinition, blue: u32, generi
     g
 }
 
+/// Table-driven: every plain "take an extra turn" spell banks exactly one turn.
 #[test]
-fn time_walk_banks_one_extra_turn() {
-    let g = cast_and_resolve(catalog::time_walk(), 1, 1);
-    assert_eq!(g.players[0].extra_turns, 1);
-}
-
-#[test]
-fn time_warp_banks_one_extra_turn() {
-    let g = cast_and_resolve(catalog::time_warp(), 2, 3);
-    assert_eq!(g.players[0].extra_turns, 1);
-}
-
-#[test]
-fn temporal_manipulation_banks_one_extra_turn() {
-    let g = cast_and_resolve(catalog::temporal_manipulation(), 2, 3);
-    assert_eq!(g.players[0].extra_turns, 1);
-}
-
-#[test]
-fn capture_of_jingzhou_banks_one_extra_turn() {
-    let g = cast_and_resolve(catalog::capture_of_jingzhou(), 2, 3);
-    assert_eq!(g.players[0].extra_turns, 1);
-}
-
-#[test]
-fn nexus_of_fate_banks_one_extra_turn() {
-    let g = cast_and_resolve(catalog::nexus_of_fate(), 2, 5);
-    assert_eq!(g.players[0].extra_turns, 1);
+fn extra_turn_spells_bank_one_extra_turn() {
+    let cases: Vec<(&str, crabomination::card::CardDefinition, u32, u32)> = vec![
+        ("Time Walk", catalog::time_walk(), 1, 1),
+        ("Time Warp", catalog::time_warp(), 2, 3),
+        ("Temporal Manipulation", catalog::temporal_manipulation(), 2, 3),
+        ("Capture of Jingzhou", catalog::capture_of_jingzhou(), 2, 3),
+        ("Nexus of Fate", catalog::nexus_of_fate(), 2, 5),
+    ];
+    for (name, card, blue, generic) in cases {
+        let g = cast_and_resolve(card, blue, generic);
+        assert_eq!(g.players[0].extra_turns, 1, "{name} banks one extra turn");
+    }
 }
 
 #[test]
