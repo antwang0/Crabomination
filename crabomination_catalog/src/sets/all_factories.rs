@@ -6863,6 +6863,14 @@ static DECKS: &[Factory] = &[
     // recent270 — Treasure-engine Cat, kicker reanimator
     super::decks::black_market_tycoon,
     super::decks::balduvian_atrocity,
+    // recent271 — aristocrats Devil, shield tricks, hybrid pump, kicker edict, modal artifact
+    super::decks::body_dropper,
+    super::decks::boon_of_safety,
+    super::decks::brokers_initiate,
+    super::decks::brokers_veteran,
+    super::decks::battle_rage_blessing,
+    super::decks::benalish_sleeper,
+    super::decks::argivian_avenger,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
