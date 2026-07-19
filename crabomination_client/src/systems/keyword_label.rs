@@ -309,6 +309,7 @@ fn board_status_strip(
     goaded: bool,
     case_solved: Option<bool>,
     class_level: Option<u8>,
+    saddled: bool,
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
     // CR 716 Class: show the current level. Leads the strip so the level reads
@@ -333,6 +334,13 @@ fn board_status_strip(
     // rather than a keyword since goad is a status, not a printed keyword.
     if goaded {
         parts.push("Goad".to_string());
+    }
+    // CR 702.171 — a Mount that's been saddled this turn has its
+    // "attacks while saddled" riders armed for this combat. The transient
+    // active state (distinct from the "Sdl N" cost chip) is a real board read,
+    // so surface it always, not just in the hover tooltip.
+    if saddled {
+        parts.push("Sdl✓".to_string());
     }
     // Summoning sickness gets a board-visible tag — skipped when Haste lifts it.
     if summoning_sick && !keywords.contains(&Keyword::Haste) {
@@ -394,6 +402,7 @@ pub fn sync_keyword_labels(
                 p.goaded,
                 p.case_solved,
                 p.class_level,
+                p.saddled,
             );
             if !strip.is_empty() {
                 desired_cache.insert(p.id, strip);
@@ -635,39 +644,50 @@ mod tests {
     fn board_status_prefixes_suspected_and_sick() {
         // A suspected creature shows "Susp" ahead of its (injected) Men/NoBlk.
         assert_eq!(
-            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true, false, None, None),
+            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true, false, None, None, false),
             "Susp Men NoBlk",
         );
         // Summoning sickness tags "Zzz"; Haste suppresses it.
-        assert_eq!(board_status_strip(&[], true, false, false, None, None), "Zzz");
-        assert_eq!(board_status_strip(&[Keyword::Haste], true, false, false, None, None), "Hst");
+        assert_eq!(board_status_strip(&[], true, false, false, None, None, false), "Zzz");
+        assert_eq!(board_status_strip(&[Keyword::Haste], true, false, false, None, None, false), "Hst");
         // Both statuses stack, suspected first.
-        assert_eq!(board_status_strip(&[], true, true, false, None, None), "Susp Zzz");
-        assert_eq!(board_status_strip(&[], false, false, false, None, None), "");
+        assert_eq!(board_status_strip(&[], true, true, false, None, None, false), "Susp Zzz");
+        assert_eq!(board_status_strip(&[], false, false, false, None, None, false), "");
     }
 
     #[test]
     fn board_status_surfaces_goaded() {
         // A goaded creature flags "Goad" after suspected, before its keywords.
-        assert_eq!(board_status_strip(&[], false, false, true, None, None), "Goad");
+        assert_eq!(board_status_strip(&[], false, false, true, None, None, false), "Goad");
         assert_eq!(
-            board_status_strip(&[Keyword::Menace], false, true, true, None, None),
+            board_status_strip(&[Keyword::Menace], false, true, true, None, None, false),
             "Susp Goad Men",
+        );
+    }
+
+    #[test]
+    fn board_status_surfaces_saddled() {
+        // A saddled Mount flags "Sdl✓" (active state) after Goad, distinct from
+        // the "Sdl N" cost chip that comes from its Saddle keyword.
+        assert_eq!(board_status_strip(&[], false, false, false, None, None, true), "Sdl✓");
+        assert_eq!(
+            board_status_strip(&[Keyword::Saddle(3)], false, false, false, None, None, true),
+            "Sdl✓ Sdl3",
         );
     }
 
     #[test]
     fn board_status_shows_case_solve_state() {
         // An unsolved Case reads "Case"; a solved one reads "Solved".
-        assert_eq!(board_status_strip(&[], false, false, false, Some(false), None), "Case");
-        assert_eq!(board_status_strip(&[], false, false, false, Some(true), None), "Solved");
+        assert_eq!(board_status_strip(&[], false, false, false, Some(false), None, false), "Case");
+        assert_eq!(board_status_strip(&[], false, false, false, Some(true), None, false), "Solved");
     }
 
     #[test]
     fn board_status_shows_class_level() {
         // A Class enchantment reads "Lvl N".
-        assert_eq!(board_status_strip(&[], false, false, false, None, Some(1)), "Lvl 1");
-        assert_eq!(board_status_strip(&[], false, false, false, None, Some(3)), "Lvl 3");
+        assert_eq!(board_status_strip(&[], false, false, false, None, Some(1), false), "Lvl 1");
+        assert_eq!(board_status_strip(&[], false, false, false, None, Some(3), false), "Lvl 3");
     }
 
     #[test]

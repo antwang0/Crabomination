@@ -1328,6 +1328,7 @@ mod tests {
             colors: vec![],
             crew_power_bonus: 0,
             saddled: false,
+            class_level: None,
             station_charges: None,
             station_next_threshold: None,
             modified: false,
