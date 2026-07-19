@@ -4197,8 +4197,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     carries `ValueAtMost(ToughnessOf(TriggerSource), 3)`; combat.rs was binding
     the Attacks-trigger source as `EntityRef::Card` (so `ToughnessOf` read 0) —
     fixed to `Permanent`. Role token helpers consolidated in `decks::woe_roles`.
-  - **Discerning Financier**'s donate ability (give a Treasure to another
-    player, draw) deferred — no control-donation-of-a-token primitive.
+  - ✅ ~~**Discerning Financier**~~ — shipped (recent290). Upkeep Treasure gated
+    on `OpponentControlsMoreLandsThanYou`; the donate ability rides
+    `GainControl { to: Some(EachOpponent) }` (the primitive already existed —
+    Wishclaw Talisman) + draw. Also: `Effect::Punisher`'s `otherwise` now binds
+    the defaulting chooser as `Triggerer` so a per-defaulter payoff is
+    multiplayer-correct (Zoyowa Lava-Tongue).
   - ✅ ~~**Experimental Confectioner**~~ — Food-sac → Rat shipped via a
     `PermanentSacrificed`/`YourControl` trigger filtered on `HasArtifactSubtype(Food)`
     (recent135; test in recent138).
@@ -4232,9 +4236,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Frantic Firebolt** approximates X = 2 + instant/sorcery cards in gy,
     dropping the "…or have an Adventure" graveyard contribution (no
     graveyard-card `HasAdventure` filter).
-  - **Discerning Financier** donate (give a Treasure to another player, draw),
-    **Rotisserie Elemental** (skewer-counter impulse), **Sentinel of Lost Lore**
-    (exile-Adventure modal) still deferred.
+  - **Rotisserie Elemental** (skewer-counter impulse) and **Sentinel of Lost
+    Lore** (exile-Adventure modal) still deferred. (Discerning Financier shipped
+    — recent290.)
 - ✅ ~~**recent141-145 (WOE waves 14-18) deferred cards**~~ — all shipped in
   `decks::recent146` (tests in `tests/recent146.rs`): Archon of the Wild Rose
   (state-aware `SetBasePtForFilter`/`GrantKeyword` for stateful `IsEnchanted`

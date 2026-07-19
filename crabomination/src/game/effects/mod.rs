@@ -9671,11 +9671,21 @@ impl GameState {
                         .find(|opt| self.punisher_option_affordable(opt, &opt_ctx));
                     match picked {
                         Some(opt) => self.run_effect(opt, &opt_ctx, events)?,
-                        // No affordable option — the ability's controller
-                        // gets the payoff (uses the original ctx, so an
-                        // `otherwise` naming `EachOpponent`/`Triggerer`
-                        // resolves relative to the source's controller).
-                        None => self.run_effect(otherwise, ctx, events)?,
+                        // No affordable option — the ability's controller gets
+                        // the payoff. Bind `trigger_source` to this defaulting
+                        // chooser so an `otherwise` can single them out via
+                        // `PlayerRef::Triggerer` (Zoyowa Lava-Tongue's "deals 3
+                        // damage to each opponent who didn't") — correct even in
+                        // multiplayer, where `EachOpponent` would hit the players
+                        // who *did* dodge. `You` / `EachOpponent` refs are
+                        // unaffected (controller is unchanged).
+                        None => {
+                            let pay_ctx = EffectContext {
+                                trigger_source: Some(EntityRef::Player(p)),
+                                ..ctx.clone()
+                            };
+                            self.run_effect(otherwise, &pay_ctx, events)?
+                        }
                     }
                 }
                 Ok(())

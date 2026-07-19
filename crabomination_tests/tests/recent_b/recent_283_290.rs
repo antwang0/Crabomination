@@ -1091,4 +1091,52 @@ mod recent290 {
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life0 - 3, "helpless opponent takes 3");
     }
+
+    /// Discerning Financier mints a Treasure on upkeep when an opponent is ahead
+    /// on lands, then donates it to that opponent for a card.
+    #[test]
+    fn discerning_financier_makes_and_donates_a_treasure() {
+        use crabomination::game::TurnStep;
+        let mut g = two_player_game();
+        let fin = g.add_card_to_battlefield(0, catalog::discerning_financier());
+        g.active_player_idx = 0;
+        // Opponent controls one more land → the upkeep trigger fires.
+        g.add_card_to_battlefield(1, catalog::forest());
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        let treasure = g
+            .battlefield
+            .iter()
+            .find(|c| c.controller == 0 && c.definition.name == "Treasure")
+            .expect("minted a Treasure")
+            .id;
+        // Donate it: the opponent gains control and you draw.
+        g.add_card_to_library(0, catalog::forest());
+        g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        let hand_before = g.players[0].hand.len();
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: fin, ability_index: 0, target: Some(Target::Permanent(treasure)),
+            additional_targets: vec![], x_value: None,
+        }).expect("donate");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(treasure).unwrap().controller, 1, "opponent controls the Treasure");
+        assert_eq!(g.players[0].hand.len(), hand_before + 1, "you drew a card");
+    }
+
+    /// No upkeep Treasure when you aren't behind on lands.
+    #[test]
+    fn discerning_financier_idle_when_not_behind_on_lands() {
+        use crabomination::game::TurnStep;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::discerning_financier());
+        g.add_card_to_battlefield(0, catalog::forest()); // you're not behind
+        g.active_player_idx = 0;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        assert!(
+            !g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+            "no Treasure while you match the opponent's land count",
+        );
+    }
 }

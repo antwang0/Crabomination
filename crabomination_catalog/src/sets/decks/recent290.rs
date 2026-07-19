@@ -1,7 +1,8 @@
 //! A modern gap batch reusing existing primitives: threshold-gated untap
-//! (Krosan Restorer), one-shot counter doubling (`Effect::DoubleCountersOnEach`
-//! — Bristly Bill), and dies-reanimate-as-Treasure (Vraska, the Silencer, via
-//! the `TriggerSource` reanimate + `Effect::BecomeTreasure` mechanism).
+//! (Krosan Restorer), dies-reanimate-as-Treasure (Vraska, the Silencer, via
+//! the `TriggerSource` reanimate + `Effect::BecomeTreasure` mechanism), a
+//! descend punisher (Zoyowa Lava-Tongue), and control-donation of a Treasure
+//! (Discerning Financier, via `GainControl { to: Some(..) }`).
 //! Tests in `recent_b/recent290`.
 
 use crate::card::{
@@ -10,9 +11,10 @@ use crate::card::{
     Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Effect, PlayerRef, ZoneDest};
+use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
+use crate::game::effects::treasure_token;
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r};
+use crate::mana::{b, cost, g, generic, r, w};
 
 /// Krosan Restorer — {2}{G} 1/2 Human Druid. {T}: Untap target land.
 /// Threshold — {T}: Untap up to three target lands (activate with 7+ cards in
@@ -90,9 +92,8 @@ pub fn vraska_the_silencer() -> CardDefinition {
 
 /// Zoyowa Lava-Tongue — {B}{R} Legendary Goblin Warlock 2/2. Deathtouch. At your
 /// end step, if you descended this turn, each opponent may discard a card or
-/// sacrifice a permanent; Zoyowa deals 3 damage to each who didn't. (The 3
-/// damage targets each opponent — exact in 1v1; in multiplayer the punisher
-/// payoff can't yet single out only the defaulting opponent.)
+/// sacrifice a permanent; Zoyowa deals 3 damage to each who didn't (the damage
+/// hits only the defaulting opponent via `PlayerRef::Triggerer`).
 pub fn zoyowa_lava_tongue() -> CardDefinition {
     CardDefinition {
         name: "Zoyowa Lava-Tongue",
@@ -124,10 +125,50 @@ pub fn zoyowa_lava_tongue() -> CardDefinition {
                     },
                 ],
                 otherwise: Box::new(Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::Player(PlayerRef::Triggerer),
                     amount: Value::Const(3),
                 }),
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Discerning Financier — {2}{W} 2/3 Human Noble. At your upkeep, if an opponent
+/// controls more lands than you, create a Treasure. {2}{W}: another player gains
+/// control of target Treasure you control; you draw a card. (The recipient is an
+/// opponent — exact in 1v1.)
+pub fn discerning_financier() -> CardDefinition {
+    CardDefinition {
+        name: "Discerning Financier",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer)
+                .with_filter(Predicate::OpponentControlsMoreLandsThanYou),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: treasure_token(),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            effect: Effect::Seq(vec![
+                Effect::GainControl {
+                    what: target_filtered(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Treasure).and(R::ControlledByYou)),
+                    to: Some(PlayerRef::EachOpponent),
+                    duration: Duration::Permanent,
+                },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+            ..Default::default()
         }],
         ..Default::default()
     }
