@@ -493,3 +493,44 @@ fn caretakers_talent_level_3_token_anthem() {
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4), "creature token gets +2/+2 at level 3");
 }
+
+/// Innkeeper's Talent: L1 begin-combat counter, L2 ward on countered permanents,
+/// L3 counter doubling — each gated on the Class's level.
+#[test]
+fn innkeepers_talent_levels() {
+    use crabomination::card::{CounterType, WardCost};
+    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::innkeepers_talent());
+    drain_stack(&mut g);
+    let bear = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+
+    // L1: the begin-combat trigger puts a +1/+1 counter on a target creature.
+    let l1 = crabomination::catalog::innkeepers_talent().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext::for_trigger(class, 0, Some(Target::Permanent(bear)), 0);
+    g.resolve_effect(&l1, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+
+    // L2: a countered permanent you control gains ward {1}.
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 2;
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Ward(WardCost::generic(1))),
+        "countered creature has ward at level 2",
+    );
+
+    // L3: adding one more counter now doubles to two (CR 614.16, level-gated).
+    g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 3;
+    let add = Effect::AddCounter {
+        what: Selector::Target(0),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    };
+    let ctx2 = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    g.resolve_effect(&add, &ctx2).unwrap();
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "1 existing + doubled 1 (=2) = 3",
+    );
+}

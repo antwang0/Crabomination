@@ -9,7 +9,7 @@
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EquipBonus, Keyword, SelectionRequirement as R, StaticAbility, Subtypes,
-    TokenDefinition, TriggeredAbility, Value,
+    TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{cast_is_instant_or_sorcery, target_filtered};
 use crate::effect::{
@@ -652,6 +652,51 @@ pub fn caretakers_talent() -> CardDefinition {
             },
         }],
         activated_abilities: vec![level_up(&[w()], 1), level_up(&[generic(3), w()], 2)],
+        ..Default::default()
+    }
+}
+
+/// Innkeeper's Talent — {1}{G} Enchantment — Class.
+/// L1: at the beginning of combat on your turn, put a +1/+1 counter on target
+/// creature you control. L2: permanents you control with counters on them have
+/// ward {1}. L3: if you would put one or more counters on a permanent or
+/// player, put twice that many instead.
+pub fn innkeepers_talent() -> CardDefinition {
+    CardDefinition {
+        name: "Innkeeper's Talent",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: class_subtypes(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Permanents you control with counters on them have ward {1}.",
+                effect: StaticEffect::WhileClassLevelAtLeast {
+                    n: 2,
+                    inner: Box::new(StaticEffect::GrantKeyword {
+                        applies_to: Selector::EachPermanent(
+                            R::Permanent.and(R::ControlledByYou).and(R::WithAnyCounter),
+                        ),
+                        keyword: Keyword::Ward(WardCost::generic(1)),
+                    }),
+                },
+            },
+            StaticAbility {
+                description: "If you would put counters on a permanent or player, put twice as many instead.",
+                effect: StaticEffect::WhileClassLevelAtLeast {
+                    n: 3,
+                    inner: Box::new(StaticEffect::DoubleCounters),
+                },
+            },
+        ],
+        activated_abilities: vec![level_up(&[g()], 1), level_up(&[generic(3), g()], 2)],
         ..Default::default()
     }
 }

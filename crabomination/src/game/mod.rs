@@ -2298,7 +2298,6 @@ impl GameState {
     /// Season + one Hardened Scales → 4× (multiplicative, matching the
     /// printed Oracle).
     pub fn counter_doublers_for(&self, seat: usize) -> u32 {
-        use crate::effect::StaticEffect;
         self.battlefield
             .iter()
             .filter(|c| c.controller == seat)
@@ -2306,10 +2305,27 @@ impl GameState {
                 c.definition
                     .static_abilities
                     .iter()
-                    .filter(|sa| matches!(sa.effect, StaticEffect::DoubleCounters))
+                    .filter(|sa| Self::static_is_active_double_counters(&sa.effect, c))
                     .count() as u32
             })
             .sum()
+    }
+
+    /// Whether a static effect is an *active* `DoubleCounters`, peeling the
+    /// level gate (CR 716.2) so a Class's level-3 "counters are put on twice"
+    /// (Innkeeper's Talent) only doubles once the Class reaches that level.
+    fn static_is_active_double_counters(
+        effect: &crate::effect::StaticEffect,
+        card: &CardInstance,
+    ) -> bool {
+        use crate::effect::StaticEffect;
+        match effect {
+            StaticEffect::DoubleCounters => true,
+            StaticEffect::WhileClassLevelAtLeast { n, inner } => {
+                card.class_level >= *n && Self::static_is_active_double_counters(inner, card)
+            }
+            _ => false,
+        }
     }
 
     /// Cursed Wombat — if `cid`'s controller has a

@@ -738,6 +738,10 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // recompute — safe to route through the dynamic CardMatch path
         // (Augusta, Dean of Order's tapped/untapped anthems).
         R::Tapped | R::Untapped => true,
+        // Counter presence is live `CardInstance` state, likewise re-read each
+        // layer recompute via the dynamic CardMatch path ("permanents you
+        // control with counters on them have ward {1}" — Innkeeper's Talent).
+        R::WithAnyCounter | R::WithCounter(_) => true,
         R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
         | R::HasArtifactSubtype(_) | R::HasEnchantmentSubtype(_) | R::HasCardType(_)
         | R::HasKeyword(_) | R::HasToxic | R::HasMutate => true,
@@ -797,6 +801,8 @@ pub(crate) fn requirement_matches_card(
         R::NotToken => !card.is_token,
         R::Tapped => card.tapped,
         R::Untapped => !card.tapped,
+        R::WithCounter(k) => card.counter_count(*k) > 0,
+        R::WithAnyCounter => card.counters.values().any(|&n| n > 0),
         R::ControlledByYou => card.controller == source_controller,
         R::ControlledByOpponent => card.controller != source_controller,
         R::OwnedByYou => card.owner == source_controller,
