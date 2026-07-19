@@ -755,6 +755,16 @@ impl MatchStats {
         }
         best.filter(|&(_, c)| c > 0).map(|(i, _)| Self::turn_bucket_label(i))
     }
+    /// Share (percent) of completed matches that ended in five turns or fewer
+    /// (`turn_buckets` 0–1). The turn-length analogue of `close_win_pct`: a
+    /// high value flags an aggro-dominated / mana-screw-prone ladder where
+    /// games routinely end before the midgame, which the mean/mode can hide
+    /// behind a long-grind tail. Returns 0 with no completed matches.
+    pub(crate) fn fast_game_pct(&self) -> u64 {
+        let total: u64 = self.turn_buckets.iter().map(|&n| n as u64).sum();
+        let fast = self.turn_buckets[0] as u64 + self.turn_buckets[1] as u64;
+        fast.saturating_mul(100).checked_div(total).unwrap_or(0)
+    }
     /// Population standard deviation of final turn counts, computed from
     /// the running `Σ turns` and `Σ turns²` accumulators (σ = √(E[x²] −
     /// E[x]²)). Returns 0.0 when no matches have completed. A small σ next
@@ -903,11 +913,12 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
     // stay tight.
     if n >= 5 {
         out.push_str(&format!(
-            " turns_p50={} p95={} (σ={:.1}, cv={}%)",
+            " turns_p50={} p95={} (σ={:.1}, cv={}%, fast={}%)",
             s.turn_percentile(0.5),
             s.turn_percentile(0.95),
             s.turn_count_stddev(),
             s.turn_count_cv_pct(),
+            s.fast_game_pct(),
         ));
     }
     // Win/draw split: only render once at least one win or draw is
@@ -1139,6 +1150,19 @@ mod tests {
             s.observe_win_life_delta(w, &life);
         }
         assert_eq!(s.close_win_pct(), 50);
+    }
+
+    #[test]
+    fn fast_game_pct_counts_short_matches() {
+        // No matches → 0, never a divide-by-zero.
+        assert_eq!(MatchStats::default().fast_game_pct(), 0);
+        // Four matches: 2 turns and 5 turns are "fast" (buckets 0/1); 10 and
+        // 25 turns are not. Half the games ended by turn 5.
+        let mut s = MatchStats::default();
+        for turns in [2, 5, 10, 25] {
+            s.observe_turns(turns);
+        }
+        assert_eq!(s.fast_game_pct(), 50);
     }
 
     #[test]

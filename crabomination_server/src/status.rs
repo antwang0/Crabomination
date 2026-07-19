@@ -55,7 +55,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"avg_turns\":{},\"avg_decisive_turns\":{},\"avg_draw_turns\":{},\
          \"min_turns\":{},\"max_turns\":{},\"turn_stddev\":{:.2},\
          \"median_turns\":{},\"turn_p10\":{},\"turn_p90\":{},\"turn_iqr\":{},\
-         \"modal_turn_band\":\"{}\",\
+         \"modal_turn_band\":\"{}\",\"fast_game_pct\":{},\
          \"inconclusive\":{},\"inconclusive_pct\":{},\"decisive_pct\":{},\"draw_pct\":{},\
          \"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
          \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
@@ -83,6 +83,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.turn_percentile(0.9),
         st.turn_count_iqr(),
         st.turn_count_mode_bucket().unwrap_or("n/a"),
+        st.fast_game_pct(),
         st.inconclusive,
         st.inconclusive_pct(),
         st.decisive_pct(),
@@ -152,6 +153,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("turn_p10", "gauge", "10th-percentile final turn count (how fast the quickest games end).", st.turn_percentile(0.1).to_string());
     m("turn_p90", "gauge", "90th-percentile final turn count.", st.turn_percentile(0.9).to_string());
     m("turn_iqr", "gauge", "Interquartile range (p75-p25) of final turn counts.", st.turn_count_iqr().to_string());
+    m("fast_game_pct", "gauge", "Percent of completed matches decided in 5 turns or fewer.", st.fast_game_pct().to_string());
     m("inconclusive_total", "counter", "Matches that ended with no declared outcome (stuck / disconnected).", st.inconclusive.to_string());
     m("inconclusive_pct", "gauge", "Percent of completed matches that were inconclusive.", st.inconclusive_pct().to_string());
     m("decisive_pct", "gauge", "Percent of resolved matches (wins+draws) that ended decisively.", st.decisive_pct().to_string());
@@ -304,6 +306,7 @@ fn render_dashboard(started: Instant, slots: &SlotManager) -> String {
     tiles.push_str(&tile("connections", format!("{} / {} peak", sl.current, sl.peak)));
     tiles.push_str(&tile("avg turns", format!("{}", st.avg_turns())));
     tiles.push_str(&tile("median turns", st.turn_percentile(0.5).to_string()));
+    tiles.push_str(&tile("fast games ≤5t", format!("{}%", st.fast_game_pct())));
     tiles.push_str(&tile("decisive %", format!("{}%", st.decisive_pct())));
     tiles.push_str(&tile("draw %", format!("{}%", st.draw_pct())));
     tiles.push_str(&tile("first-seat win %", format!("{}%", st.first_seat_win_pct())));
@@ -478,6 +481,7 @@ mod tests {
                     "\"win_life_delta_stddev\":0.00",
                     "\"min_turns\":0", "\"max_turns\":0", "\"turn_stddev\":0.00",
                     "\"median_turns\":0", "\"turn_p10\":0", "\"turn_p90\":0", "\"turn_iqr\":0",
+                    "\"fast_game_pct\":0",
                     "\"inconclusive\":0", "\"inconclusive_pct\":0",
                     "\"decisive_pct\":0", "\"draw_pct\":0",
                     "\"avg_duration_secs\":0", "\"min_duration_secs\":0",
