@@ -1331,6 +1331,7 @@ mod tests {
             class_level: None,
             station_charges: None,
             station_next_threshold: None,
+            crewed_count: 0,
             modified: false,
         }
     }
