@@ -6832,6 +6832,13 @@ static DECKS: &[Factory] = &[
     super::decks::savai_sabertooth,
     super::decks::territorial_boar,
     super::decks::might_of_murasa,
+    // recent267 — sac-draw Goblin, Powerstone body, combat tricks, exile-until-leaves
+    super::decks::akki_scrapchomper,
+    super::decks::argothian_opportunist,
+    super::decks::ashnods_intervention,
+    super::decks::gnawing_crescendo,
+    super::decks::angelic_intervention,
+    super::decks::alabaster_host_intercessor,
     // BLB — Bloomburrow gap batch
     super::decks::sugar_coat,
 ];
