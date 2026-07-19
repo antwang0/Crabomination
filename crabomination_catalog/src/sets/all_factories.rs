@@ -6977,6 +6977,7 @@ static DECKS: &[Factory] = &[
     super::decks::blister_beetle,
     super::decks::swift_response,
     super::decks::might_beyond_reason,
+    super::decks::astral_wingspan,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

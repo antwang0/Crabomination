@@ -1199,6 +1199,26 @@ mod recent290 {
         assert_eq!(counters(true), 3, "three with delirium");
     }
 
+    /// Astral Wingspan attaches, draws a card, and grants +2/+2 and flying.
+    #[test]
+    fn astral_wingspan_buffs_and_draws() {
+        use crabomination::card::Keyword;
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let aura = g.add_card_to_battlefield(0, catalog::astral_wingspan());
+        g.add_card_to_library(0, catalog::forest());
+        let hand_before = g.players[0].hand.len();
+        // Resolve the enchant (Attach) then the ETB draw.
+        let ctx = EffectContext::for_ability(aura, 0, Some(Target::Permanent(bear)));
+        g.resolve_effect(&catalog::astral_wingspan().effect, &ctx).unwrap();
+        g.fire_self_etb_triggers(aura, 0);
+        drain_stack(&mut g);
+        let cp = g.computed_permanent(bear).unwrap();
+        assert_eq!((cp.power, cp.toughness), (4, 4), "2/2 → 4/4");
+        assert!(cp.keywords.contains(&Keyword::Flying), "gains flying");
+        assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB drew a card");
+    }
+
     /// No upkeep Treasure when you aren't behind on lands.
     #[test]
     fn discerning_financier_idle_when_not_behind_on_lands() {

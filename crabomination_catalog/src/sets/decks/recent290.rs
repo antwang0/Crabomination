@@ -4,7 +4,8 @@
 //! descend punisher (Zoyowa Lava-Tongue), control-donation of a Treasure
 //! (Discerning Financier, via `GainControl { to: Some(..) }`), landfall pump
 //! (Grove Rumbler), an ETB -1/-1 (Blister Beetle), tapped-only removal (Swift
-//! Response), and delirium-scaled counters (Might Beyond Reason).
+//! Response), delirium-scaled counters (Might Beyond Reason), and a Convoke
+//! Aura (Astral Wingspan).
 //! Tests in `recent_b/recent290`.
 
 use crate::card::{
@@ -16,7 +17,7 @@ use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
 use crate::game::effects::treasure_token;
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Krosan Restorer — {2}{G} 1/2 Human Druid. {T}: Untap target land.
 /// Threshold — {T}: Untap up to three target lands (activate with 7+ cards in
@@ -247,6 +248,34 @@ pub fn might_beyond_reason() -> CardDefinition {
                 else_: Box::new(Value::Const(2)),
             },
         },
+        ..Default::default()
+    }
+}
+
+/// Astral Wingspan — {4}{U} Aura with Convoke. Enchant creature. When it enters,
+/// draw a card. Enchanted creature gets +2/+2 and has flying.
+pub fn astral_wingspan() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Astral Wingspan",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
         ..Default::default()
     }
 }
