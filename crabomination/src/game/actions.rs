@@ -381,6 +381,21 @@ pub fn cost_reduction_for_spell_zoned(
     target: Option<&crate::game::Target>,
     from_graveyard: bool,
 ) -> u32 {
+    cost_reduction_for_spell_full(state, caster, card, target, from_graveyard, false)
+}
+
+/// Full cost-reduction scan with both `from_graveyard` and `from_exile` zone
+/// toggles. Exile-cast paths (foretell / adventure-creature / plotted / impulse
+/// pay-own-cost) pass `from_exile: true` so `ExileCastCostReduction` (Doc
+/// Aurlock) and every zone-agnostic reduction apply.
+pub fn cost_reduction_for_spell_full(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+    target: Option<&crate::game::Target>,
+    from_graveyard: bool,
+    from_exile: bool,
+) -> u32 {
     use crate::effect::StaticEffect;
     let mut reduction = 0u32;
     for src in &state.battlefield {
@@ -388,6 +403,11 @@ pub fn cost_reduction_for_spell_zoned(
             match &sa.effect {
                 StaticEffect::GraveyardCastCostReduction { amount }
                     if from_graveyard && src.controller == caster =>
+                {
+                    reduction += amount;
+                }
+                StaticEffect::ExileCastCostReduction { amount }
+                    if from_exile && src.controller == caster =>
                 {
                     reduction += amount;
                 }
@@ -3765,6 +3785,11 @@ impl GameState {
         } else {
             foretell_cost
         };
+        let reduction =
+            cost_reduction_for_spell_full(self, p, &self.exile[pos], target.as_ref(), false, true);
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
@@ -3967,6 +3992,11 @@ impl GameState {
         } else {
             base
         };
+        let reduction =
+            cost_reduction_for_spell_full(self, p, &self.exile[pos], target.as_ref(), false, true);
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
@@ -4172,7 +4202,7 @@ impl GameState {
     /// face-up. Special action; main phase + empty stack only (sorcery speed).
     pub(crate) fn plot_card(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        let cost = self.players[p]
+        let mut cost = self.players[p]
             .hand
             .iter()
             .find(|c| c.id == card_id)
@@ -4180,6 +4210,20 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
+        }
+        // Doc Aurlock — "Plotting cards from your hand costs {2} less."
+        let plot_reduction: u32 = self
+            .battlefield
+            .iter()
+            .filter(|s| s.controller == p)
+            .flat_map(|s| &s.definition.static_abilities)
+            .filter_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::PlotCostReduction { amount } => Some(amount),
+                _ => None,
+            })
+            .sum();
+        if plot_reduction > 0 {
+            cost.reduce_generic(plot_reduction);
         }
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;

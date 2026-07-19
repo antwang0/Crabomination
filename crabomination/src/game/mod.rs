@@ -13287,6 +13287,8 @@ fn static_effect_to_effects(
             | StaticEffect::CostReductionBySourcePower { .. }
             | StaticEffect::CostReductionWhile { .. }
             | StaticEffect::GraveyardCastCostReduction { .. }
+            | StaticEffect::ExileCastCostReduction { .. }
+            | StaticEffect::PlotCostReduction { .. }
             | StaticEffect::CostReductionDuringOpponentsTurn { .. }
             | StaticEffect::CostReductionNthSpell { .. }
             | StaticEffect::CostReductionFirstCreatureSpell { .. }

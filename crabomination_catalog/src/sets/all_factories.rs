@@ -6959,6 +6959,8 @@ static DECKS: &[Factory] = &[
     super::decks::miriam_herd_whisperer,
     super::decks::vadmir_new_blood,
     super::decks::skyserpent_seeker,
+    // recent288 — OTJ gap batch
+    super::decks::doc_aurlock_grizzled_genius,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

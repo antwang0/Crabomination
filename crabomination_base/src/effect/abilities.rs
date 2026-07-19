@@ -330,6 +330,15 @@ pub enum StaticEffect {
     /// cost {1} less"). Applied only on the graveyard-cast paths (flashback /
     /// retrace / escape / disturb / aftermath); clamped at the generic pip.
     GraveyardCastCostReduction { amount: u32 },
+    /// Generic cost reduction for spells the controller casts *from exile*
+    /// (Doc Aurlock — "Spells you cast … from exile cost {2} less"). Applied on
+    /// the exile-cast paths (foretell, adventure-creature, plotted, impulse
+    /// pay-own-cost); clamped at the generic pip.
+    ExileCastCostReduction { amount: u32 },
+    /// Generic cost reduction for the controller's Plot activations from hand
+    /// (Doc Aurlock — "Plotting cards from your hand costs {2} less"). Applied
+    /// in `plot_card`; clamped at the generic pip.
+    PlotCostReduction { amount: u32 },
     /// Like `CostReduction`, but only on turns other than the controller's
     /// (Naiad of Hidden Coves — "During turns other than yours, spells you
     /// cast cost {1} less"). Applied in `cost_reduction_for_spell` when the
