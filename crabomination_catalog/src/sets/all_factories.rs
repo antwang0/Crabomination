@@ -7080,6 +7080,13 @@ static DECKS: &[Factory] = &[
     super::decks::poison_the_well,
     super::decks::congregation_at_dawn,
     super::decks::peregrine_mask,
+    // recent297 — Ravnica batch 7 (Boros aggro, Radiance pump, Dimir mill)
+    super::decks::wojek_siren,
+    super::decks::flame_kin_zealot,
+    super::decks::agrus_kos_wojek_veteran,
+    super::decks::sunhome_guildmage,
+    super::decks::necromancers_assistant,
+    super::decks::mark_of_eviction,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
