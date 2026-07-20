@@ -522,7 +522,6 @@ mod recent14 {
 }
 
 mod recent15 {
-    use crabomination::card::Keyword;
     use crabomination::catalog;
     use crabomination::game::*;
 

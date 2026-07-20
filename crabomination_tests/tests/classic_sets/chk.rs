@@ -6,12 +6,6 @@ use crabomination::card::Keyword;
 use crabomination::catalog;
 use crabomination::game::two_player_game;
 
-fn advance_to(g: &mut GameState, step: crabomination::game::TurnStep) {
-    while g.step != step {
-        g.perform_action(GameAction::PassPriority).expect("pass priority");
-    }
-}
-
 /// Activate an ability (optionally with an X value) and drain the stack.
 macro_rules! act {
     ($g:ident, $id:expr, $idx:expr, $tgt:expr) => {{
@@ -28,16 +22,6 @@ macro_rules! act {
         }).expect("activate ability");
         drain_stack(&mut $g);
     }};
-}
-
-/// Cast a Reach Through Mists ({U} Arcane) to fire spiritcraft triggers.
-fn cast_arcane(g: &mut GameState, target: Option<Target>) {
-    let a = g.add_card_to_hand(0, catalog::reach_through_mists());
-    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: a, target, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast Arcane spell");
-    drain_stack(g);
 }
 
 // ── Printed stats / keyword table ────────────────────────────────────────────

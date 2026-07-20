@@ -2,7 +2,7 @@
 //! Ring mechanic (CR 701.54 — `Effect::RingTempts`, per-player temptation
 //! level + Ring-bearer designation).
 
-use crabomination::card::{CreatureType, Keyword};
+use crabomination::card::CreatureType;
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, Target, TurnStep};

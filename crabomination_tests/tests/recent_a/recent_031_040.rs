@@ -441,7 +441,6 @@ mod recent32 {
 }
 
 mod recent33 {
-    use crabomination::card::Keyword;
     use crabomination::catalog;
     use crabomination::game::effects::EffectContext;
     use crabomination::game::two_player_game;
@@ -700,7 +699,7 @@ mod recent34 {
 }
 
 mod recent35 {
-    use crabomination::card::{CounterType, Keyword, Value};
+    use crabomination::card::{Keyword, Value};
     use crabomination::catalog;
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     use crabomination::mana::Color;

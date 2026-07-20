@@ -1,6 +1,8 @@
 //! Functional tests for classic / standalone sets, one module per set. Grouped into one integration-test binary to keep
 //! link time and `target/` size in check.
 
+#![allow(clippy::type_complexity)]
+
 mod afr;
 mod akh;
 mod avatar_water;
