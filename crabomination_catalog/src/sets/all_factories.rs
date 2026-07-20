@@ -7087,6 +7087,13 @@ static DECKS: &[Factory] = &[
     super::decks::sunhome_guildmage,
     super::decks::necromancers_assistant,
     super::decks::mark_of_eviction,
+    // recent298 — Ravnica batch 8 (Golgari value + guild spells)
+    super::decks::golgari_germination,
+    super::decks::corpse_blockade,
+    super::decks::vulturous_zombie,
+    super::decks::grave_shell_scarab,
+    super::decks::vindictive_mob,
+    super::decks::seed_spark,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
