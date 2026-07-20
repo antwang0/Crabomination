@@ -16,6 +16,14 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Dissension/Ravnica gap batches (recent301–304):** `FromYourGraveyard`-scoped
+  `SpellCast` triggers now dispatch (the multicolored-recur Eidolon cycle);
+  `StaticEffect::GrantActivatedAbility.condition` (Hellbent-gated granted
+  abilities) + `Selector::This` self-grant; `WardCost::DiscardHand`
+  (`CounterUnless`); `Effect::EachPlayerPutsHandCardOnTop`;
+  `Effect::LandsBecomeChosenBasicType`. Client: filtered-evasion board chip names
+  the dodged blocker class ("Eva-·Fly").
+
 - **OTJ gap batch (recent288–289):** `StaticEffect::{ExileCastCostReduction,
   PlotCostReduction}` (exile-cast reduction threads foretell + adventure-creature
   paths that previously applied none — Doc Aurlock); `CardInstance.saddled_by` +

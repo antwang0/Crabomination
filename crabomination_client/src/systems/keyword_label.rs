@@ -253,6 +253,21 @@ fn ward_suffix(cost: &WardCost) -> String {
     }
 }
 
+/// A short board-glance label for the common simple blocker filters used by
+/// filtered evasion ("can't be blocked by [filter]" / "…except by [filter]").
+/// Returns `None` for compound/complex filters so the strip stays uncluttered.
+fn req_short(req: &crabomination::card::SelectionRequirement) -> Option<String> {
+    use crabomination::card::SelectionRequirement as R;
+    Some(match req {
+        R::HasKeyword(k) => keyword_tag(k)?.to_string(),
+        R::HasCreatureType(t) => format!("{t:?}"),
+        R::HasColor(c) => format!("{c:?}"),
+        R::Artifact => "Art".to_string(),
+        R::Enchantment => "Ench".to_string(),
+        _ => return None,
+    })
+}
+
 /// The numeric magnitude worth appending to a count-carrying keyword's tag —
 /// the N in Rampage N / Toxic N / Annihilator N etc. materially changes how the
 /// creature reads in combat, so surface it ("Rmp2", "Tox3") rather than dropping
@@ -269,6 +284,13 @@ fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
     // type it dodges is the whole board read (who can block it / damage it).
     if let ProtectionFromCreatureType(t) = kw {
         return Some(format!("·{t:?}"));
+    }
+    // Filtered evasion names the excluded/required blocker class when it's a
+    // simple filter — "Eva-·Fly" (Gnat Alley Creeper can't be blocked by
+    // flyers) reads far better than a bare "Eva-". Complex filters stay
+    // unadorned.
+    if let CantBeBlockedBy(f) | CantBeBlockedExceptBy(f) = kw {
+        return req_short(f).map(|s| format!("·{s}"));
     }
     // Protection from a card type names the dodged type ("ProT·Artifact").
     if let ProtectionFromCardType(t) = kw {
@@ -597,14 +619,30 @@ mod tests {
     #[test]
     fn strip_surfaces_block_quality_evasion() {
         use crabomination::card::SelectionRequirement;
+        // Filtered evasion now names the simple blocker class it dodges.
         assert_eq!(
             keyword_strip(&[Keyword::CantBeBlockedExceptBy(Box::new(
                 SelectionRequirement::HasKeyword(Keyword::Flying),
             ))]),
-            "Eva"
+            "Eva·Fly"
         );
         assert_eq!(
             keyword_strip(&[Keyword::CantBeBlockedBy(Box::new(SelectionRequirement::Enchantment))]),
+            "Eva-·Ench"
+        );
+        // Gnat Alley Creeper — can't be blocked by creatures with flying.
+        assert_eq!(
+            keyword_strip(&[Keyword::CantBeBlockedBy(Box::new(
+                SelectionRequirement::HasKeyword(Keyword::Flying),
+            ))]),
+            "Eva-·Fly"
+        );
+        // A compound filter stays unadorned.
+        assert_eq!(
+            keyword_strip(&[Keyword::CantBeBlockedBy(Box::new(
+                SelectionRequirement::HasKeyword(Keyword::Flying)
+                    .and(SelectionRequirement::Artifact),
+            ))]),
             "Eva-"
         );
         assert_eq!(keyword_strip(&[Keyword::CantBeBlockedByMoreThanOne]), "1Blk");

@@ -81,6 +81,35 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (animate a target Forest into a 4/4 that's still a land — land-animation of a
   *targeted* land), Gobhobbler Rats (Hellbent conditional keyword-grant static),
   Gatherer of Graces "+1/+1 per Aura attached" (per-aura self-scaling P/T).
+- **Ravnica/Dissension batches 11–14 (recent301–304) — shipped:** the Eidolon
+  cycle (5, via new **`FromYourGraveyard`-scoped SpellCast dispatch** in
+  `fire_spell_cast_triggers` — "whenever you cast a multicolored spell, return
+  this from your graveyard"), Sadistic Augermage (`EachPlayerPutsHandCardOnTop`),
+  Gobhobbler Rats (**`GrantActivatedAbility.condition`** + **`Selector::This`
+  self-grant** — Hellbent regenerate), Perplex (**`WardCost::DiscardHand`** +
+  `CounterUnless`), Terraformer (**`LandsBecomeChosenBasicType`**), Skeletonize
+  (`WhenTargetDiesThisTurn` → Skeleton token), plus Haazda Exonerator, Ogre
+  Gatecrasher, Whiptail Moloch, Utvara Scalper, Gnat Alley Creeper, Silkwing
+  Scout, Vesper Ghoul, Patagia Viper, Squealing Devil, Slaughterhouse Bouncer,
+  Transguild Courier, Wakestone Gargoyle, Ragamuffyn, Soulsworn Jury, Stoic
+  Ephemera, Demon's Jester, Minister of Impediments, Flame-Kin War Scout, Rakdos
+  Ragemutt, Delirium/Vision Skeins, Psychotic Fury, Might of the Nephilim
+  (`Value::Times`×`ColorCountOf`), Stomp and Howl. CR conformance in
+  `core_rules/cr_recent7` (305.7 / 202.2b / 701.15).
+  **Still open Dissension cards noticed but not built (each on one primitive):**
+  Valor Made Real / "can block any number" — needs a `Keyword::CanBlockAnyNumber`
+  + a blocker-count-limit relaxation in `declare_blockers`; Nettling Curse — an
+  Aura whose *enchanted creature* attacks/blocks trigger (no enchanted-creature
+  `EventScope`; only step-kind equip-bonus triggers dispatch, not combat-kind);
+  Gaze of the Gorgon (regenerate + delayed destroy-all-blocked — needs a per-turn
+  blocked-by relation in combat); Kill-Suit Cultist ("next time damage would be
+  dealt to target creature, destroy it instead" — a damage→destroy replacement).
+  **Noticed engine nit:** a land animated to a basic type via
+  `LandsBecomeChosenBasicType` doesn't tap for the new color through
+  `GameAction::ActivateAbility { ability_index: 0 }` — the printed mana ability is
+  stripped by the `RemoveAllAbilities` layer but the derived intrinsic ability
+  isn't surfaced at index 0. Type-line change is correct; mana-ability re-index is
+  the gap.
 - **Ravnica batches 9–10 (recent299–300) — shipped:** Woodwraith Corrupter
   (`Effect::BecomeCreature` on a *targeted* Forest — permanent land-animation),
   Bond of Agony (`additional_cost_pay_x_life` → each opponent loses X), Enemy of
