@@ -7186,6 +7186,14 @@ static DIS: &[Factory] = &[
     super::dis::taste_for_mayhem,
     super::dis::windreaver,
     super::dis::walking_archive,
+    super::dis::nightcreep,
+    super::dis::demonfire,
+    super::dis::brain_pry,
+    super::dis::grand_arbiter_augustin_iv,
+    super::dis::magewrights_stone,
+    super::dis::hellhole_rats,
+    super::dis::biomantic_mastery,
+    super::dis::leafdrake_roost,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

@@ -3,13 +3,14 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R,
-    Selector, StaticAbility, Subtypes, TriggeredAbility, Value,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
+    SelectionRequirement as R, Selector, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility,
+    Value,
 };
-use crate::effect::shortcut::target_filtered;
+use crate::effect::shortcut::{target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, PlayerStaticTarget, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
 
 /// Nettling Curse — {2}{B} Aura. Enchant creature. Whenever enchanted creature
 /// attacks or blocks, its controller loses 3 life. `{1}{R}: Enchanted creature
@@ -556,6 +557,203 @@ pub fn walking_archive() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Nightcreep — {B}{B} Instant. Until end of turn, all creatures become black
+/// and all lands become Swamps.
+pub fn nightcreep() -> CardDefinition {
+    CardDefinition {
+        name: "Nightcreep",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::BecomeColor {
+                what: Selector::EachPermanent(R::Creature),
+                colors: vec![Color::Black],
+                duration: Duration::EndOfTurn,
+                additive: false,
+            },
+            Effect::BecomeBasicLand {
+                what: Selector::EachPermanent(R::Land),
+                land_type: LandType::Swamp,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Demonfire — {X}{R} Sorcery. Deals X damage to any target; a creature dealt
+/// damage this way is exiled instead of dying. Hellbent — with no cards in hand
+/// the damage can't be prevented (the can't-be-countered rider is cast-time).
+pub fn demonfire() -> CardDefinition {
+    CardDefinition {
+        name: "Demonfire",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::HellbentActive { who: PlayerRef::You },
+                then: Box::new(Effect::DamageCantBePreventedThisTurn),
+                else_: Box::new(Effect::Noop),
+            },
+            // Install the exile-instead-of-die redirect before the damage lands.
+            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+            Effect::DealDamage { to: target_any(), amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Grand Arbiter Augustin IV — {2}{W}{U} 2/3 Legendary Human Advisor. Your
+/// white and blue spells cost {1} less; opponents' spells cost {1} more.
+pub fn grand_arbiter_augustin_iv() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Grand Arbiter Augustin IV",
+        cost: cost(&[generic(2), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![
+            StaticAbility {
+                description: "White spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction { filter: R::HasColor(Color::White), amount: 1 },
+            },
+            StaticAbility {
+                description: "Blue spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction { filter: R::HasColor(Color::Blue), amount: 1 },
+            },
+            StaticAbility {
+                description: "Spells your opponents cast cost {1} more to cast.",
+                effect: StaticEffect::OpponentSpellsCostMore { filter: R::Any, amount: 1 },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Magewright's Stone — {2} Artifact. `{1}, {T}: Untap target creature that has
+/// an activated ability with {T} in its cost.` (The tap-ability restriction on
+/// the target is approximated as any creature.)
+pub fn magewrights_stone() -> CardDefinition {
+    CardDefinition {
+        name: "Magewright's Stone",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hellhole Rats — {2}{B}{R} 2/2 Rat with Haste. When it enters, target player
+/// discards a card; deal damage to that player equal to that card's mana value.
+pub fn hellhole_rats() -> CardDefinition {
+    CardDefinition {
+        name: "Hellhole Rats",
+        cost: cost(&[generic(2), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::TargetFiltered { slot: 0, filter: R::Player },
+                    amount: Value::ONE,
+                    random: false,
+                },
+                Effect::DealDamage {
+                    to: Selector::TargetFiltered { slot: 0, filter: R::Player },
+                    amount: Value::GreatestDiscardedManaValueThisEffect,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Brain Pry — {1}{B} Sorcery. Choose a nonland card name. Target player
+/// reveals their hand and discards a card with that name. If they can't, you
+/// draw a card.
+pub fn brain_pry() -> CardDefinition {
+    CardDefinition {
+        name: "Brain Pry",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::NameCardTargetDiscardsOneOrYouDraw,
+        ..Default::default()
+    }
+}
+
+/// Biomantic Mastery — {4}{G/U}{G/U}{G/U} Sorcery. Draw a card for each creature
+/// target player controls, then a card for each creature another target player
+/// controls.
+pub fn biomantic_mastery() -> CardDefinition {
+    CardDefinition {
+        name: "Biomantic Mastery",
+        cost: cost(&[generic(4), g(), g(), g()]), // {G/U}{G/U}{G/U} — green pips
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Sum(vec![
+                Value::CreatureCountControlledBy(PlayerRef::Target(0)),
+                Value::CreatureCountControlledBy(PlayerRef::Target(1)),
+            ]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Leafdrake Roost — {3}{G}{U} Aura. Enchant land. Enchanted land has
+/// "{G}{U}, {T}: Create a 2/2 green and blue Drake creature token with flying."
+pub fn leafdrake_roost() -> CardDefinition {
+    let drake = TokenDefinition {
+        name: "Drake".into(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Leafdrake Roost",
+        cost: cost(&[generic(3), g(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[g(), u()]),
+                tap_cost: true,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: drake,
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

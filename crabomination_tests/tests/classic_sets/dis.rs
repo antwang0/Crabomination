@@ -455,3 +455,186 @@ fn walking_archive_draws_per_counter() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew 1 card (one counter)");
 }
+
+/// Nightcreep turns every creature black and every land into a Swamp until EOT.
+#[test]
+fn nightcreep_recolors_creatures_and_lands() {
+    use crabomination::card::LandType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::nightcreep());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Nightcreep");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().colors.contains(&Color::Black), "creature is black");
+    assert!(
+        g.computed_permanent(forest).unwrap().subtypes.land_types.contains(&LandType::Swamp),
+        "land became a Swamp",
+    );
+}
+
+/// Demonfire deals X damage to a creature and exiles it instead of letting it die.
+#[test]
+fn demonfire_exiles_what_it_kills() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::demonfire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast Demonfire for X=2");
+    drain_stack(&mut g);
+    let _ = g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear died to 2 damage");
+    assert!(g.exile.iter().any(|c| c.id == bear), "exiled instead of graveyard");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear));
+}
+
+/// Biomantic Mastery draws a card per creature each targeted player controls.
+#[test]
+fn biomantic_mastery_draws_per_targeted_creatures() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    let spell = g.add_card_to_hand(0, catalog::biomantic_mastery());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Biomantic Mastery");
+    drain_stack(&mut g);
+    // 2 creatures (player 0) + 1 creature (player 1) = 3 cards, minus the spell that left hand.
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 3, "drew 3 cards");
+}
+
+/// Leafdrake Roost lets the enchanted land mint a 2/2 flying Drake.
+#[test]
+fn leafdrake_roost_land_makes_drakes() {
+    use crabomination::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let aura = g.add_card_to_battlefield(0, catalog::leafdrake_roost());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(land);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    // Index 0 is the land's intrinsic {T}: Add {G}; the granted Drake ability
+    // is surfaced at the next index.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate the granted Drake ability");
+    drain_stack(&mut g);
+    let drake = g.battlefield.iter().find(|c| c.definition.name == "Drake").expect("minted a Drake");
+    assert_eq!((drake.definition.power, drake.definition.toughness), (2, 2));
+    assert!(drake.definition.keywords.contains(&Keyword::Flying));
+    assert!(drake.definition.subtypes.creature_types.contains(&CreatureType::Drake));
+}
+
+/// Brain Pry: name a card in the target's hand → they discard it. Name a card
+/// they lack → the caster draws instead.
+#[test]
+fn brain_pry_discards_named_or_draws() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::Target;
+    // Hit: name a card the opponent holds.
+    let mut g = two_player_game();
+    let victim = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::brain_pry());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Grizzly Bears".into())]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Brain Pry (hit)");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == victim), "named card discarded");
+
+    // Miss: opponent has no card with that name → caster draws.
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::brain_pry());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand0 = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Lightning Bolt".into())]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Brain Pry (miss)");
+    drain_stack(&mut g);
+    // Spell left hand (-1), then drew a card (+1) → net unchanged, and library shrank.
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 1, "caster drew on a miss");
+}
+
+/// Grand Arbiter makes your blue spells cost {1} less and opponents' cost more.
+#[test]
+fn grand_arbiter_taxes_and_discounts() {
+    use crabomination::game::actions::{cost_reduction_for_spell, extra_cost_for_spell};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grand_arbiter_augustin_iv());
+    let blue = crabomination::card::CardInstance::new(g.next_id(), catalog::counterspell(), 0); // {U}{U}
+    assert_eq!(extra_cost_for_spell(&g, 0, &blue, None, 0), 0, "your spell isn't taxed");
+    assert_eq!(cost_reduction_for_spell(&g, 0, &blue, None), 1, "your blue spell is discounted {{1}}");
+    assert_eq!(extra_cost_for_spell(&g, 1, &blue, None, 0), 1, "opponent spell taxed {{1}}");
+}
+
+/// Magewright's Stone untaps a target creature.
+#[test]
+fn magewrights_stone_untaps_a_creature() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(0, catalog::magewrights_stone());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("untap the bear");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "bear untapped");
+}
+
+/// Hellhole Rats makes a player discard, then burns them for the discard's MV.
+#[test]
+fn hellhole_rats_discards_and_burns_by_mv() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    // The opponent holds a single MV-2 card, so the discard is forced.
+    g.add_card_to_hand(1, catalog::counterspell()); // {U}{U} → MV 2
+    let rats = g.add_card_to_hand(0, catalog::hellhole_rats());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rats, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Hellhole Rats");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "opponent discarded their card");
+    assert_eq!(g.players[1].life, life1 - 2, "burned for the discarded MV (Counterspell = 2)");
+}

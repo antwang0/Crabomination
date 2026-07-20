@@ -3170,6 +3170,9 @@ pub enum Effect {
     /// Cabal Therapy: choose a nonland card name; target player discards
     /// every card with that name from their hand.
     NameCardTargetDiscardsMatching,
+    /// Brain Pry: choose a nonland card name; target player reveals their hand
+    /// and discards one card with that name. If they can't, you draw a card.
+    NameCardTargetDiscardsOneOrYouDraw,
     /// "Choose a nonland card name, then reveal the top `count` cards of
     /// your library. Put all cards with the chosen name from among them into
     /// your hand and the rest into your graveyard." Tamiyo, Collector of

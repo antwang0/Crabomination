@@ -1235,6 +1235,9 @@ pub enum PendingEffectState {
     /// Cabal Therapy: the named-card answer makes `who` discard every
     /// matching hand card.
     NameDiscardMatchingPending { who: usize },
+    /// Brain Pry: `who` discards one card with the named name; if they have
+    /// none, `namer` draws a card.
+    NameDiscardOneOrDrawPending { who: usize, namer: usize },
     /// Tamiyo +1: the named-card answer drives the reveal-top sort
     /// (matching name → hand, rest → graveyard).
     NameRevealTopPending { player: usize, count: usize },

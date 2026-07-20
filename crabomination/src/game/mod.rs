@@ -11999,6 +11999,26 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::NameDiscardOneOrDrawPending { who, namer } => {
+                let DecisionAnswer::NamedCard(name) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = vec![];
+                let first = self.players[who]
+                    .hand
+                    .iter()
+                    .find(|c| c.definition.name == name)
+                    .map(|c| c.id);
+                match first {
+                    Some(cid) => {
+                        self.discard_card(who, cid, &mut events);
+                    }
+                    None => {
+                        self.draw_one(namer, &mut events);
+                    }
+                }
+                Ok(events)
+            }
             PendingEffectState::NameRevealTopPending { player, count } => {
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -13371,6 +13391,7 @@ fn static_effect_to_effects(
             | StaticEffect::CostReductionTargetingFilter { .. }
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::AdditionalCost { .. }
+            | StaticEffect::OpponentSpellsCostMore { .. }
             | StaticEffect::ControllerHasHexproof
             | StaticEffect::LandsTapColorlessOnly
             // ArtifactActivatedAbilitiesLocked — consulted in

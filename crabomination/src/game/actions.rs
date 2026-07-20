@@ -287,6 +287,14 @@ pub fn extra_cost_for_spell(
                 {
                     tax += amount;
                 }
+                // Grand Arbiter Augustin IV: opponents' spells cost more (the
+                // controller's own spells are exempt).
+                StaticEffect::OpponentSpellsCostMore { filter, amount }
+                    if src.controller != caster
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    tax += amount;
+                }
                 StaticEffect::NamedSpellTax { amount }
                     if src.named_card.as_deref() == Some(card.definition.name) =>
                 {

@@ -383,6 +383,11 @@ pub enum StaticEffect {
     /// cast time alongside `AdditionalCostAfterFirstSpell` in
     /// `extra_cost_for_spell`.
     AdditionalCost { filter: SelectionRequirement, amount: u32 },
+    /// Grand-Arbiter-style tax: spells matching `filter` cast by an opponent of
+    /// the source's controller cost `amount` more (Sphinx's Decree, Thalia of
+    /// Traben-for-opponents). Unlike `AdditionalCost`, the source's controller
+    /// is exempt. Applied in `extra_cost_for_spell`.
+    OpponentSpellsCostMore { filter: SelectionRequirement, amount: u32 },
     /// Jubilant-Skybonder-style "spells your opponents cast that target a
     /// [`target_filter`] permanent you control cost `amount` more" — a
     /// continuous target-tax read off the source's controller. Evaluated in

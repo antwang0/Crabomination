@@ -125,7 +125,9 @@ impl Effect {
                 | Value::MarkedDamageOn(s) => sel_has_target(s),
                 Value::CountersOn { what, .. } => sel_has_target(what),
                 Value::LifeOf(p) | Value::HandSizeOf(p) | Value::GraveyardSizeOf(p)
-                | Value::LibrarySizeOf(p) | Value::PlayerSpeed(p) => {
+                | Value::LibrarySizeOf(p) | Value::PlayerSpeed(p)
+                | Value::PermanentCountControlledBy(p)
+                | Value::CreatureCountControlledBy(p) => {
                     player_has_target(p)
                 }
                 Value::Sum(vs) => vs.iter().any(value_has_target),
@@ -250,7 +252,8 @@ impl Effect {
             Effect::ExileTopUntilNonlandMayPlay { .. } => false,
             Effect::ReturnGraveyardCreaturesUpToTotalPower { .. } => false,
             Effect::ReturnGraveyardCreaturesUpToTotalManaValue { .. } => false,
-            Effect::NameCardTargetDiscardsMatching => true,
+            Effect::NameCardTargetDiscardsMatching
+            | Effect::NameCardTargetDiscardsOneOrYouDraw => true,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only
             // `otherwise` can demand a cast-time target (Browbeat's drawer).
@@ -1794,7 +1797,9 @@ impl Effect {
                 Value::HandSizeOf(p)
                 | Value::LifeOf(p)
                 | Value::GraveyardSizeOf(p)
-                | Value::LibrarySizeOf(p) => implicit_player_for_ref_slot(p, slot),
+                | Value::LibrarySizeOf(p)
+                | Value::PermanentCountControlledBy(p)
+                | Value::CreatureCountControlledBy(p) => implicit_player_for_ref_slot(p, slot),
                 _ => None,
             }
         }
