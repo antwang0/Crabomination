@@ -51,7 +51,18 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   the Gorgon (regenerate + delayed "destroy all creatures that blocked/were
   blocked by it" at next end of combat — needs a per-turn blocked-by relation
   tracked in combat) and Golgari Brownscale's "gain 2 when returned to hand
-  from graveyard" (no enters-hand-from-graveyard event).
+  from graveyard" (no enters-hand-from-graveyard event — would want a new
+  `EventKind::PutIntoHandFromGraveyard` emitted at the gy→hand chokepoint in
+  `movement.rs` + the dredge return, dispatched as a graveyard-functional
+  SelfSource trigger).
+- **Ravnica batch 2 (recent292) discovered gaps:** "if {R}/{C} was spent to
+  cast this creature" ETB riders (Gruul Scrapper, Steamcore Weird) need a
+  predicate that reads the *permanent's* `cast_mana_spent_by_color` from a
+  triggered-ability context — `ManaSpentOfColorAtLeast` only reads the live
+  spell-resolution `ctx.mana_spent_by_color`, which is empty on an ETB trigger.
+  Radiance spells (Wojek Siren, Rally the Righteous — "target creature and each
+  other creature that shares a color with it") still need a shares-a-color
+  fan-out selector.
 
 **Tooling — client build in headless/CI:** the GUI crate needs `libwayland-dev`,
 `libasound2-dev`, `libudev-dev`, and `libxkbcommon-dev` to compile (wayland-sys/

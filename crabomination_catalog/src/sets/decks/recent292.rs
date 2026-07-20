@@ -5,13 +5,13 @@
 //! `BasePlusPerAttachedAura` dynamic P/T. Tests in `recent_b/recent_292`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, Effect,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, DynamicPt, Effect,
     EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
     Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef};
-use crate::mana::{b, cost, g, generic, r, w, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// A vanilla 1/1 green Saproling token.
 fn saproling_token() -> TokenDefinition {
@@ -30,36 +30,6 @@ fn saproling_token() -> TokenDefinition {
 }
 
 // ── Guild creatures & spells ────────────────────────────────────────────────
-
-/// Watchwolf — {G}{W} 3/3 Wolf (vanilla).
-pub fn watchwolf() -> CardDefinition {
-    CardDefinition {
-        name: "Watchwolf",
-        cost: cost(&[g(), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
-        power: 3,
-        toughness: 3,
-        ..Default::default()
-    }
-}
-
-/// Skyknight Legionnaire — {1}{R}{W} 2/2 Human Knight with flying and haste.
-pub fn skyknight_legionnaire() -> CardDefinition {
-    CardDefinition {
-        name: "Skyknight Legionnaire",
-        cost: cost(&[generic(1), r(), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Knight],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Flying, Keyword::Haste],
-        ..Default::default()
-    }
-}
 
 /// Siege Wurm — {5}{G}{G} 5/5 Wurm with Convoke and trample.
 pub fn siege_wurm() -> CardDefinition {
@@ -103,27 +73,6 @@ pub fn guardian_of_the_guildpact() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::ProtectionFromMonocolored],
-        ..Default::default()
-    }
-}
-
-/// Silhana Ledgewalker — {1}{G} 1/1 Elf Rogue with hexproof that can only be
-/// blocked by fliers (`CantBeBlockedExceptBy` flying).
-pub fn silhana_ledgewalker() -> CardDefinition {
-    CardDefinition {
-        name: "Silhana Ledgewalker",
-        cost: cost(&[generic(1), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Rogue],
-            ..Default::default()
-        },
-        power: 1,
-        toughness: 1,
-        keywords: vec![
-            Keyword::Hexproof,
-            Keyword::CantBeBlockedExceptBy(Box::new(R::HasKeyword(Keyword::Flying))),
-        ],
         ..Default::default()
     }
 }
@@ -206,28 +155,6 @@ pub fn fiery_conclusion() -> CardDefinition {
             Effect::SacrificeAndRemember { who: PlayerRef::You, filter: R::Creature },
             Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) },
         ]),
-        ..Default::default()
-    }
-}
-
-/// Vinelasher Kudzu — {1}{G} 1/1 Plant. Landfall — whenever a land you control
-/// enters, put a +1/+1 counter on it (`EventKind::LandPlayed`).
-pub fn vinelasher_kudzu() -> CardDefinition {
-    CardDefinition {
-        name: "Vinelasher Kudzu",
-        cost: cost(&[generic(1), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
-        power: 1,
-        toughness: 1,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
-            },
-        }],
         ..Default::default()
     }
 }
@@ -337,20 +264,6 @@ pub fn ostiary_thrull() -> CardDefinition {
     }
 }
 
-/// Douse in Gloom — {2}{B} Instant. Deal 2 to target creature; you gain 2 life.
-pub fn douse_in_gloom() -> CardDefinition {
-    CardDefinition {
-        name: "Douse in Gloom",
-        cost: cost(&[generic(2), b()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(2) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-        ]),
-        ..Default::default()
-    }
-}
-
 /// Rakdos Ickspitter — {1}{B}{R} 1/1 Thrull. {T}: deal 1 to target creature and
 /// its controller loses 1 life.
 pub fn rakdos_ickspitter() -> CardDefinition {
@@ -397,6 +310,78 @@ pub fn galvanic_arc() -> CardDefinition {
             to: target_any(),
             amount: Value::Const(3),
         })],
+        ..Default::default()
+    }
+}
+
+/// Ghor-Clan Bloodscale — {3}{R} 2/1 Lizard Warrior with first strike.
+/// {3}{G}: +2/+2 until end of turn, once each turn.
+pub fn ghor_clan_bloodscale() -> CardDefinition {
+    CardDefinition {
+        name: "Ghor-Clan Bloodscale",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            once_per_turn: true,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sandsower — {3}{W} 1/3 Spirit. Tap three untapped creatures you control:
+/// tap target creature.
+pub fn sandsower() -> CardDefinition {
+    CardDefinition {
+        name: "Sandsower",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((R::Creature.and(R::ControlledByYou), 3)),
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Torch Drake — {3}{U} 2/2 Drake with flying. {1}{R}: +1/+0 until end of turn.
+pub fn torch_drake() -> CardDefinition {
+    CardDefinition {
+        name: "Torch Drake",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

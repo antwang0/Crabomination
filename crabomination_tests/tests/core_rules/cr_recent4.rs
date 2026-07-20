@@ -69,9 +69,7 @@ fn cr_122_5_moving_counters_is_not_doubled_by_doubling_season() {
     let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let dst = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(src).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
-    for c in [crabomination::mana::Color::Green] {
-        g.players[0].mana_pool.add(c, 1);
-    }
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: gm, ability_index: 0, target: Some(Target::Permanent(src)),

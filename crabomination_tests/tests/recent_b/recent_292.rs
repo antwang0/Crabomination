@@ -3,7 +3,7 @@
 
 use crabomination::card::Keyword;
 use crabomination::catalog;
-use crabomination::game::types::{Target, TurnStep};
+use crabomination::game::types::Target;
 use crabomination::game::{drain_stack, two_player_game, GameAction};
 use crabomination::mana::Color;
 
@@ -16,26 +16,6 @@ fn flood(g: &mut crabomination::game::GameState) {
 
 fn count_tokens(g: &crabomination::game::GameState, name: &str) -> usize {
     g.battlefield.iter().filter(|c| c.is_token && c.definition.name == name).count()
-}
-
-#[test]
-fn ravnica2_stats_and_keywords() {
-    // One table-driven check for the vanilla / keyword-only bodies.
-    let cases: &[(fn() -> crabomination::card::CardDefinition, (i32, i32), &[Keyword])] = &[
-        (catalog::watchwolf, (3, 3), &[]),
-        (catalog::skyknight_legionnaire, (2, 2), &[Keyword::Flying, Keyword::Haste]),
-        (catalog::siege_wurm, (5, 5), &[Keyword::Convoke, Keyword::Trample]),
-        (catalog::nightguard_patrol, (2, 1), &[Keyword::FirstStrike, Keyword::Vigilance]),
-    ];
-    let mut g = two_player_game();
-    for (factory, (p, t), kws) in cases {
-        let id = g.add_card_to_battlefield(0, factory());
-        let comp = g.computed_permanent(id).unwrap();
-        assert_eq!((comp.power, comp.toughness), (*p, *t));
-        for kw in *kws {
-            assert!(comp.keywords.contains(kw), "{:?} missing", kw);
-        }
-    }
 }
 
 #[test]
@@ -59,15 +39,6 @@ fn guardian_has_protection_from_monocolored() {
     }).expect("multicolored source targets fine");
     drain_stack(&mut g);
     assert!(g.battlefield_find(guardian).is_none(), "destroyed by a multicolored spell");
-}
-
-#[test]
-fn silhana_ledgewalker_has_evasion_and_hexproof() {
-    let mut g = two_player_game();
-    let s = g.add_card_to_battlefield(0, catalog::silhana_ledgewalker());
-    let comp = g.computed_permanent(s).unwrap();
-    assert!(comp.keywords.contains(&Keyword::Hexproof));
-    assert!(comp.keywords.iter().any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))));
 }
 
 #[test]
@@ -130,19 +101,6 @@ fn fiery_conclusion_sacs_a_creature_and_deals_five() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "a creature was sacrificed");
     assert!(g.battlefield_find(victim).is_none(), "5 damage killed the 4/4");
-}
-
-#[test]
-fn vinelasher_kudzu_grows_on_landfall() {
-    use crabomination::card::CounterType;
-    let mut g = two_player_game();
-    g.step = TurnStep::PreCombatMain;
-    g.active_player_idx = 0;
-    let kudzu = g.add_card_to_battlefield(0, catalog::vinelasher_kudzu());
-    let forest = g.add_card_to_hand(0, catalog::forest());
-    g.perform_action(GameAction::PlayLand(forest)).expect("play land");
-    drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(kudzu).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1);
 }
 
 #[test]
@@ -224,22 +182,6 @@ fn ostiary_thrull_taps_a_creature() {
 }
 
 #[test]
-fn douse_in_gloom_burns_and_gains_life() {
-    let mut g = two_player_game();
-    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives 2
-    let spell = g.add_card_to_hand(0, catalog::douse_in_gloom());
-    flood(&mut g);
-    let life = g.players[0].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: spell, target: Some(Target::Permanent(angel)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast");
-    drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(angel).unwrap().damage, 2, "2 damage marked");
-    assert_eq!(g.players[0].life, life + 2, "gained 2 life");
-}
-
-#[test]
 fn rakdos_ickspitter_pings_and_drains_controller() {
     let mut g = two_player_game();
     let ick = g.add_card_to_battlefield(0, catalog::rakdos_ickspitter());
@@ -272,4 +214,54 @@ fn galvanic_arc_burns_on_enter_and_grants_first_strike() {
     assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::FirstStrike),
         "enchanted creature has first strike");
     assert_eq!(g.players[1].life, foe_life - 3, "ETB dealt 3 to the opponent");
+}
+
+#[test]
+fn ghor_clan_bloodscale_pumps_once_per_turn() {
+    let mut g = two_player_game();
+    let b = g.add_card_to_battlefield(0, catalog::ghor_clan_bloodscale());
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::FirstStrike));
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: b, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let p = g.computed_permanent(b).unwrap();
+    assert_eq!((p.power, p.toughness), (4, 3), "+2/+2");
+    // Once each turn — a second activation is rejected.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: b, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "the ability is once-per-turn");
+}
+
+#[test]
+fn sandsower_taps_three_to_tap_a_creature() {
+    let mut g = two_player_game();
+    let sower = g.add_card_to_battlefield(0, catalog::sandsower());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Cost taps three creatures you control (the sower itself + two bears).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sower, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], x_value: None,
+    }).expect("tap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).unwrap().tapped, "the target creature is tapped");
+    let tapped_own = [sower, a, b].iter().filter(|id| g.battlefield_find(**id).unwrap().tapped).count();
+    assert_eq!(tapped_own, 3, "three of your creatures tapped as the cost");
+}
+
+#[test]
+fn torch_drake_flies_and_firebreathes() {
+    let mut g = two_player_game();
+    let drake = g.add_card_to_battlefield(0, catalog::torch_drake());
+    assert!(g.computed_permanent(drake).unwrap().keywords.contains(&Keyword::Flying));
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: drake, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let p = g.computed_permanent(drake).unwrap();
+    assert_eq!((p.power, p.toughness), (3, 2), "+1/+0");
 }

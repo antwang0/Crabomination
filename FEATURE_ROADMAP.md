@@ -776,7 +776,8 @@ Each unblocks a large swath of cards.
   *and* abilities (CR 702.16c — `ability_target_has_protection`) across color /
   creatures / creature-type (Kitsune Riftwalker, Yawgmoth, Baneslayer) /
   spell-subtype / **multicolored** (`ProtectionFromMulticolored` — Stonecoil
-  Serpent), and combat damage (CR 702.16e — `damage_prevented_by_protection`
+  Serpent) / **monocolored** (`ProtectionFromMonocolored` — Guardian of the
+  Guildpact), and combat damage (CR 702.16e — `damage_prevented_by_protection`
   on both attacker→blocker and blocker→attacker). Multi-kind slots ship —
   a spell can target a permanent in one slot and a *player* in another, with
   `Selector::ControlledBy { who: Target(n) }` declaring slot `n` as a player
