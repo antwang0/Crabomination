@@ -7044,6 +7044,17 @@ static DECKS: &[Factory] = &[
     super::decks::nightmare_void,
     super::decks::vedalken_entrancer,
     super::decks::beacon_hawk,
+    // recent294 — Ravnica batch 4 (Simic Graft, Orzhov/Boros, utility)
+    super::decks::simic_ragworm,
+    super::decks::sporeback_troll,
+    super::decks::silhana_starfletcher,
+    super::decks::plaxmanta,
+    super::decks::skeletal_vampire,
+    super::decks::divebomber_griffin,
+    super::decks::steeple_roc,
+    super::decks::snapping_drake,
+    super::decks::scorched_rusalka,
+    super::decks::withstand,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
