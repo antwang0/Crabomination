@@ -6249,6 +6249,10 @@ impl GameState {
                     let n = self.players[card.controller].hand.len() as i32 * factor;
                     (n, n)
                 }
+                crate::card::DynamicPt::BaseMinusPerCardInHand { base_p, base_t, per } => {
+                    let n = self.players[card.controller].hand.len() as i32 * per;
+                    (base_p - n, base_t - n)
+                }
                 crate::card::DynamicPt::MaxOpponentHandSize => {
                     let n = self
                         .players

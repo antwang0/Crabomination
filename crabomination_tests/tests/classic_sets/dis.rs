@@ -711,3 +711,63 @@ fn voidslime_counters_an_ability() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), hand_before, "the ability was countered — no draw");
 }
+
+/// Dread Slag is 9/9 but shrinks −4/−4 per card in your hand.
+#[test]
+fn dread_slag_shrinks_with_hand() {
+    let mut g = two_player_game();
+    let slag = g.add_card_to_battlefield(0, catalog::dread_slag());
+    // Empty hand → full 9/9.
+    g.players[0].hand.clear();
+    let cp = g.computed_permanent(slag).unwrap();
+    assert_eq!((cp.power, cp.toughness), (9, 9), "empty hand → 9/9");
+    // Two cards in hand → 9 − 8 = 1/1.
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let cp = g.computed_permanent(slag).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "two cards → −8/−8");
+}
+
+/// Cytoshape turns a creature into a copy of another until end of turn.
+#[test]
+fn cytoshape_copies_a_creature() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(1, catalog::ancestor_dragon()); // 5/6
+    let spell = g.add_card_to_hand(0, catalog::cytoshape());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(big)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Cytoshape");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 6), "bear became a 5/6 Ancestor Dragon copy");
+}
+
+/// Rakdos the Defiler sacrifices half your non-Demon permanents when it attacks.
+#[test]
+fn rakdos_the_defiler_sacs_half_on_attack() {
+    let mut g = two_player_game();
+    let rakdos = g.add_card_to_battlefield(0, catalog::rakdos_the_defiler());
+    g.clear_sickness(rakdos);
+    // Four non-Demon permanents → sacrifice half rounded up = 2.
+    for _ in 0..4 { g.add_card_to_battlefield(0, catalog::grizzly_bears()); }
+    let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: rakdos, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(before - after, 2, "sacrificed half (2 of 4 non-Demons)");
+    assert!(g.battlefield.iter().any(|c| c.id == rakdos), "Rakdos (a Demon) is spared");
+}

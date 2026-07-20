@@ -714,6 +714,79 @@ pub fn hellhole_rats() -> CardDefinition {
     }
 }
 
+/// Cytoshape — {1}{G}{U} Instant. Target creature becomes a copy of another
+/// creature until end of turn. (The "nonlegendary" restriction on the copied
+/// creature is approximated as any creature.)
+pub fn cytoshape() -> CardDefinition {
+    CardDefinition {
+        name: "Cytoshape",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::BecomeCopyOfFor {
+            what: Selector::Target(0),
+            source: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+            duration: Duration::EndOfTurn,
+            non_legendary: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Rakdos the Defiler — {2}{B}{B}{R}{R} 7/6 Legendary Demon with flying and
+/// trample. Whenever it attacks, sacrifice half the non-Demon permanents you
+/// control, rounded up. Whenever it deals combat damage to a player, that
+/// player sacrifices half their non-Demon permanents, rounded up.
+pub fn rakdos_the_defiler() -> CardDefinition {
+    use crate::card::Supertype;
+    let non_demon = || R::Permanent.and(R::HasCreatureType(CreatureType::Demon).negate());
+    CardDefinition {
+        name: "Rakdos the Defiler",
+        cost: cost(&[generic(2), b(), b(), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 7,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::SacrificeHalf {
+                    who: Selector::You,
+                    filter: non_demon(),
+                    rounded_up: true,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::SacrificeHalf {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    filter: non_demon(),
+                    rounded_up: true,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dread Slag — {3}{B}{R} 9/9 Horror with trample. Gets −4/−4 for each card in
+/// your hand.
+pub fn dread_slag() -> CardDefinition {
+    use crate::card::DynamicPt;
+    CardDefinition {
+        name: "Dread Slag",
+        cost: cost(&[generic(3), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        power: 9,
+        toughness: 9,
+        keywords: vec![Keyword::Trample],
+        dynamic_pt: Some(DynamicPt::BaseMinusPerCardInHand { base_p: 9, base_t: 9, per: 4 }),
+        ..Default::default()
+    }
+}
+
 /// Voidslime — {G}{U}{U} Instant. Counter target spell, activated ability, or
 /// triggered ability.
 pub fn voidslime() -> CardDefinition {
