@@ -412,3 +412,46 @@ fn taste_for_mayhem_grants_plus2_and_hellbent_bonus() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 2), "hellbent adds +2/+0");
 }
+
+/// Windreaver can switch its power and toughness and bounce itself.
+#[test]
+fn windreaver_switch_pt_and_bounce() {
+    let mut g = two_player_game();
+    let wr = g.add_card_to_battlefield(0, catalog::windreaver()); // 1/3
+    g.clear_sickness(wr);
+    // {U}: switch P/T → 3/1.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wr, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("switch P/T");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(wr).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 1));
+    // {U}: return to hand.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wr, ability_index: 3, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("bounce self");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == wr), "Windreaver returned to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == wr));
+}
+
+/// Walking Archive draws the active player a card per +1/+1 counter on it.
+#[test]
+fn walking_archive_draws_per_counter() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let wa = g.move_card_to_battlefield_for_test(0, catalog::walking_archive());
+    drain_stack(&mut g);
+    // Enters with one +1/+1 counter (Graft-style ETB counter).
+    assert_eq!(g.battlefield_find(wa).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    g.active_player_idx = 0;
+    let hand0 = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew 1 card (one counter)");
+}

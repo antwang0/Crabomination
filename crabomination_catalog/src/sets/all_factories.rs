@@ -7184,6 +7184,8 @@ static DIS: &[Factory] = &[
     super::dis::weight_of_spires,
     super::dis::tidespout_tyrant,
     super::dis::taste_for_mayhem,
+    super::dis::windreaver,
+    super::dis::walking_archive,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

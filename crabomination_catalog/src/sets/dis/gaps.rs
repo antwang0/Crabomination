@@ -473,3 +473,89 @@ pub fn taste_for_mayhem() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Windreaver — {3}{W}{U} 1/3 Elemental with flying and four pump/evade
+/// activations: `{W}` gain vigilance, `{W}` +0/+1, `{U}` switch P/T, and
+/// `{U}` return this creature to its owner's hand.
+pub fn windreaver() -> CardDefinition {
+    CardDefinition {
+        name: "Windreaver",
+        cost: cost(&[generic(3), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[w()]),
+                effect: Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[w()]),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(0),
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[u()]),
+                effect: Effect::SwitchPT { what: Selector::This, duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[u()]),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Walking Archive — {3} 1/1 Golem with Defender. Enters with a +1/+1 counter.
+/// At the beginning of each player's upkeep, that player draws a card for each
+/// +1/+1 counter on it. `{2}{W}{U}: Put a +1/+1 counter on this creature.`
+pub fn walking_archive() -> CardDefinition {
+    CardDefinition {
+        name: "Walking Archive",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Defender],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w(), u()]),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
