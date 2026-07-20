@@ -1806,6 +1806,41 @@ impl GameState {
         }
     }
 
+    /// CR 502.3 / 122.1d — whether `card_id` is currently stopped from untapping
+    /// during its controller's next untap step by a continuous prevention (a
+    /// `PreventUntap` static in any of its selector forms, or a stun counter
+    /// waiting to be removed). A read-only sibling of the set `do_untap`
+    /// computes, surfaced through the server view so the UI can flag locked
+    /// permanents. Player-scoped skips (Yosei, Bontu's) aren't included — those
+    /// are one-shot flags, not a property of the permanent.
+    pub fn untap_prevented_by_static(&self, card_id: crate::card::CardId) -> bool {
+        use crate::card::CounterType;
+        use crate::effect::{Selector, StaticEffect};
+        let Some(card) = self.battlefield_find(card_id) else { return false };
+        if card.counter_count(CounterType::Stun) > 0 {
+            return true;
+        }
+        self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                StaticEffect::PreventUntap { applies_to: Selector::This } => c.id == card_id,
+                StaticEffect::PreventUntap { applies_to: Selector::AttachedTo(inner) }
+                    if matches!(**inner, Selector::This) =>
+                {
+                    c.attached_to == Some(card_id)
+                }
+                StaticEffect::PreventUntap { applies_to: Selector::EachPermanent(req) } => {
+                    card.controller == c.controller
+                        && self.evaluate_requirement(
+                            req,
+                            &crate::game::types::Target::Permanent(card_id),
+                            card.controller,
+                        )
+                }
+                _ => false,
+            })
+        })
+    }
+
     pub fn do_untap(&mut self) {
         // CR 502.1 — phasing happens first, as a turn-based action.
         self.do_phasing();

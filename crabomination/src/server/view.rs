@@ -84,6 +84,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                         &state.prevention_shields,
                         &state.battlefield,
                         viewer_seat,
+                        state,
                     )
                 })
                 .collect()
@@ -1031,6 +1032,7 @@ fn project_permanent(
     prevention_shields: &[crate::game::types::PreventionShield],
     battlefield: &[CardInstance],
     viewer_seat: usize,
+    state: &crate::game::GameState,
 ) -> PermanentView {
     use crate::game::types::PreventionTarget;
     let cp = computed.iter().find(|c| c.id == card.id);
@@ -1092,6 +1094,7 @@ fn project_permanent(
         triggered_ability_labels: project_triggered_ability_labels(card),
         static_ability_labels: project_static_ability_labels(card),
         has_stun_counters: card.counter_count(crate::card::CounterType::Stun) > 0,
+        wont_untap: state.untap_prevented_by_static(card.id),
         has_finality_counters: card.counter_count(crate::card::CounterType::Finality) > 0,
         dies_to_exile: card.definition.dies_to_exile,
         has_shield_counters: card.counter_count(crate::card::CounterType::Shield) > 0,
@@ -2108,6 +2111,20 @@ mod tests {
         g.remove_from_battlefield_to_graveyard_raw(b);
         let view = project(&g, 0);
         assert_eq!(view.permanents_to_graveyard_this_turn, 2);
+    }
+
+    #[test]
+    fn project_surfaces_wont_untap() {
+        // A creature enchanted by Plumes of Peace (a `PreventUntap` static)
+        // reads as `wont_untap`; an unencumbered one does not.
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let free = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let aura = g.add_card_to_battlefield(0, catalog::plumes_of_peace());
+        g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+        let v = project(&g, 0);
+        assert!(v.battlefield.iter().find(|p| p.id == bear).unwrap().wont_untap, "locked");
+        assert!(!v.battlefield.iter().find(|p| p.id == free).unwrap().wont_untap, "free");
     }
 
     #[test]

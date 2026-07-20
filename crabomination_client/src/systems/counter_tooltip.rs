@@ -433,6 +433,10 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         ));
     } else if p.has_stun_counters {
         lines.push(String::from("(stunned: next untap is skipped)"));
+    } else if p.wont_untap {
+        // A continuous untap lock (Plumes of Peace, Winter Orb, …) — distinct
+        // from the one-shot stun case above, which has its own line.
+        lines.push(String::from("(locked: won't untap during its next untap step)"));
     }
     // Surface +1/+1 and -1/-1 counter highlights — the most common
     // counter shapes carry a P/T delta that's often more important than
@@ -1287,6 +1291,7 @@ mod tests {
             loyalty_abilities: vec![],
             loyalty_uses_remaining: None,
             has_stun_counters: false,
+            wont_untap: false,
             has_finality_counters: false,
             dies_to_exile: false,
             dealt_damage_this_turn: false,
@@ -1556,6 +1561,26 @@ mod tests {
         p.has_stun_counters = true;
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("stunned ×2"), "got: {body}");
+    }
+
+    #[test]
+    fn wont_untap_lock_renders_in_tooltip() {
+        let mut p = make_permanent_view(0, 2);
+        p.wont_untap = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.to_lowercase().contains("locked"), "got: {body}");
+    }
+
+    #[test]
+    fn stun_takes_precedence_over_generic_untap_lock() {
+        // A stunned permanent is also `wont_untap`, but shows the stun line,
+        // not the generic lock line (they'd be redundant).
+        let mut p = make_permanent_view(0, 2);
+        p.has_stun_counters = true;
+        p.wont_untap = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("stunned"), "got: {body}");
+        assert!(!body.contains("locked:"), "no duplicate lock line: {body}");
     }
 
     #[test]

@@ -1268,6 +1268,13 @@ pub struct PermanentView {
     /// the full `counters` vec. Populated by `project_permanent`.
     #[serde(default)]
     pub has_stun_counters: bool,
+    /// True when a continuous prevention is stopping this permanent from
+    /// untapping on its controller's next untap step (CR 502.3 — a
+    /// `PreventUntap` static like Plumes of Peace / Winter Orb, or a pending
+    /// stun counter). Clients can badge a "won't untap" lock icon. Populated
+    /// from `GameState::untap_prevented_by_static`.
+    #[serde(default)]
+    pub wont_untap: bool,
     /// True when the permanent has one or more finality counters
     /// (CR 122.1h). Clients can badge with a "→ exile on death" icon
     /// so the player knows the permanent will exile instead of going
