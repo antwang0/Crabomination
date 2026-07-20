@@ -6852,6 +6852,7 @@ impl GameState {
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src_colors.len() >= 2,
+            Keyword::ProtectionFromMonocolored => src_colors.len() == 1,
             Keyword::ProtectionFromCardType(t) => src_card_types.contains(t),
             Keyword::ProtectionFromEverything => true,
             _ => false,
@@ -14180,6 +14181,13 @@ pub fn can_block_attacker_computed(
         // creature that is two or more colors.
         if matches!(kw, Keyword::ProtectionFromMulticolored)
             && blocker_computed.colors.len() >= 2
+        {
+            return false;
+        }
+        // CR 702.16 — protection from monocolored: can't be blocked by a
+        // creature that is exactly one color.
+        if matches!(kw, Keyword::ProtectionFromMonocolored)
+            && blocker_computed.colors.len() == 1
         {
             return false;
         }

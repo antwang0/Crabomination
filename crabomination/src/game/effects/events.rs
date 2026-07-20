@@ -240,6 +240,11 @@ pub(crate) fn event_matches_spec(
             GameEvent::AttachmentMoved { attachment, attached_to: Some(_) }
                 if *attachment == source.id
         ) || matches!(
+            // CR 303.4 — "Whenever an Aura becomes attached to this creature"
+            // (Bramble Elemental). Source must equal the enchanted permanent.
+            event,
+            GameEvent::AuraAttached { attached_to, .. } if *attached_to == source.id
+        ) || matches!(
             // CR 702.26 — "When this phases in." Source must equal the
             // phasing-in permanent.
             event,

@@ -75,6 +75,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         ProtectionFromManaValueExcept(_) => "ProMV",
         ProtectionFromManaValueParity { odd } => if *odd { "Pro-odd" } else { "Pro-even" },
         ProtectionFromMulticolored => "ProMC",
+        ProtectionFromMonocolored => "ProM1",
         ProtectionFromInstants => "ProI",
         ProtectionFromSpells => "ProS",
         ProtectionFromColoredSpells => "ProCS",

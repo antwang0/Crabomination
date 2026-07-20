@@ -4896,6 +4896,14 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // CR 702.16 — protection from monocolored: can't be targeted by
+                // a spell that is exactly one color.
+                if matches!(kw, Keyword::ProtectionFromMonocolored)
+                    && spell_colors.len() == 1
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
                 // CR 702.16j — protection from a card type (Serra's Emissary
                 // grant): can't be targeted by a spell of that type.
                 if let Keyword::ProtectionFromCardType(t) = kw
@@ -8285,6 +8293,7 @@ impl GameState {
                     | Keyword::ProtectionFromManaValueExcept(_)
                     | Keyword::ProtectionFromManaValueParity { .. }
                     | Keyword::ProtectionFromMulticolored
+                    | Keyword::ProtectionFromMonocolored
                     | Keyword::ProtectionFromCardType(_)
                     | Keyword::ProtectionFromEverything
                     | Keyword::HexproofExceptColors(_)
@@ -8327,6 +8336,7 @@ impl GameState {
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src.colors.len() >= 2,
+            Keyword::ProtectionFromMonocolored => src.colors.len() == 1,
             Keyword::ProtectionFromCardType(t) => src.card_types.contains(t),
             Keyword::ProtectionFromEverything => true,
             // "Abilities from nongreen sources opponents control can't target

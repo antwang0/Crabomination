@@ -161,6 +161,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::ProtectionFromManaValueExcept(_)
         | Keyword::ProtectionFromManaValueParity { .. }
         | Keyword::ProtectionFromMulticolored
+        | Keyword::ProtectionFromMonocolored
         | Keyword::ProtectionFromInstants
         | Keyword::ProtectionFromEverything => "Protection",
         Keyword::Landwalk(lt) => {

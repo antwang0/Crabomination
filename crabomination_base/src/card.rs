@@ -678,6 +678,10 @@ pub enum Keyword {
     /// Crusader). Can't be blocked/damaged/targeted/enchanted by a source that
     /// is two or more colors.
     ProtectionFromMulticolored,
+    /// CR 702.16 — "protection from monocolored" (Guardian of the Guildpact).
+    /// Can't be blocked/damaged/targeted/enchanted by a source that is exactly
+    /// one color (a colorless source is not monocolored, so it gets through).
+    ProtectionFromMonocolored,
     /// CR 702.16j — protection from a card type (Serra's Emissary's granted
     /// "protection from the chosen card type"): can't be blocked, damaged,
     /// enchanted/equipped, or targeted by a source of that type.
