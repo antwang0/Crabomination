@@ -383,6 +383,9 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Fellowship => "Fellowship",
         CounterType::Bait => "Bait",
         CounterType::Supply => "Supply",
+        CounterType::Book => "Book",
+        CounterType::Point => "Point",
+        CounterType::Unlock => "Unlock",
         // Silver / Prepared and any future internal counters fall through.
         _ => "Counter",
     }
@@ -559,5 +562,28 @@ pub fn sync_counter_labels(
             GlobalZIndex(COUNTER_LABEL_Z),
             crate::systems::game_ui::InGameRoot,
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{counter_label_text, counter_token};
+    use crabomination::card::CounterType;
+
+    #[test]
+    fn named_gameplay_counters_match_the_tooltip_names() {
+        // Book / Point / Unlock are real gameplay counters (Cases, Cryptex,
+        // etc.); the board coin must name them, not fall through to "Counter".
+        assert_eq!(counter_token(CounterType::Book), "Book");
+        assert_eq!(counter_token(CounterType::Point), "Point");
+        assert_eq!(counter_token(CounterType::Unlock), "Unlock");
+    }
+
+    #[test]
+    fn label_text_pluralizes_and_dedupes() {
+        assert_eq!(counter_label_text(CounterType::Unlock, 1, false), "Unlock");
+        assert_eq!(counter_label_text(CounterType::Unlock, 3, false), "Unlock ×3");
+        // Impending Time badges the countdown instead of a plain "Time".
+        assert_eq!(counter_label_text(CounterType::Time, 2, true), "Impending 2");
     }
 }

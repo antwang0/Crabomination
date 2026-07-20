@@ -811,6 +811,23 @@ impl MatchStats {
         let var = (mean_sq - mean * mean).max(0.0);
         Duration::from_millis(var.sqrt() as u64)
     }
+    /// The match-duration analogue of [`turn_count_cv_pct`](Self::
+    /// turn_count_cv_pct) and [`win_life_delta_cv_pct`](Self::
+    /// win_life_delta_cv_pct): duration σ as a percent of the mean duration, a
+    /// scale-free spread readout that stays comparable as the average match
+    /// length drifts (a 30 s σ means something very different for 1-minute vs
+    /// 10-minute games). Returns 0 with no matches or a non-positive mean.
+    pub(crate) fn duration_cv_pct(&self) -> u64 {
+        let n = self.total_matches();
+        if n == 0 {
+            return 0;
+        }
+        let mean_ms = self.total_duration.as_millis() as f64 / n as f64;
+        if mean_ms <= 0.0 {
+            return 0;
+        }
+        (self.duration_stddev().as_millis() as f64 * 100.0 / mean_ms).round() as u64
+    }
     /// Upper edge (inclusive estimate) of turn bucket `i`. Matches the
     /// cut points in [`turn_bucket_index`](Self::turn_bucket_index); the
     /// open-ended `21+` bucket reports its lower edge (21) since it has
@@ -1046,10 +1063,11 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
     // sample.
     if n >= 2 {
         out.push_str(&format!(
-            " p50≤{}, p95≤{}, σ={} (turns p50≤{}, p95≤{}, σ={:.1})",
+            " p50≤{}, p95≤{}, σ={} (cv={}%) (turns p50≤{}, p95≤{}, σ={:.1})",
             format_duration(s.percentile(0.50)),
             format_duration(s.percentile(0.95)),
             format_duration(s.duration_stddev()),
+            s.duration_cv_pct(),
             s.turn_percentile(0.50),
             s.turn_percentile(0.95),
             s.turn_count_stddev(),
@@ -1245,5 +1263,18 @@ mod tests {
         assert_eq!(s.turn_count_cv_pct(), 33);
         // No matches → 0 rather than dividing by zero.
         assert_eq!(MatchStats::default().turn_count_cv_pct(), 0);
+    }
+
+    #[test]
+    fn duration_cv_is_stddev_over_mean_percent() {
+        use std::time::Duration;
+        // Two matches, 10 s and 20 s → mean 15 s, σ 5 s → cv 33%.
+        let mut s = MatchStats { bot_matches: 2, ..Default::default() };
+        s.observe_duration(Duration::from_secs(10));
+        s.observe_duration(Duration::from_secs(20));
+        assert_eq!(s.duration_stddev().as_secs(), 5);
+        assert_eq!(s.duration_cv_pct(), 33);
+        // No matches → 0 rather than dividing by zero.
+        assert_eq!(MatchStats::default().duration_cv_pct(), 0);
     }
 }
