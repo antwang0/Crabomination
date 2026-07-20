@@ -29,3 +29,4 @@ mod cr_recent3;
 mod cr_recent4;
 mod cr_recent5;
 mod cr_recent6;
+mod cr_recent7;
