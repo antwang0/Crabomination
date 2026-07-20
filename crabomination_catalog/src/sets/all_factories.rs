@@ -7073,6 +7073,7 @@ static DECKS: &[Factory] = &[
     super::decks::vertigo_spawn,
     super::decks::tin_street_hooligan,
     super::decks::petrahydrox,
+    super::decks::souls_of_the_faultless,
     super::decks::shadow_lance,
     super::decks::shielding_plax,
     super::decks::dowsing_shaman,

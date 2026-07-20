@@ -16893,6 +16893,18 @@ impl GameState {
                         .or_else(|| self.find_card_owner(cid)),
                     _ => None,
                 }),
+            PlayerRef::CombatDamagerController(sel) => self
+                .resolve_selector(sel, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
+                        .battlefield_find(cid)
+                        .and_then(|c| c.combat_damager_controller)
+                        .or_else(|| {
+                            self.leaves_bf_lki.get(&cid).and_then(|c| c.combat_damager_controller)
+                        }),
+                    _ => None,
+                }),
         }
     }
 

@@ -47,6 +47,11 @@ pub(crate) fn event_matches_spec(
         // Enrage (CR 702.130): keyed on the damaged permanent, so we only
         // match `DamageDealt` events that hit a card (not a player).
         (EventKind::DealtDamage, GameEvent::DamageDealt { to_card: Some(_), .. }) => true,
+        // Souls of the Faultless — keyed on the damaged permanent, combat only.
+        (
+            EventKind::DealtCombatDamage,
+            GameEvent::DamageDealt { to_card: Some(_), combat: true, .. },
+        ) => true,
         // Chandra's Spitfire — keyed on a player dealt *noncombat* damage.
         (
             EventKind::PlayerDealtNoncombatDamage,

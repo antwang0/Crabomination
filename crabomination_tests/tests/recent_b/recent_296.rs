@@ -62,6 +62,33 @@ fn vertigo_spawn_taps_the_creature_it_blocks() {
 }
 
 #[test]
+fn souls_of_the_faultless_drains_the_attacker() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(attacker);
+    let souls = g.add_card_to_battlefield(0, catalog::souls_of_the_faultless()); // 0/4 Defender
+    let (my_life, foe_life) = (g.players[0].life, g.players[1].life);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(souls, attacker)])).expect("block");
+    // Advance through combat damage; the trigger fires on the 2 combat damage.
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, my_life + 2, "you gained the 2 combat damage");
+    assert_eq!(g.players[1].life, foe_life - 2, "attacking player lost that much");
+}
+
+#[test]
 fn tin_street_hooligan_destroys_artifact_only_when_green_spent() {
     // Pay the {1} with green → {G} spent → destroy the artifact.
     let mut g = two_player_game();

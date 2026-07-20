@@ -106,6 +106,36 @@ pub fn petrahydrox() -> CardDefinition {
     }
 }
 
+// ── Orzhov ──────────────────────────────────────────────────────────────────
+
+/// Souls of the Faultless — {W}{B}{B} 0/4 Spirit with Defender. Whenever it's
+/// dealt combat damage, you gain that much life and the attacking player loses
+/// that much life.
+pub fn souls_of_the_faultless() -> CardDefinition {
+    CardDefinition {
+        name: "Souls of the Faultless",
+        cost: cost(&[w(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtCombatDamage, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::CombatDamagerController(Box::new(
+                        Selector::This,
+                    ))),
+                    amount: Value::TriggerEventAmount,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Auras ───────────────────────────────────────────────────────────────────
 
 /// Shadow Lance — {W} Aura. Enchant creature. Enchanted creature has first

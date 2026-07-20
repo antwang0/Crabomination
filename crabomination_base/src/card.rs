@@ -4095,6 +4095,12 @@ pub struct CardInstance {
     /// (Bushi Tenderfoot). Read off the LKI snapshot at death-trigger time.
     /// Reset at cleanup; in-memory only.
     pub damaged_by_this_turn: Vec<CardId>,
+    /// Controller of the source that most recently dealt *combat* damage to
+    /// this creature. Stamped at the combat-damage chokepoint so a
+    /// "whenever this is dealt combat damage" trigger can name the attacking
+    /// player (`PlayerRef::CombatDamagerController` — Souls of the Faultless)
+    /// after `block_map` has already been torn down. Transient; in-memory only.
+    pub combat_damager_controller: Option<usize>,
     /// CR 701.15 — Regeneration shields. Each is a one-shot replacement:
     /// "the next time this permanent would be destroyed this turn, instead
     /// remove a regeneration shield, tap it, remove it from combat, and
@@ -4391,6 +4397,7 @@ impl CardInstance {
             dealt_deathtouch_damage: false,
             dealt_damage_this_turn: false,
             damaged_by_this_turn: Vec::new(),
+            combat_damager_controller: None,
             regeneration_shields: 0,
             skip_next_untap: false,
             untap_locked_by: None,

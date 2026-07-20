@@ -2116,6 +2116,16 @@ impl GameState {
                 self.dies_to_exile_eot.insert(damaged);
             }
         }
+        // Stamp the damaging source's controller on each recipient so a
+        // "whenever this is dealt combat damage" trigger can still name the
+        // attacking player once `block_map` is torn down (Souls of the Faultless).
+        for &(source, damaged, _) in &creature_damage {
+            if let Some(ctrl) = self.battlefield_find(source).map(|c| c.controller)
+                && let Some(c) = self.battlefield_find_mut(damaged)
+            {
+                c.combat_damager_controller = Some(ctrl);
+            }
+        }
         // CR 510.2 — now that all combat damage in this step has been dealt,
         // put `DealsCombatDamageToCreature` triggers on the stack.
         for (source, damaged, amount) in creature_damage {

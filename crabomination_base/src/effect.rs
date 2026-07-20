@@ -64,6 +64,12 @@ pub enum PlayerRef {
     /// attacking. Used for "defending player" triggers (Goblin Guide,
     /// Hypnotic Specter).
     DefendingPlayer,
+    /// The controller of the source that most recently dealt combat damage to
+    /// the permanent the inner selector resolves to (reads
+    /// `CardInstance.combat_damager_controller`). Survives the combat teardown
+    /// that clears `block_map`, so a "whenever this is dealt combat damage"
+    /// trigger can name the attacking player (Souls of the Faultless).
+    CombatDamagerController(Box<Selector>),
 }
 
 /// Which players a player-targeted static effect affects. The static
@@ -1789,6 +1795,11 @@ pub enum EventKind {
     /// enrage creatures; `AnyPlayer`/`YourControl` scopes also work for
     /// "whenever a creature you control is dealt damage" payoffs.
     DealtDamage,
+    /// A permanent was dealt **combat** damage — the combat-only sibling of
+    /// `DealtDamage`, keyed on the *recipient*. Pair with `EventScope::
+    /// SelfSource` for "whenever this creature is dealt combat damage" (Souls
+    /// of the Faultless). The amount rides in via `Value::TriggerEventAmount`.
+    DealtCombatDamage,
     /// CR 510 / 119 — a **player** was dealt noncombat damage (a spell,
     /// ability, or Fight — not combat damage). Keyed on the damaged player,
     /// so `EventScope::OpponentControl` fires "whenever an opponent is dealt

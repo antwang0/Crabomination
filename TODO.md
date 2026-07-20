@@ -59,23 +59,28 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (reads the permanent's own `cast_mana_spent_by_color` — Gruul Scrapper,
   Steamcore Weird). **Radiance now ships** (`Effect::RadianceDamage { subject,
   amount }` — damages the chosen creature + each other creature sharing a
-  computed color; Cleansing Beam, Wojek Embermage). Still open: the *untap+pump*
-  Radiance variant (Rally the Righteous) needs the same fan-out over a
-  non-damage body.
+  computed color; Cleansing Beam, Wojek Embermage). The *untap+pump* Radiance
+  variant now ships too via `Selector::RadianceGroup { subject }` (subject +
+  color-sharers as a reusable set — Rally the Righteous).
+- **Ravnica batch 6 (recent296) — shipped:** Rally the Righteous
+  (`Selector::RadianceGroup`), Vertigo Spawn (`EventKind::Blocks` +
+  `Selector::BlockedAttacker` tap + skip-untap — the "no selector for the blocked
+  attacker" note was stale, `BlockedAttacker` reads `block_map`), Souls of the
+  Faultless (new `EventKind::DealtCombatDamage` combat-only recipient event +
+  `PlayerRef::CombatDamagerController`, which reads a `CardInstance`
+  `combat_damager_controller` stamp that survives combat teardown), plus Tin
+  Street Hooligan, Petrahydrox, Shadow Lance, Shielding Plax, Dowsing Shaman,
+  Poison the Well, Congregation at Dawn, Peregrine Mask.
 - **Ravnica batches 3–5 (recent293–295) discovered gaps:** aura/equipment-granted
   *step* triggers now fire (`fire_step_triggers` walks `EquipBonus.triggered_abilities`
-  — Pillory of the Sleepless). Radiance now ships (`Effect::RadianceDamage` —
-  Cleansing Beam, Wojek Embermage). **Still deferred, each on one primitive:**
+  — Pillory of the Sleepless). **Still deferred, each on one primitive:**
   Perplex (counter unless its controller discards their *whole* hand — needs a
   `WardCost::DiscardHand` or a dedicated counter-unless-empty-hand effect);
   Terraformer (choose a basic land type, *your* lands become it EOT — no
-  "become chosen basic type" over a group); Vertigo Spawn ("whenever this blocks
-  a creature, tap *that creature*" — the Blocks trigger has no selector for the
-  blocked attacker); Souls of the Faultless ("attacking player loses that much
-  life" on combat damage — needs the attacker's controller from the damage
-  event); Nettling Curse (an Aura granting an *attacks/blocks* trigger — only
-  step-kind equip-bonus triggers are dispatched, not combat-kind); Skeletonize
-  (delayed "when a creature dealt damage this way dies, make a token").
+  "become chosen basic type" over a group); Nettling Curse (an Aura granting an
+  *attacks/blocks* trigger — only step-kind equip-bonus triggers are dispatched,
+  not combat-kind); Skeletonize (delayed "when a creature dealt damage this way
+  dies, make a token").
 
 **Tooling — client build in headless/CI:** the GUI crate needs `libwayland-dev`,
 `libasound2-dev`, `libudev-dev`, and `libxkbcommon-dev` to compile (wayland-sys/
