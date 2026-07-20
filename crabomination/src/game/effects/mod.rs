@@ -16273,6 +16273,29 @@ impl GameState {
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
+            Selector::RadianceGroup { subject } => {
+                let Some(EntityRef::Permanent(subj)) =
+                    self.resolve_selector(subject, ctx).into_iter().next()
+                else {
+                    return vec![];
+                };
+                let subj_colors = self
+                    .computed_permanent(subj)
+                    .map(|cp| cp.colors)
+                    .unwrap_or_default();
+                let mut out = vec![EntityRef::Permanent(subj)];
+                for c in &self.battlefield {
+                    if c.id != subj
+                        && c.definition.is_creature()
+                        && self.computed_permanent(c.id).is_some_and(|cp| {
+                            cp.colors.iter().any(|col| subj_colors.contains(col))
+                        })
+                    {
+                        out.push(EntityRef::Permanent(c.id));
+                    }
+                }
+                out
+            }
             Selector::BlockingCreatures => ctx
                 .source
                 .map(|attacker| {

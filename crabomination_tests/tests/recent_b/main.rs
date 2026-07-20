@@ -19,3 +19,4 @@ mod recent_292;
 mod recent_293;
 mod recent_294;
 mod recent_295;
+mod recent_296;

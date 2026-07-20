@@ -7068,6 +7068,17 @@ static DECKS: &[Factory] = &[
     super::decks::root_kin_ally,
     super::decks::cleansing_beam,
     super::decks::wojek_embermage,
+    // recent296 — Ravnica batch 6 (Radiance, guild auras/utility)
+    super::decks::rally_the_righteous,
+    super::decks::vertigo_spawn,
+    super::decks::tin_street_hooligan,
+    super::decks::petrahydrox,
+    super::decks::shadow_lance,
+    super::decks::shielding_plax,
+    super::decks::dowsing_shaman,
+    super::decks::poison_the_well,
+    super::decks::congregation_at_dawn,
+    super::decks::peregrine_mask,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
