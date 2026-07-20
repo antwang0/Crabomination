@@ -7160,6 +7160,10 @@ static DIS: &[Factory] = &[
     super::dis::simic_initiate,
     super::dis::vigean_graftmage,
     super::dis::helium_squirter,
+    super::dis::assault_zeppelid,
+    super::dis::sky_hussar,
+    super::dis::stalking_vengeance,
+    super::dis::azorius_herald,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

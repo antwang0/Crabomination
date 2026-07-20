@@ -11,6 +11,7 @@ mod bro;
 mod chk;
 mod eoe;
 mod fin;
+mod dis;
 mod gpt;
 mod innistrad;
 mod ktk;

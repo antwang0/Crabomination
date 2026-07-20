@@ -4,7 +4,7 @@ use crate::card::{
 };
 use crate::effect::Duration;
 use crate::effect::shortcut::target_filtered;
-use crate::mana::{cost, g, generic, u, w};
+use crate::mana::{cost, g, generic, r, u, w, Color};
 
 /// Azorius First-Wing — {1}{W}{U} 2/2 Bird Soldier Flying
 pub fn azorius_first_wing() -> CardDefinition {
@@ -162,6 +162,105 @@ pub fn helium_squirter() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![crate::effect::shortcut::graft()],
+        ..Default::default()
+    }
+}
+
+/// Assault Zeppelid — {2}{G}{U} 3/3 Beast with flying and trample.
+pub fn assault_zeppelid() -> CardDefinition {
+    CardDefinition {
+        name: "Assault Zeppelid",
+        cost: cost(&[generic(2), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Sky Hussar — {3}{W}{U} 4/3 Human Knight with flying. When it enters, untap
+/// all creatures you control. (Forecast omitted — no upkeep-only hand-activated
+/// ability primitive.)
+pub fn sky_hussar() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Sky Hussar",
+        cost: cost(&[generic(3), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stalking Vengeance — {5}{R}{R} 5/5 Avatar with haste. Whenever another
+/// creature you control dies, it deals damage equal to its power to any target.
+/// (Modeled as each opponent — faithful in 1v1; the dead creature's power
+/// carries via its die snapshot, CR 603.10.)
+pub fn stalking_vengeance() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        name: "Stalking Vengeance",
+        cost: cost(&[generic(5), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::DealDamageEqualToPower {
+                source: Selector::TriggerSource,
+                target: Selector::Player(PlayerRef::EachOpponent),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Azorius Herald — {2}{W} 2/1 Spirit. Can't be blocked. When it enters, gain 4
+/// life; and sacrifice it unless {U} was spent to cast it.
+pub fn azorius_herald() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    CardDefinition {
+        name: "Azorius Herald",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Unblockable],
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::If {
+                    cond: Predicate::SourceCastWithColorSpent { color: Color::Blue, at_least: 1 },
+                    then: Box::new(Effect::Noop),
+                    else_: Box::new(Effect::SacrificeSource),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

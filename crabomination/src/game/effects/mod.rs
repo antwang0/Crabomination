@@ -2986,15 +2986,20 @@ impl GameState {
             }
 
             Effect::DealDamageEqualToPower { source, target } => {
-                let src_id = self.resolve_selector(source, ctx).into_iter().find_map(|e| match e {
-                    EntityRef::Permanent(c) => Some(c),
-                    _ => None,
+                // `as_card_id` so a dead `TriggerSource` (now in a graveyard,
+                // not on the battlefield) still resolves — its power is read
+                // from LKI / die snapshot below.
+                let src_id = self
+                    .resolve_selector(source, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id());
+                // The target may be a permanent (creature/planeswalker) or a
+                // player — Stalking Vengeance's "damage equal to its power to
+                // any target." Keep the full EntityRef so player damage lands.
+                let tgt = self.resolve_selector(target, ctx).into_iter().find(|e| {
+                    matches!(e, EntityRef::Permanent(_) | EntityRef::Player(_))
                 });
-                let tgt_id = self.resolve_selector(target, ctx).into_iter().find_map(|e| match e {
-                    EntityRef::Permanent(c) => Some(c),
-                    _ => None,
-                });
-                let (Some(src_id), Some(tgt_id)) = (src_id, tgt_id) else {
+                let (Some(src_id), Some(tgt)) = (src_id, tgt) else {
                     return Ok(());
                 };
                 // CR 608.2h — when the source left the battlefield as a cost
@@ -3004,15 +3009,14 @@ impl GameState {
                     .computed_permanent(src_id)
                     .map(|cp| cp.power)
                     .or_else(|| self.leaves_bf_lki.get(&src_id).map(|s| s.power()))
+                    // A "when another creature dies, it deals damage equal to
+                    // its power" trigger (Stalking Vengeance) reads the dead
+                    // creature's last-known power from its die snapshot.
+                    .or_else(|| self.died_card_snapshots.get(&src_id).map(|s| s.power()))
                     .or(self.sacrificed_power)
                     .unwrap_or(0);
                 if power > 0 {
-                    self.deal_damage_to_from(
-                        EntityRef::Permanent(tgt_id),
-                        power as u32,
-                        Some(src_id),
-                        events,
-                    );
+                    self.deal_damage_to_from(tgt, power as u32, Some(src_id), events);
                     let mut sba = self.check_state_based_actions();
                     events.append(&mut sba);
                 }
