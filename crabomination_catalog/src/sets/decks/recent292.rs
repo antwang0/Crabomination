@@ -10,7 +10,7 @@ use crate::card::{
     Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_any, target_filtered};
-use crate::effect::{Duration, PlayerRef};
+use crate::effect::{Duration, PlayerRef, Predicate};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// A vanilla 1/1 green Saproling token.
@@ -357,6 +357,52 @@ pub fn sandsower() -> CardDefinition {
             tap_n_filter: Some((R::Creature.and(R::ControlledByYou), 3)),
             effect: Effect::Tap { what: target_filtered(R::Creature) },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gruul Scrapper — {3}{G} 3/2 Human Berserker. When it enters, if {R} was
+/// spent to cast it, it gains haste until end of turn
+/// (`Predicate::SourceCastWithColorSpent`).
+pub fn gruul_scrapper() -> CardDefinition {
+    CardDefinition {
+        name: "Gruul Scrapper",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::SourceCastWithColorSpent { color: Color::Red, at_least: 1 }),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Steamcore Weird — {3}{U} 1/3 Weird. When it enters, if {R} was spent to cast
+/// it, it deals 2 damage to any target.
+pub fn steamcore_weird() -> CardDefinition {
+    CardDefinition {
+        name: "Steamcore Weird",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Weird], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::SourceCastWithColorSpent { color: Color::Red, at_least: 1 }),
+            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
         }],
         ..Default::default()
     }

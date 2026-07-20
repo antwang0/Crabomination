@@ -7021,6 +7021,8 @@ static DECKS: &[Factory] = &[
     super::decks::ghor_clan_bloodscale,
     super::decks::sandsower,
     super::decks::torch_drake,
+    super::decks::gruul_scrapper,
+    super::decks::steamcore_weird,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

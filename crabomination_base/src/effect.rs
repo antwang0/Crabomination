@@ -1210,6 +1210,12 @@ pub enum Predicate {
     /// casting the resolving spell. Reads the per-color payment breakdown
     /// stamped at cast time (`EffectContext.mana_spent_by_color`).
     ManaSpentOfColorAtLeast { color: crate::mana::Color, at_least: u32 },
+    /// "If [color] mana was spent to cast this" read from the *source
+    /// permanent's* own cast provenance (`CardInstance.cast_mana_spent_by_color`),
+    /// not the live spell-resolution context. Used by ETB triggers that look
+    /// back at how their own creature was paid for (Gruul Scrapper's "if {R}
+    /// was spent, gain haste"; Steamcore Weird's "if {R} was spent, deal 2").
+    SourceCastWithColorSpent { color: crate::mana::Color, at_least: u32 },
     /// True if no *colored* mana was spent casting the just-cast spell
     /// (`ctx.trigger_source`) — Void Mirror's counter gate. Free casts
     /// (suspend, cascade) spend no mana, so they match.

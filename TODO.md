@@ -54,14 +54,12 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   graveyard" now ships via the new `EventKind::PutIntoHandFromGraveyard`
   (emitted at the `movement.rs` gy→hand chokepoint + the dredge return,
   dispatched as a SelfSource trigger off the card now in hand).
-- **Ravnica batch 2 (recent292) discovered gaps:** "if {R}/{C} was spent to
-  cast this creature" ETB riders (Gruul Scrapper, Steamcore Weird) need a
-  predicate that reads the *permanent's* `cast_mana_spent_by_color` from a
-  triggered-ability context — `ManaSpentOfColorAtLeast` only reads the live
-  spell-resolution `ctx.mana_spent_by_color`, which is empty on an ETB trigger.
-  Radiance spells (Wojek Siren, Rally the Righteous — "target creature and each
-  other creature that shares a color with it") still need a shares-a-color
-  fan-out selector.
+- **Ravnica batch 2 (recent292) discovered gaps:** "if {R} was spent to cast
+  this creature" ETB riders now ship via `Predicate::SourceCastWithColorSpent`
+  (reads the permanent's own `cast_mana_spent_by_color` — Gruul Scrapper,
+  Steamcore Weird). Still open: Radiance spells (Wojek Siren, Rally the
+  Righteous — "target creature and each other creature that shares a color with
+  it") need a shares-a-color fan-out selector.
 
 **Tooling — client build in headless/CI:** the GUI crate needs `libwayland-dev`,
 `libasound2-dev`, `libudev-dev`, and `libxkbcommon-dev` to compile (wayland-sys/

@@ -253,6 +253,58 @@ fn sandsower_taps_three_to_tap_a_creature() {
 }
 
 #[test]
+fn gruul_scrapper_gains_haste_only_when_red_was_spent() {
+    // {3}{G}; pay the {3} with red → {R} was spent → haste.
+    let mut g = two_player_game();
+    let s = g.add_card_to_hand(0, catalog::gruul_scrapper());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(s).unwrap().keywords.contains(&Keyword::Haste), "red spent → haste");
+
+    // No red spent ({G} + colorless {3}) → no haste.
+    let mut g = two_player_game();
+    let s = g.add_card_to_hand(0, catalog::gruul_scrapper());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(s).unwrap().keywords.contains(&Keyword::Haste), "no red → no haste");
+}
+
+#[test]
+fn steamcore_weird_burns_only_when_red_was_spent() {
+    // Opponent has no creatures → the ETB burn auto-targets their face.
+    let mut g = two_player_game();
+    let s = g.add_card_to_hand(0, catalog::steamcore_weird());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 3);
+    let foe = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe - 2, "red spent → 2 damage");
+
+    // No red spent → no burn.
+    let mut g = two_player_game();
+    let s = g.add_card_to_hand(0, catalog::steamcore_weird());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let foe = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe, "no red → no burn");
+}
+
+#[test]
 fn torch_drake_flies_and_firebreathes() {
     let mut g = two_player_game();
     let drake = g.add_card_to_battlefield(0, catalog::torch_drake());
