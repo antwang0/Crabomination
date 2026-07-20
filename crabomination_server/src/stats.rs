@@ -194,6 +194,17 @@ pub(crate) struct MatchStats {
     /// explicit count of the "stuck" delta operators previously had to derive
     /// by subtraction; a rising `inconclusive_pct` flags a hang regression.
     pub(crate) inconclusive: u64,
+    /// Running sum of the **winner's** battlefield permanent count at match
+    /// end (`outcome.final_board_sizes[winner]`). Paired with `board_samples`
+    /// it yields the average board a seat controls when it wins — a
+    /// development proxy that, next to `avg_decisive_turn`, tells a fast
+    /// face-damage win (small board, low turn) apart from a grindy attrition
+    /// win (wide board, high turn). Skipped when board data is unavailable
+    /// (aborted matches leave `final_board_sizes` empty).
+    pub(crate) winner_board_sum: u64,
+    /// Number of wins counted in `winner_board_sum` (a winner with no board
+    /// snapshot is still counted in `wins`, so this can trail `wins`).
+    pub(crate) winner_board_samples: u64,
 }
 
 /// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
@@ -267,6 +278,7 @@ impl MatchStats {
                     self.decisive_turn_sum.saturating_add(outcome.final_turn as u64);
                 self.observe_win_life_delta(w, &outcome.final_life_totals);
                 self.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
+                self.observe_winner_board(w, &outcome.final_board_sizes);
             }
             Some(None) => {
                 self.draw_turn_sum = self.draw_turn_sum.saturating_add(outcome.final_turn as u64);
@@ -514,6 +526,22 @@ impl MatchStats {
             self.damage_wins = self.damage_wins.saturating_add(1);
         }
     }
+    /// Record the winner's end-of-match board size. No-op when the winner
+    /// seat has no snapshot (aborted match — `final_board_sizes` empty or
+    /// too short).
+    pub(crate) fn observe_winner_board(&mut self, winner: usize, final_board_sizes: &[usize]) {
+        if let Some(&board) = final_board_sizes.get(winner) {
+            self.winner_board_sum = self.winner_board_sum.saturating_add(board as u64);
+            self.winner_board_samples = self.winner_board_samples.saturating_add(1);
+        }
+    }
+
+    /// Average board size (permanents controlled) a seat holds when it wins.
+    /// Returns 0 when no winner-board samples have been recorded yet.
+    pub(crate) fn avg_winner_board(&self) -> u64 {
+        self.winner_board_sum.checked_div(self.winner_board_samples).unwrap_or(0)
+    }
+
     /// Average win-by-life delta across all sampled wins. Returns 0
     /// when no win-life samples have been recorded yet.
     pub(crate) fn avg_win_life_delta(&self) -> i64 {
@@ -1049,6 +1077,11 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
                 s.win_life_delta_percentile(0.9)
             ));
         }
+        // Board development at victory — pairs with turns(win) to separate a
+        // fast face-damage win (small board) from a grindy attrition win.
+        if s.winner_board_samples > 0 {
+            out.push_str(&format!(" avg_win_board={}", s.avg_winner_board()));
+        }
     }
     if let (Some(mn), Some(mx)) = (s.min_duration, s.max_duration) {
         out.push_str(&format!(
@@ -1148,6 +1181,20 @@ pub(crate) fn format_duration(d: Duration) -> String {
 mod tests {
     use super::MatchStats;
     use crabomination::server::LossReason;
+
+    #[test]
+    fn winner_board_average_tracks_only_the_winning_seat() {
+        let mut s = MatchStats::default();
+        // Seat 0 wins with 5 permanents; seat 1's board is ignored.
+        s.observe_winner_board(0, &[5, 12]);
+        s.observe_winner_board(1, &[3, 7]); // seat 1 wins with 7
+        assert_eq!(s.winner_board_samples, 2);
+        assert_eq!(s.avg_winner_board(), 6); // (5 + 7) / 2
+        // A winner with no board snapshot is skipped, not counted as 0.
+        s.observe_winner_board(0, &[]);
+        assert_eq!(s.winner_board_samples, 2, "empty snapshot skipped");
+        assert_eq!(s.avg_winner_board(), 6);
+    }
 
     #[test]
     fn poison_of_alt_pct_reads_share_among_alternate_wins() {
