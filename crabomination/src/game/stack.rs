@@ -550,6 +550,24 @@ impl GameState {
                     .collect::<Vec<_>>()
             })
             .collect();
+        // CR 702.6e / 303.4 — step triggers granted to a permanent by an
+        // attached Aura/Equipment's `equipped_bonus` fire as though printed on
+        // the host ("Enchanted creature has 'At the beginning of your upkeep,
+        // you lose 1 life'" — Pillory of the Sleepless). Source is the host
+        // (unless `triggers_on_equipment`); "your" scope keys on the host's
+        // controller. Combat-damage/dies equip triggers use other kinds and so
+        // are untouched here.
+        for eq in &self.battlefield {
+            let Some(host_id) = eq.attached_to else { continue };
+            let Some(bonus) = &eq.definition.equipped_bonus else { continue };
+            let Some(host) = self.battlefield.iter().find(|c| c.id == host_id) else { continue };
+            for t in &bonus.triggered_abilities {
+                if t.event.kind == kind && scope_matches(&t.event.scope, host.controller) {
+                    let source = if bonus.triggers_on_equipment { eq.id } else { host_id };
+                    candidates.push((source, t.effect.clone(), host.controller, t.event.filter.clone()));
+                }
+            }
+        }
         // Walk the active player's graveyard for `FromYourGraveyard`
         // step triggers (Ichorid's "at the beginning of your upkeep").
         if let Some(player) = self.players.get(active) {
