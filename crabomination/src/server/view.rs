@@ -81,8 +81,6 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                         &computed,
                         &attacker_ids,
                         &block_map,
-                        &state.prevention_shields,
-                        &state.battlefield,
                         viewer_seat,
                         state,
                     )
@@ -1029,17 +1027,18 @@ fn project_permanent(
     computed: &[crate::game::layers::ComputedPermanent],
     attacking: &[CardId],
     block_map: &[(CardId, CardId)],
-    prevention_shields: &[crate::game::types::PreventionShield],
-    battlefield: &[CardInstance],
     viewer_seat: usize,
     state: &crate::game::GameState,
 ) -> PermanentView {
     use crate::game::types::PreventionTarget;
+    let battlefield = &state.battlefield;
     let cp = computed.iter().find(|c| c.id == card.id);
-    let has_prevention_shield = prevention_shields
+    let has_prevention_shield = state
+        .prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Permanent(card.id) && !s.destroy);
-    let doomed_next_damage = prevention_shields
+    let doomed_next_damage = state
+        .prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Permanent(card.id) && s.destroy);
     PermanentView {

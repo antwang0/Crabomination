@@ -855,6 +855,7 @@ fn anthem_of_rakdos_pumps_attacker_and_pings_you() {
     g.add_card_to_battlefield(0, catalog::anthem_of_rakdos());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
     g.clear_sickness(bear);
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // non-empty hand → not hellbent
     let life0 = g.players[0].life;
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
@@ -863,7 +864,7 @@ fn anthem_of_rakdos_pumps_attacker_and_pings_you() {
     .expect("attack");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "attacker got +2/+0");
-    assert_eq!(g.players[0].life, life0 - 1, "Anthem pinged you for 1");
+    assert_eq!(g.players[0].life, life0 - 1, "Anthem pinged you for 1 (not hellbent)");
 }
 
 /// Anthem of Rakdos doubles your sources' damage while you're hellbent.

@@ -130,6 +130,28 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   needs a per-turn blocked-by relation in combat). `EquipBonus.conditional_pt`
   (predicate-gated attached-creature pump) now exists — reuse it for other
   condition-gated aura P/T riders.
+- **Dissension gap batch 3 (dis/gaps) — shipped:** Nightcreep, Demonfire,
+  Biomantic Mastery, Leafdrake Roost, Brain Pry, Grand Arbiter Augustin IV,
+  Magewright's Stone, Hellhole Rats, Blessing of the Nephilim, Voidslime,
+  Cytoshape, Rakdos the Defiler, Dread Slag, Avatar of Discord, Omnibian,
+  Unliving Psychopath, Govern the Guildless, Anthem of Rakdos, Plumes of Peace,
+  Freewind Equenaut. New engine primitives: player-target slots surfaced from
+  `Creature/PermanentCountControlledBy` values, `NameCardTargetDiscardsOneOrYouDraw`,
+  `StaticEffect::OpponentSpellsCostMore`, `EquipScale.count_host_colors`,
+  `Effect::CounterSpellOrAbility`, `DynamicPt::BaseMinusPerCardInHand`,
+  `StaticEffect::DoubleYourSourcesDamageWhileHellbent`.
+  **Deferred DIS cards (need new primitives):** Swift Silence (counter-all-others
+  + draw-per-countered — needs a stack-count of actual counters); Azorius Ploy
+  (outgoing-only combat-damage prevention — the incoming half exists as
+  `PreventCombatDamageToTargetThisTurn`); Drekavac / (filtered "discard a
+  noncreature card or sacrifice" — `MayDiscard` has no filter); Simic Basilisk
+  (grant "destroy at end of combat on combat damage to a creature"); Protean Hulk
+  (search library for creatures up to a *total* mana value → battlefield —
+  `SearchUpToN` counts cards, not MV); Ignorant Bliss (exile hand, delayed
+  return next end step); Kindle the Carnage (repeatable random-discard damage
+  loop); Bronze Bombshell (control-change → sac + burn). Narrow approximation:
+  Magewright's Stone's target is any creature (should be "has a {T} activated
+  ability"); Cytoshape's copied creature isn't restricted to nonlegendary.
 - **Dissension gap batch (dis/creatures) — shipped:** Assault Zeppelid, Sky
   Hussar (ETB untap-all), Stalking Vengeance (death→power damage), Azorius Herald
   (unblockable + sac-unless-{U} via `SourceCastWithColorSpent`).
