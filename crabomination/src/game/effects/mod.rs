@@ -9269,6 +9269,40 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CounterSpellOrAbility { what } => {
+                // Voidslime: the target is either a stack spell (matched by card
+                // id) or an ability (matched by its source). Try the spell first,
+                // then the ability, and remove whichever the target names.
+                let targets = self.resolve_selector(what, ctx);
+                for t in &targets {
+                    let cid = match t.as_card_id() {
+                        Some(cid) => cid,
+                        None => continue,
+                    };
+                    if let Some(pos) = self.stack.iter().position(|si| matches!(
+                        si,
+                        StackItem::Spell { card, uncounterable: false, .. } if card.id == cid
+                    )) {
+                        if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
+                            self.countered_spell_mana_spent = mana_spent;
+                            self.countered_spell_off_stack(*card, events);
+                        }
+                    } else if let Some(pos) = self
+                        .stack
+                        .iter()
+                        .enumerate()
+                        .rev()
+                        .find_map(|(i, si)| match si {
+                            StackItem::Trigger { source, .. } if *source == cid => Some(i),
+                            _ => None,
+                        })
+                    {
+                        self.stack.remove(pos);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CopyAbility { what, times } => {
                 let n = self.evaluate_value(times, ctx).max(0);
                 let targets = self.resolve_selector(what, ctx);

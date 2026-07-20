@@ -7189,6 +7189,7 @@ static DIS: &[Factory] = &[
     super::dis::nightcreep,
     super::dis::demonfire,
     super::dis::brain_pry,
+    super::dis::voidslime,
     super::dis::grand_arbiter_augustin_iv,
     super::dis::magewrights_stone,
     super::dis::hellhole_rats,

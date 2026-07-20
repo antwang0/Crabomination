@@ -584,6 +584,7 @@ impl Effect {
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
             | Effect::CounterAbility { what }
+            | Effect::CounterSpellOrAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. }
             | Effect::MakeSpellUncounterable { what } => sel_has_target(what),
@@ -919,6 +920,7 @@ impl Effect {
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
             | Effect::CounterAbility { what }
+            | Effect::CounterSpellOrAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. }
             | Effect::MakeSpellUncounterable { what }
@@ -1596,6 +1598,7 @@ impl Effect {
             | Effect::CounterSpellToZone { .. }
             | Effect::CounterSpellExileNameLock { .. }
             | Effect::CounterAbility { .. }
+            | Effect::CounterSpellOrAbility { .. }
             | Effect::CounterUnlessPaid { .. }
             | Effect::CounterUnless { .. }
             | Effect::MakeSpellUncounterable { .. } => false,
@@ -1992,6 +1995,7 @@ impl Effect {
                 | Effect::CounterSpellToZone { what, .. }
                 | Effect::CounterSpellExileNameLock { what }
                 | Effect::CounterAbility { what }
+            | Effect::CounterSpellOrAbility { what }
                 | Effect::CounterUnlessPaid { what, .. }
                 | Effect::CounterUnless { what, .. }
                 | Effect::MakeSpellUncounterable { what }

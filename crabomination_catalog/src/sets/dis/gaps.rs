@@ -714,6 +714,20 @@ pub fn hellhole_rats() -> CardDefinition {
     }
 }
 
+/// Voidslime — {G}{U}{U} Instant. Counter target spell, activated ability, or
+/// triggered ability.
+pub fn voidslime() -> CardDefinition {
+    CardDefinition {
+        name: "Voidslime",
+        cost: cost(&[g(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpellOrAbility {
+            what: target_filtered(R::IsSpellOnStack.or(R::HasAbilityOnStack)),
+        },
+        ..Default::default()
+    }
+}
+
 /// Brain Pry — {1}{B} Sorcery. Choose a nonland card name. Target player
 /// reveals their hand and discards a card with that name. If they can't, you
 /// draw a card.

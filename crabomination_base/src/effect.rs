@@ -4333,6 +4333,11 @@ pub enum Effect {
     /// topmost `StackItem::Trigger` whose `source` matches. Used by
     /// Consign to Memory.
     CounterAbility { what: Selector },
+    /// Counter target spell, activated ability, or triggered ability (Voidslime).
+    /// The one selector may resolve to a stack spell (matched by card id) or an
+    /// ability's source (matched like `CounterAbility`); whichever kind the
+    /// target names is removed. Uncounterable spells are skipped.
+    CounterSpellOrAbility { what: Selector },
     /// Counter target spell **unless** its controller pays `mana_cost`.
     /// At resolution, the engine attempts to auto-pay on behalf of the
     /// targeted spell's controller — if affordable, the spell stays;

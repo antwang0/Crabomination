@@ -656,3 +656,58 @@ fn blessing_of_the_nephilim_scales_with_colors() {
     let cp = g.computed_permanent(rats).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "two colors → +2/+2");
 }
+
+/// Voidslime counters a spell on the stack.
+#[test]
+fn voidslime_counters_a_spell() {
+    use crabomination::game::types::{StackItem, Target};
+    let mut g = two_player_game();
+    // Opponent casts a spell.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the bolt");
+    assert!(matches!(g.stack.last(), Some(StackItem::Spell { card, .. }) if card.id == bolt));
+    // Respond with Voidslime.
+    g.priority.player_with_priority = 0;
+    let vs = g.add_card_to_hand(0, catalog::voidslime());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: vs, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Voidslime at the spell");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "spell countered to graveyard");
+}
+
+/// Voidslime counters an activated ability on the stack.
+#[test]
+fn voidslime_counters_an_ability() {
+    use crabomination::game::types::{StackItem, Target};
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    g.clear_sickness(stone);
+    g.players[1].mana_pool.add_colorless(1);
+    g.add_card_to_library(1, catalog::island());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate the draw/sac ability");
+    assert!(matches!(g.stack.last(), Some(StackItem::Trigger { source, .. }) if *source == stone));
+    g.priority.player_with_priority = 0;
+    let vs = g.add_card_to_hand(0, catalog::voidslime());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: vs, target: Some(Target::Permanent(stone)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Voidslime at the ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand_before, "the ability was countered — no draw");
+}
