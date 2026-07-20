@@ -769,7 +769,7 @@ pub fn govern_the_guildless() -> CardDefinition {
 
 /// Anthem of Rakdos — {2}{B}{R}{R} Enchantment. Whenever a creature you control
 /// attacks, it gets +2/+0 until end of turn and this deals 1 damage to you.
-/// (The Hellbent damage-doubling clause is deferred — tracked in TODO.md.)
+/// Hellbent — while your hand is empty, your sources deal double damage.
 pub fn anthem_of_rakdos() -> CardDefinition {
     CardDefinition {
         name: "Anthem of Rakdos",
@@ -786,6 +786,10 @@ pub fn anthem_of_rakdos() -> CardDefinition {
                 },
                 Effect::DealDamage { to: Selector::You, amount: Value::ONE },
             ]),
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Hellbent — while you have no cards in hand, sources you control deal double damage.",
+            effect: StaticEffect::DoubleYourSourcesDamageWhileHellbent,
         }],
         ..Default::default()
     }

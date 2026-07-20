@@ -866,6 +866,26 @@ fn anthem_of_rakdos_pumps_attacker_and_pings_you() {
     assert_eq!(g.players[0].life, life0 - 1, "Anthem pinged you for 1");
 }
 
+/// Anthem of Rakdos doubles your sources' damage while you're hellbent.
+#[test]
+fn anthem_of_rakdos_hellbent_doubles_damage() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::anthem_of_rakdos());
+    // Empty hand → hellbent → your sources deal double.
+    g.players[0].hand.clear();
+    let life1 = g.players[1].life;
+    let mut events = Vec::new();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.deal_damage_to_from(EntityRef::Player(1), 3, Some(src), &mut events);
+    assert_eq!(g.players[1].life, life1 - 6, "3 damage doubled to 6 while hellbent");
+    // Non-empty hand → no doubling.
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let life1b = g.players[1].life;
+    g.deal_damage_to_from(EntityRef::Player(1), 3, Some(src), &mut events);
+    assert_eq!(g.players[1].life, life1b - 3, "not hellbent → normal damage");
+}
+
 /// Plumes of Peace keeps the enchanted creature from untapping.
 #[test]
 fn plumes_of_peace_locks_untap() {

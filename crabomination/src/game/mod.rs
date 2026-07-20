@@ -3443,6 +3443,19 @@ impl GameState {
                 .filter(|sa| matches!(sa.effect, StaticEffect::DoubleDamageFromControlledCreatures))
                 .count() as u32;
         }
+        // Anthem of Rakdos (Hellbent) — while the static's controller has an
+        // empty hand, any source they control deals double damage (CR 614.5).
+        if let Some((src_ctrl, _)) = &source_info
+            && self.players[*src_ctrl].hand.is_empty()
+        {
+            d += self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == *src_ctrl)
+                .flat_map(|c| &c.definition.static_abilities)
+                .filter(|sa| matches!(sa.effect, StaticEffect::DoubleYourSourcesDamageWhileHellbent))
+                .count() as u32;
+        }
         // Valley Flamecaller — a creature you control of a listed type deals +1
         // damage to any target (combat or noncombat alike).
         if let Some(src) = source
@@ -13438,6 +13451,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn
             | StaticEffect::DoubleDamageFromControlledCreatures
+            | StaticEffect::DoubleYourSourcesDamageWhileHellbent
             | StaticEffect::DoubleNoncombatDamageToOpponents
             | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
             | StaticEffect::HalveDamageToYou

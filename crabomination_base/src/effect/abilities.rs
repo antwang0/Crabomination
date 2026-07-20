@@ -810,6 +810,11 @@ pub enum StaticEffect {
     /// Source-controller-restricted (unlike the global `DoubleDamageDealt`);
     /// combat and noncombat alike; consulted by `scale_damage_to`.
     DoubleDamageFromControlledCreatures,
+    /// CR 614.5 Hellbent — "As long as you have no cards in hand, if a source you
+    /// control would deal damage to a permanent or player, it deals double that
+    /// damage instead." (Anthem of Rakdos.) Any source (not just creatures),
+    /// gated on the static's controller having an empty hand; `scale_damage_to`.
+    DoubleYourSourcesDamageWhileHellbent,
     /// CR 614.5 — "If a source you control would deal *noncombat* damage to an
     /// opponent or a permanent an opponent controls, it deals double that
     /// damage instead." (Solphim, Mayhem Dominus.) Noncombat-only and also
