@@ -166,6 +166,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // gates blocking and combat damage, not just spell targeting.
         ProtectionFromCreatures => "ProCr",
         ProtectionFromCreatureType(_) => "ProCT",
+        // Protection from a card type (e.g. from artifacts) likewise gates
+        // which attackers/blockers connect; the suffix names the dodged type.
+        ProtectionFromCardType(_) => "ProT",
         // Combat compulsions/restrictions that change how an opponent should
         // attack or block into this creature — the mirror side of MustAttack.
         MustBlock | AllMustBlock => "MBlk",
@@ -262,6 +265,10 @@ fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
     // Protection from a creature type names the type ("ProCT·Coyote"): which
     // type it dodges is the whole board read (who can block it / damage it).
     if let ProtectionFromCreatureType(t) = kw {
+        return Some(format!("·{t:?}"));
+    }
+    // Protection from a card type names the dodged type ("ProT·Artifact").
+    if let ProtectionFromCardType(t) = kw {
         return Some(format!("·{t:?}"));
     }
     let n = match kw {
@@ -553,6 +560,11 @@ mod tests {
             )]),
             "ProCT·Coyote",
             "protection-from-type names the dodged type",
+        );
+        assert_eq!(
+            keyword_strip(&[Keyword::ProtectionFromCardType(crabomination::card::CardType::Artifact)]),
+            "ProT·Artifact",
+            "protection-from-card-type names the dodged type",
         );
         assert_eq!(keyword_strip(&[Keyword::CantAttackAlone]), "Pack");
         assert_eq!(keyword_strip(&[Keyword::CantAttackOrBlockAlone]), "Pack");
