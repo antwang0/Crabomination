@@ -85,3 +85,28 @@ fn cr_702_6e_aura_granted_upkeep_trigger_keys_on_host_controller() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1 - 1, "the enchanted creature's controller bleeds");
 }
+
+/// CR 702 Radiance — a multicolored subject bridges to creatures sharing
+/// *either* of its colors; a creature sharing neither is untouched.
+#[test]
+fn radiance_multicolor_subject_bridges_either_color() {
+    let mut g = two_player_game();
+    let subject = g.add_card_to_battlefield(1, catalog::watchwolf()); // G/W 3/3
+    let green = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // G 2/2
+    let white = g.add_card_to_battlefield(1, catalog::serra_angel()); // W 4/4
+    let blue = g.add_card_to_battlefield(1, catalog::wall_of_air()); // U 0/5
+    let beam = g.add_card_to_hand(0, catalog::cleansing_beam());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 3);
+    }
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: beam, target: Some(Target::Permanent(subject)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(subject).unwrap().damage, 2, "subject took 2");
+    assert!(g.battlefield_find(green).is_none(), "shares green → 2 → the 2/2 dies");
+    assert_eq!(g.battlefield_find(white).unwrap().damage, 2, "shares white → 2");
+    assert_eq!(g.battlefield_find(blue).unwrap().damage, 0, "shares neither color → untouched");
+}
