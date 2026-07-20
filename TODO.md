@@ -94,7 +94,10 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Transguild Courier, Wakestone Gargoyle, Ragamuffyn, Soulsworn Jury, Stoic
   Ephemera, Demon's Jester, Minister of Impediments, Flame-Kin War Scout, Rakdos
   Ragemutt, Delirium/Vision Skeins, Psychotic Fury, Might of the Nephilim
-  (`Value::Times`×`ColorCountOf`), Stomp and Howl. CR conformance in
+  (`Value::Times`×`ColorCountOf`), Stomp and Howl; Guildpact gaps (recent305):
+  Battering Wurm, Caustic Rain, Daggerclaw Imp, Dryad Sophisticate (nonbasic
+  landwalk), Harrier Griffin, Gristleback (`Value::PowerOf`), Frazzle (nonblue
+  counter), Abyssal Nocturnus (opponent-discard payoff). CR conformance in
   `core_rules/cr_recent7` (305.7 / 202.2b / 701.15).
   **Still open Dissension cards noticed but not built (each on one primitive):**
   Valor Made Real / "can block any number" — needs a `Keyword::CanBlockAnyNumber`
