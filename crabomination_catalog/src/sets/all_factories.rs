@@ -7192,6 +7192,7 @@ static DIS: &[Factory] = &[
     super::dis::grand_arbiter_augustin_iv,
     super::dis::magewrights_stone,
     super::dis::hellhole_rats,
+    super::dis::blessing_of_the_nephilim,
     super::dis::biomantic_mastery,
     super::dis::leafdrake_roost,
 ];

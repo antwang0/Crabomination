@@ -638,3 +638,21 @@ fn hellhole_rats_discards_and_burns_by_mv() {
     assert_eq!(g.players[1].hand.len(), 0, "opponent discarded their card");
     assert_eq!(g.players[1].life, life1 - 2, "burned for the discarded MV (Counterspell = 2)");
 }
+
+/// Blessing of the Nephilim pumps +1/+1 per color of the enchanted creature.
+#[test]
+fn blessing_of_the_nephilim_scales_with_colors() {
+    let mut g = two_player_game();
+    // Mono-green host → +1/+1 (one color).
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 green
+    let b1 = g.add_card_to_battlefield(0, catalog::blessing_of_the_nephilim());
+    g.battlefield_find_mut(b1).unwrap().attached_to = Some(bear);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "mono-color → +1/+1");
+    // Two-color host → +2/+2.
+    let rats = g.add_card_to_battlefield(0, catalog::hellhole_rats()); // 2/2 B/R
+    let b2 = g.add_card_to_battlefield(0, catalog::blessing_of_the_nephilim());
+    g.battlefield_find_mut(b2).unwrap().attached_to = Some(rats);
+    let cp = g.computed_permanent(rats).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "two colors → +2/+2");
+}

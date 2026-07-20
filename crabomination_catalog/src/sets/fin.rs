@@ -5124,6 +5124,7 @@ pub fn machinists_arsenal() -> CardDefinition {
                 count_self_counters: None,
                 count_graveyard: None,
                 count_all_graveyards: None,
+                count_host_colors: false,
             }),
             ..Default::default()
         }),

@@ -4610,7 +4610,16 @@ impl GameState {
             // for each artifact/enchantment the Equipment's controller controls).
             let (mut bp, mut bt) = (bonus.power, bonus.toughness);
             if let Some(scale) = &bonus.scale {
-                let n = match (
+                let n = if scale.count_host_colors {
+                    // "+1/+1 for each of the host's colors" (Blessing of the
+                    // Nephilim) — read the host's printed colors.
+                    self.battlefield
+                        .iter()
+                        .find(|c| c.id == target)
+                        .map(|c| c.definition.printed_colors().len() as i32)
+                        .unwrap_or(0)
+                } else {
+                    match (
                     &scale.count_self_counters,
                     &scale.count_graveyard,
                     &scale.count_all_graveyards,
@@ -4643,6 +4652,7 @@ impl GameState {
                                 )
                         })
                         .count() as i32,
+                    }
                 };
                 bp += n * scale.per_power;
                 bt += n * scale.per_toughness;

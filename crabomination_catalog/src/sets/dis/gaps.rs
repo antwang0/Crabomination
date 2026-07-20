@@ -46,6 +46,33 @@ pub fn nettling_curse() -> CardDefinition {
     }
 }
 
+/// Blessing of the Nephilim — {W} Aura. Enchant creature. Enchanted creature
+/// gets +1/+1 for each of its colors.
+pub fn blessing_of_the_nephilim() -> CardDefinition {
+    use crate::card::EquipScale;
+    CardDefinition {
+        name: "Blessing of the Nephilim",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(EquipScale {
+                filter: R::Any,
+                per_power: 1,
+                per_toughness: 1,
+                count_host_colors: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Riot Spikes — {B/R} Aura. Enchant creature. Enchanted creature gets +2/-1.
 pub fn riot_spikes() -> CardDefinition {
     CardDefinition {

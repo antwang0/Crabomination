@@ -2995,6 +2995,11 @@ pub struct EquipScale {
     /// creature cards in all graveyards"), rather than just the controller's.
     #[serde(default)]
     pub count_all_graveyards: Option<SelectionRequirement>,
+    /// When true, the count is the number of colors of the attached host itself
+    /// (Blessing of the Nephilim — "+1/+1 for each of its colors"), rather than
+    /// any board/graveyard count.
+    #[serde(default)]
+    pub count_host_colors: bool,
 }
 
 /// Characteristic-defining dynamic P/T formula. Read by
