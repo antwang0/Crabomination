@@ -1287,11 +1287,17 @@ pub struct PermanentView {
     /// pops a counter on each trigger. Populated by `project_permanent`.
     #[serde(default)]
     pub has_shield_counters: bool,
-    /// True when an active prevention shield (CR 615, distinct from a
-    /// shield *counter*) protects this permanent from some/all damage
-    /// this turn. Populated by `project_permanent`.
+    /// True when an active *protective* prevention shield (CR 615, distinct
+    /// from a shield *counter*) shields this permanent from some/all damage
+    /// this turn. Populated by `project_permanent`. Excludes the Kill-Suit
+    /// Cultist "destroy on next damage" shield — see `doomed_next_damage`.
     #[serde(default)]
     pub has_prevention_shield: bool,
+    /// True when a Kill-Suit Cultist-style shield will *destroy* this
+    /// permanent the next time damage would be dealt to it (the damage is
+    /// prevented but the creature dies). A danger badge, not protection.
+    #[serde(default)]
+    pub doomed_next_damage: bool,
     /// True when this creature is goaded (CR 701.38) — a UI hint so the
     /// client can badge it as "must attack." Populated by
     /// `project_permanent`.

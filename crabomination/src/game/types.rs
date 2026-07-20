@@ -1475,6 +1475,11 @@ pub struct PreventionShield {
     /// this shield prevents.
     #[serde(default)]
     pub mint_mites_for: Option<usize>,
+    /// Kill-Suit Cultist — "destroy that creature instead". When a shield
+    /// on a permanent target soaks damage, destroy that permanent after the
+    /// shield pass. Pairs with `one_event` (soaks the next event, then gone).
+    #[serde(default)]
+    pub destroy: bool,
 }
 
 /// CR 731 — the game's day/night designation. The game starts as neither

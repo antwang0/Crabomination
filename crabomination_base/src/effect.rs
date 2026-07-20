@@ -5529,6 +5529,12 @@ pub enum Effect {
     /// "you don't lose / prevent all damage to you". Non-combat path.
     PreventAllDamageThisTurn { target: Selector },
 
+    /// "The next time damage would be dealt to `target` creature this turn,
+    /// destroy that creature instead." (Kill-Suit Cultist.) A one-event
+    /// prevent-all shield flagged `destroy`: it soaks the next damage event
+    /// and destroys the protected permanent.
+    ReplaceNextDamageWithDestroy { target: Selector },
+
     /// "The next time a source would deal damage to `target` this turn,
     /// prevent that damage; `target` gains life equal to the damage
     /// prevented this way." (CR 615.1 prevention + life gain.) Pushes a

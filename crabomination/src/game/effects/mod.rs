@@ -1056,6 +1056,77 @@ impl GameState {
         cands.into_iter().take(count).map(|c| c.id).collect()
     }
 
+    /// Destroy a single permanent (CR 701.7), honoring the destruction
+    /// replacements in CR order: Indestructible (no-op), Shield counter
+    /// (CR 122.1c), regeneration (CR 701.15, unless `no_regen`), and Umbra
+    /// Armor (CR 702.89). Returns `true` when the permanent actually moved
+    /// to the graveyard. Shared by `Effect::Destroy` and the Kill-Suit
+    /// Cultist damage→destroy shield.
+    pub fn destroy_permanent(
+        &mut self,
+        cid: CardId,
+        no_regen: bool,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        // Read the *computed* keyword so a layer-6 grant counts, not just
+        // the printed keyword / Indestructible counter on the raw instance.
+        let indestructible = self
+            .computed_permanent(cid)
+            .map(|cp| cp.keywords.contains(&crate::card::Keyword::Indestructible))
+            .unwrap_or(false)
+            || self.battlefield_find(cid).map(|c| c.is_indestructible()).unwrap_or(true);
+        if indestructible {
+            return false;
+        }
+        // CR 122.1c — a Shield counter replaces destruction, removing itself.
+        let has_shield = self
+            .battlefield_find(cid)
+            .map(|c| c.counter_count(crate::card::CounterType::Shield) > 0)
+            .unwrap_or(false);
+        if has_shield {
+            if let Some(c) = self.battlefield_find_mut(cid) {
+                c.remove_counters(crate::card::CounterType::Shield, 1);
+                if c.counter_count(crate::card::CounterType::Shield) == 0 {
+                    c.counters.remove(&crate::card::CounterType::Shield);
+                }
+            }
+            return false;
+        }
+        // CR 701.15 — regeneration shield replaces destruction (skipped for
+        // `DestroyNoRegen`, CR 701.15g).
+        if !no_regen
+            && self
+                .battlefield_find(cid)
+                .map(|c| c.regeneration_shields > 0)
+                .unwrap_or(false)
+        {
+            self.apply_regeneration(cid);
+            return false;
+        }
+        // CR 702.89 — umbra armor replaces destruction.
+        if self.apply_umbra_armor(cid, events) {
+            return false;
+        }
+        let is_creature = self
+            .battlefield_find(cid)
+            .map(|c| c.definition.is_creature())
+            .unwrap_or(false);
+        if is_creature {
+            // Cache the dying card's snapshot for AnotherOfYours-scope
+            // triggers and type filter predicates (token deaths vanish
+            // before dispatch).
+            if let Some(c) = self.battlefield_find(cid) {
+                self.died_card_snapshots.insert(cid, c.clone());
+            }
+            events.push(GameEvent::CreatureDied { card_id: cid });
+        }
+        let mut dies = self.remove_to_graveyard_with_triggers(cid);
+        events.append(&mut dies);
+        self.permanents_destroyed_this_resolution =
+            self.permanents_destroyed_this_resolution.saturating_add(1);
+        true
+    }
+
     fn run_effect(
         &mut self,
         effect: &Effect,
@@ -5134,70 +5205,7 @@ impl GameState {
                 let entities = self.resolve_selector(what, ctx);
                 for ent in entities {
                     if let Some(cid) = ent.as_permanent_id() {
-                        // Read the *computed* keyword so a layer-6 grant (Aura /
-                        // Equipment / counter-conditional static — Myojin's
-                        // divinity counter) counts, not just the printed keyword
-                        // and Indestructible counter on the raw instance.
-                        let indestructible = self
-                            .computed_permanent(cid)
-                            .map(|cp| cp.keywords.contains(&crate::card::Keyword::Indestructible))
-                            .unwrap_or(false)
-                            || self.battlefield_find(cid).map(|c| c.is_indestructible()).unwrap_or(true);
-                        if indestructible {
-                            continue;
-                        }
-                        // CR 122.1c — Shield counters create a single
-                        // replacement: "If this permanent would be
-                        // destroyed as the result of an effect, instead
-                        // remove a shield counter from it."
-                        let has_shield = self
-                            .battlefield_find(cid)
-                            .map(|c| c.counter_count(crate::card::CounterType::Shield) > 0)
-                            .unwrap_or(false);
-                        if has_shield {
-                            if let Some(c) = self.battlefield_find_mut(cid) {
-                                c.remove_counters(crate::card::CounterType::Shield, 1);
-                                // No 0-count residue (CR 700.9 IsModified).
-                                if c.counter_count(crate::card::CounterType::Shield) == 0 {
-                                    c.counters.remove(&crate::card::CounterType::Shield);
-                                }
-                            }
-                            continue;
-                        }
-                        // CR 701.15 — regeneration shield replaces destruction:
-                        // remove a shield, tap the permanent, remove it from
-                        // combat, and heal marked damage instead of dying.
-                        // Skipped entirely for `DestroyNoRegen` (CR 701.15g).
-                        if !no_regen
-                            && self
-                                .battlefield_find(cid)
-                                .map(|c| c.regeneration_shields > 0)
-                                .unwrap_or(false)
-                        {
-                            self.apply_regeneration(cid);
-                            continue;
-                        }
-                        // CR 702.89 — umbra armor replaces destruction.
-                        if self.apply_umbra_armor(cid, events) {
-                            continue;
-                        }
-                        let is_creature = self.battlefield_find(cid)
-                            .map(|c| c.definition.is_creature())
-                            .unwrap_or(false);
-                        if is_creature {
-                            // Cache the dying card's snapshot for
-                            // AnotherOfYours-scope triggers and type
-                            // filter predicates (token deaths in
-                            // particular vanish before dispatch).
-                            if let Some(c) = self.battlefield_find(cid) {
-                                self.died_card_snapshots.insert(cid, c.clone());
-                            }
-                            events.push(GameEvent::CreatureDied { card_id: cid });
-                        }
-                        let mut dies = self.remove_to_graveyard_with_triggers(cid);
-                        events.append(&mut dies);
-                        self.permanents_destroyed_this_resolution =
-                            self.permanents_destroyed_this_resolution.saturating_add(1);
+                        self.destroy_permanent(cid, no_regen, events);
                     }
                 }
                 let mut sba = self.check_state_based_actions();
@@ -14411,6 +14419,7 @@ impl GameState {
                 self.prevention_shields.push(crate::game::types::PreventionShield {
                     mint_mites_for: None,
                     target: crate::game::types::PreventionTarget::Player(ctx.controller),
+                    destroy: false,
                     remaining: None,
                     gain_life: false,
                     source: Some(chosen),
@@ -14538,6 +14547,7 @@ impl GameState {
                         self.prevention_shields.push(crate::game::types::PreventionShield {
                             mint_mites_for: None,
                             target: s,
+                            destroy: false,
                             remaining: Some(n),
                             gain_life: false,
                             source: None,
@@ -14559,6 +14569,7 @@ impl GameState {
                         self.prevention_shields.push(crate::game::types::PreventionShield {
                             mint_mites_for: None,
                             target: s,
+                            destroy: false,
                             remaining: Some(n),
                             gain_life: true,
                             source: None,
@@ -14577,12 +14588,33 @@ impl GameState {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
                         mint_mites_for: None,
                         target: s,
+                        destroy: false,
                         remaining: None,
                         gain_life: false,
                         source: None,
                         one_event: false,
                         reflect: false,
                         source_controller: None,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::ReplaceNextDamageWithDestroy { target } => {
+                // Kill-Suit Cultist — "the next time damage would be dealt to
+                // target creature this turn, destroy that creature instead."
+                // A one-event prevent-all shield with the `destroy` rider.
+                for s in self.prevention_targets(target, ctx) {
+                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                        target: s,
+                        remaining: None,
+                        gain_life: false,
+                        source: None,
+                        one_event: true,
+                        reflect: false,
+                        source_controller: None,
+                        mint_mites_for: None,
+                        destroy: true,
                     });
                 }
                 Ok(())
@@ -15085,7 +15117,7 @@ impl GameState {
                         reflect: false,
                         source_controller: None,
                         mint_mites_for: Some(ctx.controller),
-                    });
+                        destroy: false,                    });
                 }
                 Ok(())
             }

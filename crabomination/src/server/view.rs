@@ -1036,7 +1036,10 @@ fn project_permanent(
     let cp = computed.iter().find(|c| c.id == card.id);
     let has_prevention_shield = prevention_shields
         .iter()
-        .any(|s| s.target == PreventionTarget::Permanent(card.id));
+        .any(|s| s.target == PreventionTarget::Permanent(card.id) && !s.destroy);
+    let doomed_next_damage = prevention_shields
+        .iter()
+        .any(|s| s.target == PreventionTarget::Permanent(card.id) && s.destroy);
     PermanentView {
         id: card.id,
         name: card.definition.name.to_string(),
@@ -1093,6 +1096,7 @@ fn project_permanent(
         dies_to_exile: card.definition.dies_to_exile,
         has_shield_counters: card.counter_count(crate::card::CounterType::Shield) > 0,
         has_prevention_shield,
+        doomed_next_damage,
         goaded: !card.goaded_by.is_empty(),
         monstrous: card.monstrous,
         suspected: card.suspected,
@@ -1937,6 +1941,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::PreventNextDamage { .. } => "Prevent damage",
         Effect::PreventNextDamageAndGainLife { .. } => "Prevent damage, gain life",
         Effect::PreventAllDamageThisTurn { .. } => "Prevent all damage",
+        Effect::ReplaceNextDamageWithDestroy { .. } => "Destroy on next damage",
         Effect::DamageCantBePreventedThisTurn => "Damage can't be prevented",
         Effect::LifeGainLockThisTurn { .. } => "Lock lifegain",
         Effect::GrantSpellsUncounterableThisTurn { .. } => "Spells can't be countered",
@@ -2214,6 +2219,7 @@ mod tests {
         state.prevention_shields.push(PreventionShield {
             mint_mites_for: None,
             target: PreventionTarget::Player(0),
+            destroy: false,
             remaining: None,
             gain_life: false,
             source: None,
@@ -2224,6 +2230,7 @@ mod tests {
         state.prevention_shields.push(PreventionShield {
             mint_mites_for: None,
             target: PreventionTarget::Permanent(bear),
+            destroy: false,
             remaining: Some(2),
             gain_life: false,
             source: None,
@@ -2231,11 +2238,30 @@ mod tests {
             reflect: false,
             source_controller: None,
         });
+        // A Kill-Suit Cultist "destroy on next damage" shield on a second
+        // creature reads as `doomed_next_damage`, NOT as protection.
+        let doomed = state.add_card_to_battlefield(1, catalog::grizzly_bears());
+        state.prevention_shields.push(PreventionShield {
+            mint_mites_for: None,
+            target: PreventionTarget::Permanent(doomed),
+            destroy: true,
+            remaining: None,
+            gain_life: false,
+            source: None,
+            one_event: true,
+            reflect: false,
+            source_controller: None,
+        });
         state.damage_cant_be_prevented_this_turn = true;
         let v = project(&state, 0);
         assert!(v.players[0].has_prevention_shield, "P0 is shielded");
         assert!(!v.players[1].has_prevention_shield, "P1 is not");
-        assert!(v.battlefield.iter().find(|p| p.id == bear).unwrap().has_prevention_shield);
+        let bear_v = v.battlefield.iter().find(|p| p.id == bear).unwrap();
+        assert!(bear_v.has_prevention_shield, "protective shield surfaces");
+        assert!(!bear_v.doomed_next_damage);
+        let doomed_v = v.battlefield.iter().find(|p| p.id == doomed).unwrap();
+        assert!(doomed_v.doomed_next_damage, "destroy shield reads as doomed");
+        assert!(!doomed_v.has_prevention_shield, "a destroy shield is not protection");
         assert!(v.damage_cant_be_prevented_this_turn);
     }
 

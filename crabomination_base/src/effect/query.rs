@@ -798,6 +798,7 @@ impl Effect {
                 sel_has_target(target) || value_has_target(amount)
             }
             Effect::PreventAllDamageThisTurn { target } => sel_has_target(target),
+            Effect::ReplaceNextDamageWithDestroy { target } => sel_has_target(target),
             Effect::DamageCantBePreventedThisTurn => false,
             Effect::PlayerProtectionUntilNextTurn { .. } => false,
             Effect::WhenLastCreatedTokenLeaves { .. } => false,
@@ -1925,6 +1926,7 @@ impl Effect {
                 Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target }
+                | Effect::ReplaceNextDamageWithDestroy { target }
                 | Effect::PreventAllCombatDamageInvolving { target }
                 | Effect::PreventCombatDamageToTargetThisTurn { target } => sel_find(target, slot),
                 Effect::Fight { attacker, defender } => {

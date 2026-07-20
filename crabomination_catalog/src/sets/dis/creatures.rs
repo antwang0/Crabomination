@@ -235,6 +235,35 @@ pub fn stalking_vengeance() -> CardDefinition {
     }
 }
 
+/// Kill-Suit Cultist — {R} 1/1 Goblin Berserker. Attacks each combat if able.
+/// `{B}, Sacrifice this creature: The next time damage would be dealt to target
+/// creature this turn, destroy that creature instead.`
+pub fn kill_suit_cultist() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::mana::b;
+    CardDefinition {
+        name: "Kill-Suit Cultist",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::MustAttack],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            sac_cost: true,
+            effect: Effect::ReplaceNextDamageWithDestroy {
+                target: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Azorius Herald — {2}{W} 2/1 Spirit. Can't be blocked. When it enters, gain 4
 /// life; and sacrifice it unless {U} was spent to cast it.
 pub fn azorius_herald() -> CardDefinition {

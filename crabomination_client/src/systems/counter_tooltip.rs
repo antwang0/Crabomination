@@ -399,6 +399,14 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     } else if p.has_shield_counters {
         lines.push(String::from("(shielded: next damage/destroy is absorbed)"));
     }
+    // CR 615 prevention shields (distinct from shield *counters*): a
+    // protective shield soaks damage this turn, while a Kill-Suit Cultist
+    // "destroy on next damage" shield is a death sentence, not protection.
+    if p.doomed_next_damage {
+        lines.push(String::from("(doomed: next damage destroys this instead)"));
+    } else if p.has_prevention_shield {
+        lines.push(String::from("(warded: damage prevented this turn)"));
+    }
     if p.finality_counter_count > 0 || p.has_finality_counters {
         lines.push(String::from("(finality: exiles instead of going to graveyard)"));
     } else if p.dies_to_exile {
@@ -867,6 +875,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
                 format!("Ward—{}, Pay {n} life", c.summary())
             }
             crabomination::card::WardCost::Discard(n) => format!("Ward—Discard {n}"),
+            crabomination::card::WardCost::DiscardHand => "Ward—Discard your hand".into(),
             crabomination::card::WardCost::Blight(n) => format!("Ward—Blight {n}"),
             crabomination::card::WardCost::CollectEvidence(n) => {
                 format!("Ward—Collect evidence {n}")
@@ -1283,6 +1292,7 @@ mod tests {
             dealt_damage_this_turn: false,
             has_shield_counters: false,
             has_prevention_shield: false,
+            doomed_next_damage: false,
             goaded: false,
             monstrous: false,
             suspected: false,

@@ -190,6 +190,9 @@ impl GameState {
         let mut spent_one_event: Vec<usize> = Vec::new();
         // Ria Ivor — (seat, prevented) mite mints owed after the loop.
         let mut mite_mints: Vec<(usize, u32)> = Vec::new();
+        // Kill-Suit Cultist — the permanent to destroy after the shield pass
+        // when a `destroy` shield soaks this event.
+        let mut destroy_after: Option<crate::card::CardId> = None;
         for (i, shield) in self
             .prevention_shields
             .iter_mut()
@@ -226,6 +229,9 @@ impl GameState {
                 reflected += soak;
                 reflect_ctrl = reflect_ctrl.or(shield.source_controller);
             }
+            if shield.destroy && soak > 0 {
+                destroy_after = to_card;
+            }
         }
         // Drop spent "next N" shields and used one-event shields.
         let mut idx = 0;
@@ -251,6 +257,13 @@ impl GameState {
                 );
                 self.mint_token_onto_battlefield(def, seat, false, events);
             }
+        }
+        // Kill-Suit Cultist — "destroy that creature instead". The shield
+        // both prevented the damage (above) and now destroys the target.
+        if let Some(cid) = destroy_after
+            && self.battlefield_find(cid).is_some()
+        {
+            self.destroy_permanent(cid, false, events);
         }
         // Deflecting Palm's "deals that much damage to that source's
         // controller". The reflected damage is its own event (source: the

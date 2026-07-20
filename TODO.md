@@ -99,14 +99,37 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   landwalk), Harrier Griffin, Gristleback (`Value::PowerOf`), Frazzle (nonblue
   counter), Abyssal Nocturnus (opponent-discard payoff). CR conformance in
   `core_rules/cr_recent7` (305.7 / 202.2b / 701.15).
-  **Still open Dissension cards noticed but not built (each on one primitive):**
+- **Dissension gap batch 2 (dis/gaps) — shipped:** Kill-Suit Cultist (new
+  `Effect::ReplaceNextDamageWithDestroy` — a one-event `PreventionShield.destroy`
+  rider; the shield-application path now `destroy_permanent`s the target after
+  soaking, a helper extracted from the `Effect::Destroy` arm), Nettling Curse
+  (enchanted-creature attacks/blocks life-drain — the equip-bonus trigger
+  dispatch *already* covered combat-kind triggers via `equip_granted_triggers_for`,
+  so the old "only step-kind" note was stale), Riot Spikes (+2/-1 aura), Street
+  Savvy (+0/+2), Proper Burial (`ToughnessOf` now reads dead-creature LKI via
+  `as_card_id`, matching `PowerOf`), Rain of Gore (`LifeGainBecomesLoss::EachPlayer`),
+  Skullmead Cauldron (two activated, discard cost), Celestial Ancient
+  (cast-enchantment → team +1/+1), Nihilistic Glee (discard-drain + hellbent draw),
+  Slithering Shade (Defender + `{B}` pump + hellbent `CanAttackIgnoringDefenderWhile`),
+  Ocular Halo (EquipBonus grants `{T}: draw` + `{W}` vigilance grant), Sprouting
+  Phytohydra (`DealtDamage`→`MayDo` token copy of self), Ratcatcher (Fear +
+  upkeep may-tutor a Rat), Cytospawn Shambler / Cytoplast Manipulator (Graft +
+  counter-gated grant / `GainControlWhileSourceRemains`), Paladin of Prahv
+  (Lifelink; forecast rider deferred), Wit's End (discard whole hand),
+  Weight of Spires (`NonbasicLandCountControlledBy(ControllerOf(Target))`),
+  Tidespout Tyrant (cast-a-spell → bounce), Taste for Mayhem (+2/+0; hellbent
+  rider deferred). Server/UI: the `destroy` shield now surfaces as
+  `PermanentView.doomed_next_damage` (a danger badge, not `has_prevention_shield`)
+  with a client tooltip line; fixed a latent non-exhaustive `WardCost::DiscardHand`
+  match in the client.
+  **Still open Dissension cards (each on one primitive):**
   Valor Made Real / "can block any number" — needs a `Keyword::CanBlockAnyNumber`
-  + a blocker-count-limit relaxation in `declare_blockers`; Nettling Curse — an
-  Aura whose *enchanted creature* attacks/blocks trigger (no enchanted-creature
-  `EventScope`; only step-kind equip-bonus triggers dispatch, not combat-kind);
-  Gaze of the Gorgon (regenerate + delayed destroy-all-blocked — needs a per-turn
-  blocked-by relation in combat); Kill-Suit Cultist ("next time damage would be
-  dealt to target creature, destroy it instead" — a damage→destroy replacement).
+  + a blocker→multiple-attacker relaxation (the `block_map` is blocker→single
+  attacker today); Gaze of the Gorgon (regenerate + delayed destroy-all-blocked —
+  needs a per-turn blocked-by relation in combat); Taste for Mayhem / Slithering
+  Shade-style hellbent aura pump — a condition-gated attached-creature P/T static
+  (`StaticEffect::AttachedCreatureGetsWhile { power, toughness, condition }`) would
+  also close Taste for Mayhem's rider.
 - **Dissension gap batch (dis/creatures) — shipped:** Assault Zeppelid, Sky
   Hussar (ETB untap-all), Stalking Vengeance (death→power damage), Azorius Herald
   (unblockable + sac-unless-{U} via `SourceCastWithColorSpent`).

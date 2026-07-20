@@ -244,6 +244,7 @@ fn ward_suffix(cost: &WardCost) -> String {
         Life(n) => format!("{n}♥"),
         ManaAndLife(c, n) => format!("{}+{n}♥", c.cmc()),
         Discard(n) => format!("{n}↓"),
+        DiscardHand => "hand↓".into(),
         Blight(n) => format!("{n}☠"),
         CollectEvidence(n) => format!("ev{n}"),
         SacrificeCreature => "sac".into(),

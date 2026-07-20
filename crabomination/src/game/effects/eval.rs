@@ -198,7 +198,11 @@ impl GameState {
                 .sum(),
             Value::ToughnessOf(s) => self.resolve_selector(s, ctx).iter()
                 .filter_map(|e| {
-                    let cid = e.as_permanent_id()?;
+                    // `as_card_id` (mirrors `PowerOf`): a dies-trigger subject
+                    // arrives as `EntityRef::Card` once it's in the graveyard,
+                    // so "gain life equal to its toughness" (Proper Burial) can
+                    // read the dead creature's last-known toughness (CR 603.10).
+                    let cid = e.as_card_id()?;
                     if let Some(snap) = self.lki_snapshot(cid) {
                         return Some(snap.toughness());
                     }
