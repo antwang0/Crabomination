@@ -275,3 +275,62 @@ fn frontier_warmonger_menace_needs_two_blockers() {
     }])).expect("attack");
     assert!(g.computed_permanent(attacker).unwrap().keywords.contains(&crabomination::card::Keyword::Menace));
 }
+
+#[test]
+fn disembowel_destroys_a_creature_of_matching_mana_value() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let spell = g.add_card_to_hand(0, catalog::disembowel());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast with X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the MV-2 bear was destroyed with X=2");
+}
+
+#[test]
+fn vigor_mortis_reanimates_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::vigor_mortis());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the bear returned to the battlefield");
+}
+
+#[test]
+fn aura_mutation_destroys_enchantment_and_makes_saprolings_by_mv() {
+    let mut g = two_player_game();
+    // A {1}{G} enchantment (MV 2) on the opponent's battlefield.
+    let ench = g.add_card_to_battlefield(1, catalog::fists_of_ironwood());
+    let spell = g.add_card_to_hand(0, catalog::aura_mutation());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(ench)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast mutation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "the enchantment was destroyed");
+    assert_eq!(count_tokens(&g, "Saproling"), 2, "X = destroyed enchantment's mana value (2)");
+}
+
+#[test]
+fn mortipede_forces_all_able_blockers() {
+    let mut g = two_player_game();
+    let mortipede = g.add_card_to_battlefield(0, catalog::mortipede());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mortipede, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("lure");
+    drain_stack(&mut g);
+    // The opponent's untapped creature is now required to block Mortipede.
+    assert_eq!(g.battlefield_find(blocker).unwrap().must_block, Some(mortipede),
+        "the able blocker is forced to block Mortipede");
+}

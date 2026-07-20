@@ -445,3 +445,78 @@ pub fn recollect() -> CardDefinition {
     }
 }
 
+
+/// Mortipede — {3}{B} 4/1 Insect. {2}{G}: All creatures able to block this
+/// creature this turn do so (a one-turn Lure on itself).
+pub fn mortipede() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Mortipede",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::MustBlockSource {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Disembowel — {X}{B} Instant. Destroy target creature with mana value X.
+pub fn disembowel() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Disembowel",
+        cost: cost(&[x(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::ManaValueExactlyXFromCost)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Vigor Mortis — {2}{B}{B} Sorcery. Return target creature card from your
+/// graveyard to the battlefield. (The "+1/+1 counter if {G} was spent" rider is
+/// approximated away — no spent-color tracking on this cast path.)
+pub fn vigor_mortis() -> CardDefinition {
+    CardDefinition {
+        name: "Vigor Mortis",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Aura Mutation — {G}{W} Instant. Destroy target enchantment. Create X 1/1
+/// Saprolings, where X is that enchantment's mana value. (X is read before the
+/// destroy so it reflects the enchantment's printed mana value.)
+pub fn aura_mutation() -> CardDefinition {
+    CardDefinition {
+        name: "Aura Mutation",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                definition: saproling_token(),
+            },
+            Effect::Destroy { what: target_filtered(R::Enchantment) },
+        ]),
+        ..Default::default()
+    }
+}

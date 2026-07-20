@@ -1054,6 +1054,31 @@ fn cr_506_4c_attacker_whose_planeswalker_left_deals_no_damage() {
     );
 }
 
+/// CR 702.52 — Dredge: if you would draw a card, you may instead mill N and
+/// return the dredge card from your graveyard to your hand (no card drawn).
+#[test]
+fn cr_702_52_dredge_mills_and_returns_instead_of_drawing() {
+    let mut g = two_player_game();
+    let brownscale = g.add_card_to_graveyard(0, catalog::golgari_brownscale()); // Dredge 2
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    let mut events = vec![];
+    g.draw_one(0, &mut events);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == brownscale),
+        "the dredge card returns to hand instead of a draw",
+    );
+    assert_eq!(g.players[0].library.len(), 1, "2 of the 3 library cards were milled");
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == brownscale),
+        "the dredge card left the graveyard",
+    );
+}
+
 // ── CR 601.2c — cast-time target filters enforced for every targeted effect ──
 
 /// Detain was one of ~20 targeted effects whose filter wasn't surfaced by

@@ -6996,6 +6996,10 @@ static DECKS: &[Factory] = &[
     super::decks::streetbreaker_wurm,
     super::decks::ghor_clan_savage,
     super::decks::recollect,
+    super::decks::mortipede,
+    super::decks::disembowel,
+    super::decks::vigor_mortis,
+    super::decks::aura_mutation,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
