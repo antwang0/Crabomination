@@ -8565,6 +8565,29 @@ impl GameState {
                 }
             }
         }
+        // CR — "Whenever you cast a multicolored spell, you may return this
+        // from your graveyard to your hand" (the Dissension Eidolon cycle):
+        // a `FromYourGraveyard`-scoped SpellCast trigger fires from its owner's
+        // graveyard when that owner is the caster.
+        let gy_casters: Vec<(CardId, usize)> = self
+            .players
+            .iter()
+            .enumerate()
+            .flat_map(|(owner, pl)| pl.graveyard.iter().map(move |c| (c.id, owner)))
+            .filter(|&(_, owner)| owner == controller)
+            .collect();
+        for (cid, owner) in gy_casters {
+            let Some(c) = self.players[owner].graveyard.iter().find(|c| c.id == cid) else {
+                continue;
+            };
+            for t in &c.definition.triggered_abilities {
+                if t.event.kind == EventKind::SpellCast
+                    && matches!(t.event.scope, EventScope::FromYourGraveyard)
+                {
+                    candidates.push((cid, owner, t.effect.clone(), t.event.filter.clone(), usize::MAX, false));
+                }
+            }
+        }
 
         for (source, listener_controller, effect, filter, trig_idx, once_per_turn) in candidates {
             // CR 603.3d — "This ability triggers only once each turn"

@@ -7123,6 +7123,18 @@ static DECKS: &[Factory] = &[
     super::decks::slaughterhouse_bouncer,
     super::decks::transguild_courier,
     super::decks::wakestone_gargoyle,
+    // recent303 — Dissension multicolored-matters + utility
+    super::decks::enigma_eidolon,
+    super::decks::sandstorm_eidolon,
+    super::decks::verdant_eidolon,
+    super::decks::entropic_eidolon,
+    super::decks::aurora_eidolon,
+    super::decks::ragamuffyn,
+    super::decks::soulsworn_jury,
+    super::decks::stoic_ephemera,
+    super::decks::demons_jester,
+    super::decks::minister_of_impediments,
+    super::decks::flame_kin_war_scout,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
