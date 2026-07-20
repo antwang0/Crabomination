@@ -7142,6 +7142,15 @@ static DECKS: &[Factory] = &[
     super::decks::psychotic_fury,
     super::decks::might_of_the_nephilim,
     super::decks::stomp_and_howl,
+    // recent305 — Guildpact gap batch
+    super::decks::battering_wurm,
+    super::decks::caustic_rain,
+    super::decks::daggerclaw_imp,
+    super::decks::dryad_sophisticate,
+    super::decks::harrier_griffin,
+    super::decks::gristleback,
+    super::decks::frazzle,
+    super::decks::abyssal_nocturnus,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
