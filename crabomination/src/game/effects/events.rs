@@ -74,6 +74,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land: true, .. }) => true,
         (EventKind::PutIntoGraveyard, GameEvent::CardPutIntoGraveyard { .. }) => true,
+        (EventKind::PutIntoHandFromGraveyard, GameEvent::CardPutIntoHandFromGraveyard { .. }) => true,
         (EventKind::CardExiled, GameEvent::PermanentExiled { .. }) => true,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
@@ -219,6 +220,11 @@ pub(crate) fn event_matches_spec(
             // from the graveyard off the card itself (Emrakul).
             event,
             GameEvent::CardPutIntoGraveyard { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // "When this card is put into your hand from your graveyard" —
+            // fires from the hand off the card itself (Golgari Brownscale).
+            event,
+            GameEvent::CardPutIntoHandFromGraveyard { card_id, .. } if *card_id == source.id
         ) || matches!(
             // CR 716.2 — "When this Class becomes level N" fires off the
             // Class itself; the specific level is checked by the trigger's
@@ -498,6 +504,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::ColorlessManaAdded { player, .. }
         | GameEvent::CardLeftGraveyard { player, .. }
         | GameEvent::CardPutIntoGraveyard { player, .. }
+        | GameEvent::CardPutIntoHandFromGraveyard { player, .. }
         | GameEvent::CardCycled { player, .. }
         | GameEvent::EnergyGained { player, .. }
         | GameEvent::Discovered { player, .. }
@@ -621,6 +628,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::PoisonAdded { player, .. } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardPutIntoGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::CardPutIntoHandFromGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         // Bind `Selector::TriggerSource` to the permanent that received the
         // counters, so "whenever one or more counters are put on a creature, …"
         // payoffs can introspect it / its controller (Auntie Ool's draw-or-drain

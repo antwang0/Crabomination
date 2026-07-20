@@ -1712,6 +1712,10 @@ pub enum GameEvent {
     /// up the (already-moved) card. Drives `EventKind::LandPutIntoGraveyard`
     /// (The Gitrog Monster).
     CardPutIntoGraveyard { player: usize, card_id: CardId, is_land: bool },
+    /// A card moved from `player`'s graveyard to their hand (dredge, or any
+    /// graveyard→hand return). Drives `EventKind::PutIntoHandFromGraveyard`
+    /// (Golgari Brownscale's "gain 2 life when returned to hand").
+    CardPutIntoHandFromGraveyard { player: usize, card_id: CardId },
     /// A permanent became the target of a spell or activated ability.
     /// `target` is the permanent being targeted; `caster` is the player
     /// who cast the spell / activated the ability. Fires per target at

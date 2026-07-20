@@ -2407,6 +2407,14 @@ impl From<&GameEvent> for GameEventWire {
                     card_id: *card_id,
                 }
             }
+            // The card genuinely left the graveyard (to hand); reuse the
+            // CardLeftGraveyard wire so no new protocol surface is needed.
+            GameEvent::CardPutIntoHandFromGraveyard { player, card_id } => {
+                GameEventWire::CardLeftGraveyard {
+                    player: *player,
+                    card_id: *card_id,
+                }
+            }
             GameEvent::CardPutIntoGraveyard { player, card_id, .. } => {
                 GameEventWire::CardPutIntoGraveyard {
                     player: *player,

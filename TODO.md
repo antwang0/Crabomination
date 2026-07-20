@@ -50,11 +50,10 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   clause is still approximated (both slots open). **Still deferred:** Gaze of
   the Gorgon (regenerate + delayed "destroy all creatures that blocked/were
   blocked by it" at next end of combat — needs a per-turn blocked-by relation
-  tracked in combat) and Golgari Brownscale's "gain 2 when returned to hand
-  from graveyard" (no enters-hand-from-graveyard event — would want a new
-  `EventKind::PutIntoHandFromGraveyard` emitted at the gy→hand chokepoint in
-  `movement.rs` + the dredge return, dispatched as a graveyard-functional
-  SelfSource trigger).
+  tracked in combat). Golgari Brownscale's "gain 2 when returned to hand from
+  graveyard" now ships via the new `EventKind::PutIntoHandFromGraveyard`
+  (emitted at the `movement.rs` gy→hand chokepoint + the dredge return,
+  dispatched as a SelfSource trigger off the card now in hand).
 - **Ravnica batch 2 (recent292) discovered gaps:** "if {R}/{C} was spent to
   cast this creature" ETB riders (Gruul Scrapper, Steamcore Weird) need a
   predicate that reads the *permanent's* `cast_mana_spent_by_color` from a

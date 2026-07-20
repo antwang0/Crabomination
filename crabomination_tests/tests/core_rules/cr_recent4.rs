@@ -82,3 +82,23 @@ fn cr_122_5_moving_counters_is_not_doubled_by_doubling_season() {
         "exactly one counter moved — Doubling Season doesn't apply to a move (CR 122.5)"
     );
 }
+
+/// "When this card is put into your hand from your graveyard" (Golgari
+/// Brownscale) fires off the card now in hand — via any graveyard→hand return
+/// (`EventKind::PutIntoHandFromGraveyard`), here a Recollect.
+#[test]
+fn put_into_hand_from_graveyard_trigger_fires_on_return() {
+    let mut g = two_player_game();
+    let brownscale = g.add_card_to_graveyard(0, catalog::golgari_brownscale());
+    let recollect = g.add_card_to_hand(0, catalog::recollect()); // return a gy card to hand
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: recollect, target: Some(Target::Permanent(brownscale)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Recollect on Brownscale");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == brownscale), "Brownscale returned to hand");
+    assert_eq!(g.players[0].life, life + 2, "gained 2 life from the return trigger");
+}

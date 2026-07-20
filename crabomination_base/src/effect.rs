@@ -1999,6 +1999,11 @@ pub enum EventKind {
     /// in the graveyard (Emrakul's "when this is put into a graveyard from
     /// anywhere, its owner shuffles their graveyard into their library").
     PutIntoGraveyard,
+    /// "When this card is put into your hand from your graveyard" (Golgari
+    /// Brownscale). With `EventScope::SelfSource` the trigger fires off the
+    /// card now sitting in its owner's hand (dredge, or any graveyard→hand
+    /// return). Matched to `GameEvent::CardPutIntoHandFromGraveyard`.
+    PutIntoHandFromGraveyard,
     /// CR 502.2 / 731 — the game's day/night designation flipped ("Whenever
     /// day becomes night or night becomes day"). Fires once per transition;
     /// this is a global game event with no player subject, so pair it with

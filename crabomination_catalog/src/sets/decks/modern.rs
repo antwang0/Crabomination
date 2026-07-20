@@ -16029,9 +16029,9 @@ pub fn stinkweed_imp() -> CardDefinition {
     }
 }
 
-/// Golgari Brownscale — {1}{G} Creature — Lizard Beast. 2/2. Dredge 2.
-/// The "when returned to hand from graveyard, gain 2 life" rider is omitted
-/// (no enters-hand-from-graveyard trigger event); the body + Dredge 2 ship.
+/// Golgari Brownscale — {1}{G}{G} 2/3 Lizard with Dredge 2. When it's put into
+/// your hand from your graveyard, you gain 2 life
+/// (`EventKind::PutIntoHandFromGraveyard`).
 pub fn golgari_brownscale() -> CardDefinition {
     CardDefinition {
         name: "Golgari Brownscale",
@@ -16044,6 +16044,10 @@ pub fn golgari_brownscale() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Dredge(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PutIntoHandFromGraveyard, EventScope::SelfSource),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        }],
         ..Default::default()
     }
 }

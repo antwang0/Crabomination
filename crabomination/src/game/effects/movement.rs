@@ -795,6 +795,11 @@ impl GameState {
                 if matches!(resolved_dest, ZoneDest::Battlefield { .. }) {
                     self.entered_from_graveyard_this_turn.insert(cid);
                 }
+                // "When this card is put into your hand from your graveyard"
+                // (Golgari Brownscale). Emitted for any graveyard→hand return.
+                if matches!(resolved_dest, ZoneDest::Hand(_)) {
+                    events.push(GameEvent::CardPutIntoHandFromGraveyard { player: p, card_id: cid });
+                }
                 self.place_card_in_dest(card, p, &resolved_dest, events);
                 return;
             }

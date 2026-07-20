@@ -8489,6 +8489,7 @@ impl GameState {
                 .cards_left_graveyard_this_turn
                 .saturating_add(1);
             events.push(GameEvent::CardLeftGraveyard { player: p, card_id });
+            events.push(GameEvent::CardPutIntoHandFromGraveyard { player: p, card_id });
         }
         true
     }
@@ -9655,6 +9656,40 @@ impl GameState {
                                     | GameEvent::CreatureSacrificed { .. }
                             ),
                             triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        // Walk every player's hand for `PutIntoHandFromGraveyard` SelfSource
+        // triggers: the card has already been moved to hand by the time the
+        // event dispatches, so it fires from there (Golgari Brownscale's "gain
+        // 2 life when this is put into your hand from your graveyard").
+        for player in &self.players {
+            for card in &player.hand {
+                for ta in &card.definition.triggered_abilities {
+                    if !matches!(ta.event.kind, crate::effect::EventKind::PutIntoHandFromGraveyard)
+                        || !matches!(ta.event.scope, crate::effect::EventScope::SelfSource)
+                    {
+                        continue;
+                    }
+                    for ev in events {
+                        if is_event_hardcoded(ev, &ta.event) {
+                            continue;
+                        }
+                        if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                            candidates.push(TriggerCandidate {
+                                source: card.id,
+                                effect: ta.effect.clone(),
+                                controller: card.owner,
+                                filter: ta.event.filter.clone(),
+                                subject: crate::game::effects::event_subject(ev, &ta.event.kind),
+                                event_amount: self.event_amount_for(ev),
+                                triggered_by_etb: false,
+                                triggered_by_death: false,
+                                triggered_by_attack: false,
                             });
                             break;
                         }
