@@ -107,6 +107,12 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Gaze of the Gorgon (regenerate + delayed destroy-all-blocked — needs a per-turn
   blocked-by relation in combat); Kill-Suit Cultist ("next time damage would be
   dealt to target creature, destroy it instead" — a damage→destroy replacement).
+- **Dissension gap batch (dis/creatures) — shipped:** Assault Zeppelid, Sky
+  Hussar (ETB untap-all), Stalking Vengeance (death→power damage), Azorius Herald
+  (unblockable + sac-unless-{U} via `SourceCastWithColorSpent`).
+  `Effect::DealDamageEqualToPower` now hits a player/PW target and reads a dead
+  `TriggerSource`'s power from its die snapshot (CR 603.10). ~70 Dissension cards
+  remain — enumerate with `python3 scripts/set_gaps.py dis`.
   **Noticed engine nit:** a land animated to a basic type via
   `LandsBecomeChosenBasicType` doesn't tap for the new color through
   `GameAction::ActivateAbility { ability_index: 0 }` — the printed mana ability is
