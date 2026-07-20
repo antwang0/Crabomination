@@ -71,6 +71,16 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   `combat_damager_controller` stamp that survives combat teardown), plus Tin
   Street Hooligan, Petrahydrox, Shadow Lance, Shielding Plax, Dowsing Shaman,
   Poison the Well, Congregation at Dawn, Peregrine Mask.
+- **Ravnica batches 7–8 (recent297–298) — shipped:** Wojek Siren (Radiance
+  pump via `RadianceGroup`), Flame-Kin Zealot, Agrus Kos, Sunhome Guildmage,
+  Necromancer's Assistant, Mark of Eviction, Golgari Germination, Corpse
+  Blockade, Vulturous Zombie, Grave-Shell Scarab, Vindictive Mob, Seed Spark.
+  **Still open Ravnica cards noticed but not built (each on one primitive):**
+  Sadistic Augermage (each player puts a hand card on top of library on death —
+  needs a "each player tucks a chosen card" effect), Woodwraith Corrupter
+  (animate a target Forest into a 4/4 that's still a land — land-animation of a
+  *targeted* land), Gobhobbler Rats (Hellbent conditional keyword-grant static),
+  Gatherer of Graces "+1/+1 per Aura attached" (per-aura self-scaling P/T).
 - **Ravnica batches 3–5 (recent293–295) discovered gaps:** aura/equipment-granted
   *step* triggers now fire (`fire_step_triggers` walks `EquipBonus.triggered_abilities`
   — Pillory of the Sleepless). **Still deferred, each on one primitive:**
