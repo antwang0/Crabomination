@@ -396,13 +396,19 @@ fn tidespout_tyrant_bounces_on_cast() {
     assert!(!g.battlefield.iter().any(|c| c.id == victim), "victim bounced to hand");
 }
 
-/// Taste for Mayhem grants +2/+0 to the enchanted creature.
+/// Taste for Mayhem grants +2/+0, plus another +2/+0 while you're hellbent.
 #[test]
-fn taste_for_mayhem_grants_plus2_power() {
+fn taste_for_mayhem_grants_plus2_and_hellbent_bonus() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
     let aura = g.add_card_to_battlefield(0, catalog::taste_for_mayhem());
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    // Non-empty hand → base +2/+0 only.
+    g.add_card_to_hand(0, catalog::grizzly_bears());
     let cp = g.computed_permanent(bear).unwrap();
-    assert_eq!((cp.power, cp.toughness), (4, 2));
+    assert_eq!((cp.power, cp.toughness), (4, 2), "base +2/+0");
+    // Empty hand → hellbent → an additional +2/+0.
+    g.players[0].hand.clear();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 2), "hellbent adds +2/+0");
 }

@@ -2853,6 +2853,12 @@ pub struct EquipBonus {
     /// common always-on case.
     #[serde(default)]
     pub during_your_turn_pt: (i32, i32),
+    /// "Equipped/enchanted creature gets +P/+T while `condition` holds" (layer
+    /// 7c, gated on a predicate evaluated against the source's controller —
+    /// Taste for Mayhem's Hellbent `+2/+0`). `(0, 0, _)` is unused; `None` for
+    /// the common unconditional case.
+    #[serde(default)]
+    pub conditional_pt: Option<(i32, i32, crate::effect::Predicate)>,
     /// Optional board-count scaling (CR 613 layer 7c): the attached creature
     /// gets an additional `per_power`/`per_toughness` for each permanent
     /// matching `filter` the source's controller controls, on top of the flat

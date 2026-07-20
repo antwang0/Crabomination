@@ -117,8 +117,9 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   counter-gated grant / `GainControlWhileSourceRemains`), Paladin of Prahv
   (Lifelink; forecast rider deferred), Wit's End (discard whole hand),
   Weight of Spires (`NonbasicLandCountControlledBy(ControllerOf(Target))`),
-  Tidespout Tyrant (cast-a-spell → bounce), Taste for Mayhem (+2/+0; hellbent
-  rider deferred). Server/UI: the `destroy` shield now surfaces as
+  Tidespout Tyrant (cast-a-spell → bounce), Taste for Mayhem (+2/+0 plus a
+  hellbent +2/+0 via the new `EquipBonus.conditional_pt` — a predicate-gated
+  layer-7c attached-creature pump). Server/UI: the `destroy` shield now surfaces as
   `PermanentView.doomed_next_damage` (a danger badge, not `has_prevention_shield`)
   with a client tooltip line; fixed a latent non-exhaustive `WardCost::DiscardHand`
   match in the client.
@@ -126,10 +127,9 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Valor Made Real / "can block any number" — needs a `Keyword::CanBlockAnyNumber`
   + a blocker→multiple-attacker relaxation (the `block_map` is blocker→single
   attacker today); Gaze of the Gorgon (regenerate + delayed destroy-all-blocked —
-  needs a per-turn blocked-by relation in combat); Taste for Mayhem / Slithering
-  Shade-style hellbent aura pump — a condition-gated attached-creature P/T static
-  (`StaticEffect::AttachedCreatureGetsWhile { power, toughness, condition }`) would
-  also close Taste for Mayhem's rider.
+  needs a per-turn blocked-by relation in combat). `EquipBonus.conditional_pt`
+  (predicate-gated attached-creature pump) now exists — reuse it for other
+  condition-gated aura P/T riders.
 - **Dissension gap batch (dis/creatures) — shipped:** Assault Zeppelid, Sky
   Hussar (ETB untap-all), Stalking Vengeance (death→power damage), Azorius Herald
   (unblockable + sac-unless-{U} via `SourceCastWithColorSpent`).

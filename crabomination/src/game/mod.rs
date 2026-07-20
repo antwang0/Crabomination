@@ -4711,6 +4711,29 @@ impl GameState {
                     });
                 }
             }
+            // "Enchanted creature gets +P/+T while `condition`" (Taste for
+            // Mayhem's Hellbent rider) — layer-7c, gated on a predicate against
+            // the source's controller so it tracks the live game state.
+            if let Some((cp, ct, condition)) = &bonus.conditional_pt
+                && (*cp != 0 || *ct != 0)
+            {
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    card.id,
+                    card.controller,
+                    None,
+                );
+                if self.evaluate_predicate(condition, &ctx) {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![target]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(*cp, *ct),
+                    });
+                }
+            }
             // Characteristic-overriding Auras (Ichthyomorphosis,
             // One with the Stars): set base P/T (7b), card/creature types,
             // and colors on the host while attached.

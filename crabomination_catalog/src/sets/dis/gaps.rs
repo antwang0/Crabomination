@@ -452,9 +452,9 @@ pub fn tidespout_tyrant() -> CardDefinition {
     }
 }
 
-/// Taste for Mayhem — {R} Aura. Enchanted creature gets +2/+0. (The Hellbent
-/// rider — an additional +2/+0 while you have no cards in hand — needs a
-/// condition-gated attached-creature pump static; deferred, tracked in TODO.md.)
+/// Taste for Mayhem — {R} Aura. Enchanted creature gets +2/+0, and an additional
+/// +2/+0 while you have no cards in hand (Hellbent) — a condition-gated
+/// attached-creature pump that tracks the empty-hand state live.
 pub fn taste_for_mayhem() -> CardDefinition {
     CardDefinition {
         name: "Taste for Mayhem",
@@ -465,7 +465,11 @@ pub fn taste_for_mayhem() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power: 2, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            conditional_pt: Some((2, 0, Predicate::HellbentActive { who: PlayerRef::You })),
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
