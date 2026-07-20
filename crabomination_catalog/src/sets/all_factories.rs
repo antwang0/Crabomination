@@ -7052,7 +7052,7 @@ static DECKS: &[Factory] = &[
     super::decks::skeletal_vampire,
     super::decks::divebomber_griffin,
     super::decks::steeple_roc,
-    super::decks::snapping_drake,
+    super::decks::elvish_skysweeper,
     super::decks::scorched_rusalka,
     super::decks::withstand,
     // recent295 — Ravnica batch 5 (Rakdos Hellbent, Boros/Gruul, Simic)

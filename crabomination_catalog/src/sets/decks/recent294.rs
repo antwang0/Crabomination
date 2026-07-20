@@ -202,19 +202,6 @@ pub fn steeple_roc() -> CardDefinition {
     }
 }
 
-/// Snapping Drake — {3}{U} 3/2 Drake with flying.
-pub fn snapping_drake() -> CardDefinition {
-    CardDefinition {
-        name: "Snapping Drake",
-        cost: cost(&[generic(3), u()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
-        power: 3,
-        toughness: 2,
-        keywords: vec![Keyword::Flying],
-        ..Default::default()
-    }
-}
 
 /// Scorched Rusalka — {R} 1/1 Spirit. {R}, Sacrifice a creature: This creature
 /// deals 1 damage to target player or planeswalker.
@@ -252,6 +239,31 @@ pub fn withstand() -> CardDefinition {
             Effect::PreventNextDamage { target: target_any(), amount: Value::Const(3) },
             draw(1),
         ]),
+        ..Default::default()
+    }
+}
+
+/// Elvish Skysweeper — {G} 1/1 Elf Warrior. {4}{G}, Sacrifice a creature:
+/// Destroy target creature with flying.
+pub fn elvish_skysweeper() -> CardDefinition {
+    CardDefinition {
+        name: "Elvish Skysweeper",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g()]),
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

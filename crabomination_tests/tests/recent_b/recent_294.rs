@@ -186,6 +186,29 @@ fn withstand_prevents_damage_and_draws() {
 }
 
 #[test]
+fn elvish_skysweeper_downs_a_flyer() {
+    let mut g = two_player_game();
+    let sweeper = g.add_card_to_battlefield(0, catalog::elvish_skysweeper());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(sweeper);
+    flood(&mut g);
+    // A non-flyer isn't a legal target.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: sweeper, ability_index: 0, target: Some(Target::Permanent(ground)),
+        additional_targets: vec![], x_value: None,
+    }).is_err(), "only flyers can be targeted");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sweeper, ability_index: 0, target: Some(Target::Permanent(flyer)),
+        additional_targets: vec![], x_value: None,
+    }).expect("shoot down the flyer");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(flyer).is_none(), "the flyer was destroyed");
+    assert!(g.battlefield_find(fodder).is_none(), "a creature was sacrificed");
+}
+
+#[test]
 fn steeple_roc_and_snapping_drake_fly() {
     let mut g = two_player_game();
     let roc = g.add_card_to_battlefield(0, catalog::steeple_roc());

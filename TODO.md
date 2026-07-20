@@ -60,6 +60,20 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Steamcore Weird). Still open: Radiance spells (Wojek Siren, Rally the
   Righteous — "target creature and each other creature that shares a color with
   it") need a shares-a-color fan-out selector.
+- **Ravnica batches 3–5 (recent293–295) discovered gaps:** aura/equipment-granted
+  *step* triggers now fire (`fire_step_triggers` walks `EquipBonus.triggered_abilities`
+  — Pillory of the Sleepless). **Still deferred, each on one primitive:** Radiance
+  (Cleansing Beam, Wojek Embermage — same shares-a-color fan-out as above);
+  Perplex (counter unless its controller discards their *whole* hand — needs a
+  `WardCost::DiscardHand` or a dedicated counter-unless-empty-hand effect);
+  Terraformer (choose a basic land type, *your* lands become it EOT — no
+  "become chosen basic type" over a group); Vertigo Spawn ("whenever this blocks
+  a creature, tap *that creature*" — the Blocks trigger has no selector for the
+  blocked attacker); Souls of the Faultless ("attacking player loses that much
+  life" on combat damage — needs the attacker's controller from the damage
+  event); Nettling Curse (an Aura granting an *attacks/blocks* trigger — only
+  step-kind equip-bonus triggers are dispatched, not combat-kind); Skeletonize
+  (delayed "when a creature dealt damage this way dies, make a token").
 
 **Tooling — client build in headless/CI:** the GUI crate needs `libwayland-dev`,
 `libasound2-dev`, `libudev-dev`, and `libxkbcommon-dev` to compile (wayland-sys/
