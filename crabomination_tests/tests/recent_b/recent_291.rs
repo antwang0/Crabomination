@@ -291,17 +291,117 @@ fn disembowel_destroys_a_creature_of_matching_mana_value() {
 }
 
 #[test]
-fn vigor_mortis_reanimates_a_creature() {
+fn vigor_mortis_reanimates_with_extra_counter_only_if_green_spent() {
+    use crabomination::card::CounterType;
+    // Green spent (the {2} generic paid with {G}{G}) → enters with a +1/+1 counter.
     let mut g = two_player_game();
-    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // 2/2
     let spell = g.add_card_to_hand(0, catalog::vigor_mortis());
-    flood(&mut g);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Green, 2);
     g.perform_action(GameAction::CastSpell {
         card_id: spell, target: Some(Target::Permanent(bear)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(bear).is_some(), "the bear returned to the battlefield");
+    let p = g.battlefield_find(bear).expect("returned to battlefield");
+    assert_eq!(p.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1,
+        "green was spent, so a +1/+1 counter rode along");
+
+    // No green spent ({B}{B} + colorless {2}) → no extra counter.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::vigor_mortis());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let p = g.battlefield_find(bear).expect("returned to battlefield");
+    assert_eq!(p.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 0,
+        "no green spent, so no extra counter");
+}
+
+#[test]
+fn golgari_guildmage_sacs_to_return_and_pumps_with_a_counter() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let gm = g.add_card_to_battlefield(0, catalog::golgari_guildmage());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    flood(&mut g);
+    // {4}{B}, Sac a creature: return a creature card from your graveyard to hand.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gm, ability_index: 0, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], x_value: None,
+    }).expect("return");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "the creature card returned to hand");
+    assert!(g.battlefield_find(fodder).is_none(), "a creature was sacrificed as the cost");
+    // {4}{G}: +1/+1 counter on target creature.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gm, ability_index: 1, target: Some(Target::Permanent(gm)),
+        additional_targets: vec![], x_value: None,
+    }).expect("counter");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gm).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1);
+}
+
+#[test]
+fn simic_guildmage_moves_a_counter_and_reattaches_an_aura() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let gm = g.add_card_to_battlefield(0, catalog::simic_guildmage());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(a).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+    flood(&mut g);
+    // {1}{G}: move the +1/+1 counter from A onto B.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gm, ability_index: 0, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], x_value: None,
+    }).expect("move counter");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 0);
+    assert_eq!(g.battlefield_find(b).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1);
+    // {1}{U}: reattach an Aura from A onto B. Put Fists of Ironwood on A first.
+    let aura = g.add_card_to_battlefield(0, catalog::fists_of_ironwood());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(a);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gm, ability_index: 1, target: Some(Target::Permanent(aura)),
+        additional_targets: vec![Target::Permanent(b)], x_value: None,
+    }).expect("reattach aura");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(b), "the Aura moved to B");
+}
+
+#[test]
+fn necromantic_thirst_returns_a_creature_on_combat_damage() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::necromantic_thirst());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(attacker);
+    // Say "yes" to the optional return, then pick the one graveyard creature.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![dead]),
+    ]));
+    g.active_player_idx = 0;
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead),
+        "combat damage to a player returned a creature card from the graveyard");
 }
 
 #[test]

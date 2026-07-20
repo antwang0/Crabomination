@@ -7000,6 +7000,9 @@ static DECKS: &[Factory] = &[
     super::decks::disembowel,
     super::decks::vigor_mortis,
     super::decks::aura_mutation,
+    super::decks::golgari_guildmage,
+    super::decks::simic_guildmage,
+    super::decks::necromantic_thirst,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -6,12 +6,15 @@
 //! Tests in `recent_b/recent291`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EquipBonus, Keyword, SelectionRequirement as R,
-    Selector, Subtypes, TokenDefinition, Value,
+    Selector, Subtypes, TokenDefinition, Value, Zone,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
+use crate::effect::{
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, TriggeredAbility,
+    ZoneDest,
+};
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 
 /// A vanilla 1/1 green Saproling token.
@@ -486,17 +489,28 @@ pub fn disembowel() -> CardDefinition {
 }
 
 /// Vigor Mortis — {2}{B}{B} Sorcery. Return target creature card from your
-/// graveyard to the battlefield. (The "+1/+1 counter if {G} was spent" rider is
-/// approximated away — no spent-color tracking on this cast path.)
+/// graveyard to the battlefield; if {G} was spent to cast this spell, it enters
+/// with an extra +1/+1 counter (`Predicate::ManaSpentOfColorAtLeast`).
 pub fn vigor_mortis() -> CardDefinition {
     CardDefinition {
         name: "Vigor Mortis",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Move {
-            what: target_filtered(R::Creature.and(R::InYourGraveyard)),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-        },
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::If {
+                cond: Predicate::ManaSpentOfColorAtLeast { color: Color::Green, at_least: 1 },
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::LastMoved,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -517,6 +531,120 @@ pub fn aura_mutation() -> CardDefinition {
             },
             Effect::Destroy { what: target_filtered(R::Enchantment) },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Golgari Guildmage — {B/G}{B/G} 2/2 Elf Shaman. {4}{B}, Sacrifice a creature:
+/// return target creature card from your graveyard to your hand; {4}{G}: put a
+/// +1/+1 counter on target creature.
+pub fn golgari_guildmage() -> CardDefinition {
+    CardDefinition {
+        name: "Golgari Guildmage",
+        cost: cost(&[hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), b()]),
+                sac_other_filter: Some((R::Creature, 1)),
+                effect: Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), g()]),
+                effect: Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Simic Guildmage — {G/U}{G/U} 2/2 Elf Wizard. {1}{G}: move a +1/+1 counter
+/// between two target creatures; {1}{U}: reattach a target Aura to another
+/// permanent (`Effect::Attach` re-anchors). The "same controller" targeting
+/// clause is approximated (both slots are open).
+pub fn simic_guildmage() -> CardDefinition {
+    CardDefinition {
+        name: "Simic Guildmage",
+        cost: cost(&[hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), g()]),
+                effect: Effect::MoveCounter {
+                    from: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                    to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), u()]),
+                effect: Effect::Attach {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
+                    },
+                    to: Selector::TargetFiltered { slot: 1, filter: R::Permanent },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Necromantic Thirst — {2}{B}{B} Aura. Enchant creature. Whenever enchanted
+/// creature deals combat damage to a player, you may return a creature card
+/// from your graveyard to your hand (granted via `EquipBonus.triggered_abilities`).
+pub fn necromantic_thirst() -> CardDefinition {
+    CardDefinition {
+        name: "Necromantic Thirst",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Return a creature card from your graveyard to your hand".to_string(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::one_of(Selector::CardsInZone {
+                            zone: Zone::Graveyard,
+                            who: PlayerRef::You,
+                            filter: R::Creature,
+                        }),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
+                },
+            }],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
