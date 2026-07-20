@@ -211,6 +211,12 @@ pub(crate) struct MatchStats {
     /// Number of wins counted in `winner_board_sum` (a winner with no board
     /// snapshot is still counted in `wins`, so this can trail `wins`).
     pub(crate) winner_board_samples: u64,
+    /// Narrowest / widest board a seat held at victory. `None` until the first
+    /// sample. The σ tells you *how spread* winning boards are; these name the
+    /// actual extremes — a `min` of 0 means at least one win came off an empty
+    /// board (pure burn/mill), a large `max` flags the widest attrition grind.
+    pub(crate) winner_board_min: Option<u32>,
+    pub(crate) winner_board_max: Option<u32>,
 }
 
 /// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
@@ -541,6 +547,9 @@ impl MatchStats {
             self.winner_board_sum_squared =
                 self.winner_board_sum_squared.saturating_add((board as u128).saturating_mul(board as u128));
             self.winner_board_samples = self.winner_board_samples.saturating_add(1);
+            let b = board as u32;
+            self.winner_board_min = Some(self.winner_board_min.map_or(b, |m| m.min(b)));
+            self.winner_board_max = Some(self.winner_board_max.map_or(b, |m| m.max(b)));
         }
     }
 
@@ -1101,6 +1110,9 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
         // fast face-damage win (small board) from a grindy attrition win.
         if s.winner_board_samples > 0 {
             out.push_str(&format!(" avg_win_board={}", s.avg_winner_board()));
+            if let (Some(mn), Some(mx)) = (s.winner_board_min, s.winner_board_max) {
+                out.push_str(&format!(" (board {mn}–{mx})"));
+            }
         }
     }
     if let (Some(mn), Some(mx)) = (s.min_duration, s.max_duration) {
@@ -1210,6 +1222,8 @@ mod tests {
         s.observe_winner_board(1, &[3, 7]); // seat 1 wins with 7
         assert_eq!(s.winner_board_samples, 2);
         assert_eq!(s.avg_winner_board(), 6); // (5 + 7) / 2
+        assert_eq!((s.winner_board_min, s.winner_board_max), (Some(5), Some(7)),
+            "extremes track the winning boards, not the losers' 12/3");
         // σ of {5, 7} about mean 6 is 1.0.
         assert!((s.winner_board_stddev() - 1.0).abs() < 1e-6, "population σ of the two winning boards");
         // A winner with no board snapshot is skipped, not counted as 0.

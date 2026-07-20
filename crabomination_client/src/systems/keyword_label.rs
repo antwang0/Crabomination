@@ -110,10 +110,13 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Banding => "Bnd",
         // Generalized menace — "can't be blocked except by N or more."
         CantBeBlockedExceptByN(_) => "Men+",
-        // Evasion by blocker quality: "can only be blocked by [filter]"
-        // (Serpent of Yawning Depths) or "can't be blocked by [filter]"
-        // (Temple Thief) — both read as evasion at a glance.
-        CantBeBlockedExceptBy(_) | CantBeBlockedBy(_) => "Eva",
+        // Evasion by blocker quality. "Can only be blocked by [filter]"
+        // (Serpent of Yawning Depths) is strong evasion → "Eva". "Can't be
+        // blocked by [filter]" (Vindictive Mob's "…by Saprolings") only
+        // excludes a slice of blockers → "Eva-" so the board doesn't read it
+        // as fully evasive.
+        CantBeBlockedExceptBy(_) => "Eva",
+        CantBeBlockedBy(_) => "Eva-",
         // "Can't be blocked by more than one creature" (anti-gang-block).
         CantBeBlockedByMoreThanOne => "1Blk",
         // Power-gated evasion — split so the board reads which way the gate
@@ -602,7 +605,7 @@ mod tests {
         );
         assert_eq!(
             keyword_strip(&[Keyword::CantBeBlockedBy(Box::new(SelectionRequirement::Enchantment))]),
-            "Eva"
+            "Eva-"
         );
         assert_eq!(keyword_strip(&[Keyword::CantBeBlockedByMoreThanOne]), "1Blk");
     }
