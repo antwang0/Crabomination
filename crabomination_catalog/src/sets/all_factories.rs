@@ -7135,6 +7135,13 @@ static DECKS: &[Factory] = &[
     super::decks::demons_jester,
     super::decks::minister_of_impediments,
     super::decks::flame_kin_war_scout,
+    // recent304 — Dissension symmetric draw/discard + tricks
+    super::decks::rakdos_ragemutt,
+    super::decks::delirium_skeins,
+    super::decks::vision_skeins,
+    super::decks::psychotic_fury,
+    super::decks::might_of_the_nephilim,
+    super::decks::stomp_and_howl,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
