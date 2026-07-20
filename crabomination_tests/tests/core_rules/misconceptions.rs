@@ -262,6 +262,27 @@ fn misconception_tapping_a_declared_blocker_does_not_stop_its_damage() {
         "the exchange happened normally: the 2/2 blocker died to the attacker's 2 power");
 }
 
+// ── CR 506.4b — tapping a declared attacker ──────────────────────────────────
+
+/// "Tap the attacker before damage so it can't hit me" — CR 506.4b: tapping
+/// (or untapping) a creature that's already been declared as an attacker
+/// doesn't remove it from combat and doesn't prevent its combat damage.
+#[test]
+fn misconception_tapping_a_declared_attacker_does_not_stop_its_damage() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    // Tap the attacker after it's declared — it stays in combat.
+    g.battlefield_find_mut(atk).unwrap().tapped = true;
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, 18, "the tapped attacker still dealt its 2 damage");
+}
+
 // ── CR 302.6 — summoning sickness only restricts attacking ───────────────────
 
 /// "It just came down, it can't block" — summoning sickness stops attacking

@@ -6979,6 +6979,23 @@ static DECKS: &[Factory] = &[
     super::decks::might_beyond_reason,
     super::decks::astral_wingspan,
     super::decks::frontier_warmonger,
+    // recent291 — Ravnica guild batch (Guildmage cycle, Convoke Saproling
+    // makers, guild removal / graveyard recursion)
+    super::decks::selesnya_guildmage,
+    super::decks::dimir_guildmage,
+    super::decks::boros_guildmage,
+    super::decks::gruul_guildmage,
+    super::decks::orzhov_guildmage,
+    super::decks::rakdos_guildmage,
+    super::decks::azorius_guildmage,
+    super::decks::fists_of_ironwood,
+    super::decks::scatter_the_seeds,
+    super::decks::sundering_vitae,
+    super::decks::golgari_rotwurm,
+    super::decks::wrecking_ball,
+    super::decks::streetbreaker_wurm,
+    super::decks::ghor_clan_savage,
+    super::decks::recollect,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

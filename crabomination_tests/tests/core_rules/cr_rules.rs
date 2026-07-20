@@ -1026,6 +1026,34 @@ fn cr_702_19g_trample_attacker_hits_player_after_blocker_dies() {
     );
 }
 
+/// CR 506.4c — a creature attacking a planeswalker stays in combat when that
+/// planeswalker leaves, but is "attacking no player"; if unblocked it deals no
+/// combat damage (and nothing is redirected to the defending player).
+#[test]
+fn cr_506_4c_attacker_whose_planeswalker_left_deals_no_damage() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(attacker);
+    let pw = g.add_card_to_battlefield(1, catalog::teferi_time_raveler());
+    let life_before = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Planeswalker(pw),
+    }]))
+    .unwrap();
+    // The attacked planeswalker leaves the battlefield before combat damage.
+    g.battlefield.retain(|c| c.id != pw);
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert_eq!(
+        g.players[1].life, life_before,
+        "an unblocked attacker whose planeswalker left combat deals no damage to the player",
+    );
+}
+
 // ── CR 601.2c — cast-time target filters enforced for every targeted effect ──
 
 /// Detain was one of ~20 targeted effects whose filter wasn't surfaced by
