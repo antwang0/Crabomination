@@ -7100,6 +7100,9 @@ static DECKS: &[Factory] = &[
     super::decks::enemy_of_the_guildpact,
     super::decks::court_hussar,
     super::decks::overrule,
+    // recent300 — Ravnica batch 10 (tap-down + MV-9 transmute leviathan)
+    super::decks::thundersong_trumpeter,
+    super::decks::grozoth,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
