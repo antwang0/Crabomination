@@ -3688,6 +3688,10 @@ picking an item up.
 - ✅ **CR 702.19c/f — trample over planeswalkers** —
   `Keyword::TrampleOverPlaneswalkers` spills excess past loyalty to the
   walker's controller; plain trample doesn't (Thrasta; `cr_702_19c_*`).
+- ✅ **CR 702.2 / 702.4 / 702.111 — Deathtouch, Double Strike, Menace combat
+  conformance** — granted deathtouch makes 1 combat damage lethal (Corpse
+  Blockade), double strike deals in both combat-damage steps, and Menace
+  rejects a lone blocker (`cr_recent6::cr_702_{2b,4b,111b}_*`).
 - ✅ **CR 702.150 — Compleated** — `Keyword::Compleated` + `{A/B/P}`
   PhyrexianHybrid pips; life paid to Phyrexian pips at cast drops the entering
   planeswalker's loyalty (tests `compleated_*`, ONE's five compleated walkers).
