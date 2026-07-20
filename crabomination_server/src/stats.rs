@@ -202,6 +202,12 @@ pub(crate) struct MatchStats {
     /// win (wide board, high turn). Skipped when board data is unavailable
     /// (aborted matches leave `final_board_sizes` empty).
     pub(crate) winner_board_sum: u64,
+    /// Running `Σ board²` over the same samples, so a population σ falls out of
+    /// √(E[x²] − E[x]²) — the winner-board analogue of `total_turns_squared`.
+    /// A tight σ next to `avg_winner_board` says wins land at a consistent
+    /// board width; a large σ flags an empty-board burn vs. wide-board grind
+    /// split the average alone hides.
+    pub(crate) winner_board_sum_squared: u128,
     /// Number of wins counted in `winner_board_sum` (a winner with no board
     /// snapshot is still counted in `wins`, so this can trail `wins`).
     pub(crate) winner_board_samples: u64,
@@ -532,6 +538,8 @@ impl MatchStats {
     pub(crate) fn observe_winner_board(&mut self, winner: usize, final_board_sizes: &[usize]) {
         if let Some(&board) = final_board_sizes.get(winner) {
             self.winner_board_sum = self.winner_board_sum.saturating_add(board as u64);
+            self.winner_board_sum_squared =
+                self.winner_board_sum_squared.saturating_add((board as u128).saturating_mul(board as u128));
             self.winner_board_samples = self.winner_board_samples.saturating_add(1);
         }
     }
@@ -540,6 +548,18 @@ impl MatchStats {
     /// Returns 0 when no winner-board samples have been recorded yet.
     pub(crate) fn avg_winner_board(&self) -> u64 {
         self.winner_board_sum.checked_div(self.winner_board_samples).unwrap_or(0)
+    }
+
+    /// Population standard deviation of winning board sizes (σ = √(E[x²] −
+    /// E[x]²)). Returns 0.0 until a winner-board sample exists.
+    pub(crate) fn winner_board_stddev(&self) -> f32 {
+        if self.winner_board_samples == 0 {
+            return 0.0;
+        }
+        let n = self.winner_board_samples as f64;
+        let mean = self.winner_board_sum as f64 / n;
+        let mean_sq = self.winner_board_sum_squared as f64 / n;
+        (mean_sq - mean * mean).max(0.0).sqrt() as f32
     }
 
     /// Average win-by-life delta across all sampled wins. Returns 0
@@ -1190,10 +1210,13 @@ mod tests {
         s.observe_winner_board(1, &[3, 7]); // seat 1 wins with 7
         assert_eq!(s.winner_board_samples, 2);
         assert_eq!(s.avg_winner_board(), 6); // (5 + 7) / 2
+        // σ of {5, 7} about mean 6 is 1.0.
+        assert!((s.winner_board_stddev() - 1.0).abs() < 1e-6, "population σ of the two winning boards");
         // A winner with no board snapshot is skipped, not counted as 0.
         s.observe_winner_board(0, &[]);
         assert_eq!(s.winner_board_samples, 2, "empty snapshot skipped");
         assert_eq!(s.avg_winner_board(), 6);
+        assert!((s.winner_board_stddev() - 1.0).abs() < 1e-6, "empty snapshot doesn't perturb σ");
     }
 
     #[test]

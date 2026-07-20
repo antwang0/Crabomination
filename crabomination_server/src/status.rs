@@ -67,6 +67,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
          \"avg_duration_secs\":{},\"min_duration_secs\":{},\"max_duration_secs\":{},\
          \"duration_stddev_secs\":{},\"duration_buckets\":[{},{},{},{},{},{}],\
+         \"avg_winner_board\":{},\"winner_board_stddev\":{:.2},\
          \"catalog_cards\":{}}}\n",
         started.elapsed().as_secs(),
         st.total_matches(),
@@ -123,6 +124,8 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.duration_buckets[3],
         st.duration_buckets[4],
         st.duration_buckets[5],
+        st.avg_winner_board(),
+        st.winner_board_stddev(),
         catalog_card_count(),
     )
 }
@@ -171,6 +174,8 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("median_duration_seconds", "gauge", "Median (p50) match duration in seconds (histogram upper bound).", st.percentile(0.5).as_secs().to_string());
     m("duration_p90_seconds", "gauge", "90th-percentile match duration in seconds (slow-tail bound).", st.percentile(0.9).as_secs().to_string());
     m("duration_stddev_seconds", "gauge", "Standard deviation of match duration in seconds (spread of game length).", st.duration_stddev().as_secs().to_string());
+    m("winner_board_avg", "gauge", "Average permanents the winner controls at game end (board width of a win).", st.avg_winner_board().to_string());
+    m("winner_board_stddev", "gauge", "Standard deviation of the winner's board size (burn-narrow vs. grind-wide spread).", format!("{:.2}", st.winner_board_stddev()));
     m("connections_current", "gauge", "Active connections.", sl.current.to_string());
     m("connections_peak", "gauge", "Peak concurrent connections.", sl.peak.to_string());
     m("connections_accepted_total", "counter", "Connections accepted.", sl.accepted.to_string());
@@ -317,6 +322,7 @@ fn render_dashboard(started: Instant, slots: &SlotManager) -> String {
     tiles.push_str(&tile("draw %", format!("{}%", st.draw_pct())));
     tiles.push_str(&tile("first-seat win %", format!("{}%", st.first_seat_win_pct())));
     tiles.push_str(&tile("median duration", format_duration(st.percentile(0.5))));
+    tiles.push_str(&tile("winner board", format!("{} ±{:.1}", st.avg_winner_board(), st.winner_board_stddev())));
     tiles.push_str(&tile("catalog cards", catalog_card_count().to_string()));
     // Win-kind mix, only the nonzero kinds so the row stays readable.
     let wins = [
