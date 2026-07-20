@@ -830,3 +830,50 @@ fn unliving_psychopath_pumps_and_kills() {
     let _ = g.check_state_based_actions();
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear destroyed");
 }
+
+/// Govern the Guildless steals a monocolored creature.
+#[test]
+fn govern_the_guildless_steals_monocolored() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // mono-green
+    let spell = g.add_card_to_hand(0, catalog::govern_the_guildless());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Govern the Guildless");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "you now control the bear");
+}
+
+/// Anthem of Rakdos pumps your attacker +2/+0 and pings you for 1.
+#[test]
+fn anthem_of_rakdos_pumps_attacker_and_pings_you() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::anthem_of_rakdos());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bear);
+    let life0 = g.players[0].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "attacker got +2/+0");
+    assert_eq!(g.players[0].life, life0 - 1, "Anthem pinged you for 1");
+}
+
+/// Plumes of Peace keeps the enchanted creature from untapping.
+#[test]
+fn plumes_of_peace_locks_untap() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let aura = g.add_card_to_battlefield(0, catalog::plumes_of_peace());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.do_untap();
+    assert!(g.battlefield_find(bear).unwrap().tapped, "stayed tapped through untap");
+}

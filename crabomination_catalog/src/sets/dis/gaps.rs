@@ -714,6 +714,68 @@ pub fn hellhole_rats() -> CardDefinition {
     }
 }
 
+/// Govern the Guildless — {5}{U} Sorcery. Gain control of target monocolored
+/// creature. (Forecast is deferred — tracked in TODO.md.)
+pub fn govern_the_guildless() -> CardDefinition {
+    CardDefinition {
+        name: "Govern the Guildless",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::GainControl {
+            what: target_filtered(R::Creature.and(R::Monocolored)),
+            to: Some(PlayerRef::You),
+            duration: Duration::Permanent,
+        },
+        ..Default::default()
+    }
+}
+
+/// Anthem of Rakdos — {2}{B}{R}{R} Enchantment. Whenever a creature you control
+/// attacks, it gets +2/+0 until end of turn and this deals 1 damage to you.
+/// (The Hellbent damage-doubling clause is deferred — tracked in TODO.md.)
+pub fn anthem_of_rakdos() -> CardDefinition {
+    CardDefinition {
+        name: "Anthem of Rakdos",
+        cost: cost(&[generic(2), b(), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::DealDamage { to: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Plumes of Peace — {1}{W}{U} Aura. Enchant creature. Enchanted creature
+/// doesn't untap during its controller's untap step. (Forecast deferred.)
+pub fn plumes_of_peace() -> CardDefinition {
+    CardDefinition {
+        name: "Plumes of Peace",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Avatar of Discord — {B/R}{B/R}{B/R} 5/3 Avatar with flying. When it enters,
 /// sacrifice it unless you discard two cards.
 pub fn avatar_of_discord() -> CardDefinition {
