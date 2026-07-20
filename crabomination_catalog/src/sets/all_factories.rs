@@ -7094,6 +7094,12 @@ static DECKS: &[Factory] = &[
     super::decks::grave_shell_scarab,
     super::decks::vindictive_mob,
     super::decks::seed_spark,
+    // recent299 — Ravnica batch 9 (land-animator + guild utility)
+    super::decks::woodwraith_corrupter,
+    super::decks::bond_of_agony,
+    super::decks::enemy_of_the_guildpact,
+    super::decks::court_hussar,
+    super::decks::overrule,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
