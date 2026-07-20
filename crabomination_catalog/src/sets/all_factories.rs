@@ -7055,6 +7055,17 @@ static DECKS: &[Factory] = &[
     super::decks::snapping_drake,
     super::decks::scorched_rusalka,
     super::decks::withstand,
+    // recent295 — Ravnica batch 5 (Rakdos Hellbent, Boros/Gruul, Simic)
+    super::decks::bloodscale_prowler,
+    super::decks::ordruun_commando,
+    super::decks::feral_animist,
+    super::decks::coalhauler_swine,
+    super::decks::vigean_hydropon,
+    super::decks::twinstrike,
+    super::decks::poisonbelly_ogre,
+    super::decks::devouring_light,
+    super::decks::fangren_pathcutter,
+    super::decks::root_kin_ally,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
