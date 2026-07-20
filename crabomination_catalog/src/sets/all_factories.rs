@@ -6978,6 +6978,7 @@ static DECKS: &[Factory] = &[
     super::decks::swift_response,
     super::decks::might_beyond_reason,
     super::decks::astral_wingspan,
+    super::decks::frontier_warmonger,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

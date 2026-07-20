@@ -42,14 +42,6 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   primitive.
 - **Rotisserie Elemental** (skewer-counter impulse), **Sentinel of Lost Lore**
   (exile-Adventure modal) — still deferred (see WOE section).
-- **Frontier Warmonger** (attack anthem — "whenever creatures you control
-  attack, they gain menace") — a `EventKind::Attacks`/`EventScope::YourControl`
-  trigger on a *non-attacking* source (the Warmonger itself isn't attacking)
-  did not fire through `declare_attackers` in testing; the batch-attack trigger
-  dispatch only surfaced the SelfSource path. Needs the same batch-attack
-  dispatch work as the batch-ETB item, or a static "attacking creatures you
-  control have menace" (`AnthemForFilter` over `IsAttacking`, like Orcish
-  Oriflamme's live-recompute anthem). Deferred this run.
 
 **Tooling — client build in headless/CI:** the GUI crate needs `libwayland-dev`,
 `libasound2-dev`, `libudev-dev`, and `libxkbcommon-dev` to compile (wayland-sys/

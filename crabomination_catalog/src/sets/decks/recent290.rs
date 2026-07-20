@@ -11,10 +11,10 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
-    Subtypes, Supertype, TriggeredAbility, Value,
+    StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
+use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::effects::treasure_token;
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w};
@@ -276,6 +276,30 @@ pub fn astral_wingspan() -> CardDefinition {
             ..Default::default()
         }),
         triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        ..Default::default()
+    }
+}
+
+/// Frontier Warmonger — {3}{R}, 4/4 Human Warrior. Whenever creatures attack
+/// one of your opponents, those creatures gain menace until end of turn.
+/// Modeled as the live "attacking creatures you control have menace" static
+/// (`GrantKeywordToAttackers`), which resolves against the current attacker
+/// set at battlefield recompute — matching the printed effect in normal play.
+pub fn frontier_warmonger() -> CardDefinition {
+    CardDefinition {
+        name: "Frontier Warmonger",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Attacking creatures you control have menace.",
+            effect: StaticEffect::GrantKeywordToAttackers { keyword: Keyword::Menace },
+        }],
         ..Default::default()
     }
 }

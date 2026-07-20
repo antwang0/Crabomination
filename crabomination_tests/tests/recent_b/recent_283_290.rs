@@ -1234,4 +1234,31 @@ mod recent290 {
             "no Treasure while you match the opponent's land count",
         );
     }
+
+    /// Frontier Warmonger gives your attacking creatures menace once they're
+    /// declared as attackers (and only while attacking).
+    #[test]
+    fn frontier_warmonger_grants_menace_to_attackers() {
+        use crabomination::card::Keyword;
+        use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::frontier_warmonger());
+        let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(attacker);
+        // Not attacking yet → no menace.
+        assert!(
+            !g.computed_permanent(attacker).unwrap().keywords.contains(&Keyword::Menace),
+            "no menace before combat",
+        );
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("attack");
+        assert!(
+            g.computed_permanent(attacker).unwrap().keywords.contains(&Keyword::Menace),
+            "attacking creature gains menace",
+        );
+    }
 }
