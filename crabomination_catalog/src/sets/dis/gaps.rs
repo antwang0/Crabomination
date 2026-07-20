@@ -714,6 +714,99 @@ pub fn hellhole_rats() -> CardDefinition {
     }
 }
 
+/// Avatar of Discord — {B/R}{B/R}{B/R} 5/3 Avatar with flying. When it enters,
+/// sacrifice it unless you discard two cards.
+pub fn avatar_of_discord() -> CardDefinition {
+    CardDefinition {
+        name: "Avatar of Discord",
+        cost: cost(&[b(), b(), b()]), // {B/R}×3 — modeled with black pips
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDiscard {
+                description: "Discard two cards to keep Avatar of Discord?".into(),
+                count: Value::Const(2),
+                then: Box::new(Effect::Noop),
+                else_: Some(Box::new(Effect::SacrificeSource)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Omnibian — {1}{G}{G}{U} 3/3 Frog. `{T}: Target creature becomes a Frog with
+/// base power and toughness 3/3 until end of turn.`
+pub fn omnibian() -> CardDefinition {
+    CardDefinition {
+        name: "Omnibian",
+        cost: cost(&[generic(1), g(), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Frog], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::BecomeCreatureType {
+                    what: Selector::Target(0),
+                    creature_types: vec![CreatureType::Frog],
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::SetBasePT {
+                    what: Selector::Target(0),
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Unliving Psychopath — {2}{B}{B} 0/4 Zombie Assassin. `{B}: +1/-1 until end of
+/// turn.` `{B}, {T}: Destroy target creature with power less than this
+/// creature's power.`
+pub fn unliving_psychopath() -> CardDefinition {
+    CardDefinition {
+        name: "Unliving Psychopath",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                tap_cost: true,
+                effect: Effect::Destroy {
+                    what: target_filtered(R::Creature.and(R::PowerLessThanSource)),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Cytoshape — {1}{G}{U} Instant. Target creature becomes a copy of another
 /// creature until end of turn. (The "nonlegendary" restriction on the copied
 /// creature is approximated as any creature.)

@@ -771,3 +771,62 @@ fn rakdos_the_defiler_sacs_half_on_attack() {
     assert_eq!(before - after, 2, "sacrificed half (2 of 4 non-Demons)");
     assert!(g.battlefield.iter().any(|c| c.id == rakdos), "Rakdos (a Demon) is spared");
 }
+
+/// Avatar of Discord sacrifices itself on ETB when you can't discard two cards.
+#[test]
+fn avatar_of_discord_sacs_without_two_discards() {
+    let mut g = two_player_game();
+    g.players[0].hand.clear(); // can't pay the two-card discard
+    let avatar = g.move_card_to_battlefield_for_test(0, catalog::avatar_of_discord());
+    drain_stack(&mut g);
+    let _ = g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == avatar), "sacrificed — couldn't discard two");
+}
+
+/// Omnibian turns a creature into a 3/3 Frog until end of turn.
+#[test]
+fn omnibian_makes_a_3_3_frog() {
+    use crabomination::card::CreatureType;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let omni = g.add_card_to_battlefield(0, catalog::omnibian());
+    g.clear_sickness(omni);
+    let target = g.add_card_to_battlefield(1, catalog::ancestor_dragon()); // 5/6
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: omni, ability_index: 0,
+        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate Omnibian");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(target).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "became a 3/3");
+    assert!(cp.subtypes.creature_types.contains(&CreatureType::Frog), "is a Frog");
+}
+
+/// Unliving Psychopath pumps +1/-1 and destroys weaker creatures.
+#[test]
+fn unliving_psychopath_pumps_and_kills() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let psycho = g.add_card_to_battlefield(0, catalog::unliving_psychopath()); // 0/4
+    g.clear_sickness(psycho);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    // Pump twice → 2/2. Now power 2 is not < 2, so pump a third time → 3/1.
+    g.players[0].mana_pool.add(Color::Black, 4);
+    for _ in 0..3 {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: psycho, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        }).expect("pump");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.computed_permanent(psycho).unwrap().power, 3, "pumped to power 3");
+    // {B},{T}: destroy the 2/2 (power 2 < 3).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: psycho, ability_index: 1,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("destroy the weaker bear");
+    drain_stack(&mut g);
+    let _ = g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear destroyed");
+}
