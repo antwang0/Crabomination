@@ -812,8 +812,11 @@ Each unblocks a large swath of cards.
   Bone-Cairn Butcher's "attacking tokens have deathtouch" and Orcish
   Oriflamme's "attacking creatures you control get +1/+0"); turn-gated statics
   (`StaticEffect::WhileYourTurn`, CR 611.2 — general on both the live and pure
-  gather paths; Blacksmith's Talent L3). Remaining: broader
-  "you may play", devotion-gated non-type states.
+  gather paths; Blacksmith's Talent L3); an opponent-scoped spell tax
+  (`OpponentSpellsCostMore` — Grand Arbiter Augustin IV, exempts the controller)
+  and a multicolored-only spend restriction (`SpendRestriction::MulticoloredSpell`
+  — Pillar of the Paruns). Remaining: broader "you may play", devotion-gated
+  non-type states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1). Life-loss
   doubling (`OpponentLifeLossDoubledDuringYourTurn` — Bloodletter) and scoped
   unpreventable combat damage (`ControllerCreaturesCombatDamageCantBePrevented`
@@ -823,7 +826,9 @@ Each unblocks a large swath of cards.
   global Furnace-of-Rath doubler (combat damage stays exempt). Life-gain
   replacements now cover both a flat bonus (`LifeGainBonus` — Honor Troll) and a
   multiplier (`LifeGainMultiplier` — Rhox Faithmender), multiplier applied first
-  (CR 614), neither firing on a 0-gain (CR 119.10).
+  (CR 614), neither firing on a 0-gain (CR 119.10). Hellbent all-your-sources
+  damage doubling (`DoubleYourSourcesDamageWhileHellbent` — Anthem of Rakdos)
+  rides `scale_damage_to`, gated on the controller's empty hand.
 - ✅ **Regeneration shields & "next time" prevention** as proper shields.
 - 🟡 **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
   CR 120/704. (Wither/Infect damage-as-counters already ships; lethal-by-power
