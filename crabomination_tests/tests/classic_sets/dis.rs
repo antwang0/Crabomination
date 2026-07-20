@@ -877,3 +877,31 @@ fn plumes_of_peace_locks_untap() {
     g.do_untap();
     assert!(g.battlefield_find(bear).unwrap().tapped, "stayed tapped through untap");
 }
+
+/// Freewind Equenaut only gains its {T}: ping ability while it's enchanted.
+#[test]
+fn freewind_equenaut_ability_requires_enchant() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let equ = g.add_card_to_battlefield(0, catalog::freewind_equenaut());
+    g.clear_sickness(equ);
+    // No aura yet → the granted ability isn't available (index out of bounds).
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking.push(Attack { attacker, target: AttackTarget::Player(0) });
+    let before = g.perform_action(GameAction::ActivateAbility {
+        card_id: equ, ability_index: 0,
+        target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None,
+    });
+    assert!(before.is_err(), "no ability while unenchanted");
+    // Attach an aura → the ping ability appears at index 0.
+    let aura = g.add_card_to_battlefield(0, catalog::plumes_of_peace());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(equ);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: equ, ability_index: 0,
+        target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("ping the attacker while enchanted");
+    drain_stack(&mut g);
+    let _ = g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == attacker), "2 damage killed the 2/2 attacker");
+}

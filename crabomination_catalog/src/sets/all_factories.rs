@@ -7190,6 +7190,7 @@ static DIS: &[Factory] = &[
     super::dis::demonfire,
     super::dis::brain_pry,
     super::dis::voidslime,
+    super::dis::freewind_equenaut,
     super::dis::govern_the_guildless,
     super::dis::anthem_of_rakdos,
     super::dis::plumes_of_peace,

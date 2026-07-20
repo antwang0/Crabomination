@@ -714,6 +714,43 @@ pub fn hellhole_rats() -> CardDefinition {
     }
 }
 
+/// Freewind Equenaut — {2}{W} 2/2 Human Archer with flying. As long as it's
+/// enchanted, it has "{T}: deal 2 damage to target attacking or blocking
+/// creature."
+pub fn freewind_equenaut() -> CardDefinition {
+    CardDefinition {
+        name: "Freewind Equenaut",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this is enchanted, it has \"{T}: deal 2 damage to target attacking or blocking creature.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::This,
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::DealDamage {
+                        to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+                        amount: Value::Const(2),
+                    },
+                    ..Default::default()
+                },
+                condition: Some(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::IsEnchanted,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Govern the Guildless — {5}{U} Sorcery. Gain control of target monocolored
 /// creature. (Forecast is deferred — tracked in TODO.md.)
 pub fn govern_the_guildless() -> CardDefinition {
