@@ -442,6 +442,9 @@ pub enum SpendRestriction {
     /// turn a permanent face up." (Creeping Peeper.) Only the enchantment-spell
     /// half is enforced; the ability halves aren't gated.
     EnchantmentSpell,
+    /// "Spend this mana only to cast a multicolored spell." (Pillar of the
+    /// Paruns.) Matches a spell with two or more colors.
+    MulticoloredSpell,
 }
 
 impl SpendRestriction {
@@ -475,6 +478,7 @@ impl SpendRestriction {
                     || kind.creature_types.contains(&crate::card::CreatureType::Dragon)
             }
             SpendRestriction::EnchantmentSpell => kind.enchantment,
+            SpendRestriction::MulticoloredSpell => kind.multicolored,
         }
     }
 }
@@ -527,6 +531,8 @@ pub struct SpellKind {
     /// that restriction aren't captured (those are ability activations, not
     /// spells) — funding them is a minor approximation.
     pub enchantment: bool,
+    /// Casting a multicolored spell — two or more colors (Pillar of the Paruns).
+    pub multicolored: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

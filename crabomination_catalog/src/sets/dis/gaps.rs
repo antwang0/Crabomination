@@ -8,9 +8,13 @@ use crate::card::{
     Value,
 };
 use crate::effect::shortcut::{target_any, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, PlayerStaticTarget, StaticEffect, ZoneDest};
+use crate::effect::{
+    Duration, Effect, ManaPayload, PlayerRef, PlayerStaticTarget, StaticEffect, ZoneDest,
+};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color, SpendRestriction};
+
+use super::super::tap_add_colorless;
 
 /// Nettling Curse — {2}{B} Aura. Enchant creature. Whenever enchanted creature
 /// attacks or blocks, its controller loses 3 life. `{1}{R}: Enchanted creature
@@ -581,6 +585,74 @@ pub fn walking_archive() -> CardDefinition {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rix Maadi, Dungeon Palace — Land. `{T}: Add {C}.` `{1}{B}{R}, {T}: Each
+/// player discards a card. Activate only as a sorcery.`
+pub fn rix_maadi_dungeon_palace() -> CardDefinition {
+    CardDefinition {
+        name: "Rix Maadi, Dungeon Palace",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), b(), r()]),
+                tap_cost: true,
+                sorcery_speed: true,
+                effect: Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::ONE,
+                    random: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Novijen, Heart of Progress — Land. `{T}: Add {C}.` `{G}{U}, {T}: Put a +1/+1
+/// counter on each creature that entered the battlefield this turn.`
+pub fn novijen_heart_of_progress() -> CardDefinition {
+    CardDefinition {
+        name: "Novijen, Heart of Progress",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[g(), u()]),
+                tap_cost: true,
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(R::Creature.and(R::EnteredThisTurn)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Pillar of the Paruns — Land. `{T}: Add one mana of any color. Spend this mana
+/// only to cast a multicolored spell.`
+pub fn pillar_of_the_paruns() -> CardDefinition {
+    CardDefinition {
+        name: "Pillar of the Paruns",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::AnyOneColor(Value::ONE)),
+                    SpendRestriction::MulticoloredSpell,
+                ),
             },
             ..Default::default()
         }],

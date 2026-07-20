@@ -3446,6 +3446,7 @@ impl CardDefinition {
             has_x: self.cost.has_x(),
             omen: false,
             enchantment: self.is_enchantment(),
+            multicolored: self.printed_colors().len() >= 2,
         }
     }
 

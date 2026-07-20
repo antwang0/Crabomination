@@ -926,3 +926,68 @@ fn freewind_equenaut_ability_requires_enchant() {
     let _ = g.check_state_based_actions();
     assert!(!g.battlefield.iter().any(|c| c.id == attacker), "2 damage killed the 2/2 attacker");
 }
+
+/// Rix Maadi's sorcery-speed ability makes each player discard a card.
+#[test]
+fn rix_maadi_each_player_discards() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::rix_maadi_dungeon_palace());
+    g.clear_sickness(land);
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate the discard ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 0, "P0 discarded");
+    assert_eq!(g.players[1].hand.len(), 0, "P1 discarded");
+}
+
+/// Novijen counters up every creature that entered this turn.
+#[test]
+fn novijen_counters_entered_this_turn() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::novijen_heart_of_progress());
+    g.clear_sickness(land);
+    let fresh = g.move_card_to_battlefield_for_test(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate Novijen");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(fresh).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "the just-entered creature got a +1/+1 counter",
+    );
+}
+
+/// Pillar of the Paruns adds mana that only pays for multicolored spells.
+#[test]
+fn pillar_of_the_paruns_multicolored_only() {
+    use crabomination::mana::{SpellKind, SpendRestriction};
+    let mono = SpellKind { multicolored: false, ..Default::default() };
+    let gold = SpellKind { multicolored: true, ..Default::default() };
+    assert!(!SpendRestriction::MulticoloredSpell.allows(&mono), "rejects a monocolored spell");
+    assert!(SpendRestriction::MulticoloredSpell.allows(&gold), "funds a multicolored spell");
+    // And the land actually produces restricted mana.
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::pillar_of_the_paruns());
+    g.clear_sickness(land);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Color(Color::Red),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("tap Pillar for restricted mana");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped, "Pillar tapped to add mana");
+}
