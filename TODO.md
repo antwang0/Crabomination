@@ -42,6 +42,14 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   primitive.
 - **Rotisserie Elemental** (skewer-counter impulse), **Sentinel of Lost Lore**
   (exile-Adventure modal) — still deferred (see WOE section).
+- **Ravnica guild remainder (recent291 follow-ups):** Simic Guildmage (move a
+  +1/+1 counter / re-attach an Aura between same-controller permanents — no
+  counter-move or aura-restich primitive), Gaze of the Gorgon (regenerate +
+  delayed "destroy all creatures that blocked/were blocked by it" at next end
+  of combat), Necromantic Thirst (aura-granted combat-damage → return-creature
+  trigger). Riders approximated in the shipped batch: Vigor Mortis's "+1/+1 if
+  {G} was spent" (no per-cast spent-color tracking) and Golgari Brownscale's
+  "gain 2 when returned to hand from graveyard" (no enters-hand-from-gy event).
 
 **Tooling — client build in headless/CI:** the GUI crate needs `libwayland-dev`,
 `libasound2-dev`, `libudev-dev`, and `libxkbcommon-dev` to compile (wayland-sys/
