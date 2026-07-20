@@ -906,7 +906,7 @@ fn magecraft_life_delta_cards() {
         (catalog::inkling_quillstrike_b128(), 1, 1, vec![]),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -946,7 +946,7 @@ fn magecraft_self_pump_cards() {
         (catalog::prismari_firebrand_b128(), 1, vec![Keyword::Haste]),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
         let p_before = g.battlefield_find(id).unwrap().power();
@@ -1003,7 +1003,7 @@ fn magecraft_loot_or_draw_cards() {
         (catalog::prismari_stormcrafter_b128(), vec![catalog::island()], vec![], -1),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         for c in libs { g.add_card_to_library(0, c); }
         for c in fodder { g.add_card_to_hand(0, c); }
         let _ = g.add_card_to_battlefield(0, def);
@@ -1032,7 +1032,7 @@ fn magecraft_mint_token_cards() {
         catalog::lorehold_sparkscholar_ii_b129(),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let _ = g.add_card_to_battlefield(0, def);
         let bf_before = g.battlefield.iter().filter(|c| c.controller == 0).count();
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -1061,7 +1061,7 @@ fn on_attack_trigger_cards() {
         (catalog::inkling_quillmender_b127(), 0, 1, vec![]),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let a = g.add_card_to_battlefield(0, def);
         g.clear_sickness(a);
         g.step = TurnStep::DeclareAttackers;
@@ -1090,7 +1090,7 @@ fn dies_drain_cards() {
         (catalog::witherbloom_reaper_hand_b128(), 99, 2, 2, vec![]),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
         {
@@ -1119,7 +1119,7 @@ fn dies_mint_token_cards() {
         (catalog::pest_brewerthing_b127(), 2),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
         g.battlefield_find_mut(id).unwrap().damage = dmg;
@@ -1155,7 +1155,7 @@ fn etb_mint_token_cards() {
         (catalog::prismari_sparkmaker_b129(), vec![(Color::Blue, 1), (Color::Red, 1)], 2, 1, 0, 0, 1, vec![]),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         for _ in 0..lib_islands { g.add_card_to_library(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
         for (c, n) in colors { g.players[0].mana_pool.add(c, n); }
@@ -1208,7 +1208,7 @@ fn etb_life_delta_cards() {
         (catalog::silverquill_sermonist_b128(), vec![(Color::White, 1)], 1, 1, 0, 0, -1, vec![Keyword::Vigilance]),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         for _ in 0..lib_islands { g.add_card_to_library(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
         for (c, n) in colors { g.players[0].mana_pool.add(c, n); }
@@ -1247,7 +1247,7 @@ fn etb_card_flow_cards() {
         (catalog::quandrix_treebinder_b128(), vec![(Color::Green, 1)], 2, 1, 0, 0, vec![]),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         for _ in 0..lib_islands { g.add_card_to_library(0, catalog::island()); }
         for _ in 0..fodder_islands { g.add_card_to_hand(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
@@ -1278,7 +1278,7 @@ fn fractal_enters_with_counters_cards() {
         (catalog::fractal_bedrock_b127(), vec![(Color::Green, 1)], 3, 4),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let id = g.add_card_to_hand(0, def);
         for (c, n) in colors { g.players[0].mana_pool.add(c, n); }
         g.players[0].mana_pool.add_colorless(colorless);
@@ -1302,7 +1302,7 @@ fn etb_mint_fractal_token_cards() {
         (catalog::quandrix_geometer_b128(), 2, 2),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let id = g.add_card_to_hand(0, def);
         g.players[0].mana_pool.add(Color::Green, 1);
         g.players[0].mana_pool.add(Color::Blue, 1);
@@ -1334,7 +1334,7 @@ fn player_damage_spell_cards() {
         (catalog::lorehold_pyreverse_b129(), vec![(Color::Red, 1)], 1, 0, 2, 1, -1),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         for _ in 0..lib_islands { g.add_card_to_library(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
         for (c, n) in colors { g.players[0].mana_pool.add(c, n); }
@@ -1366,7 +1366,7 @@ fn kill_target_creature_spell_cards() {
         (catalog::witherbloom_boneshroud_b129(), vec![(Color::Black, 1)], 0, 0, 0, 0, -1),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         for _ in 0..lib_islands { g.add_card_to_library(0, catalog::island()); }
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         g.clear_sickness(bear);

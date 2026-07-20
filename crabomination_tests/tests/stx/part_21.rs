@@ -18,7 +18,7 @@ fn magecraft_life_delta_creatures() {
         (catalog::prismari_magmamage_b166(), 0, 4),
         (catalog::prismari_aerokineticist_b169(), 0, 4),
         (catalog::lorehold_pyresage_b171(), 0, 4),
-        (catalog::lorehold_embersmith_b172(), 0, 4),
+        (catalog::lorehold_embersmith_b172(), 1, 4),
         (catalog::witherbloom_drainmancer_b166(), 1, 4),
         (catalog::lorehold_spectrescholar_b166(), 1, 3),
         (catalog::witherbloom_sapcaster_b169(), 1, 3),

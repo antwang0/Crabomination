@@ -70,8 +70,8 @@ fn etb_cast_effects_table() {
             card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
         }).unwrap_or_else(|e| panic!("{name} castable: {e:?}"));
         drain_stack(&mut g);
-        assert_eq!(g.players[0].life, l0_before + l0_delta, "{name} own life");
-        assert_eq!(g.players[1].life, l1_before + l1_delta, "{name} opp life");
+        assert_eq!(g.players[0].life, l0_before + l0_delta as i32, "{name} own life");
+        assert_eq!(g.players[1].life, l1_before + l1_delta as i32, "{name} opp life");
         if let Some(d) = bf_delta {
             let bf_after = g.battlefield.iter().filter(|c| c.controller == 0).count() as i64;
             assert_eq!(bf_after, bf_before + d, "{name} battlefield delta");
@@ -144,9 +144,9 @@ fn magecraft_drain_table() {
             additional_targets: vec![], mode: None, x_value: None,
         }).expect("Bolt castable");
         drain_stack(&mut g);
-        assert_eq!(g.players[0].life, l0_before + gain, "{name} gain");
+        assert_eq!(g.players[0].life, l0_before + gain as i32, "{name} gain");
         // Bolt 3 + drain
-        assert_eq!(g.players[1].life, l1_before - 3 - gain, "{name} opp loss");
+        assert_eq!(g.players[1].life, l1_before - 3 - gain as i32, "{name} opp loss");
     }
 }
 
@@ -171,7 +171,7 @@ fn magecraft_ping_opponent_table() {
         }).expect("Bolt castable");
         drain_stack(&mut g);
         // Bolt 3 + observer's ping
-        assert_eq!(g.players[1].life, l1_before - 3 - ping, "{name} opp loss");
+        assert_eq!(g.players[1].life, l1_before - 3 - ping as i32, "{name} opp loss");
     }
 }
 
@@ -195,7 +195,7 @@ fn magecraft_lifegain_table() {
             additional_targets: vec![], mode: None, x_value: None,
         }).expect("Bolt castable");
         drain_stack(&mut g);
-        assert_eq!(g.players[0].life, l0_before + gain, "{name} gain");
+        assert_eq!(g.players[0].life, l0_before + gain as i32, "{name} gain");
     }
 }
 
@@ -343,8 +343,8 @@ fn burn_opponent_table() {
             additional_targets: vec![], mode: None, x_value: None,
         }).unwrap_or_else(|e| panic!("{name} castable: {e:?}"));
         drain_stack(&mut g);
-        assert_eq!(g.players[1].life, l1_before - loss, "{name} opp loss");
-        assert_eq!(g.players[0].life, l0_before + gain, "{name} own gain");
+        assert_eq!(g.players[1].life, l1_before - loss as i32, "{name} opp loss");
+        assert_eq!(g.players[0].life, l0_before + gain as i32, "{name} own gain");
         if let Some(d) = hand_delta {
             assert_eq!(g.players[0].hand.len() as i64, hand_before + d, "{name} hand");
         }
@@ -385,7 +385,7 @@ fn kill_opposing_bear_table() {
         }).unwrap_or_else(|e| panic!("{name} castable: {e:?}"));
         drain_stack(&mut g);
         assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "{name}: bear died");
-        assert_eq!(g.players[0].life, l0_before + gain, "{name} life rider");
+        assert_eq!(g.players[0].life, l0_before + gain as i32, "{name} life rider");
     }
 }
 
@@ -423,8 +423,8 @@ fn pump_friendly_bear_table() {
         if let Some(kw) = keyword {
             assert!(b.keywords.contains(&kw), "{name} grants {kw:?}");
         }
-        assert_eq!(g.players[0].life, l0_before + l0_delta, "{name} own life");
-        assert_eq!(g.players[1].life, l1_before + l1_delta, "{name} opp life");
+        assert_eq!(g.players[0].life, l0_before + l0_delta as i32, "{name} own life");
+        assert_eq!(g.players[1].life, l1_before + l1_delta as i32, "{name} opp life");
     }
 }
 
@@ -533,7 +533,7 @@ fn etb_self_counters_table() {
         let c = g.battlefield_find(id).unwrap();
         assert_eq!(c.counter_count(CounterType::PlusOnePlusOne) as u32, counters, "{name} counters");
         assert_eq!(c.power() as i64, power, "{name} power");
-        assert_eq!(g.players[0].life, l0_before + gain, "{name} life");
+        assert_eq!(g.players[0].life, l0_before + gain as i32, "{name} life");
     }
 }
 

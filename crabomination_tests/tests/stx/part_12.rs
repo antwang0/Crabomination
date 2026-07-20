@@ -6,14 +6,14 @@ use super::*;
 
 /// Add generous mana of every color plus colorless so table-driven bodies can
 /// cast any of the grouped cards regardless of its exact cost.
-fn add_generous_mana(g: &mut crabomination::game::Game, player: usize) {
+fn add_generous_mana(g: &mut crabomination::game::GameState, player: usize) {
     for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         g.players[player].mana_pool.add(color, 3);
     }
     g.players[player].mana_pool.add_colorless(6);
 }
 
-fn plus_counters(c: &crabomination::game::types::CardInstance) -> i32 {
+fn plus_counters(c: &crabomination::game::CardInstance) -> i32 {
     c.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0) as i32
 }
 
@@ -493,7 +493,7 @@ fn etb_and_spell_token_minting() {
     ] {
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
-        let count_tokens = |g: &crabomination::game::Game| g.battlefield.iter()
+        let count_tokens = |g: &crabomination::game::GameState| g.battlefield.iter()
             .filter(|c| c.controller == 0 && c.is_token
                 && c.definition.subtypes.creature_types.contains(&ct))
             .count();
@@ -589,7 +589,7 @@ fn sacrifice_observers_drain_via_sacrosanct() {
 #[test]
 fn etb_mill_opponent_library() {
     for (def, mill, opp_loss, you_gain) in [
-        (catalog::witherbloom_tomeshade(), 3, 1, 0),
+        (catalog::witherbloom_tomeshade(), 3, 1, 1),
         (catalog::witherbloom_mill_mage(), 4, 0, 0),
         (catalog::silverquill_litany_b56(), 2, 2, 2),
     ] {

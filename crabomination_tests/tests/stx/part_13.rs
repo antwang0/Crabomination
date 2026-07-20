@@ -88,7 +88,7 @@ fn cast_from_hand_etb_effects_table() {
         (catalog::lorehold_skybearer(), &[(Color::White, 1)][..], 2, false, None, 0, 0, Some(2), Some(3), &[Keyword::Flying, Keyword::Vigilance][..]),
         (catalog::prismari_flashbinder(), &[(Color::Blue, 1), (Color::Red, 1)][..], 0, false, None, 0, 0, Some(2), Some(1), &[Keyword::Prowess][..]),
         (catalog::prismari_tidescryer(), &[(Color::Blue, 1)][..], 2, false, None, 0, 0, Some(2), Some(3), NO_KW),
-        (catalog::lorehold_cinderpriest_b67(), &[(Color::Red, 1), (Color::White, 1)][..], 2, false, None, 1, 0, Some(3), Some(3), NO_KW),
+        (catalog::lorehold_cinderpriest_b67(), &[(Color::Red, 1), (Color::White, 1)][..], 2, false, None, 1, 1, Some(3), Some(3), NO_KW),
         (catalog::lorehold_bellringer(), &[(Color::Red, 1), (Color::White, 1)][..], 3, false, Some(("Spirit", 1, None)), 0, 0, Some(4), None, &[Keyword::Haste][..]),
         (catalog::witherbloom_lifesage(), &[(Color::Black, 1)][..], 1, false, None, 0, 2, None, None, NO_KW),
         (catalog::silverquill_quietkeeper(), &[(Color::White, 1)][..], 2, false, None, 0, 2, Some(2), Some(3), NO_KW),
@@ -98,7 +98,7 @@ fn cast_from_hand_etb_effects_table() {
         (catalog::witherbloom_sapchant(), &[(Color::Black, 1), (Color::Green, 1)][..], 1, false, None, 3, 3, None, None, NO_KW),
         (catalog::pest_carrionbinder(), &[(Color::Black, 1), (Color::Green, 1)][..], 2, false, Some(("Pest", 2, None)), 1, 1, None, None, NO_KW),
         (catalog::pest_vinemother(), &[(Color::Black, 1), (Color::Green, 1)][..], 2, false, Some(("Pest", 2, None)), 0, 0, None, None, NO_KW),
-        (catalog::witherbloom_vinemaster_b61(), &[(Color::Black, 1), (Color::Green, 1)][..], 3, false, None, 2, 0, None, None, NO_KW),
+        (catalog::witherbloom_vinemaster_b61(), &[(Color::Black, 1), (Color::Green, 1)][..], 3, false, None, 2, 2, None, None, NO_KW),
         // Targeted (aimed at the opponent):
         (catalog::prismari_tidefurnace(), &[(Color::Blue, 1), (Color::Red, 1)][..], 2, true, Some(("Treasure", 1, None)), 2, 0, None, None, NO_KW),
         (catalog::prismari_magmaforge(), &[(Color::Blue, 1), (Color::Red, 1)][..], 3, true, Some(("Treasure", 2, None)), 3, 0, None, None, NO_KW),
@@ -113,7 +113,7 @@ fn cast_from_hand_etb_effects_table() {
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_library(0, catalog::mountain());
         g.add_card_to_library(0, catalog::plains());
-        let name = def.name.clone();
+        let name = def.name;
         let opp_before = g.players[1].life;
         let you_before = g.players[0].life;
         let id = g.add_card_to_hand(0, def);
@@ -164,7 +164,7 @@ fn magecraft_ping_table() {
         (catalog::prismari_sparkscribe_b61(), 0, NO_KW),
         (catalog::prismari_sparksinger(), 0, NO_KW),
         (catalog::lorehold_sparkstoneflinger(), 0, NO_KW),
-        (catalog::inkling_riftcaster(), 0, NO_KW),
+        (catalog::inkling_riftcaster(), 1, NO_KW),
         (catalog::prismari_combustomancer(), 0, NO_KW),
         (catalog::prismari_glassflame(), 0, NO_KW),
         (catalog::lorehold_spellbreaker(), 0, NO_KW),
@@ -173,7 +173,7 @@ fn magecraft_ping_table() {
         (catalog::lorehold_sparkscholar_b67(), 0, &[Keyword::FirstStrike][..]),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let id = g.add_card_to_battlefield(0, def);
         let opp_before = g.players[1].life;
         let you_before = g.players[0].life;
@@ -209,7 +209,7 @@ fn magecraft_scry_table() {
     ] {
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
-        let name = def.name.clone();
+        let name = def.name;
         let _ = g.add_card_to_battlefield(0, def);
         let lib_before = g.players[0].library.len();
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -236,7 +236,7 @@ fn magecraft_lifegain_table() {
     ] {
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
-        let name = def.name.clone();
+        let name = def.name;
         let _ = g.add_card_to_battlefield(0, def);
         let life_before = g.players[0].life;
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -269,7 +269,7 @@ fn magecraft_self_pump_table() {
         (catalog::spirit_bannerer(), NO_KW),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let id = g.add_card_to_battlefield(0, def);
         let p_before = g.battlefield_find(id).unwrap().power();
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -293,7 +293,7 @@ fn magecraft_loot_table() {
     for def in [catalog::quandrix_streamcaller(), catalog::prismari_stormtide()] {
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
-        let name = def.name.clone();
+        let name = def.name;
         let _ = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
         let hand_before = g.players[0].hand.len();
@@ -317,7 +317,7 @@ fn magecraft_tribal_bannerer_table() {
         (catalog::pest_bannerer(), catalog::pest_vinerunner(), 3, 2),
     ] {
         let mut g = two_player_game();
-        let name = banner_def.name.clone();
+        let name = banner_def.name;
         let banner = g.add_card_to_battlefield(0, banner_def);
         let buddy = g.add_card_to_battlefield(0, buddy_def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -341,7 +341,7 @@ fn magecraft_pump_target_table() {
         (catalog::witherbloom_loamcaller(), catalog::pest_vinerunner(), 2, 2),
     ] {
         let mut g = two_player_game();
-        let name = src_def.name.clone();
+        let name = src_def.name;
         let _src = g.add_card_to_battlefield(0, src_def);
         let target = g.add_card_to_battlefield(0, tgt_def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -368,7 +368,7 @@ fn fractal_enters_with_counters_table() {
         (catalog::fractal_stridepetal(), &[(Color::Green, 1)][..], 2, 3),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let id = g.add_card_to_hand(0, def);
         for &(c, m) in colors {
             g.players[0].mana_pool.add(c, m);
@@ -381,7 +381,7 @@ fn fractal_enters_with_counters_table() {
         let c = g.battlefield_find(id).unwrap_or_else(|| panic!("{name} on bf"));
         assert_eq!(c.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), n,
             "{name}: counters");
-        assert_eq!(c.power(), n, "{name}: power");
+        assert_eq!(c.power(), n as i32, "{name}: power");
     }
 }
 
@@ -393,7 +393,7 @@ fn shrink_spell_table() {
         (catalog::witherbloom_lifedrain(), &[(Color::Black, 1)][..], 1, 0),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let you_before = g.players[0].life;
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         let id = g.add_card_to_hand(0, def);
@@ -421,7 +421,7 @@ fn battlefield_stats_table() {
         (catalog::pest_bloodling(), 2, 1, Keyword::Deathtouch, CreatureType::Pest),
     ] {
         let mut g = two_player_game();
-        let name = def.name.clone();
+        let name = def.name;
         let id = g.add_card_to_battlefield(0, def);
         let view = g.battlefield_find(id).unwrap_or_else(|| panic!("{name} on bf"));
         assert_eq!(view.power(), p, "{name}: power");
@@ -440,7 +440,7 @@ fn drain_cantrip_table() {
     ] {
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
-        let name = def.name.clone();
+        let name = def.name;
         let you_before = g.players[0].life;
         let opp_before = g.players[1].life;
         let id = g.add_card_to_hand(0, def);

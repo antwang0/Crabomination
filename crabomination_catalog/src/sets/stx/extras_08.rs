@@ -2343,7 +2343,7 @@ pub fn witherbloom_pestseed() -> CardDefinition {
 /// Silverquill Editorialist — {1}{W}{B}, 2/2 Inkling Wizard, Flying.
 ///
 /// Printed Oracle (synthesised): "Flying / Whenever you cast an instant
-/// or sorcery spell, each opponent loses 1 life."
+/// or sorcery spell, each opponent loses 1 life and you gain 1 life."
 ///
 /// Silverquill drain-on-cast in Wizard tribal frame. Pairs with the
 /// existing Magecraft Silverquill shell (Archmage Emeritus, Eager

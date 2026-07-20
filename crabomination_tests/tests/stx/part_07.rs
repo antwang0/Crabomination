@@ -6,7 +6,7 @@ use super::*;
 
 /// Fill player 0's pool with generous mana of every color plus colorless so
 /// table-driven tests can cast cards with differing costs.
-fn generous_mana(g: &mut crabomination::game::Game) {
+fn generous_mana(g: &mut crabomination::game::GameState) {
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         g.players[0].mana_pool.add(c, 20);
     }
@@ -28,7 +28,7 @@ fn magecraft_life_delta_sources() {
         (catalog::witherbloom_neophyte(), 1, 4),
         (catalog::lorehold_pyresinger(), 1, 4),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let _src = g.add_card_to_battlefield(0, def);
         drain_stack(&mut g);
@@ -56,7 +56,7 @@ fn magecraft_self_pump_sources() {
         (catalog::prismari_glasscaster(), &[][..]),
         (catalog::lorehold_ardent_pyromage(), &[][..]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let src = g.add_card_to_battlefield(0, def);
         drain_stack(&mut g);
@@ -79,7 +79,7 @@ fn magecraft_self_pump_sources() {
 #[test]
 fn magecraft_self_counter_sources() {
     for def in [catalog::fractal_theorist(), catalog::quandrix_reach_mage()] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let src = g.add_card_to_battlefield(0, def);
         drain_stack(&mut g);
@@ -103,7 +103,7 @@ fn magecraft_token_minters() {
         (catalog::witherbloom_pestcaster(), "Pest"),
         (catalog::prismari_vandal(), "Treasure"),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let _src = g.add_card_to_battlefield(0, def);
         drain_stack(&mut g);
@@ -129,7 +129,7 @@ fn magecraft_shrink_sources() {
         catalog::witherbloom_drainscholar(),
         catalog::witherbloom_toxbrewer(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         let _src = g.add_card_to_battlefield(0, def);
@@ -173,7 +173,7 @@ fn etb_token_minters() {
         (catalog::silverquill_heraldist(), "Inkling", 1, 1, 0, &[][..]),
         (catalog::silverquill_pact(), "Inkling", 2, 4, 0, &[][..]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         // Generic setup safe for all rows (looters need library + fodder).
         for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
@@ -216,7 +216,7 @@ fn target_player_life_deltas() {
         (catalog::prismari_pyresurge_b28(), 0, 3, None, &[][..]),
         (catalog::prismari_splashcaster(), 0, 4, Some("Treasure"), &[][..]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let id = g.add_card_to_hand(0, def);
@@ -258,7 +258,7 @@ fn no_target_drain_and_lifegain() {
         (catalog::witherbloom_vinemender(), 3, 0, &[][..]),
         (catalog::witherbloom_lifebloom(), 4, 0, &[][..]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island()); // surveil fodder
         let id = g.add_card_to_hand(0, def);
@@ -298,7 +298,7 @@ fn no_target_hand_deltas() {
         (catalog::lorehold_battle_witness(), 0, &[][..]),   // gy creature → hand
         (catalog::lorehold_recallmage(), 0, &[][..]),       // gy creature → hand
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
         g.add_card_to_graveyard(0, catalog::grizzly_bears()); // recursion fodder
@@ -331,7 +331,7 @@ fn etb_pump_friendly_creature() {
         (catalog::inkling_spireguard(), &[][..]),
         (catalog::mascot_researcher(), &[][..]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         drain_stack(&mut g);
@@ -371,7 +371,7 @@ fn removal_kills_opposing_bear() {
         (catalog::prismari_stormwriter(), 0, None),
         (catalog::lorehold_pyrotechnician(), 0, None),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island()); // cantrip fodder
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -400,7 +400,7 @@ fn forced_sacrifice_effects() {
         (catalog::silverquill_inkpurge(), 2),
         (catalog::witherbloom_devourer(), 0),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let _opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         drain_stack(&mut g);
@@ -425,7 +425,7 @@ fn etb_gy_exilers() {
         (catalog::lorehold_soulchanter(), &[Keyword::Lifelink][..]),
         (catalog::lorehold_stoneweaver(), &[Keyword::Vigilance, Keyword::Lifelink][..]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let gy_card = g.add_card_to_graveyard(1, catalog::grizzly_bears());
         let id = g.add_card_to_hand(0, def);
@@ -452,7 +452,7 @@ fn etb_mill_two() {
         (catalog::witherbloom_pestreaver(), 1),
         (catalog::quandrix_fractalweaver(), 0),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_library(0, catalog::island());
@@ -478,7 +478,7 @@ fn no_target_smoke_casts() {
         (catalog::prismari_tideforger(), &[Keyword::Flash][..]),
         (catalog::quandrix_geomancer_b30(), &[][..]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
@@ -505,7 +505,7 @@ fn dies_trigger_sources() {
         (catalog::silverquill_quillwitch(), 0, 2, 0),
         (catalog::pest_outcast(), 1, 0, 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let id = g.add_card_to_battlefield(0, def);
@@ -710,7 +710,7 @@ fn basic_land_tutors() {
         (catalog::quandrix_mapmaker(), true),
         (catalog::strixhaven_druid(), false),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let forest = g.add_card_to_library(0, catalog::forest());
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));

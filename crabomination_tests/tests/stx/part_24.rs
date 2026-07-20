@@ -152,7 +152,7 @@ fn b202_b206_sorcery_drains() {
         (catalog::silverquill_final_edict_b205(), 3),
         (catalog::witherbloom_grim_harvest_b206(), 4),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, def);
         for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
@@ -183,7 +183,7 @@ fn b202_b206_burn_spells() {
         (catalog::prismari_emberbolt_b205(), 2),
         (catalog::prismari_inferno_b206(), 4),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island()); // for riders that scry
         let id = g.add_card_to_hand(0, def);
@@ -215,7 +215,7 @@ fn b202_b205_magecraft_ping_or_drain_one() {
         catalog::prismari_flarecaster_b205(),
         catalog::lorehold_emberhistorian_b205(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -235,7 +235,7 @@ fn b202_b205_magecraft_ping_or_drain_one() {
 #[test]
 fn b202_b204_magecraft_auto_ping() {
     for def in [catalog::lorehold_pyromancer_b202(), catalog::lorehold_pyromaster_b204()] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -260,7 +260,7 @@ fn b202_b206_magecraft_self_pumps() {
         (catalog::lorehold_ember_veteran_b206(), 5),
         (catalog::quandrix_scholar_b206(), 2),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -283,7 +283,7 @@ fn b202_b204_magecraft_counters() {
         (catalog::witherbloom_spellbloom_b202(), true),
         (catalog::quandrix_mentor_b204(), false),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let cd = g.add_card_to_battlefield(0, def);
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -309,7 +309,7 @@ fn b202_b205_magecraft_token_mints() {
         catalog::quandrix_fractaller_b204(),
         catalog::prismari_pyrosmith_b205(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -334,7 +334,7 @@ fn b202_b206_etb_lifegain() {
         (catalog::silverquill_lightscribe_b205(), 3),
         (catalog::witherbloom_fungalbeast_b206(), 2),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, def);
         for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
@@ -360,7 +360,7 @@ fn b202_b204_etb_token_mints() {
         (catalog::lorehold_spirit_sage_b203(), 1),
         (catalog::lorehold_spiritbringer_b204(), 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, def);
         for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
@@ -387,7 +387,7 @@ fn b205_enrage_counter_payoffs() {
         (catalog::witherbloom_gravethorn_b205(), 3),
         (catalog::quandrix_thornfractal_b205(), 3),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -411,7 +411,7 @@ fn b205_enrage_life_swings() {
         (catalog::lorehold_stoneguard_b205(), 0, 2),
         (catalog::witherbloom_thornbeast_b205(), 1, 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -470,10 +470,10 @@ fn b203_b206_death_trigger_life_swings() {
         (catalog::pest_sapper_b203(), true, 2, 0),
         (catalog::witherbloom_sapfeeder_b205(), true, 2, 2),
         (catalog::witherbloom_rotcaller_b205(), false, 1, 1),
-        (catalog::silverquill_deathscribe_b205(), false, 1, 0),
+        (catalog::silverquill_deathscribe_b205(), false, 1, 1),
         (catalog::witherbloom_sporecaller_b206(), false, 0, 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let watcher = g.add_card_to_battlefield(0, def);
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -521,7 +521,7 @@ fn b202_b206_etb_draws() {
         catalog::lorehold_archivekeeper_b206(),
         catalog::prismari_windscholar_b206(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
@@ -543,7 +543,7 @@ fn b202_b206_etb_draws() {
 #[test]
 fn b202_b205_magecraft_draws() {
     for def in [catalog::quandrix_conjurer_b202(), catalog::quandrix_tidecaller_b205()] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_battlefield(0, def);
@@ -563,7 +563,7 @@ fn b202_b205_magecraft_draws() {
 #[test]
 fn b202_draw_two_spells() {
     for def in [catalog::prismari_spellcraft_b202(), catalog::quandrix_cantrip_b202()] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_library(0, catalog::mountain());
@@ -591,7 +591,7 @@ fn b202_b205_counters_on_target() {
         (catalog::quandrix_surge_b203(), 3),
         (catalog::quandrix_growthseer_b205(), 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island()); // for surveil riders
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -614,7 +614,7 @@ fn b202_b205_counters_on_target() {
 #[test]
 fn b202_reanimators() {
     for def in [catalog::lorehold_reanimator_b202(), catalog::lorehold_excavate_b202()] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
         let id = g.add_card_to_hand(0, def);

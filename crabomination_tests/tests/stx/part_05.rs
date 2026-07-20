@@ -6,7 +6,7 @@ use super::*;
 
 /// Add generous mana of every color plus plenty of colorless so table-driven
 /// tests don't need per-card mana setup.
-fn add_generous_mana(g: &mut crabomination::game::Game) {
+fn add_generous_mana(g: &mut crabomination::game::GameState) {
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         g.players[0].mana_pool.add(c, 3);
     }
@@ -30,7 +30,7 @@ fn magecraft_burn_cards_ping_on_instant_cast() {
         (catalog::lorehold_pyrescribe(), 1),
         (catalog::prismari_ember_channeler(), 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let _ = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -57,7 +57,7 @@ fn magecraft_drain_cards_drain_one_on_instant_cast() {
         catalog::inkling_confessor(),
         catalog::witherbloom_lifebleeder(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let _ = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -84,7 +84,7 @@ fn magecraft_lifegain_cards_gain_one_on_instant_cast() {
         catalog::silverquill_witness(),
         catalog::lorehold_spectrescribe(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let _ = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -111,7 +111,7 @@ fn magecraft_counter_cards_gain_counter_on_instant_cast() {
         catalog::quandrix_doublecaster(),
         catalog::quandrix_sapsprout(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -141,7 +141,7 @@ fn magecraft_selfpump_cards_pump_one_power_on_instant_cast() {
         catalog::prismari_drakelord(),
         catalog::silverquill_erudite(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -166,7 +166,7 @@ fn magecraft_pump_friendly_cards_pump_bear_on_instant_cast() {
         catalog::quandrix_scholar(),
         catalog::withergrowth_apprentice(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let _ = g.add_card_to_battlefield(0, def);
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -192,7 +192,7 @@ fn magecraft_loot_cards_loot_on_instant_cast() {
         catalog::prismari_storm_caller(),
         catalog::prismari_stormcaster(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_hand(0, catalog::mountain()); // discard fodder
@@ -219,7 +219,7 @@ fn magecraft_scry_cards_scry_on_instant_cast() {
         catalog::silverquill_pen_pusher(),
         catalog::quandrix_scrycharmer(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
         let _ = g.add_card_to_battlefield(0, def);
@@ -246,7 +246,7 @@ fn magecraft_token_cards_mint_on_instant_cast() {
         (catalog::inkling_penmaster(), "Inkling"),
         (catalog::prismari_alchemist(), "Treasure"),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let _ = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -290,7 +290,7 @@ fn etb_token_cards_mint_named_tokens() {
         (catalog::lorehold_spiritmaster(), "Spirit", 2),
         (catalog::lorehold_battlescroll(), "Spirit", 2),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, def);
         add_generous_mana(&mut g);
@@ -320,7 +320,7 @@ fn etb_drain_cards_drain_n_life() {
         (catalog::defend_the_inkwell(), 2, false),
         (catalog::inkling_stormcaller(), 2, true),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
@@ -352,7 +352,7 @@ fn etb_burn_cards_deal_n_to_opp() {
         (catalog::lorehold_ember_brand(), 3, true),
         (catalog::silverquill_dictation(), 2, true),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let id = g.add_card_to_hand(0, def);
@@ -378,7 +378,7 @@ fn etb_lifegain_cards_gain_n_life() {
         (catalog::silverquill_marshal(), 2),
         (catalog::silverquill_archivist(), 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
@@ -402,7 +402,7 @@ fn etb_draw_cards_replace_themselves() {
         catalog::quandrix_wavewright(),
         catalog::quandrix_geomyst(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
@@ -425,7 +425,7 @@ fn etb_scry_cards_resolve_and_land_on_battlefield() {
         catalog::prismari_lightcaster(),
         catalog::quandrix_wavedancer(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
@@ -447,7 +447,7 @@ fn loot_cards_net_minus_one_hand() {
         (catalog::prismari_looter(), false),
         (catalog::prismari_spellsong(), true),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
         g.add_card_to_hand(0, catalog::grizzly_bears()); // discard fodder
@@ -478,7 +478,7 @@ fn removal_cards_remove_opp_bear() {
         (catalog::prismari_volley(), None),
         (catalog::prismari_conflagration(), Some(0)),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -504,7 +504,7 @@ fn gy_return_cards_return_bear_to_hand() {
         catalog::witherbloom_grand_necromancer(),
         catalog::witherbloom_recourse(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let _ = g.add_card_to_graveyard(0, catalog::grizzly_bears());
         let id = g.add_card_to_hand(0, def);

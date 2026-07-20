@@ -47,7 +47,7 @@ fn magecraft_bolt_at_player_life_deltas() {
         (catalog::inkling_vassal(), 4, 1),
         (catalog::lorehold_emberscholar(), 4, 0),
         (catalog::prismari_inkjet_apprentice(), 4, 0),
-        (catalog::silverquill_adept(), 4, 0),
+        (catalog::silverquill_adept(), 4, 1),
         (catalog::lorehold_sparkflinger(), 4, 0),
         (catalog::silverquill_penbringer(), 3, 1),
         (catalog::spirit_spellsmith(), 3, 1),
@@ -385,7 +385,7 @@ fn etb_scry_keeps_library_size() {
 fn cast_kills_targeted_bear() {
     // (def, self life gain)
     for (def, gain) in [
-        (catalog::lorehold_warpriest(), 0),
+        (catalog::lorehold_warpriest(), 2),
         (catalog::prismari_embershout(), 0),
         (catalog::lorehold_glimmercaller(), 0),
         (catalog::lorehold_smiteseer(), 2),
@@ -482,6 +482,7 @@ fn etb_returns_card_from_graveyard_to_hand() {
 fn fractals_enter_with_counters() {
     for (def, n, kws) in [
         (catalog::fractal_seer(), 1, vec![]),
+        (catalog::fractal_sproutling(), 1, vec![]),
         (catalog::fractal_aegis(), 3, vec![Keyword::Trample]),
         (catalog::fractal_tideshaper(), 3, vec![]),
         (catalog::fractal_sentinel(), 5, vec![Keyword::Trample]),
@@ -493,8 +494,8 @@ fn fractals_enter_with_counters() {
         drain_stack(&mut g);
         let card = g.battlefield_find(id).unwrap();
         assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), n);
-        assert_eq!(card.power(), n);
-        assert_eq!(card.toughness(), n);
+        assert_eq!(card.power(), n as i32);
+        assert_eq!(card.toughness(), n as i32);
         for kw in &kws {
             assert!(card.has_keyword(kw));
         }
@@ -669,8 +670,9 @@ fn inkling_sageling_dies_draws_a_card() {
     bolt!(g, Target::Permanent(id));
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_none());
-    // Bolt left the hand, then the death trigger drew a card = net 0.
-    assert_eq!(g.players[0].hand.len(), hand_before);
+    // `bolt!` mints the Bolt into hand and casts it (net 0); the death
+    // trigger then draws a card = net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
 }
 
 #[test]

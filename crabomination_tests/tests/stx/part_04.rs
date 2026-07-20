@@ -44,7 +44,7 @@ fn mana_dorks_tap_for_their_color() {
         g.perform_action(GameAction::ActivateAbility {
             card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap for mana");
         drain_stack(&mut g);
-        assert!(g.players[0].mana_pool.amount(color) >= before + 1, "mana added");
+        assert!(g.players[0].mana_pool.amount(color) > before, "mana added");
     }
 }
 
@@ -195,8 +195,8 @@ fn magecraft_self_pump_payoffs_grow_on_bolt_cast() {
 #[test]
 fn magecraft_burn_payoffs_add_damage_on_bolt_cast() {
     for (payoff, opp_loss, you_gain) in [
-        // Bolt 3 + Editorialist drain 1 = 4 life loss.
-        (catalog::silverquill_editorialist(), 4, 0),
+        // Bolt 3 + Editorialist drain 1 = 4 life loss; +1 life from the drain.
+        (catalog::silverquill_editorialist(), 4, 1),
         // Opp takes 3 (Bolt) + 2 (Pyromentor magecraft) = 5.
         (catalog::prismari_pyromentor(), 5, 0),
         // Bolt 3 + Burnscholar 1 = 4 to opp; +1 life.

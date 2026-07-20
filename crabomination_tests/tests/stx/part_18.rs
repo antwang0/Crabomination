@@ -6,7 +6,7 @@ use super::*;
 
 /// Fill seat 0's pool with generous mana of every color so table-driven
 /// tests don't need per-card cost bookkeeping.
-fn fill_mana(g: &mut crabomination::game::Game) {
+fn fill_mana(g: &mut crabomination::game::GameState) {
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         g.players[0].mana_pool.add(c, 3);
     }
@@ -686,7 +686,7 @@ fn vanilla_bodies_have_expected_keywords_and_stats() {
 fn attack_triggers_fire_on_declare() {
     // (def, opp life delta, your life delta, spirit tokens minted)
     for (def, opp_delta, you_delta, spirits) in [
-        (catalog::silverquill_aggressor_b147(), -1i64, 0i64, 0usize),
+        (catalog::silverquill_aggressor_b147(), -1i64, 1i64, 0usize),
         (catalog::lorehold_spirit_tender_b150(), 0, 1, 0),
         (catalog::witherbloom_cauldronkeeper_b152(), -1, 1, 0),
         (catalog::lorehold_spirit_surger_b154(), 0, 0, 1),

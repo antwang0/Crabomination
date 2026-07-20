@@ -6,7 +6,7 @@ use super::*;
 
 /// Over-provision the caster's mana pool so a shared table body can cast
 /// any of the (differently costed) cards under test.
-fn add_generous_mana(g: &mut crabomination::game::Game, player: usize) {
+fn add_generous_mana(g: &mut crabomination::game::GameState, player: usize) {
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         g.players[player].mana_pool.add(c, 3);
     }
@@ -51,7 +51,7 @@ fn cast_creature_keywords_stats_and_etb_life() {
         (catalog::inkling_inkscribe(), vec![Keyword::Flying], Some(2), Some(1), 0),
         (catalog::quandrix_threadbinder(), vec![], Some(1), Some(2), 0),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::plains());
         g.add_card_to_library(0, catalog::island());
@@ -92,12 +92,12 @@ fn cast_untargeted_drain_or_lifegain() {
         (catalog::silverquill_ledgermage(), 2, 2, vec![]),
         (catalog::silverquill_etching(), 2, 2, vec![]),
         (catalog::witherbloom_rotbloom(), 3, 3, vec![]),
-        (catalog::silverquill_pronouncer(), 0, 1, vec![Keyword::Flying, Keyword::Lifelink]),
+        (catalog::silverquill_pronouncer(), 1, 1, vec![Keyword::Flying, Keyword::Lifelink]),
         (catalog::lorehold_wargist(), 0, 1, vec![]),
         (catalog::lorehold_embermend(), 3, 0, vec![]),
         (catalog::pest_lifebloom(), 4, 0, vec![]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::plains());
         g.add_card_to_library(0, catalog::island());
@@ -132,7 +132,7 @@ fn cast_targeting_opponent_drain_or_burn() {
         (catalog::lorehold_sparkshock(), 0, 2, vec![]),
         (catalog::lorehold_emberlock(), 2, 2, vec![]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::plains());
         let life_before = g.players[0].life;
@@ -168,7 +168,7 @@ fn removal_kills_opposing_bear() {
         catalog::lorehold_sparkstrike_b50(),
         catalog::lorehold_sparklock(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::plains());
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -230,7 +230,7 @@ fn pump_friendly_bear() {
         (catalog::silverquill_mentor(), 3, Some(3), None),
         (catalog::quandrix_amplify(), 4, Some(4), None),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -263,7 +263,7 @@ fn magecraft_gains_one_life_on_bolt_cast() {
         (catalog::silverquill_studyhall(), vec![]),
         (catalog::witherbloom_grimherb(), vec![Keyword::Deathtouch]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         if !kws.is_empty() {
@@ -296,7 +296,7 @@ fn magecraft_ping_makes_bolt_deal_four() {
         catalog::prismari_pyroceptor(),
         catalog::lorehold_emberscribe_v2(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let _ = g.add_card_to_battlefield(0, def);
@@ -321,7 +321,7 @@ fn magecraft_scry_does_not_block_bolt_resolution() {
         catalog::quandrix_scryweaver(),
         catalog::prismari_spellscribe(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::plains());
         g.add_card_to_library(0, catalog::island());
@@ -349,7 +349,7 @@ fn magecraft_self_pump_on_bolt_cast() {
         (catalog::prismari_cinder_apprentice(), Some(2), None),
         (catalog::quandrix_pupil_b50(), None, Some(1)),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -378,7 +378,7 @@ fn magecraft_adds_counter_to_tribe_member() {
         (catalog::quandrix_echocaster(), catalog::fractal_avenger()),
         (catalog::lorehold_spiritchron(), catalog::lorehold_reverence()),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let tgt = g.add_card_to_battlefield(0, target_def);
         let _ = g.add_card_to_battlefield(0, def);
@@ -455,10 +455,10 @@ fn cast_mints_creature_tokens() {
         (catalog::lorehold_echocaller(), CreatureType::Spirit, 1, 1, 0, vec![]),
         (catalog::lorehold_reverence(), CreatureType::Spirit, 1, 0, 0, vec![Keyword::Vigilance]),
         (catalog::silverquill_convene(), CreatureType::Inkling, 2, 0, 1, vec![]),
-        (catalog::silverquill_pronouncement(), CreatureType::Inkling, 2, 0, 3, vec![]),
+        (catalog::silverquill_pronouncement(), CreatureType::Inkling, 2, 3, 3, vec![]),
         (catalog::silverquill_festscribe(), CreatureType::Inkling, 1, 2, 0, vec![]),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let life_before = g.players[0].life;
         let opp_before = g.players[1].life;
@@ -487,7 +487,7 @@ fn cast_mints_creature_tokens() {
 #[test]
 fn etb_mints_treasure_token() {
     for def in [catalog::prismari_sparkforge_v2(), catalog::prismari_coinforger()] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, def);
         add_generous_mana(&mut g, 0);
@@ -515,7 +515,7 @@ fn etb_cantrip_hand_net_zero() {
         (catalog::silverquill_codex(), 2, 0),
         (catalog::silverquill_cipher(), 1, 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::plains());
         g.add_card_to_library(0, catalog::island());
@@ -544,7 +544,7 @@ fn etb_returns_card_from_graveyard_to_hand() {
         (catalog::silverquill_necroscribe(), catalog::lightning_bolt()),
         (catalog::lorehold_memorialist_b50(), catalog::grizzly_bears()),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let in_gy = g.add_card_to_graveyard(0, gy_def);
         let id = g.add_card_to_hand(0, def);
@@ -568,7 +568,7 @@ fn reanimates_bear_to_battlefield() {
         (catalog::silverquill_memorial(), 1, 1),
         (catalog::silverquill_eulogize(), 2, 0),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
         let life_before = g.players[0].life;
@@ -593,7 +593,7 @@ fn fractal_enters_with_counters_per_other_creature() {
         (catalog::fractal_bloomanalyst(), 2, 2),
         (catalog::fractal_synthmage(), 3, 3),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..n_bears {
             let _ = g.add_card_to_battlefield(0, catalog::grizzly_bears());

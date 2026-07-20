@@ -2,6 +2,9 @@
 //! (`catalog::sets::stx`). New STX cards added here should ship with at
 //! least one test exercising their primary play pattern.
 
+// Table-driven tests use wide tuple rows; the shape is the point.
+#![allow(clippy::type_complexity)]
+
 use crabomination::card::CounterType;
 use crabomination::catalog;
 use crabomination::game::*;

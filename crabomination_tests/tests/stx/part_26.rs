@@ -493,7 +493,7 @@ fn equipment_grants_stats_and_keywords() {
         (catalog::team_pennant(), None, 3, Some((3, 3)), vec![Keyword::Vigilance, Keyword::Trample]),
         (catalog::zephyr_boots(), None, 2, None, vec![Keyword::Flying]),
     ] {
-        let name = equip.name.clone();
+        let name = equip.name;
         let mut g = two_player_game();
         let eq = g.add_card_to_battlefield(0, equip);
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

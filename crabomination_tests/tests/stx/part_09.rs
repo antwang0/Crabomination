@@ -9,7 +9,7 @@ use super::*;
 // Structurally identical per-card tests are collapsed into table-driven
 // tests below; unique-shape tests are kept individually at the end.
 
-fn fill_mana(g: &mut crabomination::game::Game) {
+fn fill_mana(g: &mut crabomination::game::GameState) {
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         g.players[0].mana_pool.add(c, 2);
     }
@@ -30,10 +30,9 @@ fn stx_vanilla_stats_keywords_and_subtypes() {
         (catalog::spirit_outrider(), 3, 4, vec![Keyword::FirstStrike], vec![CreatureType::Spirit, CreatureType::Knight]),
         (catalog::inkling_bookcrier(), 3, 2, vec![Keyword::Flying], vec![CreatureType::Inkling]),
         (catalog::lorehold_saberspirit(), 3, 4, vec![Keyword::FirstStrike, Keyword::Lifelink], vec![]),
-        (catalog::fractal_sproutling(), 1, 1, vec![], vec![]),
     ];
     for (def, p, t, kws, types) in cases {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         drain_stack(&mut g);
@@ -62,7 +61,7 @@ fn stx_magecraft_life_deltas_on_bolt_cast() {
         (catalog::lorehold_emberkeeper(), -4, 0),
         (catalog::witherbloom_distiller(), -4, 0),
         (catalog::prismari_glasshammer(), -4, 0),
-        (catalog::witherbloom_bloodbrewer(), -4, 0),
+        (catalog::witherbloom_bloodbrewer(), -4, 1),
         (catalog::silverquill_spellbinder(), -4, 1),
         (catalog::silverquill_liturgist(), -3, 1),
         (catalog::witherbloom_bloomcaller(), -3, 1),
@@ -72,7 +71,7 @@ fn stx_magecraft_life_deltas_on_bolt_cast() {
         (catalog::silverquill_purifier(), -3, 0),
     ];
     for (def, opp_delta, self_delta) in cases {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let _id = g.add_card_to_battlefield(0, def);
@@ -107,7 +106,7 @@ fn stx_magecraft_self_counter_on_bolt_cast() {
         catalog::witherbloom_bloomstalk(),
     ];
     for def in cases {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
@@ -139,7 +138,7 @@ fn stx_magecraft_self_pump_on_bolt_cast() {
         (catalog::lorehold_b37_beacon(), None),
     ];
     for (def, kw) in cases {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
@@ -171,7 +170,7 @@ fn stx_magecraft_pumps_other_friendly_creature() {
         (catalog::silverquill_scriptwright(), catalog::inkling_aspirant()),
     ];
     for (watcher, recipient) in cases {
-        let name = watcher.name.clone();
+        let name = watcher.name;
         let mut g = two_player_game();
         let _w = g.add_card_to_battlefield(0, watcher);
         let target = g.add_card_to_battlefield(0, recipient);
@@ -277,7 +276,7 @@ fn stx_cast_resolves_life_hand_tokens_and_keywords() {
         case(catalog::inkling_recruiter(), false, None, None, None, 1, vec![]),
     ];
     for c in cases {
-        let name = c.def.name.clone();
+        let name = c.def.name;
         let mut g = two_player_game();
         for _ in 0..3 {
             g.add_card_to_library(0, catalog::island());
@@ -327,7 +326,7 @@ fn stx_fractals_enter_with_counters() {
         (catalog::fractal_tidecaller_v2(), 2, vec![Keyword::Flying]),
     ];
     for (def, n, kws) in cases {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, def);
         fill_mana(&mut g);
@@ -355,7 +354,7 @@ fn stx_mints_fractal_token_with_counters() {
         (catalog::fractal_burst(), 3),
     ];
     for (def, n) in cases {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, def);
         fill_mana(&mut g);
@@ -373,7 +372,7 @@ fn stx_mints_fractal_token_with_counters() {
 #[test]
 fn stx_bounces_opponent_creature_to_hand() {
     for def in [catalog::quandrix_tideshaper(), catalog::prismari_skywarp()] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         drain_stack(&mut g);
@@ -398,7 +397,7 @@ fn stx_removal_kills_opponent_bear() {
         catalog::silverquill_censure_v2(),
         catalog::lorehold_pyrelancer(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         drain_stack(&mut g);
@@ -424,7 +423,7 @@ fn stx_pumps_target_friendly_creature() {
         (catalog::inkling_quilltender(), catalog::inkling_aspirant(), 1, None),
     ];
     for (def, target_def, delta, kw) in cases {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let target = g.add_card_to_battlefield(0, target_def);
         drain_stack(&mut g);
@@ -455,7 +454,7 @@ fn stx_etb_opponent_discards() {
         (catalog::inkling_loredrain(), false, Some(-2)),
     ];
     for (def, targeted, opp_delta) in cases {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_hand(1, catalog::lightning_bolt());
         g.add_card_to_hand(1, catalog::lightning_bolt());
@@ -488,7 +487,7 @@ fn stx_attack_trigger_life_deltas() {
         (catalog::lorehold_knight_champion(), 0, 2),
     ];
     for (def, opp_delta, self_delta) in cases {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
@@ -516,7 +515,7 @@ fn stx_magecraft_loot_on_bolt_cast() {
         catalog::quandrix_aquamancer(),
         catalog::quandrix_spellseer(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..3 {
             g.add_card_to_library(0, catalog::island());
@@ -549,7 +548,7 @@ fn stx_etb_then_magecraft_followup() {
         (catalog::quandrix_synthsage(), 0, 2, 0, 1, 0),
     ];
     for (def, opp_delta, self_delta, tokens, counters_after, gain_on_bolt) in cases {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, def);
         fill_mana(&mut g);

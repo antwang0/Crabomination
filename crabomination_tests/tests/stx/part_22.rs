@@ -645,7 +645,7 @@ fn burn_spells_deal_two_to_big_creature() {
 #[test]
 fn counterspells_counter_the_bolt() {
     for (def, colorless) in [
-        (catalog::quandrix_wavelock_b180(), 2),
+        (catalog::quandrix_wavelock_b174(), 2),
         (catalog::quandrix_counterspinner_b180(), 1),
     ] {
         let mut g = two_player_game();

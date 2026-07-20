@@ -6,7 +6,7 @@ use super::*;
 
 /// Give player 0 a huge rainbow mana pool so table-driven tests can cast
 /// any of the cards under test without per-card mana bookkeeping.
-fn rainbow_mana(g: &mut crabomination::game::Game) {
+fn rainbow_mana(g: &mut crabomination::game::GameState) {
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         g.players[0].mana_pool.add(c, 20);
     }
@@ -734,10 +734,10 @@ fn counter_doubling_spells() {
         let name = def.name;
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        if seed > 0 {
-            if let Some(b) = g.battlefield.iter_mut().find(|c| c.id == bear) {
-                b.add_counters(CounterType::PlusOnePlusOne, seed);
-            }
+        if seed > 0
+            && let Some(b) = g.battlefield.iter_mut().find(|c| c.id == bear)
+        {
+            b.add_counters(CounterType::PlusOnePlusOne, seed);
         }
         let id = g.add_card_to_hand(0, def);
         rainbow_mana(&mut g);

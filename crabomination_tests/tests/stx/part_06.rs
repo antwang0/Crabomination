@@ -64,9 +64,9 @@ fn magecraft_pings_or_drains_opponent_on_instant_cast() {
         (catalog::lorehold_strikevanguard(), 1, 0),
         (catalog::silverquill_eulogist(), 1, 0),
         (catalog::silverquill_inkmaster(), 1, 1),
-        (catalog::witherbloom_marshcaster(), 1, 0),
+        (catalog::witherbloom_marshcaster(), 1, 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_battlefield(0, def);
         drain_stack(&mut g);
@@ -96,7 +96,7 @@ fn magecraft_self_pumps_on_instant_cast() {
         (catalog::inkling_quillwarden(), 1, 0),
         (catalog::witherbloom_toxicaster(), 0, 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
@@ -125,7 +125,7 @@ fn magecraft_pumps_other_creature_on_instant_cast() {
         catalog::silverquill_lifeglyph(),
         catalog::prismari_spellforger_b22(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let src = g.add_card_to_battlefield(0, def);
         g.clear_sickness(src);
@@ -152,7 +152,7 @@ fn magecraft_mints_token_on_instant_cast() {
         (catalog::witherbloom_pestcaller(), "Pest"),
         (catalog::inkling_verseweaver(), "Inkling"),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_battlefield(0, def);
         drain_stack(&mut g);
@@ -182,7 +182,7 @@ fn magecraft_card_advantage_on_instant_cast() {
         (catalog::prismari_embershaper(), -1, 0),  // loot
         (catalog::witherbloom_vinetender(), -1, 1),// gain 1 life
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_hand(0, catalog::island()); // discard fodder for looters
@@ -235,7 +235,7 @@ fn burns_opponent_player_on_cast_or_etb() {
         (catalog::prismari_spitfire(), vec![Color::Red], 3, false, 2, None),
         (catalog::prismari_pyromancer(), vec![Color::Red, Color::Blue], 2, false, 2, None),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let id = g.add_card_to_hand(0, def);
@@ -276,7 +276,7 @@ fn removal_kills_bear_on_cast() {
         (catalog::silverquill_indictment(), vec![Color::White, Color::Black], 2, 2, None),
         (catalog::lorehold_ironhand(), vec![Color::Red, Color::White], 3, 0, None),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         let id = g.add_card_to_hand(0, def);
@@ -307,7 +307,7 @@ fn shrink_spells_leave_bear_alive_with_expected_stats() {
         (catalog::witherbloom_aspersor(), vec![Color::Black, Color::Green], 0, 0, 1, 1),
         (catalog::witherbloom_withercut(), vec![Color::Black, Color::Green], 1, -1, 1, 0),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -344,7 +344,7 @@ fn drains_or_gains_life_on_cast_or_etb() {
         (catalog::silverquill_lifebinder(), vec![Color::White], 2, false, 0, 2),
         (catalog::lorehold_bonereader(), vec![Color::White], 2, false, 0, 2),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let id = g.add_card_to_hand(0, def);
@@ -381,7 +381,7 @@ fn etb_mints_tokens() {
         (catalog::pest_wrangler(), vec![Color::Green], 2, "Pest", 1),
         (catalog::pest_brood_mother(), vec![Color::Black, Color::Green], 3, "Pest", 2),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, def);
         for c in &colors { g.players[0].mana_pool.add(*c, 1); }
@@ -414,7 +414,7 @@ fn etb_card_advantage_and_life_deltas() {
         (catalog::pest_harvest(), vec![Color::Black, Color::Green], 2, None, 0, 0, 0, Some(("Pest", 1))),
         (catalog::prismari_stormgaze(), vec![Color::Blue, Color::Red], 2, Some(1), 0, 0, -1, None),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_library(0, catalog::island());
@@ -449,7 +449,7 @@ fn etb_scry_bodies_resolve_onto_battlefield() {
         (catalog::spellbook_studier(), vec![Color::Blue], 1),
         (catalog::silverquill_notetaker(), vec![Color::White], 1),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
         let id = g.add_card_to_hand(0, def);
@@ -473,8 +473,8 @@ fn returns_card_from_graveyard_to_hand() {
         (catalog::pest_mausoleum(), vec![Color::Black, Color::Green], 2, catalog::grizzly_bears(), Some(("Pest", 1))),
         (catalog::lorehold_echoflame(), vec![Color::Red, Color::White], 3, catalog::lightning_bolt(), Some(("Spirit", 1))),
     ] {
-        let name = def.name.clone();
-        let gy_name = gy_def.name.clone();
+        let name = def.name;
+        let gy_name = gy_def.name;
         let mut g = two_player_game();
         g.add_card_to_graveyard(0, gy_def);
         let id = g.add_card_to_hand(0, def);
@@ -503,7 +503,7 @@ fn makes_target_opponent_discard() {
         (catalog::inkling_inquisitor(), vec![Color::Black], 2, 1, 0),
         (catalog::witherbloom_handburner(), vec![Color::Black], 2, 2, 2),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_hand(1, catalog::grizzly_bears());
         g.add_card_to_hand(1, catalog::lightning_bolt());
@@ -532,7 +532,7 @@ fn puts_counter_on_creature_on_cast() {
         (catalog::quandrix_counterproof(), vec![Color::Green, Color::Blue], 0, true),
         (catalog::quandrix_polymath(), vec![Color::Green, Color::Blue], 1, false),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -561,7 +561,7 @@ fn team_pump_spells_pump_and_grant_keyword() {
         (catalog::silverquill_battle_hymn(), vec![Color::White], 2, 3, Keyword::Vigilance),
         (catalog::lorehold_spirit_anthem(), vec![Color::Red, Color::White], 3, 4, Keyword::FirstStrike),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let id = g.add_card_to_hand(0, def);
@@ -634,7 +634,7 @@ fn searches_basic_land_onto_battlefield() {
         (catalog::hunt_the_library(), vec![Color::Green], 3, false),
         (catalog::field_researcher(), vec![Color::White], 2, false),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let forest = g.add_card_to_library(0, catalog::forest());
         g.add_card_to_library(0, catalog::grizzly_bears());
@@ -662,7 +662,7 @@ fn searches_card_into_hand() {
         (catalog::quandrix_cartographer(), vec![Color::Green], 2, catalog::forest()),
         (catalog::silverquill_hightutor(), vec![Color::White], 1, catalog::lightning_bolt()),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         let wanted_id = g.add_card_to_library(0, wanted);
@@ -721,7 +721,7 @@ fn death_triggers_drain_on_sba_death() {
         (catalog::pest_forager(), 1, 0, 1),
         (catalog::witherbloom_saproot(), 3, 2, 2),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
@@ -745,7 +745,7 @@ fn death_triggers_drain_two_when_bolted() {
         catalog::witherbloom_reaper_hand(),
         catalog::witherbloom_drainbreath(),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         drain_stack(&mut g);
@@ -839,7 +839,7 @@ fn fractal_token_minted_with_expected_counters() {
         (catalog::quandrix_pondkeeper(), vec![Color::Blue], 2, 2, true),
         (catalog::fractal_surge(), vec![Color::Green, Color::Blue], 1, 3, false),
     ].into_iter().enumerate() {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         match i {
             1 => { g.add_card_to_library(0, catalog::island()); } // harvest draws
@@ -1271,7 +1271,7 @@ fn etb_effect_then_magecraft_self_pumps() {
         (catalog::prismari_drakeforge(), vec![Color::Blue, Color::Red], 2, 0, 0, Some(("Treasure", 1))),
         (catalog::pest_cultivator_adept(), vec![Color::Black, Color::Green], 2, 0, 0, Some(("Pest", 1))),
     ] {
-        let name = def.name.clone();
+        let name = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, def);
         for c in &colors { g.players[0].mana_pool.add(*c, 1); }

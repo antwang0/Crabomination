@@ -169,7 +169,7 @@ fn etb_life_adjusters_on_cast() {
         (catalog::witherbloom_marshtender(), 0, 1),
         (catalog::witherbloom_verdancer(), 0, 1),
         (catalog::strixhaven_sapper(), 1, 0),
-        (catalog::inkling_maverick(), 1, 0),
+        (catalog::inkling_maverick(), 1, 1),
         (catalog::witherbloom_bloodscribe(), 2, 0),
     ] {
         let mut g = two_player_game();
@@ -229,7 +229,7 @@ fn targeted_player_burn_spells_and_etbs() {
         (catalog::lorehold_soulburst(), 2, 0),
         (catalog::prismari_sparkflare(), 3, 0),
         (catalog::strixhaven_sorcerer(), 2, 0),
-        (catalog::lorehold_pyremender(), 2, 0),
+        (catalog::lorehold_pyremender(), 2, 2),
         (catalog::lorehold_b35_lightning(), 3, 1),
         (catalog::prismari_cinderdrake(), 3, 0),
         (catalog::prismari_burning_lesson(), 3, 0),

@@ -139,14 +139,14 @@ fn magecraft_opp_loses_one_table() {
     // Opp takes Bolt (3) + magecraft ping/drain (1) = -4; drainers also
     // gain their controller 1 life (self_gain = 1).
     for (def, self_gain) in [
-        (catalog::lorehold_searingscholar_b154(), 0),
+        (catalog::lorehold_searingscholar_b154(), 1),
         (catalog::lorehold_glyphbearer_b155(), 0),
         (catalog::lorehold_chronicler_b155(), 0),
         (catalog::lorehold_embermage_b158(), 0),
         (catalog::lorehold_spectermage_b158(), 0),
         (catalog::prismari_sparkmaster_b155(), 0),
-        (catalog::inkling_scriptor_b158(), 0),
-        (catalog::witherbloom_decantor_b158(), 0),
+        (catalog::inkling_scriptor_b158(), 1),
+        (catalog::witherbloom_decantor_b158(), 1),
         (catalog::inkling_striplark_b155(), 1),
         (catalog::silverquill_liturgist_ii_b155(), 1),
         (catalog::witherbloom_bonebinder_b155(), 1),

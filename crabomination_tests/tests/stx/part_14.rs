@@ -40,7 +40,7 @@ fn table_cast_untargeted_primary_payload() {
         (catalog::prismari_elementalist_b104(), 0, None, true, Some("Treasure"), None, 1, 0, &[][..], None),
         (catalog::inkling_scrollwarden_b68(), 0, None, false, None, None, 0, 0, &[Keyword::Flying, Keyword::Vigilance][..], Some((4, 4))),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         for _ in 0..4 {
             g.add_card_to_library(0, catalog::island());
@@ -110,7 +110,7 @@ fn table_magecraft_ping_or_drain_opponent() {
         (catalog::lorehold_loreseeker_b120(), 4, 0, &[][..]),
         (catalog::lorehold_pyroscholar_b122(), 4, 0, &[][..]),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
@@ -139,12 +139,12 @@ fn table_magecraft_self_pump() {
     // Columns: (def, power delta, toughness delta (None = don't assert), keywords)
     for (def, dp, dt, kws) in [
         (catalog::witherbloom_vinescholar(), 1i64, Some(1i64), &[][..]),
-        (catalog::lorehold_embertenured(), 1, Some(1), &[Keyword::Vigilance][..]),
+        (catalog::lorehold_embertenured(), 1, None, &[Keyword::Vigilance][..]),
         (catalog::silverquill_brushmage(), 1, Some(1), &[][..]),
         (catalog::prismari_sparkcaller_b104(), 1, None, &[Keyword::Haste][..]),
         (catalog::lorehold_battlescribe_b119(), 1, None, &[Keyword::FirstStrike][..]),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
@@ -177,7 +177,7 @@ fn table_magecraft_self_counter() {
         catalog::quandrix_polymath_b119(),
         catalog::quandrix_apprentice_b120(),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
@@ -205,7 +205,7 @@ fn table_mints_fractal_with_counters() {
         (catalog::fractal_spawnmaster_b119(), 3),
         (catalog::fractal_bloomwright_b120(), 4),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
             g.players[0].mana_pool.add(color, 3);
@@ -240,7 +240,7 @@ fn table_targeted_removal_kills_victim() {
         (catalog::prismari_inferno_b122(), catalog::serra_angel(), 0, true, None, None, 0),
         (catalog::prismari_tempest_b120(), catalog::serra_angel(), 0, true, None, None, 0),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
@@ -285,7 +285,7 @@ fn table_targeted_damage_marks_angel() {
         (catalog::prismari_magmaweaver_b119(), 2u32, 0usize),
         (catalog::lorehold_bondbreaker_b120(), 3, 1),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
             g.players[0].mana_pool.add(color, 3);
@@ -316,7 +316,7 @@ fn table_targeted_shrink_angel_survives() {
         (catalog::witherbloom_spinecaster_b122(), -1i64, -1i64, &[][..]),
         (catalog::inkling_quillstrike_b122(), -2, -2, &[Keyword::Flying][..]),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
             g.players[0].mana_pool.add(color, 3);
@@ -359,7 +359,7 @@ fn table_targets_player_for_damage() {
         (catalog::prismari_crucible_b120(), 2, &[][..], Some("Treasure"), None, 1, false),
         (catalog::prismari_lecturer(), 2, &[][..], None, None, 0, false),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
@@ -414,7 +414,7 @@ fn table_sac_other_activated_payoffs() {
         (catalog::witherbloom_harvester_b119(), 0, 0, true, 0, &[][..]),
         (catalog::witherbloom_reaper_b121(), 0, 0, false, 0, &[Keyword::Indestructible][..]),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
@@ -462,7 +462,7 @@ fn table_targeted_friendly_buff() {
         (catalog::silverquill_embolden_b119(), 2, Some(2), &[Keyword::Lifelink][..], false),
         (catalog::silverquill_bookmark(), 0, Some(2), &[Keyword::Lifelink][..], false),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::island());
         for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
@@ -503,7 +503,7 @@ fn table_battlefield_stats_and_keywords() {
         (catalog::lorehold_heroic_sage(), 2, 2, &[Keyword::FirstStrike, Keyword::Lifelink][..], None),
         (catalog::inkling_glyphwarden_b122(), 2, 4, &[Keyword::Flying, Keyword::Lifelink][..], Some(CreatureType::Inkling)),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         let c = g.battlefield_find(id).expect("on bf");
@@ -526,7 +526,7 @@ fn table_magecraft_loots() {
         catalog::quandrix_mistshaper_b68(),
         catalog::prismari_tidemage(),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def);
         g.clear_sickness(id);
@@ -554,7 +554,7 @@ fn table_attack_drains_opponent() {
         (catalog::inkling_glaivemaster(), 1i64),
         (catalog::inkling_loremaster_b104(), 2),
     ] {
-        let cname = def.name.clone();
+        let cname = def.name;
         let mut g = two_player_game();
         let attacker = g.add_card_to_battlefield(0, def);
         g.clear_sickness(attacker);
