@@ -250,3 +250,45 @@ pub fn root_kin_ally() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Boros Radiance ──────────────────────────────────────────────────────────
+
+/// Cleansing Beam — {4}{R} Instant. Radiance — deal 2 damage to target creature
+/// and each other creature that shares a color with it.
+pub fn cleansing_beam() -> CardDefinition {
+    CardDefinition {
+        name: "Cleansing Beam",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::RadianceDamage {
+            subject: target_filtered(R::Creature),
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Wojek Embermage — {3}{R} 1/2 Human Wizard. Radiance — {T}: deal 1 damage to
+/// target creature and each other creature that shares a color with it.
+pub fn wojek_embermage() -> CardDefinition {
+    CardDefinition {
+        name: "Wojek Embermage",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::RadianceDamage {
+                subject: target_filtered(R::Creature),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -7066,6 +7066,8 @@ static DECKS: &[Factory] = &[
     super::decks::devouring_light,
     super::decks::fangren_pathcutter,
     super::decks::root_kin_ally,
+    super::decks::cleansing_beam,
+    super::decks::wojek_embermage,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -57,13 +57,15 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
 - **Ravnica batch 2 (recent292) discovered gaps:** "if {R} was spent to cast
   this creature" ETB riders now ship via `Predicate::SourceCastWithColorSpent`
   (reads the permanent's own `cast_mana_spent_by_color` — Gruul Scrapper,
-  Steamcore Weird). Still open: Radiance spells (Wojek Siren, Rally the
-  Righteous — "target creature and each other creature that shares a color with
-  it") need a shares-a-color fan-out selector.
+  Steamcore Weird). **Radiance now ships** (`Effect::RadianceDamage { subject,
+  amount }` — damages the chosen creature + each other creature sharing a
+  computed color; Cleansing Beam, Wojek Embermage). Still open: the *untap+pump*
+  Radiance variant (Rally the Righteous) needs the same fan-out over a
+  non-damage body.
 - **Ravnica batches 3–5 (recent293–295) discovered gaps:** aura/equipment-granted
   *step* triggers now fire (`fire_step_triggers` walks `EquipBonus.triggered_abilities`
-  — Pillory of the Sleepless). **Still deferred, each on one primitive:** Radiance
-  (Cleansing Beam, Wojek Embermage — same shares-a-color fan-out as above);
+  — Pillory of the Sleepless). Radiance now ships (`Effect::RadianceDamage` —
+  Cleansing Beam, Wojek Embermage). **Still deferred, each on one primitive:**
   Perplex (counter unless its controller discards their *whole* hand — needs a
   `WardCost::DiscardHand` or a dedicated counter-unless-empty-hand effect);
   Terraformer (choose a basic land type, *your* lands become it EOT — no

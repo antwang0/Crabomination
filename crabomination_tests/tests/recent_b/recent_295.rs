@@ -194,3 +194,41 @@ fn root_kin_ally_taps_two_to_pump() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(ally).unwrap().power, 5, "3/3 + 2/2");
 }
+
+#[test]
+fn cleansing_beam_radiance_hits_shared_colors_only() {
+    let mut g = two_player_game();
+    // Two green creatures (share green) and a white one (doesn't).
+    let g1 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green 2/2
+    let g2 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green 2/2
+    let white = g.add_card_to_battlefield(1, catalog::serra_angel()); // white 4/4
+    let spell = g.add_card_to_hand(0, catalog::cleansing_beam());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(g1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(g1).is_none() && g.battlefield_find(g2).is_none(),
+        "both green creatures took 2 (radiance) and died");
+    assert!(g.battlefield_find(white).is_some(), "the white creature shares no color — untouched");
+    assert_eq!(g.battlefield_find(white).unwrap().damage, 0);
+}
+
+#[test]
+fn wojek_embermage_radiance_pings() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::wojek_embermage());
+    g.clear_sickness(mage);
+    let g1 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    let g2 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    let white = g.add_card_to_battlefield(1, catalog::serra_angel()); // white
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(g1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(g1).unwrap().damage, 1, "subject took 1");
+    assert_eq!(g.battlefield_find(g2).unwrap().damage, 1, "the other green creature too");
+    assert_eq!(g.battlefield_find(white).unwrap().damage, 0, "white shares no color");
+}

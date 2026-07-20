@@ -2524,6 +2524,13 @@ pub enum Effect {
 
     // ── Damage / life ────────────────────────────────────────────────────────
     DealDamage { to: Selector, amount: Value },
+    /// CR 702 Radiance (Ravnica) — deal `amount` damage to the creature `subject`
+    /// resolves to *and* each other creature that shares a color with it
+    /// (Cleansing Beam, Wojek Embermage). `subject` carries the target slot
+    /// (`TargetFiltered { slot: 0, filter: Creature }`), so cast/auto-target
+    /// legality flows through the normal slot-0 path; the fan-out then reads the
+    /// chosen creature's computed colors. A colorless subject hits only itself.
+    RadianceDamage { subject: Selector, amount: Value },
     /// Each creature the controller controls deals `amount` damage to the `to`
     /// target — each damage is sourced from that creature (so its deathtouch /
     /// lifelink apply). "Each creature you control deals 1 damage to that

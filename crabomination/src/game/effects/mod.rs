@@ -2647,6 +2647,41 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 702 Radiance — damage the subject creature and each other
+            // creature sharing a color with it.
+            Effect::RadianceDamage { subject, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                // The chosen creature and its computed colors.
+                let Some(EntityRef::Permanent(subj)) =
+                    self.resolve_selector(subject, ctx).into_iter().next()
+                else {
+                    return Ok(());
+                };
+                let subj_colors = self
+                    .computed_permanent(subj)
+                    .map(|cp| cp.colors)
+                    .unwrap_or_default();
+                // Subject first, then every other creature that shares a color.
+                let mut recipients = vec![subj];
+                for c in &self.battlefield {
+                    if c.id != subj
+                        && c.definition.is_creature()
+                        && self
+                            .computed_permanent(c.id)
+                            .is_some_and(|cp| cp.colors.iter().any(|col| subj_colors.contains(col)))
+                    {
+                        recipients.push(c.id);
+                    }
+                }
+                for id in recipients {
+                    self.deal_damage_to_from(EntityRef::Permanent(id), amt, ctx.source, events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::EachControlledCreatureDealsDamage { to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 let targets = self.resolve_selector(to, ctx);
