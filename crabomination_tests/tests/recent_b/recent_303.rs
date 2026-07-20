@@ -1,6 +1,6 @@
 //! Tests for the recent303 Dissension batch 2 (Eidolon cycle + utility).
 
-use crabomination::card::Keyword;
+// (no card-type imports needed)
 use crabomination::catalog;
 use crabomination::game::types::Target;
 use crabomination::game::{drain_stack, two_player_game, GameAction};
@@ -138,5 +138,4 @@ fn minister_of_impediments_taps_a_creature() {
     }).expect("tap the creature");
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");
-    let _ = Keyword::Defender;
 }

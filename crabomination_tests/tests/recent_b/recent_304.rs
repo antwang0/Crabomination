@@ -1,6 +1,6 @@
 //! Tests for the recent304 Dissension batch 3.
 
-use crabomination::card::{CardType, Keyword};
+use crabomination::card::Keyword;
 use crabomination::catalog;
 use crabomination::game::types::Target;
 use crabomination::game::{drain_stack, two_player_game, GameAction};
@@ -98,5 +98,4 @@ fn stomp_and_howl_destroys_an_artifact_and_an_enchantment() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(art).is_none() && g.battlefield_find(ench).is_none(),
         "both destroyed");
-    let _ = CardType::Sorcery;
 }

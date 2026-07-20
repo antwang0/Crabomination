@@ -1,6 +1,6 @@
 //! Tests for the recent302 Dissension gap batch.
 
-use crabomination::card::{CardType, Keyword};
+use crabomination::card::Keyword;
 use crabomination::catalog;
 use crabomination::game::types::Target;
 use crabomination::game::{drain_stack, two_player_game, GameAction};
@@ -169,5 +169,4 @@ fn wakestone_gargoyle_lets_defenders_attack() {
     g.priority.player_with_priority = 0;
     // It can now be declared as an attacker despite Defender.
     assert!(g.legal_attackers(0).contains(&wg), "defender lifted this turn");
-    let _ = CardType::Creature;
 }
