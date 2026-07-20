@@ -81,6 +81,13 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (animate a target Forest into a 4/4 that's still a land — land-animation of a
   *targeted* land), Gobhobbler Rats (Hellbent conditional keyword-grant static),
   Gatherer of Graces "+1/+1 per Aura attached" (per-aura self-scaling P/T).
+- **Ravnica batches 9–10 (recent299–300) — shipped:** Woodwraith Corrupter
+  (`Effect::BecomeCreature` on a *targeted* Forest — permanent land-animation),
+  Bond of Agony (`additional_cost_pay_x_life` → each opponent loses X), Enemy of
+  the Guildpact, Court Hussar (`LookPickToHand` dig-3), Overrule
+  (`CounterUnlessPaid { extra_generic: XFromCost }` + gain X life), Thundersong
+  Trumpeter (CantAttack+CantBlock EOT grants), Grozoth (MV-9 `SearchUpToN`,
+  `LoseKeywordThisTurn` defender-drop, transmute).
 - **Ravnica batches 3–5 (recent293–295) discovered gaps:** aura/equipment-granted
   *step* triggers now fire (`fire_step_triggers` walks `EquipBonus.triggered_abilities`
   — Pillory of the Sleepless). **Still deferred, each on one primitive:**
