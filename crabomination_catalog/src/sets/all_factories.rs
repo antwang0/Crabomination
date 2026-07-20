@@ -7110,6 +7110,19 @@ static DECKS: &[Factory] = &[
     super::decks::perplex,
     super::decks::terraformer,
     super::decks::skeletonize,
+    // recent302 — Dissension gap batch
+    super::decks::haazda_exonerator,
+    super::decks::ogre_gatecrasher,
+    super::decks::whiptail_moloch,
+    super::decks::utvara_scalper,
+    super::decks::gnat_alley_creeper,
+    super::decks::silkwing_scout,
+    super::decks::vesper_ghoul,
+    super::decks::patagia_viper,
+    super::decks::squealing_devil,
+    super::decks::slaughterhouse_bouncer,
+    super::decks::transguild_courier,
+    super::decks::wakestone_gargoyle,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
