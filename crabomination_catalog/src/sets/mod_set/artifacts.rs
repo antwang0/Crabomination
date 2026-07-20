@@ -1393,6 +1393,7 @@ pub fn chromatic_lantern() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         activated_abilities: vec![ActivatedAbility {

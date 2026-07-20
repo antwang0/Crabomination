@@ -8312,6 +8312,7 @@ pub fn ultima_origin_of_oblivion() -> CardDefinition {
                         },
                         ..Default::default()
                     },
+                    condition: None,
                 },
             },
             StaticAbility {

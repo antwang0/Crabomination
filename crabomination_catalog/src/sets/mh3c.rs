@@ -998,6 +998,7 @@ pub fn path_of_annihilation() -> CardDefinition {
                     R::HasCreatureType(CreatureType::Eldrazi).and(R::ControlledByYou),
                 ),
                 ability: super::tap_add_any_color(),
+                condition: None,
             },
         }],
         ..Default::default()

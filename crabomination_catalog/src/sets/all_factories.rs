@@ -7103,6 +7103,13 @@ static DECKS: &[Factory] = &[
     // recent300 — Ravnica batch 10 (tap-down + MV-9 transmute leviathan)
     super::decks::thundersong_trumpeter,
     super::decks::grozoth,
+    // recent301 — Ravnica batch 11 (death-tuck, Hellbent, hand-empty counter,
+    // group basic-type animator, delayed-token burn)
+    super::decks::sadistic_augermage,
+    super::decks::gobhobbler_rats,
+    super::decks::perplex,
+    super::decks::terraformer,
+    super::decks::skeletonize,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

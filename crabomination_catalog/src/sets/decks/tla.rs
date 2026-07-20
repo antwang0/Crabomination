@@ -849,6 +849,7 @@ pub fn great_divide_guide() -> CardDefinition {
                         .and(SelectionRequirement::ControlledByYou),
                 ),
                 ability: super::super::tap_add_any_color(),
+                condition: None,
             },
         }],
         ..Default::default()

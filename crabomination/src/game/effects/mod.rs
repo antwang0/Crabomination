@@ -9008,6 +9008,20 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::DiscardHand => {
+                        // "...unless its controller discards their hand."
+                        // Always payable (even from empty). Discard through
+                        // the shared funnel so CardDiscarded / Madness fire.
+                        let ids: Vec<CardId> = self.players[affected_controller]
+                            .hand
+                            .iter()
+                            .map(|c| c.id)
+                            .collect();
+                        for card_id in ids {
+                            self.discard_card(affected_controller, card_id, events);
+                        }
+                        true
+                    }
                     WardCost::Blight(n) => {
                         // Ward—Blight N (CR 701.68): the warding player puts N
                         // -1/-1 counters on a creature they control. Auto-pay
@@ -12004,6 +12018,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachPlayerPutsHandCardOnTop { who } => {
+                use crate::decision::Decision;
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, p) in seats.iter().copied().enumerate() {
+                    if self.players[p].hand.is_empty() {
+                        continue;
+                    }
+                    let hand: Vec<(crate::card::CardId, String)> = self.players[p]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let decision = Decision::PutOnLibrary { player: p, count: 1, hand };
+                    let pending = PendingEffectState::PutOnLibraryPending { player: p, count: 1 };
+                    if self.players[p].wants_ui {
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| {
+                            Effect::EachPlayerPutsHandCardOnTop {
+                                who: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                            }
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
+                        return Ok(());
+                    }
+                    // Bot: put the first hand card on top.
+                    let pick = self.players[p].hand.first().map(|c| c.id).unwrap();
+                    self.execute_put_on_library(p, &[pick], events);
+                }
+                Ok(())
+            }
+
             Effect::RevealTopAndDrawIf { who, reveal_filter, may_graveyard_miss } => {
                 // Each resolved player reveals the top card of their library;
                 // if it matches `reveal_filter`, that player puts it into
@@ -13740,6 +13791,64 @@ impl GameState {
                         Modification::SetCardTypes(vec![crate::card::CardType::Land]),
                     );
                     push(Layer::L4Type, Modification::SetLandTypes(vec![*land_type]));
+                    push(Layer::L5Color, Modification::LoseAllColors);
+                    push(Layer::L6Ability, Modification::RemoveAllAbilities);
+                }
+                Ok(())
+            }
+
+            Effect::LandsBecomeChosenBasicType { what, duration } => {
+                // Choose one basic land type (rides the ChooseColor decision,
+                // basics map 1:1 onto colors — as in ReplaceBasicLandType),
+                // then apply the BecomeBasicLand layer stack to every picked
+                // land. Terraformer.
+                use crate::card::LandType;
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, Layer, Modification,
+                };
+                use crate::mana::Color;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let lands: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                if lands.is_empty() {
+                    return Ok(());
+                }
+                let land_type = match self.decider.decide(&Decision::ChooseColor {
+                    source,
+                    legal: vec![
+                        Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                    ],
+                }) {
+                    DecisionAnswer::Color(Color::White) => LandType::Plains,
+                    DecisionAnswer::Color(Color::Blue) => LandType::Island,
+                    DecisionAnswer::Color(Color::Black) => LandType::Swamp,
+                    DecisionAnswer::Color(Color::Red) => LandType::Mountain,
+                    _ => LandType::Forest,
+                };
+                let duration_kind = map_effect_duration(*duration);
+                for cid in lands {
+                    let affected = AffectedPermanents::Specific(vec![cid]);
+                    let mut push = |layer, modification| {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: affected.clone(),
+                            layer,
+                            sublayer: None,
+                            duration: duration_kind.clone(),
+                            modification,
+                        });
+                    };
+                    push(
+                        Layer::L4Type,
+                        Modification::SetCardTypes(vec![crate::card::CardType::Land]),
+                    );
+                    push(Layer::L4Type, Modification::SetLandTypes(vec![land_type]));
                     push(Layer::L5Color, Modification::LoseAllColors);
                     push(Layer::L6Ability, Modification::RemoveAllAbilities);
                 }

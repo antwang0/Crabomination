@@ -1291,6 +1291,11 @@ pub enum StaticEffect {
     GrantActivatedAbility {
         applies_to: Selector,
         ability: ActivatedAbility,
+        /// Optional gate on the granting source's controller (Hellbent —
+        /// "has '{B}: Regenerate this creature'" only while hand-empty).
+        /// Evaluated from the source's controller; `None` = always granted.
+        #[serde(default)]
+        condition: Option<crate::effect::Predicate>,
     },
     /// CR 605.1b — triggered mana ability: "Whenever [a matching land] is
     /// tapped for mana, its controller adds [extra]." Doesn't use the stack;

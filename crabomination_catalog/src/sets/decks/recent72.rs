@@ -56,6 +56,7 @@ pub fn zombie_master() -> CardDefinition {
                         effect: Effect::Regenerate { what: Selector::This },
                         ..Default::default()
                     },
+                    condition: None,
                 },
             },
         ],

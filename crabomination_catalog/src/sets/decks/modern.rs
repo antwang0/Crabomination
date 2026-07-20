@@ -24725,6 +24725,7 @@ pub fn springleaf_parade() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..Default::default()
@@ -38776,6 +38777,7 @@ pub fn manaweft_sliver() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..sliver("Manaweft Sliver", cost(&[generic(1), g()]), 1, 1)
@@ -45769,6 +45771,7 @@ pub fn splinter_twin() -> CardDefinition {
                     ]),
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..Default::default()
@@ -46375,6 +46378,7 @@ pub fn paradise_mantle() -> CardDefinition {
                     effect: add_any_one_color(1),
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..Default::default()
@@ -52321,6 +52325,7 @@ pub fn alpine_moon() -> CardDefinition {
                         },
                         ..Default::default()
                     },
+                    condition: None,
                 },
             },
         ],
@@ -53254,6 +53259,7 @@ pub fn clot_sliver() -> CardDefinition {
                     effect: Effect::Regenerate { what: Selector::This },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..sliver("Clot Sliver", cost(&[generic(1), b()]), 1, 1)
@@ -53281,6 +53287,7 @@ pub fn quilled_sliver() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..sliver("Quilled Sliver", cost(&[generic(1), w()]), 1, 1)
@@ -53303,6 +53310,7 @@ pub fn gemhide_sliver() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..sliver("Gemhide Sliver", cost(&[generic(1), g()]), 1, 1)
@@ -53576,6 +53584,7 @@ pub fn sedge_sliver() -> CardDefinition {
                         effect: Effect::Regenerate { what: Selector::This },
                         ..Default::default()
                     },
+                    condition: None,
                 },
             },
         ],
@@ -53616,6 +53625,7 @@ pub fn crypt_sliver() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..sliver("Crypt Sliver", cost(&[generic(1), b()]), 1, 1)
@@ -53638,6 +53648,7 @@ pub fn hibernation_sliver() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..sliver("Hibernation Sliver", cost(&[u(), b()]), 2, 2)
@@ -53660,6 +53671,7 @@ pub fn necrotic_sliver() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..sliver("Necrotic Sliver", cost(&[generic(1), w(), b()]), 2, 2)
@@ -53683,6 +53695,7 @@ pub fn acidic_sliver() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..sliver("Acidic Sliver", cost(&[b(), r()]), 2, 2)
@@ -53723,6 +53736,7 @@ pub fn telekinetic_sliver() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..sliver("Telekinetic Sliver", cost(&[generic(2), u(), u()]), 2, 2)
@@ -53814,6 +53828,7 @@ pub fn cautery_sliver() -> CardDefinition {
                         },
                         ..Default::default()
                     },
+                    condition: None,
                 },
             },
             StaticAbility {
@@ -53829,6 +53844,7 @@ pub fn cautery_sliver() -> CardDefinition {
                         },
                         ..Default::default()
                     },
+                    condition: None,
                 },
             },
         ],

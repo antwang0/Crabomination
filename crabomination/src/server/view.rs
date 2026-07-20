@@ -1154,6 +1154,7 @@ fn project_permanent(
                 W::ManaAndLife(c, n) => format!("Ward—{{{}}}, pay {n} life", c.cmc()),
                 W::Life(n) => format!("Ward—pay {n} life"),
                 W::Discard(n) => format!("Ward—discard {n}"),
+                W::DiscardHand => "Ward—discard your hand".to_string(),
                 W::Blight(n) => format!("Ward—Blight {n}"),
                 W::CollectEvidence(n) => format!("Ward—Collect evidence {n}"),
                 W::SacrificeCreature => "Ward—sacrifice a creature".to_string(),

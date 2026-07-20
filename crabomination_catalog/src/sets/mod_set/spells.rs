@@ -588,6 +588,7 @@ pub fn underworld_connections() -> CardDefinition {
                     effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..Default::default()

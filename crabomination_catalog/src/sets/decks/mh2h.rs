@@ -72,6 +72,7 @@ pub fn arcus_acolyte() -> CardDefinition {
                         .and(R::Not(Box::new(R::WithCounter(CounterType::PlusOnePlusOne)))),
                 ),
                 ability: outlast(gw()),
+                condition: None,
             },
         }],
         ..Default::default()

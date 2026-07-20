@@ -108,6 +108,7 @@ pub fn new_horizons() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..Default::default()

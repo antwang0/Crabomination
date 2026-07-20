@@ -168,6 +168,7 @@ pub fn rishkar_peema_renegade() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..Default::default()

@@ -297,6 +297,7 @@ pub fn regeneration() -> CardDefinition {
                     effect: Effect::Regenerate { what: Selector::This },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..Default::default()

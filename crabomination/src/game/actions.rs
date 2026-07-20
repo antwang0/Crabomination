@@ -15,6 +15,9 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::Life(n) => *n == 0,
         WardCost::ManaAndLife(c, n) => c.cmc() == 0 && *n == 0,
         WardCost::Discard(n) => *n == 0,
+        // Discarding your hand is never trivial as a Perplex-style counter cost,
+        // but as a Ward tax it's free when the hand is already empty.
+        WardCost::DiscardHand => false,
         WardCost::Blight(n) => *n == 0,
         WardCost::CollectEvidence(n) => *n == 0,
         WardCost::SacrificeCreature => false,
@@ -9552,10 +9555,21 @@ impl GameState {
         }
         for src in &self.battlefield {
             for sa in &src.definition.static_abilities {
-                let StaticEffect::GrantActivatedAbility { applies_to, ability } = &sa.effect
+                let StaticEffect::GrantActivatedAbility { applies_to, ability, condition } =
+                    &sa.effect
                 else {
                     continue;
                 };
+                // Hellbent-style gate: the grant is live only while the
+                // source's controller satisfies `condition`.
+                if let Some(pred) = condition {
+                    let cond_ctx = crate::game::effects::EffectContext::for_ability(
+                        src.id, src.controller, None,
+                    );
+                    if !self.evaluate_predicate(pred, &cond_ctx) {
+                        continue;
+                    }
+                }
                 match applies_to {
                     Selector::EachPermanent(req) => {
                         // Evaluate the filter from the granting source's
@@ -9570,6 +9584,13 @@ impl GameState {
                     // grant rides the attachment link (Splinter Twin).
                     Selector::AttachedTo(inner) if matches!(**inner, Selector::This) => {
                         if src.attached_to == Some(card_id) {
+                            out.push(ability.clone());
+                        }
+                    }
+                    // Self-grant — "this creature has '[ability]'", optionally
+                    // condition-gated (Gobhobbler Rats' Hellbent regenerate).
+                    Selector::This => {
+                        if src.id == card_id {
                             out.push(ability.clone());
                         }
                     }

@@ -265,6 +265,7 @@ pub fn petrified_hamlet() -> CardDefinition {
                     SelectionRequirement::Land.and(SelectionRequirement::NamedBySource),
                 ),
                 ability: tap_add_colorless(),
+                condition: None,
             },
         }],
         activated_abilities: vec![tap_add_colorless()],

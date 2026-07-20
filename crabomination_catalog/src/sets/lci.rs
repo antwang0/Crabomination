@@ -1327,6 +1327,7 @@ pub fn forgotten_monument() -> CardDefinition {
                     effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..Default::default()

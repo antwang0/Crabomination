@@ -4276,6 +4276,11 @@ pub enum Effect {
     },
     /// Target becomes a basic land of `land_type` (losing other types/abilities).
     BecomeBasicLand { what: Selector, land_type: LandType, duration: Duration },
+    /// The controller chooses one basic land type, then every land picked by
+    /// `what` becomes that type for `duration` (losing other types/abilities).
+    /// Terraformer — "{1}: Choose a basic land type. Each land you control
+    /// becomes that type until end of turn."
+    LandsBecomeChosenBasicType { what: Selector, duration: Duration },
     /// CR 305 — each resolved permanent *gains* all five basic land types for
     /// `duration` (additive, keeping existing types and abilities). Installs a
     /// layer-4 `AddLandType` continuous effect per basic type so the lands tap
@@ -4992,6 +4997,11 @@ pub enum Effect {
     /// Controller chooses `count` cards from their hand and puts them on top of
     /// their library in a chosen order (first chosen = topmost).
     PutOnLibraryFromHand { who: PlayerRef, count: Value },
+
+    /// Each player in `who` puts one card from their hand on top of their
+    /// library (Sadistic Augermage). Suspends per-seat for UI players via the
+    /// same continuation machinery as a symmetric discard.
+    EachPlayerPutsHandCardOnTop { who: Selector },
 
     /// Sacrifice one creature `who` controls matching `filter` and store its
     /// power in the resolution context for later `Value::SacrificedPower`

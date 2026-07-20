@@ -84,6 +84,7 @@ pub fn firebreathing() -> CardDefinition {
                     },
                     ..Default::default()
                 },
+                condition: None,
             },
         }],
         ..Default::default()

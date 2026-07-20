@@ -238,6 +238,7 @@ pub fn grant_tap_for_any_color(filter: SelectionRequirement) -> StaticAbility {
                 effect: add_any_one_color(1),
                 ..Default::default()
             },
+            condition: None,
         },
     }
 }
@@ -266,6 +267,7 @@ pub fn grant_tap_for_any_color_restricted(
                 },
                 ..Default::default()
             },
+            condition: None,
         },
     }
 }

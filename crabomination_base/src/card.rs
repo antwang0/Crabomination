@@ -498,6 +498,9 @@ pub enum WardCost {
     /// Hellraiser). Both halves must be paid or the spell/ability is countered.
     ManaAndLife(crate::mana::ManaCost, u32),
     Discard(u32),
+    /// "...unless its controller discards their hand." (Perplex.) Payable
+    /// even from an empty hand — discarding zero cards is a legal payment.
+    DiscardHand,
     /// "Ward—Blight N." (CR 701.68 — Auntie Ool, Cursewretch.) The warding
     /// player must put N -1/-1 counters on a creature they control.
     Blight(u32),

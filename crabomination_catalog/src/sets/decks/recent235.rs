@@ -160,6 +160,7 @@ pub fn greenhouse_rickety_gazebo() -> CardDefinition {
                         },
                         ..Default::default()
                     },
+                    condition: None,
                 },
             }],
             ..Default::default()

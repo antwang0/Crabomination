@@ -398,6 +398,7 @@ pub fn ringing_strike_mastery() -> CardDefinition {
                         effect: Effect::Untap { what: Selector::This, up_to: None },
                         ..Default::default()
                     },
+                    condition: None,
                 },
             },
         ],

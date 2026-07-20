@@ -454,6 +454,7 @@ pub fn phenax_god_of_deception() -> CardDefinition {
                 effect: StaticEffect::GrantActivatedAbility {
                     applies_to: your_creatures(),
                     ability: mill_ability,
+                    condition: None,
                 },
             },
         ],
