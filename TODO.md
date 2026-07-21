@@ -162,9 +162,34 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (`Effect::RevealRandomDiscardNonland`). RAV/GPT: the seven guild bounce-lands,
   Benevolent Ancestor, Carrion Howler, Conclave Phalanx, Dogpile, Dimir Cutpurse,
   Clinging Darkness, Consult the Necrosages.
-  **Still-deferred DIS/RAV cards (need new primitives):** Azorius Ploy
-  (outgoing-only combat-damage prevention — the incoming half exists as
-  `PreventCombatDamageToTargetThisTurn`); Simic Basilisk (grant "destroy at end
+  **Shipped since (this run):** Azorius Ploy now uses the new
+  `Effect::PreventCombatDamageByTargetThisTurn` (outgoing-only combat-damage
+  prevention, mirror of `PreventCombatDamageToTargetThisTurn`). Plus a GPT/RAV
+  wave — Giant Solifuge, Crystal Seer, Izzet Chronarch, Drowned Rusalka, Crash
+  Landing, Hissing Miasma, Agent of Masks, Exhumer Thrull, Benediction of Moons
+  (`Value::PlayerCount`), Burning-Tree Shaman/Bloodscale, Culling Sun, Ghostway,
+  Glass Golem, Goliath Spider, Grayscaled Gharial, Centaur Safeguard, Greater
+  Forgeling, Goblin Fire Fiend, Blazing Archon
+  (`StaticEffect::CreaturesCantAttackController`), Sell-Sword Brute, Screeching
+  Griffin, Roofstalker Wight, Sewerdreg, Infectious Host, Loxodon Gatekeeper,
+  Oathsworn Giant, Moroii, Keening Banshee, Primordial Sage, Junktroller, Ivy
+  Dancer, Lore Broker, and the Hunted cycle.
+  **Newly deferred (this run, need new primitives):** Belltower Sphinx (needs a
+  "source deals damage to this → that source's controller mills that many"
+  trigger — `EventKind::DamageDealtToThis` + a damage-source-controller player
+  binding + a `LastDamageToThis` value); Boros Fury-Shield (prevention exists;
+  needs an "if {R} was spent" conditional rider); Leyline of Lifeforce
+  (`StaticEffect::CreatureSpellsCantBeCountered`); Selesnya Sagittars (a
+  "can block an additional creature" keyword); Indentured Oaf (prevent this
+  creature's damage to red creatures — a self-source damage-prevention static);
+  Sabertooth Alley Cat ("creatures without defender can't block this" mass
+  restriction); Stoneshaker Shaman (each end step, that player sacs an untapped
+  land); Molten Sentry (coin-flip enters-as 5/2-haste or 2/5-defender);
+  Spawnbroker (exchange control by power); Nullstone Gargoyle (counter the
+  first noncreature spell of a turn); Necroplasm (dredge + toughness-scaling
+  end-step wrath); the Radiance mechanic (Surge of Zeal, Leave No Trace —
+  target + each other permanent sharing a color).
+  **Still-deferred DIS/RAV cards (need new primitives):** Simic Basilisk (grant "destroy at end
   of combat on combat damage to a creature" until EOT); Ignorant Bliss
   (exile hand, delayed return next end step); Kindle the Carnage (repeatable
   random-discard damage loop); Bronze Bombshell (needs a `GameEvent::ControlChanged`

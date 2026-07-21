@@ -16,7 +16,20 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **DIS/RAV gap batch (this run):** `Effect::SearchLibraryCreaturesUpToTotalManaValue`
+- **GPT/RAV gap batch (this run):** `Effect::PreventCombatDamageByTargetThisTurn`
+  (deal-side combat-damage prevention, routed through the per-dealer fog path so
+  a prevented attacker's blockers still strike back — Azorius Ploy);
+  `Value::PlayerCount` ("for each player" — Benediction of Moons);
+  `StaticEffect::CreaturesCantAttackController` (absolute attack prohibition, the
+  non-payable sibling of `AttackTaxToController` — Blazing Archon). Server:
+  per-format wall-clock match duration (`format_duration_totals` +
+  `crab_format_avg_duration_seconds`). Client: fixed a non-exhaustive
+  `CounterType::Palliation` match that broke the headless-uncheckable Bevy build.
+  ~40 cards across GPT/RAV/DIS (Giant Solifuge, Crystal Seer, Culling Sun,
+  Ghostway, Burning-Tree Shaman/Bloodscale, the Hunted cycle, Loxodon Gatekeeper,
+  Oathsworn Giant, Lore Broker, …). CR conformance: 615.1, 702.19e, 104.3a.
+
+- **DIS/RAV gap batch (prior run):** `Effect::SearchLibraryCreaturesUpToTotalManaValue`
   (Protean Hulk), `Effect::CounterAllOtherSpellsDrawPer` (Swift Silence),
   `Effect::RevealRandomDiscardNonland` (Fall), `Predicate::SacrificedWasColor`
   (off a `sacrificed_colors` sacrifice scratch — Lyzolda) and
