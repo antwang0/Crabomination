@@ -734,6 +734,12 @@ pub enum DelayedKind {
     /// "At end of combat, …" — fires once at the current turn's end-of-combat
     /// step (`Effect::DelayUntil { kind: EndOfCombat }`; Fortune, Loyal Steed).
     EndOfCombat,
+    /// "Until end of turn, whenever [the watched creature] deals damage, [body]"
+    /// (CR 603.4). Fires per damage the watched permanent deals — combat or
+    /// noncombat, to any target — with the amount bound via
+    /// `Value::TriggerEventAmount`; the body runs for `DelayedTrigger.controller`.
+    /// Expires at cleanup. Paladin of Prahv's Forecast rider.
+    SourceDealsDamageThisTurn(crate::card::CardId),
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

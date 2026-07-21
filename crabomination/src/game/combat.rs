@@ -2129,6 +2129,7 @@ impl GameState {
         // CR 510.2 — now that all combat damage in this step has been dealt,
         // put `DealsCombatDamageToCreature` triggers on the stack.
         for (source, damaged, amount) in creature_damage {
+            self.fire_source_dealt_damage_watchers(source, amount);
             self.fire_combat_damage_to_creature_triggers(source, damaged, amount);
         }
 
@@ -2473,6 +2474,7 @@ impl GameState {
                 );
             }
         }
+        self.fire_source_dealt_damage_watchers(source, damage_amount);
         self.fire_combat_damage_triggers(
             source,
             EventKind::DealsCombatDamageToPlayer,
@@ -2503,6 +2505,33 @@ impl GameState {
                 TriggerPush::new(listener, controller, effect)
                     .target(auto_target)
                     .event_amount(damage_amount)
+                    .build(),
+            );
+        }
+    }
+
+    /// CR 603.4 — fire any `SourceDealsDamageThisTurn` delayed triggers
+    /// watching `source` (Paladin of Prahv's Forecast rider). Called from every
+    /// damage-delivery path — combat to a player/creature and noncombat — so the
+    /// watcher sees *any* damage the creature deals. The amount rides in via
+    /// `Value::TriggerEventAmount`.
+    pub(crate) fn fire_source_dealt_damage_watchers(&mut self, source: CardId, amount: u32) {
+        if amount == 0 {
+            return;
+        }
+        let watchers: Vec<crate::game::types::DelayedTrigger> = self
+            .delayed_triggers
+            .iter()
+            .filter(|dt| {
+                matches!(dt.kind, crate::game::types::DelayedKind::SourceDealsDamageThisTurn(id) if id == source)
+            })
+            .cloned()
+            .collect();
+        for dt in watchers {
+            self.stack.push(
+                TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                    .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
+                    .event_amount(amount)
                     .build(),
             );
         }

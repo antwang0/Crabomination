@@ -13076,6 +13076,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GainLifeWhenTargetDealsDamageThisTurn { slot } => {
+                // Watch the targeted creature; each time it deals damage this
+                // turn the ability's controller gains that much life.
+                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.get(*slot).cloned() {
+                    let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: crate::game::types::DelayedKind::SourceDealsDamageThisTurn(cid),
+                        effect: Effect::GainLife {
+                            who: Selector::You,
+                            amount: crate::effect::Value::TriggerEventAmount,
+                        },
+                        target: None,
+                        bound_token: None,
+                        fires_once: false,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::CreaturesYouControlDyingThisTurn { body } => {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {

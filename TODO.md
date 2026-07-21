@@ -115,11 +115,11 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Phytohydra (`DealtDamage`→`MayDo` token copy of self), Ratcatcher (Fear +
   upkeep may-tutor a Rat), Cytospawn Shambler / Cytoplast Manipulator (Graft +
   counter-gated grant / `GainControlWhileSourceRemains`), Paladin of Prahv
-  (Lifelink; forecast rider deferred — needs a `DelayedKind` watching one
-  creature's *any* damage so the ability's controller gains that much, hooked
-  in both the combat and noncombat damage paths). Plumes of Peace, Govern the
-  Guildless, and Sky Hussar now ship their real Forecast abilities via the
-  `forecast()` shortcut. Wit's End (discard whole hand),
+  (Lifelink + a real Forecast rider — `Effect::GainLifeWhenTargetDealsDamageThisTurn`
+  registers a `DelayedKind::SourceDealsDamageThisTurn` watcher fired from all
+  three damage paths). Plumes of Peace, Govern the Guildless, and Sky Hussar
+  also ship their real Forecast abilities via the `forecast()` shortcut. Wit's
+  End (discard whole hand),
   Weight of Spires (`NonbasicLandCountControlledBy(ControllerOf(Target))`),
   Tidespout Tyrant (cast-a-spell → bounce), Taste for Mayhem (+2/+0 plus a
   hellbent +2/+0 via the new `EquipBonus.conditional_pt` — a predicate-gated

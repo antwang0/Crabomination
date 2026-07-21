@@ -236,6 +236,36 @@ fn palliation_accord_counters_on_opponent_tap() {
         "opponent tap added a palliation counter");
 }
 
+/// Paladin of Prahv's Forecast: you gain life when the watched creature deals
+/// combat damage this turn.
+#[test]
+fn paladin_of_prahv_forecast_gains_life_on_damage() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    // Watch our own attacker.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bear);
+    let paladin = g.add_card_to_hand(0, catalog::paladin_of_prahv());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: paladin, ability_index: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+    }).expect("Forecast activatable in upkeep");
+    drain_stack(&mut g);
+    let life0 = g.players[0].life;
+    // Bear deals 2 noncombat damage to the opponent → we gain 2.
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(1), 2, Some(bear), &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 2, "gained life equal to the watched damage");
+}
+
 /// Stalking Vengeance turns a dying creature's power into damage to a player.
 #[test]
 fn stalking_vengeance_death_burns_target() {

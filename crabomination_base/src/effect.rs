@@ -5156,6 +5156,16 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// "Whenever target creature deals damage this turn, you gain that much
+    /// life" (CR 603.4). Watches the creature in target slot `slot`; each time
+    /// it deals damage (combat or noncombat) the controller gains that much
+    /// (the amount rides in via `Value::TriggerEventAmount`). Expires at
+    /// cleanup. Paladin of Prahv's Forecast rider.
+    GainLifeWhenTargetDealsDamageThisTurn {
+        #[serde(default)]
+        slot: usize,
+    },
+
     /// "Until end of turn, whenever a creature you control dies, [body]."
     /// Registers a turn-scoped delayed trigger (CR 603.4) that fires once per
     /// creature the controller controlled (read from death LKI) that dies for

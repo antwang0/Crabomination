@@ -663,6 +663,11 @@ impl GameState {
                 events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });
             }
         }
+        // CR 603.4 — "whenever [this creature] deals damage this turn" delayed
+        // triggers watching the noncombat source (Paladin of Prahv's Forecast).
+        if let Some(src) = source {
+            self.fire_source_dealt_damage_watchers(src, amount);
+        }
     }
 
     /// Seat that gains life from lifelink on a *non-combat* damage event from
