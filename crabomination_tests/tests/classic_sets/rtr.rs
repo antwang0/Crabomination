@@ -136,3 +136,82 @@ fn dead_reveler_unleash_counter() {
     assert_eq!(g.battlefield_find(cid).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "entered unleashed with a +1/+1 counter");
 }
+
+/// Stat/keyword lines for the vanilla / french-vanilla RTR batch-2 creatures.
+#[test]
+fn rtr_batch2_stat_lines() {
+    assert!(catalog::rubbleback_rhino().keywords.contains(&Keyword::Hexproof));
+    assert!(catalog::skyline_predator().keywords.contains(&Keyword::Flash));
+    assert!(catalog::towering_indrik().keywords.contains(&Keyword::Reach));
+    assert!(catalog::tenement_crasher().keywords.contains(&Keyword::Haste));
+    let thug = catalog::splatter_thug();
+    assert!(thug.keywords.contains(&Keyword::FirstStrike) && thug.keywords.contains(&Keyword::Unleash));
+}
+
+/// Runewing draws a card when it dies.
+#[test]
+fn runewing_draws_on_death() {
+    let mut g = two_player_game();
+    let wing = g.add_card_to_battlefield(0, catalog::runewing()); // 2/2
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let h = g.players[0].hand.len();
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(wing), 2, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wing).is_none(), "Runewing died");
+    assert_eq!(g.players[0].hand.len(), h + 1, "drew on death");
+}
+
+/// Seller of Songbirds makes a 1/1 flying Bird on entry.
+#[test]
+fn seller_of_songbirds_makes_bird() {
+    let mut g = two_player_game();
+    let seller = g.add_card_to_hand(0, catalog::seller_of_songbirds());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: seller, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Bird"
+        && c.definition.keywords.contains(&Keyword::Flying)), "1/1 flying Bird token");
+}
+
+/// Korozda Monitor scavenges from the graveyard to grow a creature.
+#[test]
+fn korozda_monitor_scavenges() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let mon = g.add_card_to_graveyard(0, catalog::korozda_monitor()); // power 3
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mon, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], x_value: None,
+    }).expect("scavenge");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 3,
+        "three +1/+1 counters (Monitor's power)");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == mon), "Monitor exiled by scavenge");
+}
+
+/// Tavern Swindler's coin flip gains 6 life on a win.
+#[test]
+fn tavern_swindler_wins_flip() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let sw = g.add_card_to_battlefield(0, catalog::tavern_swindler());
+    g.clear_sickness(sw);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sw, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("flip");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 3 + 6, "paid 3 life, won 6");
+}
