@@ -274,6 +274,14 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     for (seat, wins) in st.seat_wins.iter().enumerate() {
         out.push_str(&format!("crab_seat_wins_total{{seat=\"{seat}\"}} {wins}\n"));
     }
+    // Per-seat win share — the turn-order fairness signal. `first_seat_win_pct`
+    // only covers seat 0; this exposes every seat so an N-player skew is
+    // visible directly (a healthy 2-player bot mirror sits near 50/50).
+    out.push_str("# HELP crab_seat_win_share_pct Decided wins by seat index, as a percent of all decided wins.\n");
+    out.push_str("# TYPE crab_seat_win_share_pct gauge\n");
+    for seat in 0..st.seat_wins.len() {
+        out.push_str(&format!("crab_seat_win_share_pct{{seat=\"{seat}\"}} {}\n", st.seat_win_share_pct(seat)));
+    }
     // Per-format completed matches + their average game length. Already in the
     // plaintext summary and dashboard; exposing them here lets a scraper alert
     // on a format-specific stall (e.g. cube averaging 3× demo's turns) or a

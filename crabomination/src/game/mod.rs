@@ -332,6 +332,11 @@ pub struct GameState {
     pub skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
     pub spells_cast_this_turn: u32,
+    /// Count of noncreature spells cast this turn (any player), for
+    /// "the first noncreature spell of a turn" (Nullstone Gargoyle). Reset at
+    /// Cleanup alongside `spells_cast_this_turn`.
+    #[serde(default)]
+    pub noncreature_spells_cast_this_turn: u32,
     /// CR 702.29 — per-game tally of how many times a card with each name has
     /// been cycled (Yidaro, Wandering Monster's "four or more times this game"
     /// recursion). Keyed by card name; never reset. `#[serde(default)]`.
@@ -1216,6 +1221,7 @@ impl Clone for GameState {
             blockers_declared: self.blockers_declared,
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
+            noncreature_spells_cast_this_turn: self.noncreature_spells_cast_this_turn,
             cycled_count_by_name: self.cycled_count_by_name.clone(),
             mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
             expend_prev_total: self.expend_prev_total,
@@ -1397,6 +1403,7 @@ impl GameState {
             // starting player does.
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
+            noncreature_spells_cast_this_turn: 0,
             cycled_count_by_name: std::collections::HashMap::new(),
             mana_spent_on_spells_this_turn: 0,
             expend_prev_total: 0,

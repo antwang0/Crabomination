@@ -16,7 +16,17 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **GPT/RAV gap batch (this run):** `Effect::PreventCombatDamageByTargetThisTurn`
+- **GPT/RAV gap wave 2 (this run):** `Predicate::FirstNoncreatureSpellThisTurn`
+  (+ `GameState.noncreature_spells_cast_this_turn` tracking — Nullstone Gargoyle).
+  ~20 cards reusing existing primitives: the Magemark aura anthems (Fencer's,
+  Guardian's via `AnthemForFilter`+`IsEnchanted`), Skyrider Trainee, Order of the
+  Stars, Ogre Savant / Revenant Patriarch (enters-if-color-spent), Boros
+  Fury-Shield (`ManaSpentOfColorAtLeast` burn rider), Siege of Towers (Replicate +
+  land animation), Sinstriker's Will (aura granting an activated ability), Nullstone
+  Gargoyle, … Server: `crab_seat_win_share_pct` per-seat fairness gauge. Client:
+  Morph/Megamorph + `ProtectionFromSpellSubtype` board tags. CR conformance:
+  702.36, 702.16b, 702.107.
+- **GPT/RAV gap batch (prior run):** `Effect::PreventCombatDamageByTargetThisTurn`
   (deal-side combat-damage prevention, routed through the per-dealer fog path so
   a prevented attacker's blockers still strike back — Azorius Ploy);
   `Value::PlayerCount` ("for each player" — Benediction of Moons);

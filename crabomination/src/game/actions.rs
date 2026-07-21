@@ -6052,6 +6052,12 @@ impl GameState {
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
+        // "First noncreature spell of a turn" tally (Nullstone Gargoyle). An
+        // Adventure/Omen half cast is a noncreature spell regardless of the
+        // card's front face.
+        if card.casting_alt_half() || !card.definition.is_creature() {
+            self.noncreature_spells_cast_this_turn += 1;
+        }
         // Per-name lifetime tally — "you've cast another spell named X this
         // game" (Approach of the Second Sun).
         *self

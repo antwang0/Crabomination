@@ -410,6 +410,17 @@ impl MatchStats {
         if seated == 0 { return 50; }
         self.seat_wins[0].saturating_mul(100) / seated
     }
+    /// Seat `seat`'s share of all decided wins, as a percent. Generalizes
+    /// `first_seat_win_pct` to every seat so an N-player turn-order skew
+    /// (not just first-vs-rest) is visible. Returns 0 before any win is
+    /// recorded (no data) and for an out-of-range seat.
+    pub(crate) fn seat_win_share_pct(&self, seat: usize) -> u64 {
+        let seated: u64 = self.seat_wins.iter().sum();
+        if seated == 0 {
+            return 0;
+        }
+        self.seat_wins.get(seat).copied().unwrap_or(0).saturating_mul(100) / seated
+    }
     /// Accumulate the win-by-life delta for one match. `final_life`
     /// is the per-seat life array; `winner` is the winning seat. The
     /// delta is `winner_life - max_opponent_life` clamped to ≥0 so
@@ -1297,6 +1308,21 @@ mod tests {
     #[test]
     fn percentile_bucket_empty_is_none() {
         assert_eq!(MatchStats::percentile_bucket(&[0; 6], 0.5), None);
+    }
+
+    #[test]
+    fn seat_win_share_pct_splits_by_seat() {
+        // No wins → 0 (no data).
+        let s = MatchStats::default();
+        assert_eq!(s.seat_win_share_pct(0), 0);
+        // 3 wins for seat 0, 1 for seat 1 → 75 / 25.
+        let mut s = MatchStats::default();
+        s.seat_wins[0] = 3;
+        s.seat_wins[1] = 1;
+        assert_eq!(s.seat_win_share_pct(0), 75);
+        assert_eq!(s.seat_win_share_pct(1), 25);
+        // Out-of-range seat → 0, never a panic.
+        assert_eq!(s.seat_win_share_pct(99), 0);
     }
 
     #[test]

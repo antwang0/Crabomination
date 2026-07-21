@@ -428,3 +428,27 @@ pub fn cryptwailing() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nullstone Gargoyle — {9} Artifact Creature — Gargoyle 4/5 with flying.
+/// Whenever the first noncreature spell of a turn is cast, counter that spell.
+pub fn nullstone_gargoyle() -> CardDefinition {
+    CardDefinition {
+        name: "Nullstone Gargoyle",
+        cost: cost(&[generic(9)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
+                Predicate::All(vec![
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Noncreature },
+                    Predicate::FirstNoncreatureSpellThisTurn,
+                ]),
+            ),
+            effect: Effect::CounterSpell { what: Selector::TriggerSource },
+        }],
+        ..Default::default()
+    }
+}

@@ -1317,6 +1317,7 @@ impl GameState {
                 .resolve_player(who, ctx)
                 .map(|p| self.players[p].spells_cast_from_hand_this_turn == 0)
                 .unwrap_or(false),
+            Predicate::FirstNoncreatureSpellThisTurn => self.noncreature_spells_cast_this_turn == 1,
             Predicate::NoSpellsCastLastTurn => self.spells_cast_last_turn == 0,
             Predicate::TwoOrMoreSpellsCastLastTurn => self.spells_cast_last_turn >= 2,
             Predicate::CreaturesDiedThisTurnAtLeast { who, at_least } => {

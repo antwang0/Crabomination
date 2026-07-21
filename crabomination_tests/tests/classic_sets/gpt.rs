@@ -642,3 +642,31 @@ fn cryptwailing_forces_a_discard() {
     assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 0,
         "two creatures exiled from graveyard as a cost");
 }
+
+/// Nullstone Gargoyle counters the first noncreature spell of a turn but not
+/// the second.
+#[test]
+fn nullstone_gargoyle_counters_first_noncreature_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nullstone_gargoyle());
+    // First noncreature spell → countered.
+    let bolt1 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let life0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast first bolt");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt1), "first noncreature spell countered");
+    assert_eq!(g.players[0].life, life0, "no damage from the countered bolt");
+    // Second noncreature spell the same turn → resolves.
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast second bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 - 3, "second noncreature spell resolved");
+}

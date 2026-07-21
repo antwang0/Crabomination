@@ -172,6 +172,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Protection from a card type (e.g. from artifacts) likewise gates
         // which attackers/blockers connect; the suffix names the dodged type.
         ProtectionFromCardType(_) => "ProT",
+        // Protection from a spell subtype (e.g. from Auras) — a targeting/
+        // attachment gate, the last of the Protection* family to surface.
+        ProtectionFromSpellSubtype(_) => "ProSub",
         // Combat compulsions/restrictions that change how an opponent should
         // attack or block into this creature — the mirror side of MustAttack.
         MustBlock | AllMustBlock => "MBlk",
@@ -229,6 +232,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Disguise (CR 702.168) — a face-down 2/2 with ward {2} that can be
         // turned face up; the chip flags the hidden card.
         Disguise(_) => "Dsg",
+        // Morph / Megamorph (CR 702.37) — the face-down 2/2 sibling of Disguise
+        // (no ward), turnable face up for its unmorph cost; flag the hidden card.
+        Morph(_) | Megamorph(_) => "Mph",
         _ => return None,
     })
 }
@@ -553,6 +559,17 @@ mod tests {
     fn strip_skips_non_displayable_keywords() {
         // Flash isn't a board-glance combat status → no badge.
         assert_eq!(keyword_strip(&[Keyword::Flash]), "");
+    }
+
+    #[test]
+    fn strip_surfaces_morph_and_spell_subtype_protection() {
+        use crabomination::card::SpellSubtype;
+        use crabomination::mana::{cost, generic};
+        // Face-down Morph flags the hidden card like Disguise does.
+        assert_eq!(keyword_strip(&[Keyword::Morph(cost(&[generic(3)]))]), "Mph");
+        assert_eq!(keyword_strip(&[Keyword::Megamorph(cost(&[generic(4)]))]), "Mph");
+        // The last Protection* variant now surfaces too.
+        assert_eq!(keyword_strip(&[Keyword::ProtectionFromSpellSubtype(SpellSubtype::Arcane)]), "ProSub");
     }
 
     #[test]

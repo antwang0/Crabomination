@@ -1113,6 +1113,12 @@ pub enum Predicate {
     /// haven't cast a spell from your hand this turn" (Prairie Dog,
     /// Emergent Haunting).
     NoSpellCastFromHandThisTurn { who: PlayerRef },
+    /// True while the just-cast spell is the first noncreature spell cast this
+    /// turn (any player). Backed by `GameState.noncreature_spells_cast_this_turn`
+    /// (already incremented for the current cast at trigger time, so the first
+    /// noncreature spell reads == 1). Nullstone Gargoyle. Pair with a
+    /// noncreature-spell event filter so a later creature spell doesn't match.
+    FirstNoncreatureSpellThisTurn,
     /// `who` has cast *exactly* `count` spells so far this turn. Backed by
     /// `Player.spells_cast_this_turn` (already incremented for the current
     /// cast at trigger time). Used by "whenever a player casts their second

@@ -174,21 +174,26 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Griffin, Roofstalker Wight, Sewerdreg, Infectious Host, Loxodon Gatekeeper,
   Oathsworn Giant, Moroii, Keening Banshee, Primordial Sage, Junktroller, Ivy
   Dancer, Lore Broker, and the Hunted cycle.
-  **Newly deferred (this run, need new primitives):** Belltower Sphinx (needs a
-  "source deals damage to this → that source's controller mills that many"
-  trigger — `EventKind::DamageDealtToThis` + a damage-source-controller player
-  binding + a `LastDamageToThis` value); Boros Fury-Shield (prevention exists;
-  needs an "if {R} was spent" conditional rider); Leyline of Lifeforce
-  (`StaticEffect::CreatureSpellsCantBeCountered`); Selesnya Sagittars (a
-  "can block an additional creature" keyword); Indentured Oaf (prevent this
-  creature's damage to red creatures — a self-source damage-prevention static);
-  Sabertooth Alley Cat ("creatures without defender can't block this" mass
-  restriction); Stoneshaker Shaman (each end step, that player sacs an untapped
-  land); Molten Sentry (coin-flip enters-as 5/2-haste or 2/5-defender);
-  Spawnbroker (exchange control by power); Nullstone Gargoyle (counter the
-  first noncreature spell of a turn); Necroplasm (dredge + toughness-scaling
-  end-step wrath); the Radiance mechanic (Surge of Zeal, Leave No Trace —
-  target + each other permanent sharing a color).
+  **Still-deferred RAV/GPT/DIS cards (each on one primitive):** Belltower Sphinx
+  (needs a "source deals damage to this → that source's controller mills that
+  many" trigger — `EventKind::DamageDealtToThis` + a damage-source-controller
+  player binding + a `LastDamageToThis` value); **Selesnya Sagittars / Valor Made
+  Real** (need a "can block an additional creature" / "block any number" keyword
+  — the `block_map` is blocker→single-attacker today; a multi-block refactor
+  across ~9 files unblocks both); Indentured Oaf (prevent this creature's damage
+  to red creatures — a self-source damage-prevention static keyed on the
+  *recipient's* color, threaded through both the combat and noncombat damage
+  paths); Sabertooth Alley Cat ("creatures without defender can't block this"
+  mass restriction); Molten Sentry (coin-flip enters-as 5/2-haste or 2/5-defender
+  — `Effect::FlipCoin` exists; needs an enters-as-coin-flip replacement);
+  Spawnbroker (exchange control by power); Schismotivate / other "another target
+  creature" spells (need a `DifferentFromTarget(slot)` selection requirement so
+  the two slots can't collapse to one creature); the complex Magemarks —
+  Beastmaster's (becomes-blocked +1/+1-per-blocker rider), Infiltrator's
+  ("can't be blocked except by defenders" evasion keyword), Necromancer's
+  (return-to-hand death replacement over your enchanted creatures); Necroplasm
+  (dredge + toughness-scaling end-step wrath); the Radiance mechanic (Surge of
+  Zeal, Leave No Trace — target + each other permanent sharing a color).
   **Still-deferred DIS/RAV cards (need new primitives):** Simic Basilisk (grant "destroy at end
   of combat on combat damage to a creature" until EOT); Ignorant Bliss
   (exile hand, delayed return next end step); Kindle the Carnage (repeatable
