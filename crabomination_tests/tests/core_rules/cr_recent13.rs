@@ -30,6 +30,7 @@ fn cr_615_12_excruciator_source_scoped_unpreventable() {
         one_event: false,
         reflect: false,
         source_controller: None,
+        redirect_to: None,
         mint_mites_for: None,
         destroy: false,
     });

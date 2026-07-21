@@ -5608,6 +5608,12 @@ pub enum Effect {
     /// Samite Healer, Healing Salve, Awe Strike-style effects.
     PreventNextDamage { target: Selector, amount: Value },
 
+    /// "The next `amount` damage that would be dealt to `target` this turn is
+    /// dealt to `to` instead." (CR 614.9 — Carom, Razia's redirect.) Pushes a
+    /// per-target prevention shield flagged with `redirect_to`; when it soaks
+    /// damage, that damage is re-dealt to the chosen permanent.
+    RedirectNextDamage { target: Selector, to: Selector, amount: Value },
+
     /// "Prevent all damage that would be dealt to `target` this turn."
     /// (CR 615) A fog scoped to one player/permanent — Pradesh Gypsies,
     /// "you don't lose / prevent all damage to you". Non-combat path.

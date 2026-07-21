@@ -214,6 +214,9 @@ impl GameState {
         // as the fallback when the source has left every visible zone).
         let mut reflected = 0u32;
         let mut reflect_ctrl: Option<usize> = None;
+        // Carom / Razia — damage soaked by `redirect_to` shields, dealt to a
+        // chosen permanent after the shield pass.
+        let mut redirected: Vec<(crate::card::CardId, u32)> = Vec::new();
         // One-event (Circle of Protection) shields spent in this event.
         let mut spent_one_event: Vec<usize> = Vec::new();
         // Ria Ivor — (seat, prevented) mite mints owed after the loop.
@@ -257,6 +260,9 @@ impl GameState {
                 reflected += soak;
                 reflect_ctrl = reflect_ctrl.or(shield.source_controller);
             }
+            if soak > 0 && let Some(dst) = shield.redirect_to {
+                redirected.push((dst, soak));
+            }
             if shield.destroy && soak > 0 {
                 destroy_after = to_card;
             }
@@ -292,6 +298,14 @@ impl GameState {
             && self.battlefield_find(cid).is_some()
         {
             self.destroy_permanent(cid, false, events);
+        }
+        // Carom / Razia — redirect the soaked damage onto the chosen
+        // permanent. Its own event, keyed to the original source so
+        // protection/prevention on the new target still applies.
+        for (dst, amt) in redirected {
+            if self.battlefield_find(dst).is_some() {
+                self.deal_damage_to_from(EntityRef::Permanent(dst), amt, source, events);
+            }
         }
         // Deflecting Palm's "deals that much damage to that source's
         // controller". The reflected damage is its own event (source: the

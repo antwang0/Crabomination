@@ -752,6 +752,7 @@ fn prevention_shield_stops_combat_damage_to_player() {
         one_event: false,
         reflect: false,
         source_controller: None,
+        redirect_to: None,
             destroy: false,
     });
     g.step = TurnStep::DeclareAttackers;
@@ -832,6 +833,7 @@ fn skullcrack_damage_cant_be_prevented() {
         one_event: false,
         reflect: false,
         source_controller: None,
+        redirect_to: None,
             destroy: false,
     });
     let sk = g.add_card_to_hand(0, catalog::skullcrack());
@@ -903,6 +905,7 @@ fn prevention_shield_stops_creature_combat_damage() {
         one_event: false,
         reflect: false,
         source_controller: None,
+        redirect_to: None,
             destroy: false,
     });
 

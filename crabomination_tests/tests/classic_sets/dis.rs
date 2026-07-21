@@ -1552,3 +1552,23 @@ fn azorius_ploy_prevents_both_ways() {
     assert!(g.battlefield_find(a).is_none(), "a still takes its blocker's damage and dies");
     assert!(g.battlefield_find(d).is_none(), "c still deals damage — its blocker dies");
 }
+
+/// Carom redirects the next 1 damage from one creature onto another, and draws.
+#[test]
+fn carom_redirects_next_damage_and_draws() {
+    use crabomination::game::effects::EntityRef;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand0 = g.players[0].hand.len();
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(a), Target::Permanent(b)];
+    g.resolve_effect(&catalog::carom().effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "Carom cantrips");
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(a), 3, None, &mut evs);
+    assert_eq!(g.battlefield_find(a).unwrap().damage, 2, "1 of 3 redirected away");
+    assert_eq!(g.battlefield_find(b).unwrap().damage, 1, "1 redirected onto b");
+}

@@ -813,6 +813,7 @@ fn frenzied_baloth_combat_damage_unpreventable() {
         one_event: false,
         reflect: false,
         source_controller: None,
+        redirect_to: None,
         destroy: false,
     });
     g.step = TurnStep::DeclareAttackers;

@@ -14713,6 +14713,7 @@ impl GameState {
                     one_event: true,
                     reflect: *reflect,
                     source_controller: src_ctrl,
+                    redirect_to: None,
                 });
                 Ok(())
             }
@@ -14841,6 +14842,34 @@ impl GameState {
                             one_event: false,
                         reflect: false,
                             source_controller: None,
+                            redirect_to: None,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::RedirectNextDamage { target, to, amount } => {
+                // CR 614.9 — push a "redirect the next N damage to `target`
+                // onto `to`" shield consumed by `apply_prevention_shields`.
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let dst = self.resolve_selector(to, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Permanent(c) => Some(c),
+                    _ => None,
+                });
+                if n > 0 && let Some(dst) = dst {
+                    for s in self.prevention_targets(target, ctx) {
+                        self.prevention_shields.push(crate::game::types::PreventionShield {
+                            mint_mites_for: None,
+                            target: s,
+                            destroy: false,
+                            remaining: Some(n),
+                            gain_life: false,
+                            source: None,
+                            one_event: false,
+                            reflect: false,
+                            source_controller: None,
+                            redirect_to: Some(dst),
                         });
                     }
                 }
@@ -14863,6 +14892,7 @@ impl GameState {
                             one_event: false,
                         reflect: false,
                             source_controller: None,
+                            redirect_to: None,
                         });
                     }
                 }
@@ -14882,6 +14912,7 @@ impl GameState {
                         one_event: false,
                         reflect: false,
                         source_controller: None,
+                        redirect_to: None,
                     });
                 }
                 Ok(())
@@ -14900,6 +14931,7 @@ impl GameState {
                         one_event: true,
                         reflect: false,
                         source_controller: None,
+                        redirect_to: None,
                         mint_mites_for: None,
                         destroy: true,
                     });
@@ -15403,6 +15435,7 @@ impl GameState {
                         one_event: true,
                         reflect: false,
                         source_controller: None,
+                        redirect_to: None,
                         mint_mites_for: Some(ctx.controller),
                         destroy: false,                    });
                 }

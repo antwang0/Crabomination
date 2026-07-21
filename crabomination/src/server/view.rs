@@ -2261,6 +2261,7 @@ mod tests {
             one_event: false,
             reflect: false,
             source_controller: None,
+            redirect_to: None,
         });
         state.prevention_shields.push(PreventionShield {
             mint_mites_for: None,
@@ -2272,6 +2273,7 @@ mod tests {
             one_event: false,
             reflect: false,
             source_controller: None,
+            redirect_to: None,
         });
         // A Kill-Suit Cultist "destroy on next damage" shield on a second
         // creature reads as `doomed_next_damage`, NOT as protection.
@@ -2286,6 +2288,7 @@ mod tests {
             one_event: true,
             reflect: false,
             source_controller: None,
+            redirect_to: None,
         });
         state.damage_cant_be_prevented_this_turn = true;
         let v = project(&state, 0);

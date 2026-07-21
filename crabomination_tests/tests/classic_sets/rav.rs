@@ -1728,3 +1728,24 @@ fn pariahs_shield_redirects_player_damage() {
     assert_eq!(g.players[0].life, life0, "no life lost — damage redirected");
     assert_eq!(g.battlefield_find(creature).unwrap().damage, 2, "equipped creature took it");
 }
+
+/// Razia redirects the next 3 damage from your creature onto another.
+#[test]
+fn razia_redirects_three_damage() {
+    use crabomination::game::effects::EntityRef;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let razia = g.add_card_to_battlefield(0, catalog::razia_boros_archangel());
+    g.clear_sickness(razia);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(crabomination::game::GameAction::ActivateAbility {
+        card_id: razia, ability_index: 0, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(foe)], x_value: None,
+    }).expect("activate Razia's redirect");
+    drain_stack(&mut g);
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(mine), 4, None, &mut evs);
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 1, "3 of 4 redirected away");
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 3, "3 redirected onto the opponent's creature");
+}

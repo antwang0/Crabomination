@@ -441,6 +441,9 @@ impl Effect {
                 sel_has_target(source) || sel_has_target(targets)
             }
             Effect::ExchangeControl { a, b } => sel_has_target(a) || sel_has_target(b),
+            Effect::RedirectNextDamage { target, to, .. } => {
+                sel_has_target(target) || sel_has_target(to)
+            }
             Effect::ExchangeControlChoosing { with, .. } => sel_has_target(with),
             Effect::GainLife { who, amount } | Effect::LoseLife { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
@@ -896,6 +899,9 @@ impl Effect {
             // The targeted side may be `b` when `a` is the source itself
             // (Volatile Stormdrake exchanges `This` with a targeted creature).
             Effect::ExchangeControl { a, b } => sel_filter(a).or_else(|| sel_filter(b)),
+            Effect::RedirectNextDamage { target, to, .. } => {
+                sel_filter(target).or_else(|| sel_filter(to))
+            }
             Effect::ExchangeControlChoosing { with, .. } => sel_filter(with),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
             Effect::LoseHalfLife { who, .. }
@@ -1964,6 +1970,9 @@ impl Effect {
                 }
                 Effect::ExchangeControl { a, b } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
+                }
+                Effect::RedirectNextDamage { target, to, .. } => {
+                    sel_find(target, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::ExchangeControlChoosing { with, .. } => sel_find(with, slot),
                 // `amount` may read a target's power (Soul's Grace gains life

@@ -1489,6 +1489,11 @@ pub struct PreventionShield {
     /// shield pass. Pairs with `one_event` (soaks the next event, then gone).
     #[serde(default)]
     pub destroy: bool,
+    /// CR 614.9 — Carom / Razia: damage this shield prevents is dealt to
+    /// this permanent instead (a chosen redirect target, distinct from
+    /// `reflect`'s "deal to the source's controller").
+    #[serde(default)]
+    pub redirect_to: Option<crate::card::CardId>,
 }
 
 /// CR 731 — the game's day/night designation. The game starts as neither

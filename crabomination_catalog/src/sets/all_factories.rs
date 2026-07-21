@@ -7083,6 +7083,7 @@ static DIS: &[Factory] = &[
     super::dis::hit_run,
     super::dis::rise_fall,
     super::dis::azorius_ploy,
+    super::dis::carom,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,
@@ -9305,6 +9306,7 @@ static RAV: &[Factory] = &[
     super::rav::trophy_hunter,
     super::rav::wojek_apothecary,
     super::rav::pariahs_shield,
+    super::rav::razia_boros_archangel,
     super::rav::glass_golem,
     super::rav::goliath_spider,
     super::rav::grayscaled_gharial,
