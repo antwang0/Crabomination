@@ -642,6 +642,11 @@ pub enum StaticEffect {
     /// `apply_prevention_shields` bypasses all shields while any source on the
     /// battlefield has this. Sulfuric Vortex, Sunspine Lynx, Everlasting Torment.
     DamageCantBePrevented,
+    /// CR 615.12 (source-scoped) — "Damage that would be dealt by this
+    /// [permanent] can't be prevented." Only bypasses shields when the damage
+    /// source is the permanent carrying the static (Excruciator), unlike the
+    /// global `DamageCantBePrevented`.
+    SourceDamageCantBePrevented,
     /// CR 614 — "If an opponent would lose life during your turn, they lose
     /// twice that much life instead." (Bloodletter of Aclazotz.) A life-loss
     /// doubling replacement scoped to the source controller's turn and their

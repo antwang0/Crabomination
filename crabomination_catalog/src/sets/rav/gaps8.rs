@@ -199,7 +199,7 @@ pub fn excruciator() -> CardDefinition {
         toughness: 7,
         static_abilities: vec![StaticAbility {
             description: "Damage that would be dealt by this creature can't be prevented.",
-            effect: StaticEffect::DamageCantBePrevented,
+            effect: StaticEffect::SourceDamageCantBePrevented,
         }],
         ..Default::default()
     }

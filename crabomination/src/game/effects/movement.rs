@@ -74,6 +74,17 @@ impl GameState {
                 return amount;
             }
         }
+        // CR 615.12 (source-scoped) — Excruciator: damage dealt by this
+        // permanent can't be prevented. Keyed on the damage source itself.
+        if let Some(src_id) = source
+            && self.battlefield_find(src_id).is_some_and(|src| {
+                src.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::SourceDamageCantBePrevented)
+                })
+            })
+        {
+            return amount;
+        }
         // Protection from everything (The One Ring) — all damage to the
         // player is prevented until their next turn.
         if let EntityRef::Player(p) = ent

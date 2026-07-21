@@ -13752,6 +13752,8 @@ fn static_effect_to_effects(
             // DamageCantBePrevented — consulted in `apply_prevention_shields`
             // via `damage_cant_be_prevented_now` (Sulfuric Vortex); no layer.
             | StaticEffect::DamageCantBePrevented
+            // Excruciator — source-scoped, consulted in `apply_prevention_shields`.
+            | StaticEffect::SourceDamageCantBePrevented
             // Questing Beast — consulted directly in `apply_prevention_shields`;
             // no layer effect.
             | StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
