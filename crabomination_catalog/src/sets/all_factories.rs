@@ -7796,6 +7796,11 @@ static GPT: &[Factory] = &[
     super::gpt::sinstrikers_will,
     super::gpt::cryptwailing,
     super::gpt::nullstone_gargoyle,
+    super::gpt::angel_of_despair,
+    super::gpt::debtors_knell,
+    super::gpt::hypervolt_grasp,
+    super::gpt::invoke_the_firemind,
+    super::gpt::orzhov_euthanist,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,

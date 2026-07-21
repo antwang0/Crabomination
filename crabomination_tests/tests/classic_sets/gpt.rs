@@ -670,3 +670,78 @@ fn nullstone_gargoyle_counters_first_noncreature_spell() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life0 - 3, "second noncreature spell resolved");
 }
+
+/// Angel of Despair's ETB destroys any target permanent.
+#[test]
+fn angel_of_despair_etb_destroys_permanent() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::angel_of_despair());
+    drain_stack(&mut g);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(foe).is_none(), "ETB destroyed the target permanent");
+}
+
+/// Debtors' Knell reanimates a creature from a graveyard each upkeep.
+#[test]
+fn debtors_knell_reanimates_at_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::debtors_knell());
+    let corpse = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    advance_to(&mut g, TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let reanimated = g.battlefield_find(corpse).expect("returned to the battlefield");
+    assert_eq!(reanimated.controller, 0, "under your control");
+}
+
+/// Hypervolt Grasp grants the enchanted creature a tap-to-ping and can bounce
+/// itself.
+#[test]
+fn hypervolt_grasp_grants_ping_and_bounces() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::hypervolt_grasp());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    assert_eq!(g.granted_abilities_for(bear).len(), 1, "host gained the ping ability");
+    // {1}{U}: return the aura to hand.
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("bounce aura");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "aura returned to hand");
+}
+
+/// Invoke the Firemind's draw mode draws X cards.
+#[test]
+fn invoke_the_firemind_draws_x() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let invoke = g.add_card_to_hand(0, catalog::invoke_the_firemind());
+    g.players[0].mana_pool.add_colorless(2); // X = 2
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let h0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: invoke, target: None, additional_targets: vec![], mode: Some(0), x_value: Some(2),
+    }).expect("cast Invoke in draw mode with X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 - 1 + 2, "drew X=2 (net +1 after casting)");
+}
+
+/// Orzhov Euthanist's haunt destroys a creature that was dealt damage this turn.
+#[test]
+fn orzhov_euthanist_destroys_damaged_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.battlefield_find_mut(foe).unwrap().dealt_damage_this_turn = true;
+    g.move_card_to_battlefield_for_test(0, catalog::orzhov_euthanist());
+    drain_stack(&mut g);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(foe).is_none(), "ETB destroyed the damaged creature");
+}

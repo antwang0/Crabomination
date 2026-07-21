@@ -7,7 +7,7 @@ use crate::card::{
     EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R,
     StaticAbility, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{bloodthirst, target_filtered};
+use crate::effect::shortcut::{bloodthirst, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
@@ -449,6 +449,127 @@ pub fn nullstone_gargoyle() -> CardDefinition {
             ),
             effect: Effect::CounterSpell { what: Selector::TriggerSource },
         }],
+        ..Default::default()
+    }
+}
+
+/// Angel of Despair — {3}{W}{W}{B}{B} 5/5 Angel with flying. When it enters,
+/// destroy target permanent.
+pub fn angel_of_despair() -> CardDefinition {
+    CardDefinition {
+        name: "Angel of Despair",
+        cost: cost(&[generic(3), w(), w(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Destroy { what: target_filtered(R::Permanent) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Debtors' Knell — {4}{W/B}{W/B}{W/B} Enchantment. At the beginning of your
+/// upkeep, put target creature card from a graveyard onto the battlefield under
+/// your control.
+pub fn debtors_knell() -> CardDefinition {
+    CardDefinition {
+        name: "Debtors' Knell",
+        cost: cost(&[
+            generic(4),
+            crate::mana::hybrid(Color::White, Color::Black),
+            crate::mana::hybrid(Color::White, Color::Black),
+            crate::mana::hybrid(Color::White, Color::Black),
+        ]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::InGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hypervolt Grasp — {2}{R} Aura. Enchant creature. Enchanted creature has
+/// "{T}: This creature deals 1 damage to any target." {1}{U}: Return this Aura
+/// to its owner's hand.
+pub fn hypervolt_grasp() -> CardDefinition {
+    CardDefinition {
+        name: "Hypervolt Grasp",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::DealDamage { to: target_any(), amount: Value::ONE },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Invoke the Firemind — {X}{U}{U}{R} Sorcery. Choose one — draw X cards; or
+/// deal X damage to any target.
+pub fn invoke_the_firemind() -> CardDefinition {
+    CardDefinition {
+        name: "Invoke the Firemind",
+        cost: cost(&[crate::mana::x(), u(), u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseModesCast {
+            modes: vec![
+                Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+                Effect::DealDamage { to: target_any(), amount: Value::XFromCost },
+            ],
+            min: 1,
+            max: 1,
+            allow_repeats: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Orzhov Euthanist — {2}{B} 2/2 Human Assassin with haunt. When it enters or
+/// the creature it haunts dies, destroy target creature that was dealt damage
+/// this turn.
+pub fn orzhov_euthanist() -> CardDefinition {
+    let destroy = Effect::Destroy {
+        what: target_filtered(R::Creature.and(R::DealtDamageThisTurn)),
+    };
+    CardDefinition {
+        name: "Orzhov Euthanist",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Assassin], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: destroy.clone(),
+            },
+            on_dies(Effect::HauntCreature { body: Box::new(destroy) }),
+        ],
         ..Default::default()
     }
 }
