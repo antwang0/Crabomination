@@ -1780,3 +1780,43 @@ fn indentured_oaf_spares_red_creatures() {
     g.deal_damage_to_from(EntityRef::Permanent(green), 2, Some(oaf), &mut evs);
     assert_eq!(g.battlefield_find(green).unwrap().damage, 2, "non-red takes it");
 }
+
+/// Spectral Searchlight adds a mana of any color to a chosen player's pool.
+#[test]
+fn spectral_searchlight_ramps_a_chosen_player() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let light = g.add_card_to_battlefield(0, catalog::spectral_searchlight());
+    g.clear_sickness(light);
+    assert_eq!(g.players[1].mana_pool.total(), 0);
+    g.perform_action(crabomination::game::GameAction::ActivateAbility {
+        card_id: light, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("tap for a chosen player's mana");
+    assert_eq!(g.players[1].mana_pool.total(), 1, "the chosen player got a mana");
+}
+
+/// Molten Sentry flips a coin as it enters: heads → 5/2 haste, tails → 2/5 defender.
+#[test]
+fn molten_sentry_coin_flip_stats() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let etb = catalog::molten_sentry().triggered_abilities[0].effect.clone();
+    // Heads.
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::molten_sentry());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(s, 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    let cp = g.computed_permanent(s).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 2), "heads → 5/2");
+    assert!(cp.keywords.contains(&Keyword::Haste));
+    // Tails.
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::molten_sentry());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(s, 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    let cp = g.computed_permanent(s).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 5), "tails → 2/5");
+    assert!(cp.keywords.contains(&Keyword::Defender));
+}
