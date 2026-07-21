@@ -1420,3 +1420,88 @@ fn twilight_drover_grows_on_token_death() {
         "a creature token leaving grows Twilight Drover",
     );
 }
+
+// ── gap wave 9 ───────────────────────────────────────────────────────────────
+
+/// Necroplasm grows on upkeep and, at the end step, destroys every creature
+/// whose mana value equals its counter count.
+#[test]
+fn necroplasm_wraths_at_counter_mana_value() {
+    use crabomination::TurnStep;
+    let mut g = two_player_game();
+    let nec = g.add_card_to_battlefield(0, catalog::necroplasm());
+    // Two-drops and a three-drop across the table.
+    let two_a = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // MV 2
+    let two_b = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let three = g.add_card_to_battlefield(1, catalog::craw_wurm()); // MV 6, survives
+    g.active_player_idx = 0;
+    // Two upkeeps → two +1/+1 counters → MV-2 wrath.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(nec).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 2);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(two_a).is_none() && g.battlefield_find(two_b).is_none(), "MV-2 creatures destroyed");
+    assert!(g.battlefield_find(three).is_some(), "MV-6 survives");
+}
+
+/// Shambling Shell sacrifices itself to put a +1/+1 counter on a creature.
+#[test]
+fn shambling_shell_sacs_for_counter() {
+    let mut g = two_player_game();
+    let shell = g.add_card_to_battlefield(0, catalog::shambling_shell());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(shell);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shell, ability_index: 0, target: Some(Target::Permanent(ally)),
+        additional_targets: vec![], x_value: None,
+    }).expect("sac for counter");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(shell).is_none(), "sacrificed");
+    assert_eq!(g.battlefield_find(ally).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+    assert_eq!(catalog::shambling_shell().keywords, vec![Keyword::Dredge(3)]);
+}
+
+/// Woebringer Demon edicts the active player; with no creatures they can't, so
+/// the Demon is sacrificed instead.
+#[test]
+fn woebringer_demon_edict_else_self() {
+    use crabomination::TurnStep;
+    let mut g = two_player_game();
+    let demon = g.add_card_to_battlefield(0, catalog::woebringer_demon());
+    let victim = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    // Player 0 controls the Demon + a bear → they sacrifice the (weakest) creature, not the Demon.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(demon).is_some(), "Demon survives while its controller has fodder");
+    assert!(g.battlefield_find(victim).is_none(), "the bear was edicted");
+    // Now on the opponent's upkeep with no creatures they control, the Demon dies.
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(demon).is_none(), "no creature to sacrifice → Demon sacrificed");
+}
+
+/// Perilous Forays sacrifices a creature to fetch a basic-typed land tapped.
+#[test]
+fn perilous_forays_fetches_land() {
+    let mut g = two_player_game();
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let forays = g.add_card_to_battlefield(0, catalog::perilous_forays());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _ = fodder;
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.players[0].mana_pool.add_colorless(1);
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.card_types.contains(&crabomination::card::CardType::Land)).count();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forays, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("forays");
+    drain_stack(&mut g);
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.card_types.contains(&crabomination::card::CardType::Land)).count();
+    assert_eq!(lands_after, lands_before + 1, "a land entered");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Forest" && c.tapped), "and it's tapped");
+}

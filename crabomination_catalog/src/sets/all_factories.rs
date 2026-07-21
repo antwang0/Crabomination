@@ -9362,6 +9362,10 @@ static RAV: &[Factory] = &[
     super::rav::glare_of_subdual,
     super::rav::voyager_staff,
     super::rav::twilight_drover,
+    super::rav::necroplasm,
+    super::rav::shambling_shell,
+    super::rav::woebringer_demon,
+    super::rav::perilous_forays,
     super::rav::lightning_helix,
     super::rav::putrefy,
 ];
