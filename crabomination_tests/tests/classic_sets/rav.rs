@@ -873,3 +873,178 @@ fn ethereal_usher_grants_unblockable() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Unblockable));
 }
+
+/// Viashino Fangtail taps to ping any target for 1.
+#[test]
+fn viashino_fangtail_pings() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let fang = g.add_card_to_battlefield(0, catalog::viashino_fangtail());
+    g.clear_sickness(fang);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fang, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "pinged for 1");
+}
+
+/// Undercity Shade pumps itself +1/+1 for {B}.
+#[test]
+fn undercity_shade_pumps() {
+    let mut g = two_player_game();
+    let shade = g.add_card_to_battlefield(0, catalog::undercity_shade());
+    assert!(shade_is_fearsome(&g, shade));
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shade, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("shade pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(shade).unwrap().power, 2, "+1/+1");
+}
+
+fn shade_is_fearsome(g: &GameState, id: crabomination::game::CardId) -> bool {
+    g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::Fear)
+}
+
+/// Viashino Slasher trades toughness for power (+1/-1).
+#[test]
+fn viashino_slasher_pumps_lopsided() {
+    let mut g = two_player_game();
+    let slasher = g.add_card_to_battlefield(0, catalog::viashino_slasher());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: slasher, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("slasher pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(slasher).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 1), "+1/-1");
+}
+
+/// Tattered Drake regenerates for {B}.
+#[test]
+fn tattered_drake_regenerates() {
+    let mut g = two_player_game();
+    let drake = g.add_card_to_battlefield(0, catalog::tattered_drake());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: drake, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("regen");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(drake).unwrap().regeneration_shields >= 1);
+}
+
+/// Surveilling Sprite draws a card when it dies (opting in).
+#[test]
+fn surveilling_sprite_dies_draw() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let sprite = g.add_card_to_battlefield(0, catalog::surveilling_sprite());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    g.battlefield_find_mut(sprite).unwrap().damage = 5;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew on death");
+}
+
+/// Zephyr Spirit bounces itself to hand when it blocks.
+#[test]
+fn zephyr_spirit_returns_on_block() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    // P1 attacks; P0's Zephyr Spirit blocks and returns to hand.
+    let spirit = g.add_card_to_battlefield(0, catalog::zephyr_spirit());
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    // Hand P1 the turn.
+    while g.active_player_idx == 0 {
+        g.perform_action(GameAction::PassPriority).expect("pass to P1 turn");
+    }
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("advance to attacks");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(0),
+    }])).expect("P1 attacks");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("advance to blocks");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(spirit, attacker)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == spirit), "returned to hand on block");
+}
+
+/// Cyclopean Snare taps a creature and bounces itself to hand.
+#[test]
+fn cyclopean_snare_taps_and_returns() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let snare = g.add_card_to_battlefield(0, catalog::cyclopean_snare());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: snare, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: None,
+    }).expect("snare");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");
+    assert!(g.players[0].hand.iter().any(|c| c.id == snare), "snare returned to hand");
+}
+
+/// Festival of the Guildpact prevents the next X damage to you and cantrips.
+#[test]
+fn festival_prevents_x_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    // Cast with X = 3.
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 3);
+    g.resolve_effect(&catalog::festival_of_the_guildpact().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "cantrip drew");
+    // Now deal 5 to player 0; only 2 should land (3 prevented).
+    let life = g.players[0].life;
+    let dctx = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+    let mut dctx2 = dctx.clone();
+    dctx2.targets = vec![crabomination::game::types::Target::Player(0)];
+    g.resolve_effect(&crabomination::effect::Effect::DealDamage {
+        to: crabomination::effect::Selector::Target(0),
+        amount: crabomination::effect::Value::Const(5),
+    }, &dctx2).unwrap();
+    assert_eq!(g.players[0].life, life - 2, "3 of the 5 prevented");
+}
+
+/// War-Torch Goblin sacrifices to deal 2 to a blocking creature.
+#[test]
+fn war_torch_goblin_burns_blocker() {
+    use crabomination::game::types::{Attack, AttackTarget, Target, TurnStep};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let goblin = g.add_card_to_battlefield(0, catalog::war_torch_goblin());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("advance to attacks");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("advance to blocks");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).expect("block");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: goblin, ability_index: 0, target: Some(Target::Permanent(blocker)),
+        additional_targets: vec![], x_value: None,
+    }).expect("torch the blocker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blocker).is_none(), "2/2 blocker took 2 and died");
+}

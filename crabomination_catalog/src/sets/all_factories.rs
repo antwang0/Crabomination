@@ -9472,6 +9472,15 @@ static RAV: &[Factory] = &[
     super::rav::flight_of_fancy,
     super::rav::dimir_house_guard,
     super::rav::ethereal_usher,
+    super::rav::cyclopean_snare,
+    super::rav::festival_of_the_guildpact,
+    super::rav::viashino_fangtail,
+    super::rav::undercity_shade,
+    super::rav::war_torch_goblin,
+    super::rav::viashino_slasher,
+    super::rav::tattered_drake,
+    super::rav::surveilling_sprite,
+    super::rav::zephyr_spirit,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

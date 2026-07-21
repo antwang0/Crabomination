@@ -195,8 +195,7 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (dredge + toughness-scaling end-step wrath); the Radiance mechanic (Surge of
   Zeal, Leave No Trace, Incite Hysteria — target + each other permanent sharing a
   color); Hex (needs an exactly-N-target `DestroyTargets` — the current variant is
-  "up to X"); Sanguine Praetor (needs a creature-only "destroy each creature with
-  MV = X"; `DestroyEachNonlandWithManaValue` also hits noncreature nonlands);
+  "up to X");
   Living Inferno (two-way divided-damage fight — the damaged creatures deal power
   back to the source); Orzhov Pontiff (now unblocked — `Effect::ChooseMode` gives
   a resolution-time "choose one" for triggered/activated abilities, as used by
