@@ -228,6 +228,7 @@ impl Effect {
             Effect::DestroyLandOfEachBasicType => false,
             // Untargeted mass destroy keyed on a mana-value count.
             Effect::DestroyEachNonlandWithManaValue { .. } => false,
+            Effect::DestroyEachCreatureWithManaValue { .. } => false,
             Effect::AttackDespiteDefenderThisTurn { .. } => false,
             Effect::LookTopExileOneMayPlay { .. } => false,
             Effect::LookTopDeployLandOrHand { .. } => false,

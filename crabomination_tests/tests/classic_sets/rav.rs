@@ -779,3 +779,97 @@ fn guardian_of_vitu_ghazi_stat_line() {
     assert_eq!((g.power, g.toughness), (4, 7));
     assert!(g.keywords.contains(&Keyword::Convoke) && g.keywords.contains(&Keyword::Vigilance));
 }
+
+// ── RAV gap wave 6 (gaps6.rs) ────────────────────────────────────────────────
+
+/// Hammerfist Giant taps to deal 4 to each non-flyer and each player.
+#[test]
+fn hammerfist_giant_sweeps_grounded_and_players() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::hammerfist_giant());
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // flying
+    g.clear_sickness(giant);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: giant, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap sweep");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ground).is_none(), "grounded creature took 4, died");
+    assert_eq!(g.battlefield_find(flyer).unwrap().damage, 0, "flyer untouched");
+    assert_eq!(g.players[1].life, foe_life - 4, "each player took 4");
+}
+
+/// Blockbuster sacrifices for 3 damage to each tapped creature and each player.
+#[test]
+fn blockbuster_hits_tapped_creatures_and_players() {
+    let mut g = two_player_game();
+    let bb = g.add_card_to_battlefield(0, catalog::blockbuster());
+    let tapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let untapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bb, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac blast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bb).is_none(), "enchantment sacrificed");
+    assert!(g.battlefield_find(tapped).is_none(), "tapped creature took 3, died");
+    assert_eq!(g.battlefield_find(untapped).unwrap().damage, 0, "untapped untouched");
+    assert_eq!(g.players[1].life, foe_life - 3, "each player took 3");
+}
+
+/// Flight of Fancy draws two on entry and grants the host flying.
+#[test]
+fn flight_of_fancy_draws_and_grants_flying() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    let hand = g.players[0].hand.len();
+    // Aura attached to the host grants it flying (equip bonus).
+    let aura = g.add_card_to_battlefield(0, catalog::flight_of_fancy());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(host);
+    assert!(g.computed_permanent(host).unwrap().keywords.contains(&Keyword::Flying),
+        "host has flying");
+    // Its ETB trigger draws two cards.
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let etb = &catalog::flight_of_fancy().triggered_abilities[0].effect;
+    g.resolve_effect(etb, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 2, "ETB drew two");
+}
+
+/// Dimir House Guard has fear and regenerates by sacrificing a creature.
+#[test]
+fn dimir_house_guard_fear_and_regenerate() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let guard = g.add_card_to_battlefield(0, catalog::dimir_house_guard());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.battlefield_find(guard).unwrap().definition.keywords.contains(&Keyword::Fear));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: guard, ability_index: 0, target: None,
+        additional_targets: vec![Target::Permanent(fodder)], x_value: None,
+    }).expect("regenerate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
+    assert!(g.battlefield_find(guard).unwrap().regeneration_shields >= 1, "regen shield up");
+}
+
+/// Ethereal Usher makes a target creature unblockable until end of turn.
+#[test]
+fn ethereal_usher_grants_unblockable() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let usher = g.add_card_to_battlefield(0, catalog::ethereal_usher());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(usher);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: usher, ability_index: 0, target: Some(Target::Permanent(ally)),
+        additional_targets: vec![], x_value: None,
+    }).expect("grant unblockable");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Unblockable));
+}

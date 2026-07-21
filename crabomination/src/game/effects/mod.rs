@@ -5264,6 +5264,17 @@ impl GameState {
                 )
             }
 
+            Effect::DestroyEachCreatureWithManaValue { value } => {
+                use crate::card::SelectionRequirement as R;
+                let n = self.evaluate_value(value, ctx).max(0) as u32;
+                let req = R::Creature.and(R::ManaValueExactly(n));
+                self.run_effect(
+                    &Effect::Destroy { what: crate::effect::Selector::EachPermanent(req) },
+                    ctx,
+                    events,
+                )
+            }
+
             Effect::ChooseNumberDestroyByPower { max } => {
                 use crate::card::SelectionRequirement as R;
                 use crate::decision::{Decision, DecisionAnswer};

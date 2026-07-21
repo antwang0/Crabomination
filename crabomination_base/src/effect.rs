@@ -3428,6 +3428,11 @@ pub enum Effect {
     /// and destroys every nonland permanent whose mana value matches. Ratchet
     /// Bomb, Engineered Explosives, Blast Zone.
     DestroyEachNonlandWithManaValue { value: Value },
+    /// Creature-scoped sibling of `DestroyEachNonlandWithManaValue`: destroys
+    /// every *creature* whose mana value matches `value` (Sanguine Praetor's
+    /// "destroy each creature with the same mana value as the sacrificed
+    /// creature" via `Value::SacrificedManaValue`).
+    DestroyEachCreatureWithManaValue { value: Value },
     /// "Choose a number between 0 and `max`. Destroy all creatures with power
     /// greater than or equal to the chosen number." The controller picks the
     /// number at resolution (`Decision::ChooseAmount`); a bot/AutoDecider picks

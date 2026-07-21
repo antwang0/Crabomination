@@ -414,3 +414,26 @@ pub fn ulasht_the_hate_seed() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sanguine Praetor — {6}{B}{B} 7/5 Avatar Praetor. {B}, Sacrifice a creature:
+/// Destroy each creature with the same mana value as the sacrificed creature.
+pub fn sanguine_praetor() -> CardDefinition {
+    CardDefinition {
+        name: "Sanguine Praetor",
+        cost: cost(&[generic(6), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar, CreatureType::Praetor],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 5,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::DestroyEachCreatureWithManaValue { value: Value::SacrificedManaValue },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

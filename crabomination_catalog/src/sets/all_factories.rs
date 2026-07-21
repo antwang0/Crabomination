@@ -7823,6 +7823,7 @@ static GPT: &[Factory] = &[
     super::gpt::leyline_of_the_meek,
     super::gpt::leyline_of_singularity,
     super::gpt::ulasht_the_hate_seed,
+    super::gpt::sanguine_praetor,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,
@@ -9466,6 +9467,11 @@ static RAV: &[Factory] = &[
     super::rav::flow_of_ideas,
     super::rav::hour_of_reckoning,
     super::rav::guardian_of_vitu_ghazi,
+    super::rav::hammerfist_giant,
+    super::rav::blockbuster,
+    super::rav::flight_of_fancy,
+    super::rav::dimir_house_guard,
+    super::rav::ethereal_usher,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

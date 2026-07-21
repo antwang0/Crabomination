@@ -1086,3 +1086,23 @@ fn ulasht_ability_removes_counter_and_pings() {
     // but the mode-0 ping still resolved.
     assert_eq!(g.battlefield_find(foe).unwrap().damage, 1, "mode 0 dealt 1 damage");
 }
+
+/// Sanguine Praetor sacrifices a creature to destroy every creature sharing its
+/// mana value.
+#[test]
+fn sanguine_praetor_destroys_by_shared_mana_value() {
+    let mut g = two_player_game();
+    let praetor = g.add_card_to_battlefield(0, catalog::sanguine_praetor()); // MV 8
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // MV 2
+    let peer = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let bigger = g.add_card_to_battlefield(1, catalog::serra_angel()); // MV 5
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: praetor, ability_index: 0, target: None,
+        additional_targets: vec![Target::Permanent(fodder)], x_value: None,
+    }).expect("sac + destroy by MV");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(peer).is_none(), "same-MV creature destroyed");
+    assert!(g.battlefield_find(bigger).is_some(), "different-MV creature survives");
+    assert!(g.battlefield_find(praetor).is_some(), "the 8-MV Praetor survives");
+}
