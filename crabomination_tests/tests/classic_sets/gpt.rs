@@ -328,3 +328,29 @@ fn ghostway_blinks_your_creatures() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
         "returned at the next end step");
 }
+
+/// Leyline of Lifeforce makes creature spells uncounterable — a Counterspell
+/// resolves with no effect and the creature spell survives on the stack.
+#[test]
+fn leyline_of_lifeforce_protects_creature_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_lifeforce());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear");
+    // Try to counter it.
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    let counter = crabomination::effect::Effect::CounterSpell {
+        what: crabomination::effect::Selector::Target(0),
+    };
+    g.resolve_effect(&counter, &ctx).unwrap();
+    assert!(g.stack.iter().any(|si| matches!(si,
+        crabomination::game::StackItem::Spell { card, .. } if card.id == bear)),
+        "creature spell survived the counter");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "and resolved onto the battlefield");
+}

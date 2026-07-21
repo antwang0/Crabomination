@@ -7777,6 +7777,7 @@ static GPT: &[Factory] = &[
     super::gpt::burning_tree_bloodscale,
     super::gpt::culling_sun,
     super::gpt::ghostway,
+    super::gpt::leyline_of_lifeforce,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,

@@ -299,3 +299,21 @@ pub fn ghostway() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Leyline of Lifeforce — {2}{G}{G} Enchantment. If in your opening hand, you
+/// may begin the game with it in play. Creature spells can't be countered.
+pub fn leyline_of_lifeforce() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{OpeningHandEffect, StaticEffect};
+    CardDefinition {
+        name: "Leyline of Lifeforce",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creature spells can't be countered.",
+            effect: StaticEffect::CreatureSpellsCantBeCountered,
+        }],
+        opening_hand: Some(OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
+        ..Default::default()
+    }
+}

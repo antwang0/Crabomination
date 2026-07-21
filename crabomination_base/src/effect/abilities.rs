@@ -1437,6 +1437,11 @@ pub enum StaticEffect {
     /// (creature and enchantment spells). Read at cast time by
     /// `caster_grants_uncounterable_with_x` off the caster's battlefield.
     SpellsUncounterable { filter: SelectionRequirement },
+    /// "Creature spells can't be countered" — a *symmetric* uncounterable
+    /// static (any player's copy protects every player's creature spells,
+    /// unlike `SpellsUncounterable` which is scoped to the caster's own
+    /// permanents). Leyline of Lifeforce.
+    CreatureSpellsCantBeCountered,
     /// CR 614.x — "If a nontoken creature would enter the battlefield and it
     /// wasn't cast, exile it instead." Containment Priest. A global ETB
     /// replacement read off the battlefield in `place_card_in_dest`'s

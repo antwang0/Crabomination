@@ -1323,6 +1323,18 @@ impl crate::game::GameState {
                 }
             }
         }
+        // Symmetric "creature spells can't be countered" (Leyline of Lifeforce):
+        // any player's copy protects every player's creature spells, so scan the
+        // whole battlefield rather than just the caster's permanents.
+        if card.definition.is_creature()
+            && self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::CreatureSpellsCantBeCountered)
+                })
+            })
+        {
+            return true;
+        }
         // Cavern of Souls' "can't be countered" rider is provenance-based:
         // it rides the spent mana (`SpendRestriction::
         // CreatureOfTypeUncounterable` → `cast_paid_uncounterable`), not a

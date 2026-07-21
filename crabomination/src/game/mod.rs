@@ -13551,6 +13551,8 @@ fn static_effect_to_effects(
             | StaticEffect::AttackTaxToController { .. }
             // CreaturesCantAttackController — consulted in declare_attackers; no layer.
             | StaticEffect::CreaturesCantAttackController { .. }
+            // CreatureSpellsCantBeCountered — consulted at cast time; no layer.
+            | StaticEffect::CreatureSpellsCantBeCountered
             // BlockTaxToController — consulted in declare_blockers; no layer.
             | StaticEffect::BlockTaxToController { .. }
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no
