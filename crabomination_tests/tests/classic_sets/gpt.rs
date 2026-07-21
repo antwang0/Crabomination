@@ -745,3 +745,70 @@ fn orzhov_euthanist_destroys_damaged_creature() {
     g.dispatch_triggers_for_events(&evs);
     assert!(g.battlefield_find(foe).is_none(), "ETB destroyed the damaged creature");
 }
+
+/// Graven Dominator's ETB shrinks every other creature to base 1/1.
+#[test]
+fn graven_dominator_flattens_other_creatures() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.move_card_to_battlefield_for_test(0, catalog::graven_dominator());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(foe).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "other creature flattened to 1/1");
+}
+
+/// Seize the Soul destroys a nonwhite/nonblack creature and makes a Spirit.
+#[test]
+fn seize_the_soul_destroys_and_makes_a_spirit() {
+    let mut g = two_player_game();
+    let green = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green, valid target
+    g.add_card_to_battlefield(1, catalog::serra_angel()); // a creature for the haunt to attach to
+    resolve_spell(&mut g, catalog::seize_the_soul(), vec![Target::Permanent(green)]);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(green).is_none(), "nonwhite/nonblack creature destroyed");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit" && c.controller == 0),
+        "made a 1/1 Spirit under your control");
+}
+
+/// Leyline of Lightning pings a player when you pay {1} on a spell cast.
+#[test]
+fn leyline_of_lightning_pings_on_cast() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_lightning());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G}, no target
+    g.players[0].mana_pool.add_colorless(2); // 1 for the bear's generic, 1 for the ping
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 1, "paid one generic to ping the opponent for 1");
+}
+
+/// Rabble-Rouser taps to pump every attacking creature by its own power.
+#[test]
+fn rabble_rouser_pumps_attackers_by_its_power() {
+    let mut g = two_player_game();
+    let rr = g.add_card_to_battlefield(0, catalog::rabble_rouser()); // 1/1
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(rr);
+    g.clear_sickness(ally);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ally, target: AttackTarget::Player(1),
+    }])).expect("attack with the ally only");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump the attackers");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 3, "attacker got +1/+0 (Rabble-Rouser's power)");
+}

@@ -7801,6 +7801,10 @@ static GPT: &[Factory] = &[
     super::gpt::hypervolt_grasp,
     super::gpt::invoke_the_firemind,
     super::gpt::orzhov_euthanist,
+    super::gpt::graven_dominator,
+    super::gpt::seize_the_soul,
+    super::gpt::leyline_of_lightning,
+    super::gpt::rabble_rouser,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,
