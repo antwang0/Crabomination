@@ -1106,3 +1106,102 @@ fn sanguine_praetor_destroys_by_shared_mana_value() {
     assert!(g.battlefield_find(bigger).is_some(), "different-MV creature survives");
     assert!(g.battlefield_find(praetor).is_some(), "the 8-MV Praetor survives");
 }
+
+// ── gap wave 5 ───────────────────────────────────────────────────────────────
+
+/// Skarrg pumps a creature +1/+1 and grants trample.
+#[test]
+fn skarrg_pumps_and_grants_trample() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::skarrg_the_rage_pits());
+    g.clear_sickness(land);
+    let cre = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(cre)),
+        additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(cre).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Orzhova drains a target player for 1.
+#[test]
+fn orzhova_drains_one() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    let land = g.add_card_to_battlefield(0, catalog::orzhova_the_church_of_deals());
+    g.clear_sickness(land);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("drain");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "target lost 1");
+    assert_eq!(g.players[0].life, 21, "you gained 1");
+}
+
+/// Wreak Havoc can't be countered and destroys an artifact or land.
+#[test]
+fn wreak_havoc_uncounterable_destroy() {
+    let wh = catalog::wreak_havoc();
+    assert!(wh.keywords.contains(&Keyword::CantBeCountered));
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    resolve_spell(&mut g, catalog::wreak_havoc(), vec![Target::Permanent(land)]);
+    assert!(g.battlefield_find(land).is_none(), "land destroyed");
+}
+
+/// Parallectric Feedback deals a target spell's mana value to its controller.
+#[test]
+fn parallectric_feedback_burns_by_mana_value() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Player 0 casts a 6-MV creature; Parallectric then hits its controller.
+    let spell = g.add_card_to_hand(0, catalog::craw_wurm()); // {5}{G}, MV 6
+    for _ in 0..6 { g.add_card_to_battlefield(0, catalog::forest()); }
+    g.cast_spell(spell, None, vec![], None, None).expect("cast wurm");
+    let target_spell = match g.stack.last() {
+        Some(StackItem::Spell { card, .. }) => card.id,
+        _ => panic!("spell on stack, len={}", g.stack.len()),
+    };
+    resolve_spell(&mut g, catalog::parallectric_feedback(), vec![Target::Permanent(target_spell)]);
+    assert_eq!(g.players[0].life, 14, "6 damage = the wurm's mana value to its controller");
+}
+
+/// Quicken draws a card and grants your sorceries flash.
+#[test]
+fn quicken_cantrips_and_grants_flash() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let before = g.players[0].hand.len();
+    resolve_spell(&mut g, catalog::quicken(), vec![]);
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew a card");
+    assert!(g.players[0].sorceries_as_flash, "sorceries gain flash");
+}
+
+/// Wurmweaver Coil buffs +6/+6 and can be sacrificed for a 6/6 Wurm.
+#[test]
+fn wurmweaver_coil_buffs_and_makes_wurm() {
+    let mut g = two_player_game();
+    let cre = g.add_card_to_battlefield(0, catalog::llanowar_elves()); // green 1/1
+    let coil = g.add_card_to_battlefield(0, catalog::wurmweaver_coil());
+    g.battlefield_find_mut(coil).unwrap().attached_to = Some(cre);
+    let cp = g.computed_permanent(cre).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7), "+6/+6");
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: coil, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for wurm");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Wurm"), "6/6 Wurm minted");
+}

@@ -7677,6 +7677,12 @@ static GPT: &[Factory] = &[
     super::gpt::leyline_of_singularity,
     super::gpt::ulasht_the_hate_seed,
     super::gpt::sanguine_praetor,
+    super::gpt::skarrg_the_rage_pits,
+    super::gpt::orzhova_the_church_of_deals,
+    super::gpt::wreak_havoc,
+    super::gpt::parallectric_feedback,
+    super::gpt::quicken,
+    super::gpt::wurmweaver_coil,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,
