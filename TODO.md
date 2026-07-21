@@ -186,16 +186,19 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   paths); Sabertooth Alley Cat ("creatures without defender can't block this"
   mass restriction); Molten Sentry (coin-flip enters-as 5/2-haste or 2/5-defender
   — `Effect::FlipCoin` exists; needs an enters-as-coin-flip replacement);
-  Spawnbroker (exchange control by power); other "another target creature" spells
+  Spawnbroker (exchange control by power); Drake Familiar (ETB "sacrifice unless
+  you return an enchantment to hand" — needs a return-a-permanent-else-sacrifice
+  reflexive cost, the non-mana sibling of `Effect::MayPay`); Stasis Cell (aura
+  "enchanted creature doesn't untap" — needs a plain `Keyword::DoesntUntap`
+  static, distinct from `DoesntUntapWhileCounter`); Spectral Searchlight (choose a
+  player, that player adds one mana of any color they choose — needs a
+  choose-player-adds-any-color effect); Razia's Purification (each player keeps 3
+  permanents, sacrifices the rest — generalize `EachPlayerKeepsOneSacrificeRest`
+  to a keep-N count); other "another target creature" spells
   could use a `DifferentFromTarget(slot)` requirement so the two slots can't
   collapse to one creature (Schismotivate ships with the two-slot idiom today);
   the complex Magemarks — Beastmaster's (becomes-blocked +1/+1-per-blocker rider),
   Necromancer's (return-to-hand death replacement over your enchanted creatures);
-  Necroplasm
-  (dredge + toughness-scaling end-step wrath); the Radiance mechanic (Surge of
-  Zeal, Leave No Trace, Incite Hysteria — target + each other permanent sharing a
-  color); Hex (needs an exactly-N-target `DestroyTargets` — the current variant is
-  "up to X");
   Living Inferno (two-way divided-damage fight — the damaged creatures deal power
   back to the source); Orzhov Pontiff (now unblocked — `Effect::ChooseMode` gives
   a resolution-time "choose one" for triggered/activated abilities, as used by

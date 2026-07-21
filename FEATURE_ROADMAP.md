@@ -16,6 +16,21 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **RAV gap waves 8–9 (this run, 24 cards):** `Selector::RadianceGroup`
+  generalized to fan out over any card type the subject shares (Leave No Trace
+  over enchantments, not just creatures); `StaticEffect::SourceDamageCantBePrevented`
+  (Excruciator — source-scoped unpreventable, distinct from the global
+  `DamageCantBePrevented`). Cards on existing primitives: the Radiance spells
+  (Surge of Zeal, Incite Hysteria, Leave No Trace), Induce Paranoia / Flash
+  Conscription (`ManaSpentOfColorAtLeast`), Hex (`ApplyToTargets` 6-slot destroy),
+  Mnemonic Nexus, Helldozer, Tolsimir Wolfblood, Woodwraith Strangler,
+  Transluminant (`AtNextEndStep`), Stone-Seeder Hierophant, the Duskmantle/Sunhome/
+  Vitu-Ghazi utility lands, Copy Enchantment (`enters_as_copy`), Glare of Subdual,
+  Voyager Staff (`ExileReturnNextEndStep`), Twilight Drover, Necroplasm
+  (`DestroyEachCreatureWithManaValue`), Shambling Shell, Woebringer Demon
+  (conditional edict via `ValueAtLeast`), Perilous Forays. CR conformance:
+  615.12 (source-scoped unpreventable), 701.16 (edict sacrifice vs regeneration),
+  702 (Radiance card-type scoping). Server: `winner_board_cv_pct`.
 - **GPT gap wave 4 (this run):** `StaticEffect::AllNonlandPermanentsAreLegendary`
   (Leyline of Singularity, layer-4 supertype add over the whole board); the legend
   rule (CR 704.5j) now reads *computed* supertypes so continuous Legendary grants

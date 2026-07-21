@@ -1250,7 +1250,7 @@ fn excruciator_damage_unpreventable_static() {
     use crabomination::effect::StaticEffect;
     let e = catalog::excruciator();
     assert_eq!((e.power, e.toughness), (7, 7));
-    assert!(e.static_abilities.iter().any(|a| matches!(a.effect, StaticEffect::DamageCantBePrevented)));
+    assert!(e.static_abilities.iter().any(|a| matches!(a.effect, StaticEffect::SourceDamageCantBePrevented)));
 }
 
 /// Helldozer destroys a nonbasic land and untaps itself; a basic leaves it tapped.
