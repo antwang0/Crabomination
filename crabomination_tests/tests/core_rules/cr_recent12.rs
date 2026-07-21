@@ -5,7 +5,7 @@
 //! ("during your turn" anthems switch off outside the controller's turn).
 
 use crabomination::card::{
-    CardDefinition, CardType, Keyword, SelectionRequirement as R, StaticAbility,
+    CardDefinition, CardType, SelectionRequirement as R, StaticAbility,
 };
 use crabomination::catalog;
 use crabomination::effect::StaticEffect;
