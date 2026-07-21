@@ -7683,6 +7683,8 @@ static GPT: &[Factory] = &[
     super::gpt::parallectric_feedback,
     super::gpt::quicken,
     super::gpt::wurmweaver_coil,
+    super::gpt::spelltithe_enforcer,
+    super::gpt::goblin_flectomancer,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,
@@ -9300,6 +9302,7 @@ static RAV: &[Factory] = &[
     super::rav::firemane_angel,
     super::rav::halcyon_glaze,
     super::rav::light_of_sanction,
+    super::rav::trophy_hunter,
     super::rav::glass_golem,
     super::rav::goliath_spider,
     super::rav::grayscaled_gharial,

@@ -1205,3 +1205,52 @@ fn wurmweaver_coil_buffs_and_makes_wurm() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Wurm"), "6/6 Wurm minted");
 }
+
+/// Spelltithe Enforcer makes an opponent sacrifice a permanent unless they
+/// pay {1} when they cast a spell.
+#[test]
+fn spelltithe_enforcer_taxes_opponent_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spelltithe_enforcer());
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    // AutoDecider declines the {1}, so player 1 sacrifices a permanent.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a spell");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "the Forest was sacrificed to the tax");
+}
+
+/// Goblin Flectomancer sacrifices itself to change a spell's target.
+#[test]
+fn goblin_flectomancer_repoints_a_spell() {
+    let mut g = two_player_game();
+    let gf = g.add_card_to_battlefield(0, catalog::goblin_flectomancer());
+    g.clear_sickness(gf);
+    // Opponent casts Lightning Bolt at us.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts bolt at us");
+    // Sacrifice Flectomancer to repoint the bolt at its caster.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        crabomination::decision::DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gf, ability_index: 0, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], x_value: None,
+    }).expect("sacrifice to change targets");
+    let life1 = g.players[1].life;
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gf).is_none(), "Flectomancer was sacrificed");
+    assert_eq!(g.players[1].life, life1 - 3, "bolt now hits its caster");
+}

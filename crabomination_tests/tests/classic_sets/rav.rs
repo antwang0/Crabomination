@@ -1659,3 +1659,35 @@ fn light_of_sanction_shields_from_your_sources() {
     g.deal_damage_to_from(EntityRef::Permanent(mine), 2, Some(foe_src), &mut evs);
     assert_eq!(g.battlefield_find(mine).unwrap().damage, 2, "opponent's damage lands");
 }
+
+/// Trophy Hunter pings flyers and grows when a flyer it damaged dies.
+#[test]
+fn trophy_hunter_pings_flyers_and_grows() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let th = g.add_card_to_battlefield(0, catalog::trophy_hunter());
+    g.clear_sickness(th);
+    // A grounded creature isn't a legal target; a flyer is.
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.perform_action(crabomination::game::GameAction::ActivateAbility {
+        card_id: th, ability_index: 0, target: Some(Target::Permanent(ground)),
+        additional_targets: vec![], x_value: None,
+    }).is_err(), "can't ping a non-flyer");
+    let flyer = g.add_card_to_battlefield(1, catalog::wind_drake()); // 2/2 flyer
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(crabomination::game::GameAction::ActivateAbility {
+        card_id: th, ability_index: 0, target: Some(Target::Permanent(flyer)),
+        additional_targets: vec![], x_value: None,
+    }).expect("ping the flyer");
+    drain_stack(&mut g);
+    // Kill the (already-damaged) flyer; Trophy Hunter grows.
+    let mut evs = Vec::new();
+    g.destroy_permanent(flyer, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(th).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1,
+        "a +1/+1 counter for the flyer's death",
+    );
+}
