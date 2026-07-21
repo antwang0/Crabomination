@@ -624,6 +624,10 @@ pub enum StaticEffect {
     /// (CR 614.5). Combat damage aimed at the controller's *other creatures*
     /// isn't redirected (blocker damage keeps its normal path).
     RedirectDamageToSelf,
+    /// CR 614.9 — "All damage that would be dealt to you is dealt to equipped
+    /// creature instead" (Pariah's Shield). Only player-directed damage is
+    /// redirected, and only to the creature this Equipment is attached to.
+    RedirectControllerDamageToEquippedCreature,
     /// Codie's lock: the source's controller can't cast permanent spells
     /// (creature/artifact/enchantment/planeswalker). Checked at the main
     /// cast gate in `cast_spell`.

@@ -1691,3 +1691,40 @@ fn trophy_hunter_pings_flyers_and_grows() {
         "a +1/+1 counter for the flyer's death",
     );
 }
+
+/// Wojek Apothecary's Radiance prevents 1 damage to a creature and its color-mates.
+#[test]
+fn wojek_apothecary_radiance_prevention() {
+    use crabomination::game::effects::EntityRef;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let apoth = g.add_card_to_battlefield(0, catalog::wojek_apothecary());
+    g.clear_sickness(apoth);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    let b = g.add_card_to_battlefield(0, catalog::llanowar_elves()); // green
+    g.perform_action(crabomination::game::GameAction::ActivateAbility {
+        card_id: apoth, ability_index: 0, target: Some(Target::Permanent(a)),
+        additional_targets: vec![], x_value: None,
+    }).expect("radiance prevention");
+    drain_stack(&mut g);
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(a), 2, None, &mut evs);
+    g.deal_damage_to_from(EntityRef::Permanent(b), 2, None, &mut evs);
+    assert_eq!(g.battlefield_find(a).unwrap().damage, 1, "1 of 2 prevented on the target");
+    assert_eq!(g.battlefield_find(b).unwrap().damage, 1, "shared green → also shielded");
+}
+
+/// Pariah's Shield redirects the wearer's damage onto the equipped creature.
+#[test]
+fn pariahs_shield_redirects_player_damage() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let shield = g.add_card_to_battlefield(0, catalog::pariahs_shield());
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(shield).unwrap().attached_to = Some(creature);
+    let life0 = g.players[0].life;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 2, None, &mut evs);
+    assert_eq!(g.players[0].life, life0, "no life lost — damage redirected");
+    assert_eq!(g.battlefield_find(creature).unwrap().damage, 2, "equipped creature took it");
+}

@@ -24,6 +24,23 @@ impl GameState {
             EntityRef::Permanent(c) => Some(c),
             _ => None,
         };
+        // Pariah's Shield — a player's damage is dealt to the equipped
+        // creature instead. Only player-directed damage redirects.
+        if let EntityRef::Player(p) = ent
+            && let Some(cid) = self.battlefield.iter().find_map(|c| {
+                (c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            StaticEffect::RedirectControllerDamageToEquippedCreature
+                        )
+                    }))
+                .then_some(c.attached_to)
+                .flatten()
+            })
+        {
+            return Some(cid);
+        }
         self.battlefield.iter().find_map(|c| {
             (c.controller == protected
                 && Some(c.id) != aimed_at

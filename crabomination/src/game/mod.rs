@@ -13898,6 +13898,7 @@ fn static_effect_to_effects(
             | StaticEffect::ProliferateTwice
             | StaticEffect::PoisonCappedAtOnePerTurn
             | StaticEffect::RedirectDamageToSelf
+            | StaticEffect::RedirectControllerDamageToEquippedCreature
             | StaticEffect::ControllerCantCastPermanentSpells
             | StaticEffect::NoncreatureSpellsCantBeCastIf { .. }
             | StaticEffect::NoncreatureSpellsWithChosenManaValueCantBeCast

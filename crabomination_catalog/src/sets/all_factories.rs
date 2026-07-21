@@ -9303,6 +9303,8 @@ static RAV: &[Factory] = &[
     super::rav::halcyon_glaze,
     super::rav::light_of_sanction,
     super::rav::trophy_hunter,
+    super::rav::wojek_apothecary,
+    super::rav::pariahs_shield,
     super::rav::glass_golem,
     super::rav::goliath_spider,
     super::rav::grayscaled_gharial,
