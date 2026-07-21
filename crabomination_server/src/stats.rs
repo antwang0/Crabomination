@@ -48,6 +48,12 @@ pub(crate) struct MatchStats {
     /// (`demo:7(9t) cube:3(14t)`), so operators can tell a slow format apart
     /// from a slow build without sampling per-match logs.
     pub(crate) format_turn_totals: [u64; FORMAT_BUCKET_COUNT],
+    /// Per-format cumulative wall-clock duration in seconds, indexed like
+    /// `format_buckets`. Divided by the matching count to surface each
+    /// format's average *wall-clock* game length alongside its turn count —
+    /// so operators can tell a format that's slow in real time (long decision
+    /// timeouts) from one that's merely long in turns. Push (modern_decks).
+    pub(crate) format_duration_totals: [u64; FORMAT_BUCKET_COUNT],
     /// Cumulative turn count across all matches — divided by total
     /// matches in the summary line. Operators see at a glance whether
     /// games are concession-heavy (low avg turn count) or grindy
@@ -263,11 +269,13 @@ impl MatchStats {
         self.bot_matches += 1;
         self.observe_duration(d);
         self.observe_format(f);
+        self.observe_format_duration(f, d);
     }
     pub(crate) fn record_pair(&mut self, d: Duration, f: Format) {
         self.pair_matches += 1;
         self.observe_duration(d);
         self.observe_format(f);
+        self.observe_format_duration(f, d);
     }
     /// Fold a completed match into every counter at once: the match-kind
     /// tally (`record_bot`/`record_pair`), turn counts, winner/seat bias,
@@ -701,6 +709,22 @@ impl MatchStats {
             return None;
         }
         total.checked_div(*self.format_buckets.get(i)?)
+    }
+    /// Accumulate a completed match's wall-clock duration into its format
+    /// bucket. Called from the record paths alongside `observe_format`.
+    pub(crate) fn observe_format_duration(&mut self, f: Format, d: Duration) {
+        let idx = format_index(f).min(FORMAT_BUCKET_COUNT - 1);
+        self.format_duration_totals[idx] =
+            self.format_duration_totals[idx].saturating_add(d.as_secs());
+    }
+    /// Average wall-clock seconds for format bucket `i`, or `None` when no
+    /// match has completed in that format yet.
+    pub(crate) fn format_avg_duration_secs(&self, i: usize) -> Option<u64> {
+        let count = *self.format_buckets.get(i)?;
+        if count == 0 {
+            return None;
+        }
+        self.format_duration_totals.get(i)?.checked_div(count)
     }
     /// Shared bookkeeping for both record paths — accumulates the
     /// total + tracks the new min/max envelope. Pulled out of the
@@ -1167,9 +1191,12 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
                 if count == 0 {
                     return None;
                 }
-                format_label_for_bucket(i).map(|label| match s.format_avg_turns(i) {
-                    Some(avg) => format!("{label}:{count}({avg}t)"),
-                    None => format!("{label}:{count}"),
+                format_label_for_bucket(i).map(|label| {
+                    match (s.format_avg_turns(i), s.format_avg_duration_secs(i)) {
+                        (Some(t), Some(secs)) => format!("{label}:{count}({t}t,{secs}s)"),
+                        (Some(t), None) => format!("{label}:{count}({t}t)"),
+                        _ => format!("{label}:{count}"),
+                    }
                 })
             })
             .collect();

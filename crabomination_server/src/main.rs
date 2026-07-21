@@ -1159,18 +1159,22 @@ mod tests {
     #[test]
     pub(crate) fn format_match_stats_shows_per_format_avg_turns() {
         let mut s = MatchStats::default();
-        // Two demo matches (8 and 12 turns → avg 10), one cube (20 turns).
-        s.record_bot(Duration::from_secs(60), Format::Demo);
+        // Two demo matches (8 and 12 turns → avg 10; 40s and 80s → avg 60s),
+        // one cube (20 turns, 120s).
+        s.record_bot(Duration::from_secs(40), Format::Demo);
         s.observe_format_turns(Format::Demo, 8);
-        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.record_bot(Duration::from_secs(80), Format::Demo);
         s.observe_format_turns(Format::Demo, 12);
-        s.record_bot(Duration::from_secs(60), Format::Cube);
+        s.record_bot(Duration::from_secs(120), Format::Cube);
         s.observe_format_turns(Format::Cube, 20);
         assert_eq!(s.format_avg_turns(format_index(Format::Demo)), Some(10));
         assert_eq!(s.format_avg_turns(format_index(Format::Cube)), Some(20));
+        // Per-format wall-clock average is tracked alongside turns.
+        assert_eq!(s.format_avg_duration_secs(format_index(Format::Demo)), Some(60));
+        assert_eq!(s.format_avg_duration_secs(format_index(Format::Cube)), Some(120));
         let line = format_match_stats(&s);
-        assert!(line.contains("demo:2(10t)"), "got: {line}");
-        assert!(line.contains("cube:1(20t)"), "got: {line}");
+        assert!(line.contains("demo:2(10t,60s)"), "got: {line}");
+        assert!(line.contains("cube:1(20t,120s)"), "got: {line}");
     }
 
     #[test]

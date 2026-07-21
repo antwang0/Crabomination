@@ -293,6 +293,14 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
             out.push_str(&format!("crab_format_avg_turns{{format=\"{label}\"}} {avg}\n"));
         }
     }
+    out.push_str("# HELP crab_format_avg_duration_seconds Average wall-clock match duration by format.\n");
+    out.push_str("# TYPE crab_format_avg_duration_seconds gauge\n");
+    for (i, _) in st.format_buckets.iter().enumerate() {
+        if let Some(label) = crate::stats::format_label_for_bucket(i) {
+            let avg = st.format_avg_duration_secs(i).unwrap_or(0);
+            out.push_str(&format!("crab_format_avg_duration_seconds{{format=\"{label}\"}} {avg}\n"));
+        }
+    }
     out
 }
 
