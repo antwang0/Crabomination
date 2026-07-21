@@ -5355,6 +5355,68 @@ fn cr_702_56_forecast_once_per_turn_in_upkeep() {
     }).is_err(), "once each turn");
 }
 
+/// CR 603.4 — a turn-scoped "whenever [watched creature] deals damage this
+/// turn" delayed trigger fires on combat damage too (not just noncombat) and
+/// expires at cleanup. Paladin of Prahv's Forecast watches a creature.
+#[test]
+fn cr_603_4_watched_creature_damage_fires_on_combat_and_expires() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bear);
+    let paladin = g.add_card_to_hand(0, catalog::paladin_of_prahv());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: paladin, ability_index: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+    }).expect("forecast");
+    drain_stack(&mut g);
+    // Combat damage from the watched creature gains us that much life.
+    let life0 = g.players[0].life;
+    g.fire_combat_damage_to_player_triggers(bear, 1, 2);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 2, "combat damage from the watched creature gained life");
+    // After cleanup the watcher is gone.
+    g.do_cleanup(&mut Vec::new());
+    let life1 = g.players[0].life;
+    let mut ev = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(1), 2, Some(bear), &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life1, "watcher expired at cleanup — no more life gain");
+}
+
+/// CR 615.7 — "Prevent all damage a source of your choice would deal this turn"
+/// (Prahv, Spires of Order). The chosen source deals no damage afterward.
+#[test]
+fn cr_615_7_prevent_all_damage_from_chosen_source() {
+    let mut g = two_player_game();
+    let prahv = g.add_card_to_battlefield(0, catalog::prahv_spires_of_order());
+    g.clear_sickness(prahv);
+    // A creature whose damage we'll prevent; script the source choice to it.
+    let ogre = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Cards(vec![ogre]),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: prahv, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Prahv's prevention");
+    drain_stack(&mut g);
+    let life1 = g.players[0].life;
+    let mut ev = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0), 2, Some(ogre), &mut ev);
+    assert_eq!(g.players[0].life, life1, "the chosen source's damage was prevented");
+}
+
 /// CR 701.40 — Explore via a Map token: sacrifice the Map to explore a
 /// creature; a land reveal goes to hand.
 #[test]
