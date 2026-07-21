@@ -602,6 +602,10 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // referencing `Selector::TriggerSource` (and the implicit
         // SelfSource scope) bind to the creature that took the damage.
         GameEvent::DamageDealt { to_card: Some(card_id), .. } => Some(EntityRef::Permanent(*card_id)),
+        // Damage to a player binds `Selector::TriggerSource` / `PlayerRef::Triggerer`
+        // to the damaged player, so "that player discards / loses …" bodies on
+        // player-damage triggers resolve (Pain Magnification).
+        GameEvent::DamageDealt { to_player: Some(p), .. } => Some(EntityRef::Player(*p)),
         // CardDrawn / CardDiscarded carry a card_id — bind
         // `Selector::TriggerSource` to the *card* (not the player) so
         // filters like `Predicate::EntityMatches { what: TriggerSource,

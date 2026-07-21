@@ -266,6 +266,37 @@ fn paladin_of_prahv_forecast_gains_life_on_damage() {
     assert_eq!(g.players[0].life, life0 + 2, "gained life equal to the watched damage");
 }
 
+/// Pain Magnification: an opponent dealt 3+ by a single source discards.
+#[test]
+fn pain_magnification_discards_on_big_hit() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pain_magnification());
+    g.add_card_to_hand(1, catalog::forest());
+    let h1 = g.players[1].hand.len();
+    // 3 damage to the opponent → they discard.
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(1), 3, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), h1 - 1, "opponent discarded after a 3-damage hit");
+}
+
+/// Pain Magnification does not fire on a hit below 3.
+#[test]
+fn pain_magnification_ignores_small_hit() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pain_magnification());
+    g.add_card_to_hand(1, catalog::forest());
+    let h1 = g.players[1].hand.len();
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(1), 2, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), h1, "2 damage is below the threshold");
+}
+
 /// Stalking Vengeance turns a dying creature's power into damage to a player.
 #[test]
 fn stalking_vengeance_death_burns_target() {

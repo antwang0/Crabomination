@@ -1279,3 +1279,26 @@ pub fn palliation_accord() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Pain Magnification — {1}{B}{R} Enchantment. Whenever an opponent is dealt 3
+/// or more damage by a single source, that player discards a card.
+pub fn pain_magnification() -> CardDefinition {
+    CardDefinition {
+        name: "Pain Magnification",
+        cost: cost(&[generic(1), b(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::OpponentControl)
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::TriggerEventAmount,
+                    Value::Const(3),
+                )),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::ONE,
+                random: false,
+            },
+        }],
+        ..Default::default()
+    }
+}

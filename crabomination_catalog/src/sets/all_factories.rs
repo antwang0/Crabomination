@@ -7218,6 +7218,7 @@ static DIS: &[Factory] = &[
     super::dis::haazda_shield_mate,
     super::dis::jagged_poppet,
     super::dis::palliation_accord,
+    super::dis::pain_magnification,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,
