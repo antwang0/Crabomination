@@ -300,3 +300,96 @@ fn dynacharge_overload_pumps_team() {
     assert_eq!(g.computed_permanent(a).unwrap().power, 4, "first creature +2/+0");
     assert_eq!(g.computed_permanent(b).unwrap().power, 4, "second creature +2/+0");
 }
+
+/// Batch-4 vanilla/hybrid stat lines.
+#[test]
+fn rtr_batch4_stat_lines() {
+    let rs = catalog::risen_sanctuary();
+    assert_eq!((rs.power, rs.toughness), (8, 8));
+    assert!(rs.keywords.contains(&Keyword::Vigilance));
+    assert!(catalog::rakdos_shred_freak().keywords.contains(&Keyword::Haste));
+    let gl = catalog::golgari_longlegs();
+    assert_eq!((gl.power, gl.toughness), (5, 4));
+}
+
+/// Frostburn Weird pumps +1/-1 with its hybrid ability.
+#[test]
+fn frostburn_weird_pumps() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let weird = g.add_card_to_battlefield(0, catalog::frostburn_weird()); // 1/4
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: weird, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(weird).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "1/4 -> 2/3");
+}
+
+/// Phantom General buffs your creature tokens only.
+#[test]
+fn phantom_general_buffs_tokens() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::phantom_general());
+    // A real (nontoken) creature is unaffected.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // A token creature (via Seller of Songbirds' Bird) gets +1/+1.
+    let seller = g.add_card_to_hand(0, catalog::seller_of_songbirds());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: seller, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let bird = g.battlefield.iter().find(|c| c.definition.name == "Bird").unwrap().id;
+    assert_eq!(g.computed_permanent(bird).unwrap().power, 2, "1/1 token -> 2/2");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "nontoken bear unaffected");
+}
+
+/// Slum Reaper makes each player sacrifice a creature.
+#[test]
+fn slum_reaper_edicts_everyone() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let reaper = g.add_card_to_hand(0, catalog::slum_reaper());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: reaper, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "opponent's only creature sacrificed");
+}
+
+/// Soulsworn Spirit detains an opponent's creature on entry.
+#[test]
+fn soulsworn_spirit_detains() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+        [crabomination::decision::DecisionAnswer::Target(Target::Permanent(foe))],
+    ));
+    let spirit = g.add_card_to_hand(0, catalog::soulsworn_spirit());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spirit, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().detained_by.is_some(), "opponent's creature detained");
+}
+
+/// Chaos Imps has trample only while it carries a +1/+1 counter.
+#[test]
+fn chaos_imps_trample_gated_on_counter() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let imps = g.add_card_to_battlefield(0, catalog::chaos_imps());
+    assert!(!g.computed_permanent(imps).unwrap().keywords.contains(&Keyword::Trample),
+        "no trample without a counter");
+    g.battlefield_find_mut(imps).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(g.computed_permanent(imps).unwrap().keywords.contains(&Keyword::Trample),
+        "trample once it has a +1/+1 counter");
+}

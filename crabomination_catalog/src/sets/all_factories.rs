@@ -9454,6 +9454,17 @@ static RTR: &[Factory] = &[
     super::rtr::skull_rend,
     super::rtr::dynacharge,
     super::rtr::downsize,
+    super::rtr::risen_sanctuary,
+    super::rtr::rakdos_shred_freak,
+    super::rtr::golgari_longlegs,
+    super::rtr::grim_roustabout,
+    super::rtr::frostburn_weird,
+    super::rtr::rakdos_ringleader,
+    super::rtr::soulsworn_spirit,
+    super::rtr::skymark_roc,
+    super::rtr::phantom_general,
+    super::rtr::slum_reaper,
+    super::rtr::chaos_imps,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,

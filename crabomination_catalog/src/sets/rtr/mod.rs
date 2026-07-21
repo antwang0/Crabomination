@@ -6,8 +6,10 @@ mod creatures;
 mod gaps;
 mod gaps2;
 mod spells;
+mod gaps3;
 
 pub use creatures::*;
 pub use gaps::*;
 pub use gaps2::*;
 pub use spells::*;
+pub use gaps3::*;
