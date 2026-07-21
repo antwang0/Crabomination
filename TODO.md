@@ -193,7 +193,13 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   ("can't be blocked except by defenders" evasion keyword), Necromancer's
   (return-to-hand death replacement over your enchanted creatures); Necroplasm
   (dredge + toughness-scaling end-step wrath); the Radiance mechanic (Surge of
-  Zeal, Leave No Trace — target + each other permanent sharing a color).
+  Zeal, Leave No Trace, Incite Hysteria — target + each other permanent sharing a
+  color); Hex (needs an exactly-N-target `DestroyTargets` — the current variant is
+  "up to X"); Sanguine Praetor (needs a creature-only "destroy each creature with
+  MV = X"; `DestroyEachNonlandWithManaValue` also hits noncreature nonlands);
+  Living Inferno (two-way divided-damage fight — the damaged creatures deal power
+  back to the source); Orzhov Pontiff (a *triggered-ability* modal "choose one" —
+  only `ChooseModesCast` at cast time exists today).
   **Still-deferred DIS/RAV cards (need new primitives):** Simic Basilisk (grant "destroy at end
   of combat on combat damage to a creature" until EOT); Ignorant Bliss
   (exile hand, delayed return next end step); Kindle the Carnage (repeatable
