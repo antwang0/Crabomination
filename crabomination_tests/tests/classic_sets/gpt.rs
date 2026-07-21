@@ -354,3 +354,240 @@ fn leyline_of_lifeforce_protects_creature_spells() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "and resolved onto the battlefield");
 }
+
+// ── GPT gap wave 2 (gaps2.rs) ────────────────────────────────────────────────
+
+use crabomination::card::CounterType;
+
+/// Fencer's Magemark anthems your enchanted creatures with +1/+1 and first
+/// strike.
+#[test]
+fn fencers_magemark_pumps_and_grants_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let mark = g.add_card_to_battlefield(0, catalog::fencers_magemark());
+    g.battlefield_find_mut(mark).unwrap().attached_to = Some(bear);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 anthem");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "granted first strike");
+}
+
+/// Guardian's Magemark has flash and anthems enchanted creatures +1/+1.
+#[test]
+fn guardians_magemark_has_flash_and_pumps() {
+    assert!(catalog::guardians_magemark().keywords.contains(&Keyword::Flash));
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mark = g.add_card_to_battlefield(0, catalog::guardians_magemark());
+    g.battlefield_find_mut(mark).unwrap().attached_to = Some(bear);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 anthem");
+}
+
+/// Skyrider Trainee flies only while enchanted.
+#[test]
+fn skyrider_trainee_flies_only_while_enchanted() {
+    let mut g = two_player_game();
+    let sky = g.add_card_to_battlefield(0, catalog::skyrider_trainee());
+    assert!(!g.computed_permanent(sky).unwrap().keywords.contains(&Keyword::Flying),
+        "no flying while unenchanted");
+    let aura = g.add_card_to_battlefield(0, catalog::guardians_magemark());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(sky);
+    assert!(g.computed_permanent(sky).unwrap().keywords.contains(&Keyword::Flying),
+        "gains flying while enchanted");
+}
+
+/// Lionheart Maverick's activated ability pumps it +1/+2.
+#[test]
+fn lionheart_maverick_pumps_itself() {
+    let mut g = two_player_game();
+    let lion = g.add_card_to_battlefield(0, catalog::lionheart_maverick()); // 1/1
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lion, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(lion).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "+1/+2 until end of turn");
+    assert!(cp.keywords.contains(&Keyword::Vigilance));
+}
+
+/// Order of the Stars chooses a color as it enters and has defender.
+#[test]
+fn order_of_the_stars_picks_a_color() {
+    let mut g = two_player_game();
+    let order = g.move_card_to_battlefield_for_test(0, catalog::order_of_the_stars());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(order).unwrap().chosen_color.is_some(), "chose a color on entry");
+    assert!(catalog::order_of_the_stars().keywords.contains(&Keyword::Defender));
+}
+
+/// Ogre Savant bounces a creature only when {U} was spent to cast it.
+#[test]
+fn ogre_savant_bounces_when_blue_spent() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let ogre = g.add_card_to_battlefield(0, catalog::ogre_savant());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let def = catalog::ogre_savant();
+    // No blue spent → no bounce.
+    let mut ctx = EffectContext::for_spell_with_source(ogre, "Ogre Savant", 0, None, vec![], 0, 0, 0, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.battlefield_find(bear).is_some(), "no bounce without blue");
+    // Blue spent → bounce.
+    g.battlefield_find_mut(ogre).unwrap().cast_mana_spent_by_color = vec![(Color::Blue, 1)];
+    let mut ctx = EffectContext::for_spell_with_source(ogre, "Ogre Savant", 0, None, vec![], 0, 0, 0, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced when blue was spent");
+}
+
+/// Revenant Patriarch can't block; casting it with {W} makes a player skip
+/// their next combat.
+#[test]
+fn revenant_patriarch_skips_combat_when_white_spent() {
+    let mut g = two_player_game();
+    assert!(catalog::revenant_patriarch().keywords.contains(&Keyword::CantBlock));
+    let pat = g.add_card_to_hand(0, catalog::revenant_patriarch());
+    // {4}{B}: pay the four generic with white so {W} is spent.
+    g.players[0].mana_pool.add(Color::White, 4);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pat, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with white");
+    drain_stack(&mut g);
+    assert!(g.players[1].skip_next_combat >= 1, "opponent skips next combat");
+}
+
+/// Restless Bones grants swampwalk to a target creature.
+#[test]
+fn restless_bones_grants_swampwalk() {
+    use crabomination::card::LandType;
+    let mut g = two_player_game();
+    let bones = g.add_card_to_battlefield(0, catalog::restless_bones());
+    g.clear_sickness(bones);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bones, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("grant swampwalk");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Landwalk(LandType::Swamp)));
+}
+
+/// Smogsteed Rider gives every other attacker fear when it attacks.
+#[test]
+fn smogsteed_rider_grants_fear_to_other_attackers() {
+    let mut g = two_player_game();
+    let rider = g.add_card_to_battlefield(0, catalog::smogsteed_rider());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(rider);
+    g.clear_sickness(ally);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: rider, target: AttackTarget::Player(1) },
+        Attack { attacker: ally, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Fear),
+        "other attacker gained fear");
+    assert!(!g.computed_permanent(rider).unwrap().keywords.contains(&Keyword::Fear),
+        "the rider itself does not");
+}
+
+/// Martyred Rusalka sacrifices a creature to stop a creature from attacking.
+#[test]
+fn martyred_rusalka_prevents_attack() {
+    let mut g = two_player_game();
+    let rusalka = g.add_card_to_battlefield(0, catalog::martyred_rusalka());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rusalka, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![Target::Permanent(fodder)], x_value: None,
+    }).expect("prevent attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed as a cost");
+    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantAttack));
+}
+
+/// Skarrgan Firebird enters with three +1/+1 counters when an opponent was
+/// dealt damage this turn (bloodthirst 3).
+#[test]
+fn skarrgan_firebird_bloodthirst_three() {
+    let mut g = two_player_game();
+    g.players[1].was_dealt_damage_this_turn = true;
+    let bird = g.move_card_to_battlefield_for_test(0, catalog::skarrgan_firebird());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bird).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    assert!(catalog::skarrgan_firebird().keywords.contains(&Keyword::Flying));
+}
+
+/// Runeboggle counters an unpaid spell and draws a card.
+#[test]
+fn runeboggle_counters_and_draws() {
+    use crabomination::game::types::{StackItem, Target};
+    let mut g = two_player_game();
+    // Opponent casts a bolt, spending all their mana.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    assert!(matches!(g.stack.last(), Some(StackItem::Spell { card, .. }) if card.id == bolt));
+    // Respond with Runeboggle; opponent can't pay {1}.
+    g.priority.player_with_priority = 0;
+    g.add_card_to_library(0, catalog::forest());
+    let hand0 = g.players[0].hand.len();
+    let rune = g.add_card_to_hand(0, catalog::runeboggle());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rune, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Runeboggle");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "bolt countered");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card (Runeboggle left hand, one drawn)");
+}
+
+/// Primeval Light destroys only the target player's enchantments.
+#[test]
+fn primeval_light_destroys_target_players_enchantments() {
+    let mut g = two_player_game();
+    // Attach each Aura to a creature so the unattached-Aura SBA doesn't destroy them.
+    let mb = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::guardians_magemark());
+    g.battlefield_find_mut(mine).unwrap().attached_to = Some(mb);
+    let tb = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::guardians_magemark());
+    g.battlefield_find_mut(theirs).unwrap().attached_to = Some(tb);
+    resolve_spell(&mut g, catalog::primeval_light(), vec![Target::Player(1)]);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(mine).is_some(), "my enchantment survives");
+    assert!(g.battlefield_find(theirs).is_none(), "their enchantment destroyed");
+}
+
+/// Hatching Plans draws three cards when it hits the graveyard.
+#[test]
+fn hatching_plans_draws_three_on_death() {
+    let mut g = two_player_game();
+    let plans = g.add_card_to_battlefield(0, catalog::hatching_plans());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let hand0 = g.players[0].hand.len();
+    let mut evs = Vec::new();
+    g.destroy_permanent(plans, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 3, "drew three cards");
+}
