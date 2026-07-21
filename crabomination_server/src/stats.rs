@@ -598,6 +598,21 @@ impl MatchStats {
         (mean_sq - mean * mean).max(0.0).sqrt() as f32
     }
 
+    /// Coefficient of variation of the winner's board size (σ / mean, as a
+    /// percent). The scale-free companion to [`winner_board_stddev`](Self::
+    /// winner_board_stddev) and the sibling of [`win_life_delta_cv_pct`](Self::
+    /// win_life_delta_cv_pct): a burn format (winners at ~0 board) and a
+    /// go-wide format (winners at ~8 board) can share a σ yet differ wildly in
+    /// relative spread — the CV normalizes that so board-consistency is
+    /// comparable across formats. Returns 0 with no samples or a zero mean.
+    pub(crate) fn winner_board_cv_pct(&self) -> u64 {
+        let mean = self.avg_winner_board();
+        if self.winner_board_samples == 0 || mean == 0 {
+            return 0;
+        }
+        (self.winner_board_stddev() as f64 * 100.0 / mean as f64).round() as u64
+    }
+
     /// Average win-by-life delta across all sampled wins. Returns 0
     /// when no win-life samples have been recorded yet.
     pub(crate) fn avg_win_life_delta(&self) -> i64 {

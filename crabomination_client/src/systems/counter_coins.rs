@@ -386,7 +386,10 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Book => "Book",
         CounterType::Point => "Point",
         CounterType::Unlock => "Unlock",
-        // Silver / Prepared and any future internal counters fall through.
+        CounterType::Silver => "Silver",
+        CounterType::Prepared => "Prepared",
+        CounterType::Palliation => "Palliation",
+        // Any future internal counters fall through to a generic label.
         _ => "Counter",
     }
 }

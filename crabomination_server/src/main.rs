@@ -1224,6 +1224,25 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn winner_board_cv_is_scale_free_and_guards_empty() {
+        // No samples → 0.
+        assert_eq!(MatchStats::default().winner_board_cv_pct(), 0);
+        // Winning boards {2,2,2,8}: integer mean 3, σ ≈ 2.6 → cv ≈ 87%.
+        let mut s = MatchStats::default();
+        for b in [2usize, 2, 2, 8] {
+            s.observe_winner_board(0, &[b, 0]);
+        }
+        let cv = s.winner_board_cv_pct();
+        assert!((80..=95).contains(&cv), "swingy board sizes → high cv, got {cv}");
+        // Identical winning boards → zero dispersion → cv 0.
+        let mut s = MatchStats::default();
+        for _ in 0..4 {
+            s.observe_winner_board(0, &[4, 0]);
+        }
+        assert_eq!(s.winner_board_cv_pct(), 0, "identical boards → cv 0");
+    }
+
+    #[test]
     pub(crate) fn win_life_delta_percentile_clamps_and_handles_empty() {
         let s = MatchStats::default();
         assert_eq!(s.win_life_delta_percentile(0.5), 0, "no samples → 0");
