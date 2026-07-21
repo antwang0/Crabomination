@@ -9448,6 +9448,10 @@ static RAV: &[Factory] = &[
     super::rav::hunted_troll,
     super::rav::boros_fury_shield,
     super::rav::siege_of_towers,
+    super::rav::greater_mossdog,
+    super::rav::flow_of_ideas,
+    super::rav::hour_of_reckoning,
+    super::rav::guardian_of_vitu_ghazi,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

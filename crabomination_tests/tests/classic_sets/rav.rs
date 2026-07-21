@@ -731,3 +731,51 @@ fn siege_of_towers_animates_a_mountain() {
     assert!(cp.card_types.contains(&CardType::Creature), "now a creature");
     assert!(cp.card_types.contains(&CardType::Land), "still a land");
 }
+
+/// Greater Mossdog is a 3/3 with dredge 3.
+#[test]
+fn greater_mossdog_stat_and_dredge() {
+    let m = catalog::greater_mossdog();
+    assert_eq!((m.power, m.toughness), (3, 3));
+    assert!(m.keywords.iter().any(|k| matches!(k, Keyword::Dredge(3))));
+}
+
+/// Flow of Ideas draws one card per Island you control.
+#[test]
+fn flow_of_ideas_draws_per_island() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::island()); }
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    let h0 = g.players[0].hand.len();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::flow_of_ideas().effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), h0 + 3, "drew a card per Island (3)");
+}
+
+/// Hour of Reckoning destroys nontoken creatures but spares tokens.
+#[test]
+fn hour_of_reckoning_spares_tokens() {
+    use crabomination::card::{CardType, TokenDefinition};
+    let mut g = two_player_game();
+    let real = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let token_def = TokenDefinition {
+        name: "Soldier".into(), power: 1, toughness: 1,
+        card_types: vec![CardType::Creature], ..Default::default()
+    };
+    let token = g.add_token_to_battlefield(0, &token_def);
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&catalog::hour_of_reckoning().effect, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(real).is_none(), "nontoken creature destroyed");
+    assert!(g.battlefield_find(token).is_some(), "token spared");
+}
+
+/// Guardian of Vitu-Ghazi is a 4/7 with convoke and vigilance.
+#[test]
+fn guardian_of_vitu_ghazi_stat_line() {
+    let g = catalog::guardian_of_vitu_ghazi();
+    assert_eq!((g.power, g.toughness), (4, 7));
+    assert!(g.keywords.contains(&Keyword::Convoke) && g.keywords.contains(&Keyword::Vigilance));
+}
