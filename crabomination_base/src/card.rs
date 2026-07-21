@@ -164,6 +164,9 @@ pub enum CreatureType {
     Naga,
     // Strixhaven artifact-creature subtype (Biblioplex Assistant).
     Gargoyle,
+    // Ravnica four-color rares (the Nephilim cycle) + their Sand tokens.
+    Nephilim,
+    Sand,
     // Innistrad Eye Horror (Concealing Curtains // Revealing Eye).
     Eye,
     // Manland animate-into bodies (Mishra's Factory, Inkmoth / Blinkmoth Nexus).

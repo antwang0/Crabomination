@@ -2,12 +2,13 @@
 //! Bloodthirst attacker-anthem. Tests in `classic_sets/gpt`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility,
+    Value,
 };
-use crate::effect::shortcut::{bloodthirst, etb, on_dies, target_filtered};
+use crate::effect::shortcut::{bloodthirst, etb, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, Effect, OpeningHandEffect, PlayerRef, Selector};
-use crate::mana::{b, cost, generic, r, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// 1/1 white Spirit token with flying.
 fn spirit_token() -> TokenDefinition {
@@ -119,6 +120,117 @@ pub fn rabble_rouser() -> CardDefinition {
                 what: Selector::EachPermanent(R::Creature.and(R::IsAttacking)),
                 power: Value::PowerOf(Box::new(Selector::This)),
                 toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Borborygmos — {3}{R}{R}{G}{G} legendary 6/7 Cyclops with trample. Whenever it
+/// deals combat damage to a player, put a +1/+1 counter on each creature you
+/// control.
+pub fn borborygmos() -> CardDefinition {
+    CardDefinition {
+        name: "Borborygmos",
+        cost: cost(&[generic(3), r(), r(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cyclops], ..Default::default() },
+        power: 6,
+        toughness: 7,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skarrgan Skybreaker — {4}{R}{R}{G} 3/3 Giant Shaman with bloodthirst 3. {1},
+/// Sacrifice this creature: it deals damage equal to its power to any target.
+pub fn skarrgan_skybreaker() -> CardDefinition {
+    CardDefinition {
+        name: "Skarrgan Skybreaker",
+        cost: cost(&[generic(4), r(), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant, CreatureType::Shaman], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![bloodthirst(3)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::DealDamageEqualToPower { source: Selector::This, target: target_any() },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// 1/1 colorless Sand creature token.
+fn sand_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Sand".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sand], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Dune-Brood Nephilim — {B}{R}{G}{W} 3/3 Nephilim. Whenever it deals combat
+/// damage to a player, create a 1/1 colorless Sand token for each land you
+/// control.
+pub fn dune_brood_nephilim() -> CardDefinition {
+    CardDefinition {
+        name: "Dune-Brood Nephilim",
+        cost: cost(&[b(), r(), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nephilim], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByYou))),
+                definition: sand_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Glint-Eye Nephilim — {U}{B}{R}{G} 2/2 Nephilim. Whenever it deals combat
+/// damage to a player, draw that many cards. {1}, Discard a card: +1/+1 until
+/// end of turn.
+pub fn glint_eye_nephilim() -> CardDefinition {
+    CardDefinition {
+        name: "Glint-Eye Nephilim",
+        cost: cost(&[u(), b(), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nephilim], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ONE,
                 duration: Duration::EndOfTurn,
             },
             ..Default::default()

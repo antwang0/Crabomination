@@ -7805,6 +7805,10 @@ static GPT: &[Factory] = &[
     super::gpt::seize_the_soul,
     super::gpt::leyline_of_lightning,
     super::gpt::rabble_rouser,
+    super::gpt::borborygmos,
+    super::gpt::skarrgan_skybreaker,
+    super::gpt::dune_brood_nephilim,
+    super::gpt::glint_eye_nephilim,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,

@@ -812,3 +812,71 @@ fn rabble_rouser_pumps_attackers_by_its_power() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(ally).unwrap().power, 3, "attacker got +1/+0 (Rabble-Rouser's power)");
 }
+
+/// Borborygmos puts a +1/+1 counter on each of your creatures on combat damage.
+#[test]
+fn borborygmos_grows_your_team_on_combat_damage() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let bor = g.add_card_to_battlefield(0, catalog::borborygmos());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bor);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bor, target: AttackTarget::Player(1),
+    }])).expect("Borborygmos attacks");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.battlefield_find(ally).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "each creature you control got a +1/+1 counter");
+}
+
+/// Skarrgan Skybreaker sacrifices itself to deal damage equal to its power.
+#[test]
+fn skarrgan_skybreaker_sacrifices_for_power_damage() {
+    let mut g = two_player_game();
+    let sky = g.add_card_to_battlefield(0, catalog::skarrgan_skybreaker()); // 3/3
+    g.players[0].mana_pool.add_colorless(1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sky, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+    }).expect("sacrifice for damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sky).is_none(), "sacrificed as a cost");
+    assert_eq!(g.players[1].life, p1 - 3, "dealt damage equal to its power (3)");
+}
+
+/// Dune-Brood Nephilim makes a Sand token per land you control on combat damage.
+#[test]
+fn dune_brood_nephilim_makes_sand_per_land() {
+    let mut g = two_player_game();
+    let dune = g.add_card_to_battlefield(0, catalog::dune_brood_nephilim());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.clear_sickness(dune);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dune, target: AttackTarget::Player(1),
+    }])).expect("Dune-Brood attacks");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    let sand = g.battlefield.iter().filter(|c| c.definition.name == "Sand" && c.controller == 0).count();
+    assert_eq!(sand, 2, "one Sand token per land controlled");
+}
+
+/// Glint-Eye Nephilim draws cards equal to the combat damage it deals.
+#[test]
+fn glint_eye_nephilim_draws_on_combat_damage() {
+    let mut g = two_player_game();
+    let glint = g.add_card_to_battlefield(0, catalog::glint_eye_nephilim()); // 2/2
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    g.clear_sickness(glint);
+    let h0 = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: glint, target: AttackTarget::Player(1),
+    }])).expect("Glint-Eye attacks");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[0].hand.len(), h0 + 2, "drew cards equal to combat damage (2)");
+}
