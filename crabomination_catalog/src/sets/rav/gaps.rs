@@ -359,3 +359,40 @@ pub fn conclaves_blessing() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Autochthon Wurm — {10}{G}{G}{G}{W}{W} 9/14 Wurm with Convoke and Trample.
+pub fn autochthon_wurm() -> CardDefinition {
+    CardDefinition {
+        name: "Autochthon Wurm",
+        cost: cost(&[generic(10), g(), g(), g(), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        power: 9,
+        toughness: 14,
+        keywords: vec![Keyword::Convoke, Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Cackling Imp — {2}{B}{B} 2/2 Imp with flying. `{T}: Target player loses 1
+/// life.`
+pub fn cackling_imp() -> CardDefinition {
+    CardDefinition {
+        name: "Cackling Imp",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

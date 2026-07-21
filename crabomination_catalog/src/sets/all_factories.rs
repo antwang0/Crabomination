@@ -9372,6 +9372,8 @@ static RAV: &[Factory] = &[
     super::rav::dryads_caress,
     super::rav::empty_the_catacombs,
     super::rav::conclaves_blessing,
+    super::rav::autochthon_wurm,
+    super::rav::cackling_imp,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

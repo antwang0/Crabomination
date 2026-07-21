@@ -343,3 +343,29 @@ fn conclaves_blessing_scales_toughness() {
     // Three creatures you control → +0/+6.
     assert_eq!(g.computed_permanent(host).map(|c| c.toughness), Some(8), "+2 toughness per creature");
 }
+
+/// Autochthon Wurm is a 9/14 with Convoke and Trample.
+#[test]
+fn autochthon_wurm_stats_and_keywords() {
+    let w = catalog::autochthon_wurm();
+    assert_eq!((w.power, w.toughness), (9, 14));
+    assert!(w.keywords.contains(&Keyword::Convoke));
+    assert!(w.keywords.contains(&Keyword::Trample));
+}
+
+/// Cackling Imp's tap ability drains a target player 1 life.
+#[test]
+fn cackling_imp_drains_a_life() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let imp = g.add_card_to_battlefield(0, catalog::cackling_imp());
+    g.clear_sickness(imp);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: imp, ability_index: 0,
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Cackling Imp");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 1, "target player lost 1 life");
+    assert!(g.battlefield_find(imp).unwrap().tapped, "tapped as the cost");
+}
