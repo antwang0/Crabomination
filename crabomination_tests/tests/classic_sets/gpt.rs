@@ -1297,3 +1297,73 @@ fn droning_bureaucrats_locks_matching_mv() {
     assert!(!g.computed_permanent(one_drop).unwrap().keywords.contains(&Keyword::CantAttack),
         "MV-1 creature is unaffected");
 }
+
+/// Yore-Tiller Nephilim reanimates a graveyard creature tapped and attacking.
+#[test]
+fn yore_tiller_reanimates_attacking() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let neph = g.add_card_to_battlefield(0, catalog::yore_tiller_nephilim());
+    g.clear_sickness(neph);
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(dead))]));
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: neph, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let bear = g.battlefield_find(dead).expect("bear reanimated to battlefield");
+    assert!(bear.tapped, "reanimated tapped");
+    assert!(g.attacking.iter().any(|a| a.attacker == dead), "and attacking");
+}
+
+/// Witch-Maw Nephilim grows by two counters when you cast a spell.
+#[test]
+fn witch_maw_grows_on_cast() {
+    use crabomination::card::CounterType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let neph = g.add_card_to_battlefield(0, catalog::witch_maw_nephilim());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(neph).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "two +1/+1 counters from the cast trigger",
+    );
+}
+
+/// Sabertooth Alley Cat's ability lets only defenders block it.
+#[test]
+fn sabertooth_only_blocked_by_defenders() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::sabertooth_alley_cat());
+    g.clear_sickness(cat);
+    assert!(cat_has_must_attack(&g, cat), "attacks each combat if able");
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cat, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    let kws = g.computed_permanent(cat).unwrap().keywords.clone();
+    assert!(
+        kws.iter().any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))),
+        "gained the defender-only evasion",
+    );
+}
+
+fn cat_has_must_attack(g: &crabomination::game::GameState, id: crabomination::card::CardId) -> bool {
+    g.computed_permanent(id).unwrap().keywords.contains(&Keyword::MustAttack)
+}
