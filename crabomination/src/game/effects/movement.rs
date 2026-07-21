@@ -464,6 +464,24 @@ impl GameState {
             let n = self.noncombat_damage_doublers_for(source, ent);
             amount.saturating_mul(1 << n.min(16))
         };
+        // CR 614 — Phytohydra: "If damage would be dealt to this creature, put
+        // that many +1/+1 counters on it instead." A replacement (not
+        // prevention), so it fires even when damage can't be prevented; grows
+        // by the full scaled amount. Combat damage is replaced on the combat
+        // path (`ironscale_replace`).
+        if let EntityRef::Permanent(tgt) = ent
+            && self.creature_replaces_damage_with_counters(tgt)
+        {
+            if let Some(c) = self.battlefield_find_mut(tgt) {
+                c.add_counters(crate::card::CounterType::PlusOnePlusOne, amount);
+            }
+            events.push(GameEvent::CounterAdded {
+                card_id: tgt,
+                counter_type: crate::card::CounterType::PlusOnePlusOne,
+                count: amount,
+            });
+            return;
+        }
         // CR 615 — Stormwild Capridor: "If noncombat damage would be dealt
         // to this creature, prevent that damage. Put a +1/+1 counter on it
         // for each 1 damage prevented this way." Applied after scaling so

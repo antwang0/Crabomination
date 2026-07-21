@@ -2265,19 +2265,38 @@ impl GameState {
     /// emit the event, and return 0 (the damage is prevented); otherwise
     /// return `dealt` unchanged.
     fn ironscale_replace(&mut self, recipient: CardId, dealt: i32, events: &mut Vec<GameEvent>) -> i32 {
-        if dealt > 0 && self.creature_prevents_combat_damage_grows(recipient) {
-            if let Some(c) = self.battlefield_find_mut(recipient) {
-                c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
-            }
-            events.push(GameEvent::CounterAdded {
-                card_id: recipient,
-                counter_type: crate::card::CounterType::PlusOnePlusOne,
-                count: 1,
-            });
-            0
-        } else {
-            dealt
+        if dealt <= 0 {
+            return dealt;
         }
+        // Ironscale Hydra grows by exactly one; Phytohydra grows by the full
+        // amount. Both are replacements (CR 614), so they apply even when
+        // damage can't be prevented.
+        let grow = if self.creature_prevents_combat_damage_grows(recipient) {
+            1
+        } else if self.creature_replaces_damage_with_counters(recipient) {
+            dealt as u32
+        } else {
+            return dealt;
+        };
+        if let Some(c) = self.battlefield_find_mut(recipient) {
+            c.add_counters(crate::card::CounterType::PlusOnePlusOne, grow);
+        }
+        events.push(GameEvent::CounterAdded {
+            card_id: recipient,
+            counter_type: crate::card::CounterType::PlusOnePlusOne,
+            count: grow,
+        });
+        0
+    }
+
+    /// Phytohydra (CR 614) — does `id` replace incoming damage with that many
+    /// +1/+1 counters? Reads `StaticEffect::ReplaceDamageToSelfWithCounters`.
+    pub(crate) fn creature_replaces_damage_with_counters(&self, id: CardId) -> bool {
+        self.battlefield_find(id).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|s| {
+                matches!(s.effect, crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters)
+            })
+        })
     }
 
     fn scale_combat_damage(
@@ -2341,6 +2360,39 @@ impl GameState {
     ) {
         match atk.target {
             AttackTarget::Player(p) => {
+                // CR 614 — Szadek: this attacker's combat damage to a player
+                // becomes that many +1/+1 counters on it, and the player mills
+                // that many instead of losing life.
+                if amount > 0
+                    && self.battlefield_find(atk.id).is_some_and(|c| {
+                        c.definition.static_abilities.iter().any(|s| {
+                            matches!(
+                                s.effect,
+                                crate::effect::StaticEffect::CombatDamageToPlayerBecomesCountersAndMill
+                            )
+                        })
+                    })
+                {
+                    if let Some(c) = self.battlefield_find_mut(atk.id) {
+                        c.add_counters(crate::card::CounterType::PlusOnePlusOne, amount);
+                    }
+                    events.push(GameEvent::CounterAdded {
+                        card_id: atk.id,
+                        counter_type: crate::card::CounterType::PlusOnePlusOne,
+                        count: amount,
+                    });
+                    for _ in 0..amount {
+                        if self.players[p].library.is_empty() {
+                            break;
+                        }
+                        let card = self.players[p].library.remove(0);
+                        let cid = card.id;
+                        if !self.route_to_graveyard(card, events) {
+                            events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                        }
+                    }
+                    return;
+                }
                 // CR 614.9 — Palisade-Giant-style redirect: combat damage
                 // aimed at the player lands on the redirector instead.
                 if let Some(redirect) =

@@ -1883,3 +1883,66 @@ fn belltower_sphinx_mills_the_damager() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib1 - 3, "the damager's controller milled 3");
 }
+
+/// Phytohydra grows by the full noncombat damage instead of taking any.
+#[test]
+fn phytohydra_grows_from_damage() {
+    use crabomination::card::CounterType;
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let hydra = g.add_card_to_battlefield(0, catalog::phytohydra());
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(hydra), 4, None, &mut evs);
+    let c = g.battlefield_find(hydra).unwrap();
+    assert_eq!(c.damage, 0, "no damage marked — it was replaced");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 4, "grew by 4");
+}
+
+/// Phytohydra's replacement fires even when damage can't be prevented.
+#[test]
+fn phytohydra_grows_through_unpreventable() {
+    use crabomination::card::CounterType;
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let hydra = g.add_card_to_battlefield(0, catalog::phytohydra());
+    g.damage_cant_be_prevented_this_turn = true;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(hydra), 2, None, &mut evs);
+    assert_eq!(
+        g.battlefield_find(hydra).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "replacement (not prevention) still applies",
+    );
+}
+
+/// Szadek's combat damage to a player mills that many and grows Szadek.
+#[test]
+fn szadek_mills_instead_of_damaging() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let szadek = g.add_card_to_battlefield(0, catalog::szadek_lord_of_secrets());
+    g.clear_sickness(szadek);
+    for _ in 0..10 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    let lib1 = g.players[1].library.len();
+    let life1 = g.players[1].life;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: szadek, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1, "no life lost");
+    assert_eq!(g.players[1].library.len(), lib1 - 5, "milled 5 (Szadek's power)");
+    assert_eq!(
+        g.battlefield_find(szadek).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        5,
+        "grew by 5",
+    );
+}

@@ -1410,6 +1410,17 @@ pub enum StaticEffect {
     /// Ironscale Hydra. A self-only combat-damage replacement consulted at the
     /// creature-vs-creature damage sites.
     PreventCombatDamageToSelfAndGrow,
+    /// CR 614 — "If damage would be dealt to this creature, put that many
+    /// +1/+1 counters on it instead." Phytohydra. A true replacement (not
+    /// prevention, so it fires even when damage can't be prevented), consulted
+    /// at both the combat and noncombat self-damage sites; grows by the full
+    /// amount rather than a single counter.
+    ReplaceDamageToSelfWithCounters,
+    /// CR 614 — "If this creature would deal combat damage to a player,
+    /// instead put that many +1/+1 counters on it and that player mills that
+    /// many cards." Szadek, Lord of Secrets. A dealer-side combat-damage
+    /// replacement consulted in the attack-a-player branch.
+    CombatDamageToPlayerBecomesCountersAndMill,
     /// CR 615 — "Prevent all damage that would be dealt to attacking
     /// creatures you control." Iroas, God of Victory. Consulted at both the
     /// combat strike-back and the shared non-combat damage funnel.

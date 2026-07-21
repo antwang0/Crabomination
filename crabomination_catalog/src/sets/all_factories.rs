@@ -9316,6 +9316,8 @@ static RAV: &[Factory] = &[
     super::rav::svogthos_the_restless_tomb,
     super::rav::shadow_of_doubt,
     super::rav::belltower_sphinx,
+    super::rav::phytohydra,
+    super::rav::szadek_lord_of_secrets,
     super::rav::glass_golem,
     super::rav::goliath_spider,
     super::rav::grayscaled_gharial,
