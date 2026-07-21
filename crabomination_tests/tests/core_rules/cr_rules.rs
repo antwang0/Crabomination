@@ -9926,3 +9926,70 @@ fn cr_202_3b_x_cost_is_zero_in_graveyard() {
     g.add_card_to_graveyard(0, catalog::horses_of_the_bruinen()); // {3}{U}{U} = 5
     assert_eq!(g.computed_permanent(aven).unwrap().power, 3, "five distinct MVs → +2/+2");
 }
+
+// ── CR 701.5g / 709.3 / 608.2h (this run's DIS gap wave) ─────────────────────
+
+/// CR 701.5g — a countered spell is put into its owner's graveyard. Swift
+/// Silence counters every other spell on the stack; the countered card lands
+/// in the graveyard (not exile).
+#[test]
+fn cr_701_5g_countered_spell_goes_to_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear onto the stack");
+    let silence = g.add_card_to_hand(0, catalog::swift_silence());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: silence, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Swift Silence");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "the countered spell rests in its owner's graveyard");
+}
+
+/// CR 709.3 — a split card's two halves are cast independently, each paying its
+/// own cost and resolving only its own effect. Punishment (right) destroys by
+/// mana value X without touching Crime's reanimation.
+#[test]
+fn cr_709_3_split_halves_cast_independently() {
+    let mut g = two_player_game();
+    let two_drop = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let three_drop = g.add_card_to_battlefield(1, catalog::craw_wurm()); // MV 6
+    let cp = g.add_card_to_hand(0, catalog::crime_punishment());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: cp, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("Punishment castable for X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(two_drop).is_none(), "MV-2 destroyed by Punishment");
+    assert!(g.battlefield_find(three_drop).is_some(), "MV-6 untouched");
+}
+
+/// CR 608.2h — a permanent sacrificed as part of resolution is measured by its
+/// last-known information. Hit reads the sacrificed permanent's mana value
+/// after it has already left the battlefield.
+#[test]
+fn cr_608_2h_sacrificed_mana_value_read_via_lki() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::craw_wurm()); // MV 6, the only sac fodder
+    let hr = g.add_card_to_hand(0, catalog::hit_run());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: hr, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hit");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 6, "damage equals the departed permanent's LKI mana value");
+}
