@@ -503,6 +503,15 @@ impl MatchStats {
             self.win_life_delta_buckets[0] as u64 + self.win_life_delta_buckets[1] as u64;
         close.saturating_mul(100).checked_div(total).unwrap_or(0)
     }
+    /// Share (percent) of margin-tracked wins that were blowouts — a final life
+    /// margin above 15 (delta bucket 5). The upper-tail mirror of
+    /// [`close_win_pct`](Self::close_win_pct): a rising value with a stable
+    /// mean flags a widening blowout tail (one deck stomping the field) that
+    /// the average alone hides. Returns 0 with no margin samples.
+    pub(crate) fn blowout_win_pct(&self) -> u64 {
+        let total: u64 = self.win_life_delta_buckets.iter().map(|&n| n as u64).sum();
+        (self.win_life_delta_buckets[5] as u64).saturating_mul(100).checked_div(total).unwrap_or(0)
+    }
     /// Classify one clean win as a damage win or an "alternate" win
     /// (deckout / poison / mill / win-the-game). Prefers the outcome's
     /// precise per-seat `loss_reasons`; if any losing seat died to
@@ -1351,6 +1360,9 @@ mod tests {
             s.observe_win_life_delta(w, &life);
         }
         assert_eq!(s.close_win_pct(), 50);
+        // Only the 20-margin win (bucket 5) is a blowout — 1 of 4.
+        assert_eq!(s.blowout_win_pct(), 25);
+        assert_eq!(MatchStats::default().blowout_win_pct(), 0);
     }
 
     #[test]

@@ -61,7 +61,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"deckout_wins\":{},\"commander_damage_wins\":{},\"concede_wins\":{},\"other_wins\":{},\
          \"first_seat_win_pct\":{},\"avg_win_life_delta\":{},\
          \"median_win_life_delta\":{},\"win_life_delta_p90\":{},\"win_life_delta_stddev\":{:.2},\
-         \"win_life_delta_iqr\":{},\"close_win_pct\":{},\
+         \"win_life_delta_iqr\":{},\"close_win_pct\":{},\"blowout_win_pct\":{},\
          \"connections_current\":{},\"connections_peak\":{},\
          \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
          \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
@@ -105,6 +105,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.win_life_delta_stddev(),
         st.win_life_delta_iqr(),
         st.close_win_pct(),
+        st.blowout_win_pct(),
         sl.current,
         sl.peak,
         sl.accepted,
@@ -206,6 +207,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("win_life_delta_stddev", "gauge", "Standard deviation of the win-by-life margin.", format!("{:.2}", st.win_life_delta_stddev()));
     m("win_life_delta_iqr", "gauge", "Interquartile range (p75-p25) of the win-by-life margin.", st.win_life_delta_iqr().to_string());
     m("close_win_pct", "gauge", "Percent of wins decided by a final life margin of 3 or less (nail-biters).", st.close_win_pct().to_string());
+    m("blowout_win_pct", "gauge", "Percent of wins decided by a final life margin above 15 (blowouts).", st.blowout_win_pct().to_string());
     // Split the refusals by cause so operators can tell "server at capacity"
     // (global cap) apart from "one IP hammering us" (per-IP cap) without diffing
     // two scrapes — the two alert on different runbooks.

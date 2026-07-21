@@ -1367,28 +1367,62 @@ fn project_triggered_ability_labels(card: &CardInstance) -> Vec<String> {
 /// `project_triggered_ability_labels`. Returns an empty string for
 /// unrecognized event kinds so the caller can fall back to the bare
 /// effect label.
+enum SpellCastKind {
+    InstantOrSorcery,
+    Creature,
+    Other,
+}
+
+/// Classify a "whenever you cast a spell" trigger by the card-type gate in its
+/// filter, so the client chip reads "Magecraft" only for the instant/sorcery
+/// gate and "Creature cast" for a creature gate (Halcyon Glaze).
+fn spellcast_filter_kind(filter: Option<&crate::card::Predicate>) -> SpellCastKind {
+    use crate::card::{CardType, Predicate, SelectionRequirement as R};
+    fn req_mentions(r: &R, ct: &CardType) -> bool {
+        match r {
+            R::HasCardType(c) => c == ct,
+            R::Creature if matches!(ct, CardType::Creature) => true,
+            R::And(a, b) | R::Or(a, b) => req_mentions(a, ct) || req_mentions(b, ct),
+            _ => false,
+        }
+    }
+    fn pred_kind(p: &Predicate) -> SpellCastKind {
+        match p {
+            Predicate::EntityMatches { filter, .. } => {
+                if req_mentions(filter, &CardType::Instant)
+                    || req_mentions(filter, &CardType::Sorcery)
+                {
+                    SpellCastKind::InstantOrSorcery
+                } else if req_mentions(filter, &CardType::Creature) {
+                    SpellCastKind::Creature
+                } else {
+                    SpellCastKind::Other
+                }
+            }
+            Predicate::All(parts) => parts
+                .iter()
+                .map(pred_kind)
+                .find(|k| !matches!(k, SpellCastKind::Other))
+                .unwrap_or(SpellCastKind::Other),
+            _ => SpellCastKind::Other,
+        }
+    }
+    filter.map(pred_kind).unwrap_or(SpellCastKind::Other)
+}
+
 fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
-    use crate::card::{EventKind, EventScope, Predicate};
-    // Magecraft pattern: SpellCast / YourControl with the IS-filter.
+    use crate::card::{EventKind, EventScope};
+    // "Whenever you cast a [kind] spell" — distinguish magecraft (instant or
+    // sorcery) from a creature-cast trigger (Halcyon Glaze) by inspecting the
+    // filter's card-type gate instead of assuming any filter means magecraft.
     if matches!(event.kind, EventKind::SpellCast)
         && matches!(event.scope, EventScope::YourControl)
     {
-        // Check the filter for the canonical "instant or sorcery"
-        // gate — that's a magecraft trigger.
-        let is_magecraft = matches!(
-            &event.filter,
-            Some(Predicate::All(parts))
-                if parts.iter().any(|p| matches!(
-                    p, Predicate::EntityMatches { .. }
-                ))
-        ) || matches!(
-            &event.filter,
-            Some(Predicate::EntityMatches { .. })
-        );
-        if is_magecraft {
-            return "Magecraft";
-        }
-        return "Spell cast";
+        return match spellcast_filter_kind(event.filter.as_ref()) {
+            SpellCastKind::InstantOrSorcery => "Magecraft",
+            SpellCastKind::Creature => "Creature cast",
+            SpellCastKind::Other => "Spell cast",
+        };
     }
     match (&event.kind, event.scope) {
         (EventKind::EntersBattlefield, EventScope::SelfSource) => "ETB",
@@ -3312,6 +3346,31 @@ mod tests {
             perm.triggered_ability_labels.iter().any(|s| s.starts_with("Another attacks")),
             "expected 'Another attacks' label for Slaughter Singer's Attacks/AnotherOfYours trigger; got {:?}",
             perm.triggered_ability_labels,
+        );
+    }
+
+    #[test]
+    fn spellcast_trigger_label_distinguishes_creature_cast_from_magecraft() {
+        // Halcyon Glaze's "whenever you cast a creature spell" trigger reads
+        // "Creature cast", not "Magecraft" (the instant/sorcery gate).
+        let mut state = two_player_game();
+        let glaze = state.add_card_to_battlefield(0, catalog::halcyon_glaze());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == glaze).unwrap();
+        assert!(
+            perm.triggered_ability_labels.iter().any(|s| s.starts_with("Creature cast")),
+            "expected 'Creature cast'; got {:?}",
+            perm.triggered_ability_labels,
+        );
+        // A real magecraft card still reads "Magecraft".
+        let mut s2 = two_player_game();
+        let mage = s2.add_card_to_battlefield(0, catalog::leonin_lightscribe());
+        let v2 = project(&s2, 0);
+        let mp = v2.battlefield.iter().find(|p| p.id == mage).unwrap();
+        assert!(
+            mp.triggered_ability_labels.iter().any(|s| s.starts_with("Magecraft")),
+            "expected 'Magecraft'; got {:?}",
+            mp.triggered_ability_labels,
         );
     }
 
