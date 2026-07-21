@@ -215,3 +215,88 @@ fn tavern_swindler_wins_flip() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life - 3 + 6, "paid 3 life, won 6");
 }
+
+/// Explosive Impact burns a player for 5.
+#[test]
+fn explosive_impact_deals_5() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::explosive_impact());
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 5, "5 damage");
+}
+
+/// Auger Spree gives +4/-4.
+#[test]
+fn auger_spree_pumps_and_shrinks() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let spree = g.add_card_to_hand(0, catalog::auger_spree());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spree, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // 2/2 → 6/-2 → dies to SBA.
+    let _ = g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "toughness dropped to -2, creature died");
+}
+
+/// Avenging Arrow only hits a creature that dealt damage this turn.
+#[test]
+fn avenging_arrow_needs_damage_dealt() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let dealt = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(dealt).unwrap().dealt_damage_this_turn = true;
+    let arrow = g.add_card_to_hand(0, catalog::avenging_arrow());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: arrow, target: Some(Target::Permanent(dealt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dealt).is_none(), "the damaging creature is destroyed");
+}
+
+/// Skull Rend burns each opponent and discards two at random.
+#[test]
+fn skull_rend_damages_and_discards() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    let rend = g.add_card_to_hand(0, catalog::skull_rend());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    let life = g.players[1].life;
+    let h = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: rend, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "2 damage to the opponent");
+    assert_eq!(g.players[1].hand.len(), h - 2, "discarded two");
+}
+
+/// Dynacharge's overload pumps every creature you control.
+#[test]
+fn dynacharge_overload_pumps_team() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let over = catalog::dynacharge().alternative_cost.unwrap().effect_override.unwrap();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&over, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.computed_permanent(a).unwrap().power, 4, "first creature +2/+0");
+    assert_eq!(g.computed_permanent(b).unwrap().power, 4, "second creature +2/+0");
+}

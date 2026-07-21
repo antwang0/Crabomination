@@ -9442,6 +9442,18 @@ static RTR: &[Factory] = &[
     super::rtr::sewer_shambler,
     super::rtr::terrus_wurm,
     super::rtr::tavern_swindler,
+    super::rtr::explosive_impact,
+    super::rtr::annihilating_fire,
+    super::rtr::avenging_arrow,
+    super::rtr::auger_spree,
+    super::rtr::savage_surge,
+    super::rtr::swift_justice,
+    super::rtr::chorus_of_might,
+    super::rtr::common_bond,
+    super::rtr::assassins_strike,
+    super::rtr::skull_rend,
+    super::rtr::dynacharge,
+    super::rtr::downsize,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,
