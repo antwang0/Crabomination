@@ -16,7 +16,10 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **RAV gap waves 8–9 (this run, 24 cards):** `Selector::RadianceGroup`
+- **RAV gap waves 8–10 (this run, 27 cards):** Stasis Cell (`StaticEffect::PreventUntap`
+  doesn't-untap Aura + reattach), Savra (color-filtered `CreatureSacrificed`
+  payoffs — `MayPayLife` edict / `MayDo` lifegain), Searing Meditation
+  (`LifeGained` → `MayPay {2}` → 2 damage). `Selector::RadianceGroup`
   generalized to fan out over any card type the subject shares (Leave No Trace
   over enchantments, not just creatures); `StaticEffect::SourceDamageCantBePrevented`
   (Excruciator — source-scoped unpreventable, distinct from the global

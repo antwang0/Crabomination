@@ -188,9 +188,7 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   — `Effect::FlipCoin` exists; needs an enters-as-coin-flip replacement);
   Spawnbroker (exchange control by power); Drake Familiar (ETB "sacrifice unless
   you return an enchantment to hand" — needs a return-a-permanent-else-sacrifice
-  reflexive cost, the non-mana sibling of `Effect::MayPay`); Stasis Cell (aura
-  "enchanted creature doesn't untap" — needs a plain `Keyword::DoesntUntap`
-  static, distinct from `DoesntUntapWhileCounter`); Spectral Searchlight (choose a
+  reflexive cost, the non-mana sibling of `Effect::MayPay`); Spectral Searchlight (choose a
   player, that player adds one mana of any color they choose — needs a
   choose-player-adds-any-color effect); Razia's Purification (each player keeps 3
   permanents, sacrifices the rest — generalize `EachPlayerKeepsOneSacrificeRest`
