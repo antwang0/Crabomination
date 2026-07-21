@@ -7221,6 +7221,7 @@ static DIS: &[Factory] = &[
     super::dis::pain_magnification,
     super::dis::rakdos_augermage,
     super::dis::drekavac,
+    super::dis::crypt_champion,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

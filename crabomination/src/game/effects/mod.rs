@@ -12177,6 +12177,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachPlayerReanimateCreatureMaxMv { max_mv } => {
+                // APNAP order: the active player first. Each seat's highest-MV
+                // eligible graveyard creature is auto-chosen and enters under
+                // their control.
+                let n = self.players.len();
+                let order: Vec<usize> =
+                    (0..n).map(|i| (self.active_player_idx + i) % n).collect();
+                for p in order {
+                    let pick = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| c.definition.is_creature() && c.definition.cost.cmc() <= *max_mv)
+                        .max_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id);
+                    if let Some(cid) = pick {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
             Effect::RevealTopAndDrawIf { who, reveal_filter, may_graveyard_miss } => {
                 // Each resolved player reveals the top card of their library;
                 // if it matches `reveal_filter`, that player puts it into

@@ -484,3 +484,31 @@ pub fn drekavac() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Crypt Champion — {3}{B} 2/2 Zombie with double strike. When it enters, each
+/// player puts a creature card with mana value 3 or less from their graveyard
+/// onto the battlefield; then sacrifice Crypt Champion unless {R} was spent to
+/// cast it.
+pub fn crypt_champion() -> CardDefinition {
+    CardDefinition {
+        name: "Crypt Champion",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::EachPlayerReanimateCreatureMaxMv { max_mv: 3 }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::If {
+                    cond: Predicate::SourceCastWithColorSpent { color: Color::Red, at_least: 1 },
+                    then: Box::new(Effect::Noop),
+                    else_: Box::new(Effect::SacrificeSource),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -734,6 +734,7 @@ impl Effect {
             Effect::GainLifeWhenTargetDealsDamageThisTurn { .. } => true,
             // Registers a turn-scoped delayed trigger; no cast-time target.
             Effect::CreaturesYouControlEnteringThisTurn { .. } => false,
+            Effect::EachPlayerReanimateCreatureMaxMv { .. } => false,
             Effect::CreaturesYouControlDyingThisTurn { .. } => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::PayOrLoseGame { .. } => false,

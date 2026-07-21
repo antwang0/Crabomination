@@ -355,6 +355,20 @@ fn drekavac_kept_with_noncreature_discard() {
     assert_eq!(g.players[0].hand.len(), 0, "the land was discarded");
 }
 
+/// Crypt Champion reanimates a MV≤3 creature for each player on entry.
+#[test]
+fn crypt_champion_each_player_reanimates() {
+    let mut g = two_player_game();
+    // Each player has an eligible creature in their graveyard.
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.move_card_to_battlefield_for_test(0, catalog::crypt_champion());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_some(), "your creature came back");
+    assert!(g.battlefield_find(theirs).is_some(), "opponent's creature came back too");
+}
+
 /// Stalking Vengeance turns a dying creature's power into damage to a player.
 #[test]
 fn stalking_vengeance_death_burns_target() {

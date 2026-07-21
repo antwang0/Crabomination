@@ -5170,6 +5170,15 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// "Each player puts a creature card with mana value `max_mv` or less from
+    /// their graveyard onto the battlefield" (Crypt Champion). Each player's
+    /// highest-mana-value eligible creature is auto-chosen (UI players don't
+    /// pick which — a documented approximation), moved under that player's
+    /// control in APNAP order.
+    EachPlayerReanimateCreatureMaxMv {
+        max_mv: u32,
+    },
+
     /// "Whenever target creature deals damage this turn, you gain that much
     /// life" (CR 603.4). Watches the creature in target slot `slot`; each time
     /// it deals damage (combat or noncombat) the controller gains that much
