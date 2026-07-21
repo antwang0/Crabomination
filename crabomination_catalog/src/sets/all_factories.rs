@@ -9408,6 +9408,11 @@ static RAV: &[Factory] = &[
     super::rav::junktroller,
     super::rav::ivy_dancer,
     super::rav::lore_broker,
+    super::rav::hunted_horror,
+    super::rav::hunted_phantasm,
+    super::rav::hunted_dragon,
+    super::rav::hunted_lammasu,
+    super::rav::hunted_troll,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

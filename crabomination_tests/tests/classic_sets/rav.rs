@@ -605,3 +605,66 @@ fn lore_broker_each_player_loots() {
     assert_eq!(g.players[0].hand.len(), h0, "P0 drew one, discarded one");
     assert_eq!(g.players[1].hand.len(), h1, "P1 drew one, discarded one");
 }
+
+// ── Hunted cycle (gap wave 4) ────────────────────────────────────────────────
+
+/// Stat/keyword lines for the Hunted cycle.
+#[test]
+fn hunted_cycle_stat_lines() {
+    let h = catalog::hunted_horror();
+    assert_eq!((h.power, h.toughness), (7, 7));
+    assert!(h.keywords.contains(&Keyword::Trample));
+    assert!(catalog::hunted_phantasm().keywords.contains(&Keyword::Unblockable));
+    let d = catalog::hunted_dragon();
+    assert!(d.keywords.contains(&Keyword::Flying) && d.keywords.contains(&Keyword::Haste));
+    assert_eq!((catalog::hunted_troll().power, catalog::hunted_troll().toughness), (8, 4));
+}
+
+/// Hunted Lammasu's ETB gives a *target opponent* a 4/4 Horror token.
+#[test]
+fn hunted_lammasu_gifts_opponent_a_horror() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let etb = catalog::hunted_lammasu().triggered_abilities[0].effect.clone();
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    let evs = g.resolve_effect(&etb, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let horrors: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 1 && c.definition.name == "Horror").collect();
+    assert_eq!(horrors.len(), 1, "opponent got one 4/4 Horror");
+    assert_eq!((horrors[0].definition.power, horrors[0].definition.toughness), (4, 4));
+}
+
+/// Hunted Horror's ETB gives the opponent two 3/3 Centaurs with protection from black.
+#[test]
+fn hunted_horror_centaurs_have_pro_black() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let etb = catalog::hunted_horror().triggered_abilities[0].effect.clone();
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    let evs = g.resolve_effect(&etb, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let centaurs: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 1 && c.definition.name == "Centaur").collect();
+    assert_eq!(centaurs.len(), 2, "two Centaur tokens");
+    assert!(centaurs[0].definition.keywords.contains(&Keyword::Protection(Color::Black)),
+        "pro-black");
+}
+
+/// Hunted Troll can regenerate itself for {G}.
+#[test]
+fn hunted_troll_regenerates() {
+    let mut g = two_player_game();
+    let troll = g.add_card_to_battlefield(0, catalog::hunted_troll());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: troll, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("regen shield");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(troll).unwrap().regeneration_shields, 1,
+        "{{G}} stamps a regeneration shield");
+}
