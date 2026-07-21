@@ -14651,6 +14651,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventCombatDamageByTargetThisTurn { target } => {
+                // CR 615.1 — Azorius Ploy: prevent all combat damage the target
+                // would *deal* this turn (it still takes damage normally).
+                for ent in self.resolve_selector(target, ctx) {
+                    if let EntityRef::Permanent(id) | EntityRef::Card(id) = ent
+                        && !self.combat_damage_prevented_by_this_turn.contains(&id)
+                    {
+                        self.combat_damage_prevented_by_this_turn.push(id);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventAllDamageFromChosenSourceThisTurn { filter } => {
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());

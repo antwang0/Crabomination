@@ -7229,6 +7229,7 @@ static DIS: &[Factory] = &[
     super::dis::crime_punishment,
     super::dis::hit_run,
     super::dis::rise_fall,
+    super::dis::azorius_ploy,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,
@@ -7763,6 +7764,15 @@ static GPT: &[Factory] = &[
     super::gpt::cry_of_contrition,
     super::gpt::douse_in_gloom,
     super::gpt::castigate,
+    super::gpt::giant_solifuge,
+    super::gpt::crystal_seer,
+    super::gpt::izzet_chronarch,
+    super::gpt::drowned_rusalka,
+    super::gpt::crash_landing,
+    super::gpt::hissing_miasma,
+    super::gpt::agent_of_masks,
+    super::gpt::exhumer_thrull,
+    super::gpt::benediction_of_moons,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,

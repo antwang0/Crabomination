@@ -720,6 +720,9 @@ pub enum Value {
     /// always read the spell's controller instead of the iterated
     /// player.
     PermanentCountControlledBy(PlayerRef),
+    /// Number of players still in the game (not eliminated). "For each player"
+    /// riders — Benediction of Moons's "gain 1 life for each player".
+    PlayerCount,
     /// CR 700.11 — how many times the controller descended this turn (permanent
     /// cards put into their graveyard). The Mycotyrant's end-step token count.
     TimesDescendedThisTurn,
@@ -5562,6 +5565,12 @@ pub enum Effect {
     /// which the resolver consults via `combat_damage_prevented_to_self`.
     /// Fleeting Flight.
     PreventCombatDamageToTargetThisTurn { target: Selector },
+
+    /// "Prevent all combat damage that would be dealt by target creature this
+    /// turn" — the deal-side mirror of `PreventCombatDamageToTargetThisTurn`.
+    /// Adds the target to `GameState.combat_damage_prevented_by_this_turn`.
+    /// Azorius Ploy.
+    PreventCombatDamageByTargetThisTurn { target: Selector },
 
     /// "Target creature can't block `source` this turn." Records a
     /// `(target, source)` pair in `GameState.cant_block_pairs`; the

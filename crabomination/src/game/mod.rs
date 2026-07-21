@@ -886,6 +886,11 @@ pub struct GameState {
     /// be dealt to it this turn". Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_to_this_turn: Vec<CardId>,
+    /// CR 615.1 — creatures whose *own* combat damage is prevented this turn
+    /// (Azorius Ploy's "prevent all combat damage target creature would deal").
+    /// The mirror of `combat_damage_prevented_to_this_turn`. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_by_this_turn: Vec<CardId>,
     /// CR 510.1c — attackers that became blocked this combat. An attacker
     /// stays blocked even if all its blockers leave combat (double-strike
     /// step-one kills, post-block removal): without trample it assigns no
@@ -1298,6 +1303,7 @@ impl Clone for GameState {
             upkeep_steps_this_turn: self.upkeep_steps_this_turn,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             combat_damage_prevented_to_this_turn: self.combat_damage_prevented_to_this_turn.clone(),
+            combat_damage_prevented_by_this_turn: self.combat_damage_prevented_by_this_turn.clone(),
             blocked_attackers: self.blocked_attackers.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
@@ -1476,6 +1482,7 @@ impl GameState {
             upkeep_steps_this_turn: 0,
             combat_damage_prevented_creatures: Vec::new(),
             combat_damage_prevented_to_this_turn: Vec::new(),
+            combat_damage_prevented_by_this_turn: Vec::new(),
             blocked_attackers: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
             search_tax_paid_this_turn: Vec::new(),
@@ -3329,6 +3336,14 @@ impl GameState {
         !self.damage_cant_be_prevented_this_turn
             && (self.permanent_prevents_all_combat_damage_to_self(tgt)
                 || self.combat_damage_prevented_to_this_turn.contains(&tgt))
+    }
+
+    /// CR 615 — true when all combat damage `dealer` would *deal* is prevented
+    /// this turn (Azorius Ploy's first clause). Mirror of
+    /// `combat_damage_prevented_to_self`.
+    pub fn combat_damage_prevented_from(&self, dealer: crate::card::CardId) -> bool {
+        !self.damage_cant_be_prevented_this_turn
+            && self.combat_damage_prevented_by_this_turn.contains(&dealer)
     }
 
     /// Scale a pending damage event by the global doubling/halving

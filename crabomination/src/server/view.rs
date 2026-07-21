@@ -1947,6 +1947,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::WinGame { .. } => "Win the game",
         Effect::PreventAllCombatDamageThisTurn => "Prevent combat damage",
         Effect::PreventAllCombatDamageInvolving { .. } => "Prevent combat damage to/from target",
+        Effect::PreventCombatDamageByTargetThisTurn { .. } => "Prevent combat damage by target",
         Effect::CantBlockSourceThisTurn { .. } => "Target can't block this",
         Effect::SkipTurns { .. } => "Skip turns",
         Effect::SetLifeTotal { .. } => "Set life total",

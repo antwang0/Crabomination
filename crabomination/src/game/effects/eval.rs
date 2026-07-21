@@ -899,6 +899,7 @@ impl GameState {
                         .count() as i32
                 })
                 .unwrap_or(0),
+            Value::PlayerCount => self.alive_count() as i32,
             Value::CreatureCountControlledBy(p) => self
                 .resolve_player(p, ctx)
                 .map(|seat| {

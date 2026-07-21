@@ -1511,3 +1511,44 @@ fn fall_discards_nonlands() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), h1 - 2, "both revealed nonlands were discarded");
 }
+
+/// Azorius Ploy: clause 1 prevents all combat damage the first target would
+/// *deal* (its blocker survives); clause 2 prevents all combat damage dealt
+/// *to* the second target (it survives its blocker's strike).
+#[test]
+fn azorius_ploy_prevents_both_ways() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    // Two 2/2 attackers for player 0.
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(c);
+    // Two 2/2 blockers for player 1.
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let d = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    // slot0 = a (prevent a's outgoing), slot1 = c (prevent incoming to c).
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(a), Target::Permanent(c)];
+    let evs = g.resolve_effect(&catalog::azorius_ploy().effect, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: c, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(b, a), (d, c)])).expect("block");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.battlefield_find(b).is_some(), "a dealt no combat damage — its blocker lives");
+    assert!(g.battlefield_find(c).is_some(), "damage to c prevented — c lives");
+    assert!(g.battlefield_find(a).is_none(), "a still takes its blocker's damage and dies");
+    assert!(g.battlefield_find(d).is_none(), "c still deals damage — its blocker dies");
+}

@@ -1794,7 +1794,11 @@ impl GameState {
             if !atk.should_deal {
                 continue;
             }
-            let prevent_combat_damage = self.combat_damage_prevented_for_dealer(atk.id);
+            // Fog (per-dealer) OR "prevent all combat damage it would deal"
+            // (Azorius Ploy) both zero this attacker's outgoing damage while
+            // still letting its blockers strike it back.
+            let prevent_combat_damage = self.combat_damage_prevented_for_dealer(atk.id)
+                || self.combat_damage_prevented_from(atk.id);
 
             // CR 510.1c: the attacking player chose the order in which an
             // attacker assigns combat damage to its multiple blockers; that
@@ -1994,6 +1998,8 @@ impl GameState {
                         .is_some_and(|bc| blocker_filter(&bc.keywords)))
                     // CR 614.9 — a Maze-of-Ith'd blocker deals no combat damage.
                     .filter(|bid| !self.combat_damage_prevented_creatures.contains(bid))
+                    // CR 615.1 — "prevent all combat damage it would deal" (Azorius Ploy).
+                    .filter(|bid| !self.combat_damage_prevented_from(*bid))
                     // CR 615.7 — chosen-source prevention (Forge-Tender).
                     .filter(|bid| !self.damage_prevented_sources.contains(bid))
                     // CR 615.1 — fog (with Inspire Awe's per-dealer exception).
