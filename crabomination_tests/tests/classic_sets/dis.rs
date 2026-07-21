@@ -156,6 +156,55 @@ fn writ_of_passage_forecast_grants_unblockable() {
     assert!(g.players[0].hand.iter().any(|c| c.id == writ), "card stays in hand");
 }
 
+/// Flaring Flame-Kin gets +2/+2 and trample only while enchanted.
+#[test]
+fn flaring_flame_kin_pumps_while_enchanted() {
+    let mut g = two_player_game();
+    let kin = g.add_card_to_battlefield(0, catalog::flaring_flame_kin());
+    // Bare: 2/2, no trample.
+    let base = g.computed_permanent(kin).unwrap();
+    assert_eq!((base.power, base.toughness), (2, 2));
+    assert!(!base.keywords.contains(&Keyword::Trample));
+    // Enchant it with any aura.
+    let aura = g.add_card_to_hand(0, catalog::riot_spikes()); // +2/-1 aura
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(crabomination::game::types::Target::Permanent(kin)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("attach aura");
+    drain_stack(&mut g);
+    let buffed = g.computed_permanent(kin).unwrap();
+    // 2/2 base +2/+2 (enchanted) +2/-1 (Riot Spikes) = 6/3, with trample.
+    assert_eq!((buffed.power, buffed.toughness), (6, 3), "enchanted pump + aura");
+    assert!(buffed.keywords.contains(&Keyword::Trample), "gains trample while enchanted");
+}
+
+/// Haazda Shield Mate sacrifices itself at upkeep if {W}{W} isn't paid.
+#[test]
+fn haazda_shield_mate_sacrifices_without_payment() {
+    let mut g = two_player_game();
+    let haazda = g.add_card_to_battlefield(0, catalog::haazda_shield_mate());
+    g.active_player_idx = 0;
+    // No mana available → the MayPay declines → sacrifice.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(haazda).is_none(), "sacrificed without paying WW");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == haazda), "in graveyard");
+}
+
+/// Prahv, Spires of Order taps for {C} and can prevent a chosen source's damage.
+#[test]
+fn prahv_taps_for_colorless() {
+    let mut g = two_player_game();
+    let prahv = g.add_card_to_battlefield(0, catalog::prahv_spires_of_order());
+    g.clear_sickness(prahv);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: prahv, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("tap Prahv for {C}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added colorless");
+}
+
 /// Stalking Vengeance turns a dying creature's power into damage to a player.
 #[test]
 fn stalking_vengeance_death_burns_target() {

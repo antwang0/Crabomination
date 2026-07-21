@@ -1,9 +1,11 @@
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword,
-    SelectionRequirement, Selector, Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, Selector, StaticAbility,
+    StaticEffect, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::Duration;
 use crate::effect::shortcut::{forecast, target_filtered};
+use crate::effect::Duration;
+use crate::game::TurnStep;
 use crate::mana::{cost, g, generic, r, u, w, Color};
 
 /// Azorius First-Wing — {1}{W}{U} 2/2 Bird Soldier Flying
@@ -184,7 +186,6 @@ pub fn assault_zeppelid() -> CardDefinition {
 /// all creatures you control. Forecast — Tap two untapped white and/or blue
 /// creatures you control: Draw a card.
 pub fn sky_hussar() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     let wu_creature = SelectionRequirement::Creature
         .and(SelectionRequirement::ControlledByYou)
         .and(
@@ -300,6 +301,92 @@ pub fn azorius_herald() -> CardDefinition {
                 },
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Flaring Flame-Kin — {2}{R} 2/2 Elemental Warrior. As long as it's enchanted,
+/// it gets +2/+2, has trample, and has "{R}: This creature gets +1/+0 until end
+/// of turn."
+pub fn flaring_flame_kin() -> CardDefinition {
+    let enchanted = || Predicate::EntityMatches {
+        what: Selector::This,
+        filter: SelectionRequirement::IsEnchanted,
+    };
+    CardDefinition {
+        name: "Flaring Flame-Kin",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as this creature is enchanted, it gets +2/+2 and has trample.",
+                effect: StaticEffect::PumpTeamIf {
+                    condition: enchanted(),
+                    applies_to: Selector::This,
+                    power: 2,
+                    toughness: 2,
+                    keywords: vec![Keyword::Trample],
+                },
+            },
+            StaticAbility {
+                description: "As long as this creature is enchanted, it has \"{R}: This creature gets +1/+0 until end of turn.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: Selector::This,
+                    ability: ActivatedAbility {
+                        mana_cost: cost(&[r()]),
+                        effect: Effect::PumpPT {
+                            what: Selector::This,
+                            power: Value::Const(1),
+                            toughness: Value::Const(0),
+                            duration: Duration::EndOfTurn,
+                        },
+                        ..Default::default()
+                    },
+                    condition: Some(enchanted()),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Haazda Shield Mate — {2}{W} 1/1 Human Soldier. At your upkeep, sacrifice it
+/// unless you pay {W}{W}. `{W}: The next time a source of your choice would deal
+/// damage to you this turn, prevent that damage.`
+pub fn haazda_shield_mate() -> CardDefinition {
+    CardDefinition {
+        name: "Haazda Shield Mate",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {W}{W} or sacrifice Haazda Shield Mate?".into(),
+                mana_cost: cost(&[w(), w()]),
+                body: Box::new(Effect::Noop),
+                else_: Some(Box::new(Effect::SacrificeSource)),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::PreventNextDamageFromChosenSource {
+                filter: SelectionRequirement::Any,
+                reflect: false,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

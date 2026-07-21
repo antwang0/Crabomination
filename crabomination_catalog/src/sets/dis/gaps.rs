@@ -1225,3 +1225,22 @@ pub fn writ_of_passage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Prahv, Spires of Order — Land. `{T}: Add {C}.` and `{4}{W}{U}, {T}: Prevent
+/// all damage a source of your choice would deal this turn.`
+pub fn prahv_spires_of_order() -> CardDefinition {
+    CardDefinition {
+        name: "Prahv, Spires of Order",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), w(), u()]),
+                tap_cost: true,
+                effect: Effect::PreventAllDamageFromChosenSourceThisTurn { filter: R::Any },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

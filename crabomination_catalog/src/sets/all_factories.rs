@@ -7213,6 +7213,9 @@ static DIS: &[Factory] = &[
     super::dis::rakdos_carnarium,
     super::dis::simic_growth_chamber,
     super::dis::writ_of_passage,
+    super::dis::prahv_spires_of_order,
+    super::dis::flaring_flame_kin,
+    super::dis::haazda_shield_mate,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,
