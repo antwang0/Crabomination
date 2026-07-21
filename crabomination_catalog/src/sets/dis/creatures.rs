@@ -4,9 +4,9 @@ use crate::card::{
     StaticEffect, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{forecast, target_filtered};
-use crate::effect::Duration;
+use crate::effect::{Duration, PlayerRef};
 use crate::game::TurnStep;
-use crate::mana::{cost, g, generic, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Azorius First-Wing — {1}{W}{U} 2/2 Bird Soldier Flying
 pub fn azorius_first_wing() -> CardDefinition {
@@ -387,6 +387,43 @@ pub fn haazda_shield_mate() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Jagged Poppet — {1}{B}{R} 3/4 Ogre Warrior. Whenever it's dealt damage,
+/// discard that many cards. Hellbent — whenever it deals combat damage to a
+/// player, if you have no cards in hand, that player discards that many cards.
+pub fn jagged_poppet() -> CardDefinition {
+    CardDefinition {
+        name: "Jagged Poppet",
+        cost: cost(&[generic(1), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+                effect: Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::TriggerEventAmount,
+                    random: false,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource)
+                    .with_filter(Predicate::HellbentActive { who: PlayerRef::You }),
+                effect: Effect::Discard {
+                    who: Selector::Player(PlayerRef::DefendingPlayer),
+                    amount: Value::TriggerEventAmount,
+                    random: false,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

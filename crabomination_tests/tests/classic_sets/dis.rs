@@ -205,6 +205,22 @@ fn prahv_taps_for_colorless() {
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added colorless");
 }
 
+/// Jagged Poppet discards cards equal to damage it's dealt.
+#[test]
+fn jagged_poppet_discards_on_damage() {
+    let mut g = two_player_game();
+    let poppet = g.add_card_to_battlefield(0, catalog::jagged_poppet());
+    for _ in 0..3 { g.add_card_to_hand(0, catalog::forest()); }
+    let h0 = g.players[0].hand.len();
+    // Deal 2 damage to the Poppet, then dispatch the DamageDealt event.
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(poppet), 2, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 - 2, "discarded 2 (the damage dealt)");
+}
+
 /// Stalking Vengeance turns a dying creature's power into damage to a player.
 #[test]
 fn stalking_vengeance_death_burns_target() {

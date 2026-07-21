@@ -7216,6 +7216,7 @@ static DIS: &[Factory] = &[
     super::dis::prahv_spires_of_order,
     super::dis::flaring_flame_kin,
     super::dis::haazda_shield_mate,
+    super::dis::jagged_poppet,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,
