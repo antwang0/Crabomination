@@ -9481,6 +9481,16 @@ static RAV: &[Factory] = &[
     super::rav::tattered_drake,
     super::rav::surveilling_sprite,
     super::rav::zephyr_spirit,
+    super::rav::votary_of_the_conclave,
+    super::rav::torpid_moloch,
+    super::rav::psychic_drain,
+    super::rav::rolling_spoil,
+    super::rav::quickchange,
+    super::rav::ursapine,
+    super::rav::tidewater_minion,
+    super::rav::twisted_justice,
+    super::rav::strands_of_undeath,
+    super::rav::wizened_snitches,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

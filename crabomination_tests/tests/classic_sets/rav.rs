@@ -1048,3 +1048,142 @@ fn war_torch_goblin_burns_blocker() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(blocker).is_none(), "2/2 blocker took 2 and died");
 }
+
+/// Votary of the Conclave regenerates for {2}{G}.
+#[test]
+fn votary_regenerates() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::votary_of_the_conclave());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: v, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("regen");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(v).unwrap().regeneration_shields >= 1);
+}
+
+/// Torpid Moloch sheds defender by sacrificing three lands.
+#[test]
+fn torpid_moloch_sheds_defender() {
+    let mut g = two_player_game();
+    let moloch = g.add_card_to_battlefield(0, catalog::torpid_moloch());
+    let lands: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::forest())).collect();
+    assert!(g.computed_permanent(moloch).unwrap().keywords.contains(&Keyword::Defender));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: moloch, ability_index: 0, target: None,
+        additional_targets: lands.iter().map(|&l| Target::Permanent(l)).collect(), x_value: None,
+    }).expect("sac 3 lands");
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(moloch).unwrap().keywords.contains(&Keyword::Defender),
+        "lost defender this turn");
+}
+
+/// Psychic Drain mills the target X and gains you X life.
+#[test]
+fn psychic_drain_mills_and_gains() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(1, catalog::forest()); }
+    let gy0 = g.players[1].graveyard.len();
+    let life = g.players[0].life;
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 3);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&catalog::psychic_drain().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy0 + 3, "milled 3");
+    assert_eq!(g.players[0].life, life + 3, "gained 3");
+}
+
+/// Rolling Spoil destroys a target land.
+#[test]
+fn rolling_spoil_destroys_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    resolve_spell_r(&mut g, catalog::rolling_spoil(), vec![Target::Permanent(land)]);
+    assert!(g.battlefield_find(land).is_none(), "land destroyed");
+}
+
+/// Quickchange is a cantrip that recolors a creature.
+#[test]
+fn quickchange_cantrips() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    resolve_spell_r(&mut g, catalog::quickchange(), vec![Target::Permanent(bear)]);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Ursapine pumps a target creature +1/+1.
+#[test]
+fn ursapine_pumps_target() {
+    let mut g = two_player_game();
+    let pine = g.add_card_to_battlefield(0, catalog::ursapine());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pine, ability_index: 0, target: Some(Target::Permanent(ally)),
+        additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 3, "+1/+1");
+}
+
+/// Tidewater Minion untaps a target permanent.
+#[test]
+fn tidewater_minion_untaps() {
+    let mut g = two_player_game();
+    let minion = g.add_card_to_battlefield(0, catalog::tidewater_minion());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.clear_sickness(minion);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: minion, ability_index: 1, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], x_value: None,
+    }).expect("untap");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "target untapped");
+}
+
+/// Twisted Justice edicts the target and draws for the sacrificed power.
+#[test]
+fn twisted_justice_edict_and_draw() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let hand = g.players[0].hand.len();
+    resolve_spell_r(&mut g, catalog::twisted_justice(), vec![Target::Player(1)]);
+    assert!(g.battlefield_find(foe).is_none(), "opponent sacrificed its creature");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew for its power (2)");
+}
+
+/// Strands of Undeath's ETB makes the target discard two.
+#[test]
+fn strands_of_undeath_etb_discard() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_hand(1, catalog::forest()); }
+    let etb = &catalog::strands_of_undeath().triggered_abilities[0].effect;
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(etb, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "discarded two");
+}
+
+/// Wizened Snitches is a 1/3 flyer that reveals library tops.
+#[test]
+fn wizened_snitches_stat_line() {
+    let s = catalog::wizened_snitches();
+    assert_eq!((s.power, s.toughness), (1, 3));
+    assert!(s.keywords.contains(&Keyword::Flying));
+    assert!(s.static_abilities.iter().any(|a| matches!(
+        a.effect, crabomination::effect::StaticEffect::AllLibraryTopsRevealed)));
+}
+
+fn resolve_spell_r(g: &mut GameState, def: crabomination::card::CardDefinition, targets: Vec<Target>) {
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = targets;
+    let events = g.resolve_effect(&def.effect, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(g);
+}
