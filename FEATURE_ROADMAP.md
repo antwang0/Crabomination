@@ -16,6 +16,16 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **DIS/RAV gap batch (this run):** `Effect::SearchLibraryCreaturesUpToTotalManaValue`
+  (Protean Hulk), `Effect::CounterAllOtherSpellsDrawPer` (Swift Silence),
+  `Effect::RevealRandomDiscardNonland` (Fall), `Predicate::SacrificedWasColor`
+  (off a `sacrificed_colors` sacrifice scratch — Lyzolda) and
+  `Predicate::LastDiscardedWasMulticolored` (Stormscale Anarch);
+  `Effect::SacrificeAndRemember` now surfaces a player-target slot so
+  target-player edict-with-mana-value payoffs auto-target (Hit // Run). Cards:
+  the DIS split cards (Crime // Punishment, Hit // Run, Rise // Fall) + the RAV/GPT
+  guild bounce-land cycle and simple guild spells/creatures.
+
 - **Dissension/Ravnica gap batches (recent301–304):** `FromYourGraveyard`-scoped
   `SpellCast` triggers now dispatch (the multicolored-recur Eidolon cycle);
   `StaticEffect::GrantActivatedAbility.condition` (Hellbent-gated granted

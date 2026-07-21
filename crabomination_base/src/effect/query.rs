@@ -284,6 +284,10 @@ impl Effect {
             Effect::WishToHand { .. } => false,
             Effect::SacrificeAllButOnePerType { who } => sel_has_target(who),
             Effect::EachPlayerKeepsOneSacrificeRest { who, .. } => sel_has_target(who),
+            Effect::RevealRandomDiscardNonland { who, .. } => sel_has_target(who),
+            // Search-library / counter-all effects pick no cast-time target.
+            Effect::SearchLibraryCreaturesUpToTotalManaValue { .. }
+            | Effect::CounterAllOtherSpellsDrawPer => false,
             Effect::DestroyTargetsPolymorph { .. } => true,
             Effect::DestroyTargets { .. } => true,
             Effect::DealHalfLifeDamage { .. } => false,
@@ -738,7 +742,7 @@ impl Effect {
             Effect::CreaturesYouControlDyingThisTurn { .. } => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::PayOrLoseGame { .. } => false,
-            Effect::SacrificeAndRemember { .. } => false,
+            Effect::SacrificeAndRemember { who, .. } => player_has_target(who),
             Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),
             Effect::PayLifeLookTake { .. } => false,
             Effect::PayLifeDraw { .. } => false,

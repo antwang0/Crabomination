@@ -1334,3 +1334,180 @@ fn pillar_of_the_paruns_multicolored_only() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).unwrap().tapped, "Pillar tapped to add mana");
 }
+
+// ─── DIS second gap wave (gaps2) ────────────────────────────────────────────
+
+/// Protean Hulk's death fetches creatures with total mana value 6 or less onto
+/// the battlefield.
+#[test]
+fn protean_hulk_dies_reanimates_from_library() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let hulk = g.add_card_to_battlefield(0, catalog::protean_hulk());
+    let b1 = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
+    let b2 = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![b1, b2])]));
+    let evs = g.remove_to_graveyard_with_triggers(hulk);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 2, "both MV-2 bears (total 4 ≤ 6) came onto the battlefield");
+}
+
+/// Swift Silence counters every other spell on the stack and draws one card per
+/// spell countered.
+#[test]
+fn swift_silence_counters_others_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    // A creature spell sits on the stack; Swift Silence answers it at instant
+    // speed and draws for the one spell it counters.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear onto the stack");
+    let silence = g.add_card_to_hand(0, catalog::swift_silence());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let h0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: silence, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Swift Silence in response");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Grizzly Bears"),
+        "the bear spell was countered before resolving");
+    assert_eq!(g.players[0].hand.len(), h0 - 1 + 1, "drew a card for the one spell countered");
+}
+
+/// Lyzolda deals 2 damage when the sacrificed creature was red.
+#[test]
+fn lyzolda_sac_red_deals_damage() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let lyz = g.add_card_to_battlefield(0, catalog::lyzolda_the_blood_witch());
+    g.clear_sickness(lyz);
+    g.add_card_to_battlefield(0, catalog::goblin_guide()); // a red creature to sacrifice
+    g.players[0].mana_pool.add_colorless(2);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lyz, ability_index: 0,
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Lyzolda sacrificing a red creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 2, "red sacrifice dealt 2 to the opponent");
+}
+
+/// Lyzolda draws a card when the sacrificed creature was black.
+#[test]
+fn lyzolda_sac_black_draws() {
+    let mut g = two_player_game();
+    let lyz = g.add_card_to_battlefield(0, catalog::lyzolda_the_blood_witch());
+    g.clear_sickness(lyz);
+    g.add_card_to_battlefield(0, catalog::black_knight()); // a black creature
+    g.add_card_to_library(0, catalog::swamp());
+    g.players[0].mana_pool.add_colorless(2);
+    let h0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lyz, ability_index: 0,
+        target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Lyzolda sacrificing a black creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 + 1, "black sacrifice drew a card");
+}
+
+/// Stormscale Anarch deals 4 when the discarded card was multicolored.
+#[test]
+fn stormscale_anarch_multicolor_discard_deals_four() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let anarch = g.add_card_to_battlefield(0, catalog::stormscale_anarch());
+    g.clear_sickness(anarch);
+    g.add_card_to_hand(0, catalog::lightning_helix()); // a multicolored (R/W) card
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: anarch, ability_index: 0,
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Stormscale discarding a multicolored card");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 4, "multicolored discard dealt 4");
+}
+
+/// Crime reanimates a creature from an opponent's graveyard under your control.
+#[test]
+fn crime_reanimates_from_opponent_graveyard() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let crime = g.add_card_to_hand(0, catalog::crime_punishment());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: crime, target: Some(Target::Permanent(dead)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Crime");
+    drain_stack(&mut g);
+    let bear = g.battlefield_find(dead).expect("bear reanimated");
+    assert_eq!(bear.controller, 0, "under your control");
+}
+
+/// Punishment destroys each artifact/creature/enchantment with mana value X.
+#[test]
+fn punishment_destroys_mana_value_x() {
+    let mut g = two_player_game();
+    let two_drop = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let one_drop = g.add_card_to_battlefield(1, catalog::goblin_guide()); // MV 1
+    let cp = g.add_card_to_hand(0, catalog::crime_punishment());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: cp, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Punishment for X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(two_drop).is_none(), "MV-2 creature destroyed");
+    assert!(g.battlefield_find(one_drop).is_some(), "MV-1 creature survived");
+}
+
+/// Hit makes the target player sacrifice a creature and deals its mana value.
+#[test]
+fn hit_edict_and_mana_value_damage() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2, the only sac fodder
+    let hr = g.add_card_to_hand(0, catalog::hit_run());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: hr, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hit");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Grizzly Bears"),
+        "the opponent's creature was sacrificed");
+    assert_eq!(g.players[1].life, foe_life - 2, "took damage equal to the sacrificed MV");
+}
+
+/// Fall makes the target player discard the nonland cards among two revealed at
+/// random; a hand of only nonlands loses two.
+#[test]
+fn fall_discards_nonlands() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::goblin_guide());
+    let rf = g.add_card_to_hand(0, catalog::rise_fall());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let h1 = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: rf, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Fall");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), h1 - 2, "both revealed nonlands were discarded");
+}

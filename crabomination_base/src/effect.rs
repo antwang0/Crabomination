@@ -1343,6 +1343,13 @@ pub enum Predicate {
     /// "If the sacrificed permanent was a Vehicle" — reads the sacrifice
     /// scratch (Hellish Sideswipe's draw rider).
     SacrificedWasVehicle,
+    /// "If the sacrificed permanent was [color]" — reads the sacrificed
+    /// permanent's colors off the sacrifice scratch (Lyzolda, the Blood
+    /// Witch: damage if red, draw if black).
+    SacrificedWasColor(Color),
+    /// "If the discarded card was multicolored" — reads the last-discarded
+    /// scratch (Stormscale Anarch's doubled damage).
+    LastDiscardedWasMulticolored,
     /// The entering permanent bound to `ctx.trigger_source` arrived from a
     /// graveyard this turn, or was cast from one (escape / unearth — read
     /// via `!cast_from_hand`; exile-casts over-trigger, noted per card).
@@ -4164,6 +4171,20 @@ pub enum Effect {
         max_count: Value,
         counters: u32,
     },
+    /// Protean Hulk — search the controller's *library* for any number of
+    /// creature cards with total mana value `max_total` or less, put them
+    /// onto the battlefield, then shuffle. The controller picks the set at
+    /// resolution; picks are accepted greedily until the next would exceed
+    /// the cap. The library variant of
+    /// [`ReturnGraveyardCreaturesUpToTotalManaValue`].
+    SearchLibraryCreaturesUpToTotalManaValue { max_total: Value },
+    /// Swift Silence — counter every other spell on the stack, then draw a
+    /// card for each spell countered this way (CR 701.5).
+    CounterAllOtherSpellsDrawPer,
+    /// Fall (Rise // Fall) — `who` reveals `count` cards at random from their
+    /// hand, then discards each nonland card revealed this way. Lands revealed
+    /// this way stay in hand.
+    RevealRandomDiscardNonland { who: Selector, count: Value },
     /// "Tap up to N target permanents; they don't untap during their
     /// controller's next untap step" where N is a runtime `Value`
     /// (Archipelagore — N = `Value::MutateCount`). The controller chooses up

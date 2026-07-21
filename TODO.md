@@ -153,25 +153,32 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Poppet, Palliation Accord (`CounterType::Palliation`), Pain Magnification (rode
   a fix binding `event_subject` to the damaged player), Rakdos Augermage, Drekavac
   (`Effect::MayDiscardMatching`), Crypt Champion (`Effect::EachPlayerReanimateCreatureMaxMv`).
-  **Deferred DIS cards (need new primitives):** Swift Silence (counter-all-others
-  + draw-per-countered — needs a stack-count of actual counters); Azorius Ploy
+- **Dissension/Ravnica gap batch (dis/gaps2, rav/gaps) — shipped:** Protean Hulk
+  (`Effect::SearchLibraryCreaturesUpToTotalManaValue`), Swift Silence
+  (`Effect::CounterAllOtherSpellsDrawPer`), Lyzolda (`Predicate::SacrificedWasColor`
+  off a new `sacrificed_colors` scratch), Stormscale Anarch
+  (`Predicate::LastDiscardedWasMulticolored`), and the split cards Crime // Punishment,
+  Hit // Run (`SacrificeAndRemember` now surfaces a player-target slot), Rise // Fall
+  (`Effect::RevealRandomDiscardNonland`). RAV/GPT: the seven guild bounce-lands,
+  Benevolent Ancestor, Carrion Howler, Conclave Phalanx, Dogpile, Dimir Cutpurse,
+  Clinging Darkness, Consult the Necrosages.
+  **Still-deferred DIS/RAV cards (need new primitives):** Azorius Ploy
   (outgoing-only combat-damage prevention — the incoming half exists as
   `PreventCombatDamageToTargetThisTurn`); Simic Basilisk (grant "destroy at end
-  of combat on combat damage to a creature" until EOT); Protean Hulk (search
-  library for creatures up to a *total* mana value → battlefield); Ignorant Bliss
+  of combat on combat damage to a creature" until EOT); Ignorant Bliss
   (exile hand, delayed return next end step); Kindle the Carnage (repeatable
   random-discard damage loop); Bronze Bombshell (needs a `GameEvent::ControlChanged`
-  + `EventKind::ControlChanged` emitted from every control-change site); Lyzolda /
-  Stormscale Anarch (need the cost-sacrificed / cost-discarded card's colors
-  stamped on the resolution context + `SacrificedWasColor`/`DiscardedWasColor`
-  predicates); Muse Vessel (needs "may play a card exiled with this source");
+  + `EventKind::ControlChanged` emitted from every control-change site);
+  Muse Vessel (needs "may play a card exiled with this source");
   Evolution Vat (grant a counter-doubling activated ability until EOT); Azorius
   Aethermage (needs a "permanent returned to your hand" trigger); Vigean Intuition
   / Fertile Imagination (choose-a-card-type at resolution + type-routed reveal);
-  Isperia / Momir Vig / Experiment Kraj (complex legendaries); the RAV/GPT/DIS
-  split cards (need per-half effect plumbing). Narrow approximation:
-  Magewright's Stone's target is any creature (should be "has a {T} activated
-  ability"); Cytoshape's copied creature isn't restricted to nonlegendary.
+  Isperia / Momir Vig / Experiment Kraj (complex legendaries); the remaining split
+  cards Trial // Error (return all blocking/blocked-by), Odds // Ends (coin-flip
+  counter-or-copy), Research // Development (outside-the-game / repeated may-draw),
+  Bound // Determined (return-up-to-colors-of-sacrificed from graveyard). Narrow
+  approximation: Stormscale Anarch's discard is chosen-lowest, not random;
+  Magewright's Stone's target is any creature; Cytoshape's copy isn't nonlegendary.
 - **Dissension gap batch (dis/creatures) — shipped:** Assault Zeppelid, Sky
   Hussar (ETB untap-all), Stalking Vengeance (death→power damage), Azorius Herald
   (unblockable + sac-unless-{U} via `SourceCastWithColorSpent`).

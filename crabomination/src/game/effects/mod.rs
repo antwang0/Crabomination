@@ -6231,6 +6231,112 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SearchLibraryCreaturesUpToTotalManaValue { max_total } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                use rand::seq::SliceRandom;
+                let p = ctx.controller;
+                let cap = self.evaluate_value(max_total, ctx).max(0);
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .library
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if !candidates.is_empty() {
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: format!(
+                            "Search library for creatures with total mana value {cap} or less"
+                        ),
+                        candidates: candidates.clone(),
+                        min: 0,
+                        max: candidates.len() as u32,
+                    });
+                    let chosen: Vec<CardId> = match answer {
+                        DecisionAnswer::Cards(ids) => ids,
+                        _ => Vec::new(),
+                    };
+                    let mut total = 0i32;
+                    for cid in chosen {
+                        let Some(c) = self.players[p].library.iter().find(|c| c.id == cid) else {
+                            continue;
+                        };
+                        let mv = c.definition.cost.cmc() as i32;
+                        if total + mv > cap {
+                            continue;
+                        }
+                        total += mv;
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
+                self.players[p].library.shuffle(&mut rand::rng());
+                Ok(())
+            }
+
+            Effect::CounterAllOtherSpellsDrawPer => {
+                use crate::game::types::StackItem;
+                let src = ctx.source;
+                let to_remove: Vec<usize> = self
+                    .stack
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, si)| {
+                        matches!(si, StackItem::Spell { card, uncounterable: false, .. }
+                            if Some(card.id) != src)
+                    })
+                    .map(|(i, _)| i)
+                    .collect();
+                let mut countered = 0u32;
+                for pos in to_remove.into_iter().rev() {
+                    if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
+                        self.countered_spell_mana_spent = mana_spent;
+                        self.countered_spell_off_stack(*card, events);
+                        countered += 1;
+                    }
+                }
+                if countered > 0 {
+                    self.run_effect(
+                        &Effect::Draw {
+                            who: Selector::You,
+                            amount: crate::effect::Value::Const(countered as i32),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+            Effect::RevealRandomDiscardNonland { who, count } => {
+                use rand::seq::SliceRandom;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    let mut ids: Vec<CardId> =
+                        self.players[p].hand.iter().map(|c| c.id).collect();
+                    ids.shuffle(&mut rand::rng());
+                    let revealed: Vec<CardId> = ids.into_iter().take(n).collect();
+                    for cid in revealed {
+                        let is_land = self
+                            .players[p]
+                            .hand
+                            .iter()
+                            .find(|c| c.id == cid)
+                            .is_some_and(|c| c.definition.is_land());
+                        if !is_land {
+                            self.discard_card(p, cid, events);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReturnGraveyardPermanentsDifferentNames => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::effect::ZoneDest;

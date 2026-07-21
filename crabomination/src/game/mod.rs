@@ -419,6 +419,16 @@ pub struct GameState {
     /// Vehicle — Hellish Sideswipe's `Predicate::SacrificedWasVehicle`.
     #[serde(default)]
     pub(crate) sacrificed_was_vehicle: Option<bool>,
+    /// Transient: colors of the most-recently-sacrificed cost permanent —
+    /// Lyzolda's `Predicate::SacrificedWasColor`. Set on the sacrifice-cost
+    /// paths; reset between resolutions.
+    #[serde(default)]
+    pub(crate) sacrificed_colors: Option<Vec<crate::mana::Color>>,
+    /// Transient: whether the last card discarded during the current
+    /// resolution was multicolored (Stormscale Anarch). Stamped in
+    /// `discard_card`.
+    #[serde(default)]
+    pub(crate) last_discarded_was_multicolored: Option<bool>,
     /// Transient: card-type count of the most recently discarded card
     /// (`Value::LastDiscardedCardTypes` — Mount Velus Manticore). Stamped in
     /// `discard_card`.
@@ -1217,6 +1227,8 @@ impl Clone for GameState {
             sacrificed_was_artifact: self.sacrificed_was_artifact,
             sacrificed_was_outlaw: self.sacrificed_was_outlaw,
             sacrificed_was_vehicle: self.sacrificed_was_vehicle,
+            sacrificed_colors: self.sacrificed_colors.clone(),
+            last_discarded_was_multicolored: self.last_discarded_was_multicolored,
             last_discarded_card_types: self.last_discarded_card_types,
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
@@ -1393,6 +1405,8 @@ impl GameState {
             sacrificed_was_artifact: None,
             sacrificed_was_outlaw: None,
             sacrificed_was_vehicle: None,
+            sacrificed_colors: None,
+            last_discarded_was_multicolored: None,
             last_discarded_card_types: 0,
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
@@ -8009,6 +8023,7 @@ impl GameState {
         self.greatest_discarded_mv_this_resolution =
             self.greatest_discarded_mv_this_resolution.max(card.definition.cost.cmc());
         self.last_discarded_card_types = card.definition.card_types.len() as u32;
+        self.last_discarded_was_multicolored = Some(card.definition.cost.distinct_colors() >= 2);
         *self
             .cards_discarded_per_player_this_resolution
             .entry(p)
