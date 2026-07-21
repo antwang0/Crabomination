@@ -16715,10 +16715,17 @@ impl GameState {
                     .computed_permanent(subj)
                     .map(|cp| cp.colors)
                     .unwrap_or_default();
+                // Radiance fans out over every other permanent that shares a
+                // card type with the subject (creatures for the usual cards,
+                // enchantments for Leave No Trace) AND shares a color.
+                let subj_types = self
+                    .battlefield_find(subj)
+                    .map(|c| c.definition.card_types.clone())
+                    .unwrap_or_default();
                 let mut out = vec![EntityRef::Permanent(subj)];
                 for c in &self.battlefield {
                     if c.id != subj
-                        && c.definition.is_creature()
+                        && c.definition.card_types.iter().any(|t| subj_types.contains(t))
                         && self.computed_permanent(c.id).is_some_and(|cp| {
                             cp.colors.iter().any(|col| subj_colors.contains(col))
                         })

@@ -182,11 +182,13 @@ pub enum Selector {
     /// up to one *target* creature".
     CastSpellTarget(u8),
 
-    /// CR 702 Radiance (Ravnica) — the `subject` creature plus every other
-    /// creature on the battlefield that shares a computed color with it.
-    /// A colorless subject resolves to just itself. Lets a non-damage body
-    /// (untap + pump for Rally the Righteous) fan out the same way
-    /// `Effect::RadianceDamage` does. `subject` is usually a target slot.
+    /// CR 702 Radiance (Ravnica) — the `subject` permanent plus every other
+    /// permanent on the battlefield that shares a card type with it (creatures
+    /// for the usual cards, enchantments for Leave No Trace) and shares a
+    /// computed color with it. A colorless subject resolves to just itself.
+    /// Lets a non-damage body (untap + pump for Rally the Righteous, destroy
+    /// for Leave No Trace) fan out the same way `Effect::RadianceDamage` does.
+    /// `subject` is usually a target slot.
     RadianceGroup { subject: Box<Selector> },
 
     /// All game objects matching `filter` in `zone`.

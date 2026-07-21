@@ -1187,3 +1187,236 @@ fn resolve_spell_r(g: &mut GameState, def: crabomination::card::CardDefinition, 
     g.dispatch_triggers_for_events(&events);
     drain_stack(g);
 }
+
+// ── gap wave 8 ───────────────────────────────────────────────────────────────
+
+use crabomination::game::types::Target;
+
+/// Surge of Zeal's Radiance grants haste to the target and every creature
+/// that shares a color with it.
+#[test]
+fn surge_of_zeal_radiance_grants_haste() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    let b = g.add_card_to_battlefield(0, catalog::llanowar_elves()); // green
+    let w = g.add_card_to_battlefield(0, catalog::savannah_lions()); // white, off-color
+    resolve_spell_r(&mut g, catalog::surge_of_zeal(), vec![Target::Permanent(a)]);
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Haste), "shared green");
+    assert!(!g.computed_permanent(w).unwrap().keywords.contains(&Keyword::Haste), "off-color");
+}
+
+/// Leave No Trace's Radiance destroys the target enchantment and every
+/// enchantment sharing a color with it — exercising the generalized
+/// `RadianceGroup` over a non-creature card type.
+#[test]
+fn leave_no_trace_radiance_over_enchantments() {
+    let mut g = two_player_game();
+    // Two white enchantments + one green enchantment.
+    let a = g.add_card_to_battlefield(0, catalog::glare_of_subdual()); // GW → white
+    let b = g.add_card_to_battlefield(1, catalog::copy_enchantment()); // blue
+    let _ = b;
+    let target = g.add_card_to_battlefield(0, catalog::glare_of_subdual());
+    resolve_spell_r(&mut g, catalog::leave_no_trace(), vec![Target::Permanent(target)]);
+    assert!(g.battlefield_find(target).is_none(), "target destroyed");
+    assert!(g.battlefield_find(a).is_none(), "shared-color enchantment destroyed too");
+}
+
+/// Mnemonic Nexus shuffles each player's graveyard into their library.
+#[test]
+fn mnemonic_nexus_recycles_graveyards() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::forest()); }
+    let before_lib = g.players[0].library.len();
+    let before_gy = g.players[0].graveyard.len();
+    assert!(before_gy > 0);
+    resolve_spell_r(&mut g, catalog::mnemonic_nexus(), vec![]);
+    assert_eq!(g.players[0].graveyard.len(), 0, "graveyard emptied");
+    assert_eq!(g.players[0].library.len(), before_lib + before_gy, "cards went to library");
+}
+
+/// Hex destroys six target creatures.
+#[test]
+fn hex_destroys_six_creatures() {
+    let mut g = two_player_game();
+    let ids: Vec<_> = (0..6).map(|_| g.add_card_to_battlefield(1, catalog::grizzly_bears())).collect();
+    resolve_spell_r(&mut g, catalog::hex(), ids.iter().map(|&i| Target::Permanent(i)).collect());
+    for id in ids { assert!(g.battlefield_find(id).is_none(), "creature destroyed"); }
+}
+
+/// Excruciator carries the "damage it deals can't be prevented" static.
+#[test]
+fn excruciator_damage_unpreventable_static() {
+    use crabomination::effect::StaticEffect;
+    let e = catalog::excruciator();
+    assert_eq!((e.power, e.toughness), (7, 7));
+    assert!(e.static_abilities.iter().any(|a| matches!(a.effect, StaticEffect::DamageCantBePrevented)));
+}
+
+/// Helldozer destroys a nonbasic land and untaps itself; a basic leaves it tapped.
+#[test]
+fn helldozer_untaps_on_nonbasic() {
+    let mut g = two_player_game();
+    let dozer = g.add_card_to_battlefield(0, catalog::helldozer());
+    g.clear_sickness(dozer); // the {T} cost taps it; the nonbasic clause untaps it back
+    let land = g.add_card_to_battlefield(1, catalog::duskmantle_house_of_shadow()); // nonbasic
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dozer, ability_index: 0, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land destroyed");
+    assert!(!g.battlefield_find(dozer).unwrap().tapped, "untapped by nonbasic destruction");
+}
+
+/// Tolsimir Wolfblood anthems other green and white creatures and mints Voja.
+#[test]
+fn tolsimir_anthems_and_mints_voja() {
+    let mut g = two_player_game();
+    let tol = g.add_card_to_battlefield(0, catalog::tolsimir_wolfblood());
+    let green = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 green
+    assert_eq!(g.computed_permanent(green).unwrap().power, 3, "green anthem");
+    g.clear_sickness(tol);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tol, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("make voja");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Voja"), "Voja token created");
+}
+
+/// Woodwraith Strangler regenerates by exiling a creature card from the graveyard.
+#[test]
+fn woodwraith_strangler_regenerates() {
+    let mut g = two_player_game();
+    let ww = g.add_card_to_battlefield(0, catalog::woodwraith_strangler());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.clear_sickness(ww);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ww, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("regen shield");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ww).unwrap().regeneration_shields > 0, "regen shield set");
+}
+
+/// Stone-Seeder Hierophant untaps target lands with its tap ability.
+#[test]
+fn stone_seeder_untaps_land() {
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::stone_seeder_hierophant());
+    g.clear_sickness(h);
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: h, ability_index: 0, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], x_value: None,
+    }).expect("untap");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "land untapped");
+}
+
+/// Vitu-Ghazi mints a Saproling.
+#[test]
+fn vitu_ghazi_makes_saproling() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::vitu_ghazi_the_city_tree());
+    g.clear_sickness(land);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("saproling");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Saproling"));
+}
+
+/// Duskmantle's activated ability mills the targeted player.
+#[test]
+fn duskmantle_mills_target() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::duskmantle_house_of_shadow());
+    g.clear_sickness(land);
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
+    let before = g.players[1].graveyard.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("mill");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), before + 1, "milled one");
+}
+
+/// Sunhome grants double strike until end of turn.
+#[test]
+fn sunhome_grants_double_strike() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::sunhome_fortress_of_the_legion());
+    g.clear_sickness(land);
+    let cre = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(cre)),
+        additional_targets: vec![], x_value: None,
+    }).expect("double strike");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(cre).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Copy Enchantment is set up to enter as a copy of any enchantment.
+#[test]
+fn copy_enchantment_enters_as_copy() {
+    let ce = catalog::copy_enchantment();
+    let eac = ce.enters_as_copy.expect("has enters_as_copy");
+    assert_eq!(eac.filter, crabomination::card::SelectionRequirement::Enchantment);
+}
+
+/// Glare of Subdual taps a target creature (paying by tapping one of your own).
+#[test]
+fn glare_of_subdual_taps_target() {
+    let mut g = two_player_game();
+    let glare = g.add_card_to_battlefield(0, catalog::glare_of_subdual());
+    let _ = glare;
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mine);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Find the enchantment's ability; the tap-a-creature cost taps `mine`.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: glare, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![Target::Permanent(mine)], x_value: None,
+    }).expect("tap down");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "enemy creature tapped");
+}
+
+/// Twilight Drover grows when a creature token leaves the battlefield.
+#[test]
+fn twilight_drover_grows_on_token_death() {
+    let mut g = two_player_game();
+    let drover = g.add_card_to_battlefield(0, catalog::twilight_drover());
+    // Mint an actual token via Vitu-Ghazi to guarantee token-ness, then remove it.
+    let land = g.add_card_to_battlefield(0, catalog::vitu_ghazi_the_city_tree());
+    g.clear_sickness(land);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("saproling");
+    drain_stack(&mut g);
+    let sap = g.battlefield.iter().find(|c| c.definition.name == "Saproling").unwrap().id;
+    // Lethal damage → SBA emits the leave/death event, firing the watcher.
+    g.battlefield_find_mut(sap).unwrap().damage = 1;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(drover).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne),
+        1,
+        "a creature token leaving grows Twilight Drover",
+    );
+}
