@@ -17387,6 +17387,21 @@ impl GameState {
                         }),
                     _ => None,
                 }),
+            PlayerRef::LastDamagerControllerOf(sel) => self
+                .resolve_selector(sel, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        let src = self
+                            .battlefield_find(cid)
+                            .or_else(|| self.leaves_bf_lki.get(&cid))
+                            .and_then(|c| c.damaged_by_this_turn.last().copied())?;
+                        self.battlefield_find(src)
+                            .map(|c| c.controller)
+                            .or_else(|| self.find_card_anywhere(src).map(|c| c.owner))
+                    }
+                    _ => None,
+                }),
         }
     }
 

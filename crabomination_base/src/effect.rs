@@ -70,6 +70,12 @@ pub enum PlayerRef {
     /// that clears `block_map`, so a "whenever this is dealt combat damage"
     /// trigger can name the attacking player (Souls of the Faultless).
     CombatDamagerController(Box<Selector>),
+    /// The controller of the most recent source that dealt damage to the
+    /// permanent the inner selector resolves to this turn (reads the last entry
+    /// of `CardInstance.damaged_by_this_turn`). Unlike `CombatDamagerController`
+    /// this covers noncombat damage too — Belltower Sphinx's "that source's
+    /// controller mills that many."
+    LastDamagerControllerOf(Box<Selector>),
 }
 
 /// Which players a player-targeted static effect affects. The static

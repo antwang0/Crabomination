@@ -1865,3 +1865,21 @@ fn shadow_of_doubt_locks_out_searches() {
         "no land entered — the search was locked out",
     );
 }
+
+/// Belltower Sphinx mills the controller of whatever damages it, by that much.
+#[test]
+fn belltower_sphinx_mills_the_damager() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let sphinx = g.add_card_to_battlefield(0, catalog::belltower_sphinx());
+    // Give player 1 a library to mill.
+    for _ in 0..5 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    let lib1 = g.players[1].library.len();
+    // A source player 1 controls deals 3 to the Sphinx.
+    let src = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(sphinx), 3, Some(src), &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib1 - 3, "the damager's controller milled 3");
+}
