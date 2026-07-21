@@ -1749,3 +1749,34 @@ fn razia_redirects_three_damage() {
     assert_eq!(g.battlefield_find(mine).unwrap().damage, 1, "3 of 4 redirected away");
     assert_eq!(g.battlefield_find(foe).unwrap().damage, 3, "3 redirected onto the opponent's creature");
 }
+
+/// Grifter's Blade enters attached and pumps the equipped creature.
+#[test]
+fn grifters_blade_enters_attached() {
+    let mut g = two_player_game();
+    use crabomination::game::types::Target;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blade = g.add_card_to_battlefield(0, catalog::grifters_blade());
+    let attach = catalog::grifters_blade().triggered_abilities[0].effect.clone();
+    let mut ctx = crabomination::game::effects::EffectContext::for_trigger(blade, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&attach, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(blade).unwrap().attached_to, Some(bear), "attached on ETB");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 from the blade");
+    assert!(catalog::grifters_blade().keywords.iter().any(|k| matches!(k, Keyword::Flash)));
+}
+
+/// Indentured Oaf deals no damage to red creatures but hits others.
+#[test]
+fn indentured_oaf_spares_red_creatures() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let oaf = g.add_card_to_battlefield(0, catalog::indentured_oaf());
+    let red = g.add_card_to_battlefield(1, catalog::goblin_arsonist()); // red creature
+    let green = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(red), 2, Some(oaf), &mut evs);
+    assert_eq!(g.battlefield_find(red).unwrap().damage, 0, "red creature spared");
+    g.deal_damage_to_from(EntityRef::Permanent(green), 2, Some(oaf), &mut evs);
+    assert_eq!(g.battlefield_find(green).unwrap().damage, 2, "non-red takes it");
+}

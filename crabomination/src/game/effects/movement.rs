@@ -404,6 +404,13 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — Indentured Oaf: this source prevents its own damage to
+        // creatures of a chosen color.
+        if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
+            && self.source_damage_to_color_prevented(src, tgt)
+        {
+            return;
+        }
         // CR 615 — Iroas-style "prevent all damage to attacking creatures
         // you control".
         if let EntityRef::Permanent(tgt) = ent

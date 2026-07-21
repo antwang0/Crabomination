@@ -1955,6 +1955,11 @@ impl GameState {
                     if self.damage_from_your_source_to_your_creature_prevented(atk.id, blocker_id) {
                         continue;
                     }
+                    // CR 615 — Indentured Oaf: this source prevents its own
+                    // damage to creatures of a chosen color.
+                    if self.source_damage_to_color_prevented(atk.id, blocker_id) {
+                        continue;
+                    }
                     // CR 615 — route attacker→blocker combat damage through
                     // the blocker's prevention shields. Lifelink and the
                     // wither/infect -1/-1 counters scale off the actual
@@ -2063,6 +2068,9 @@ impl GameState {
                     .filter(|&bid| {
                         !self.damage_from_your_source_to_your_creature_prevented(bid, atk.id)
                     })
+                    // CR 615 — Indentured Oaf: a blocker's own damage to a
+                    // chosen color is prevented.
+                    .filter(|&bid| !self.source_damage_to_color_prevented(bid, atk.id))
                     .collect();
 
                 let attacker_takes_strike_back =

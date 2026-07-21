@@ -6940,6 +6940,33 @@ impl GameState {
         })
     }
 
+    /// CR 615 — Indentured Oaf: "prevent all damage this creature would deal to
+    /// [color] creatures." True when `source` has the static and `target` is a
+    /// creature of the named color.
+    pub(crate) fn source_damage_to_color_prevented(&self, source: CardId, target: CardId) -> bool {
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        let Some(colors) = self.battlefield_find(source).map(|src| {
+            src.definition
+                .static_abilities
+                .iter()
+                .filter_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::PreventThisDamageToColor(c) => Some(c),
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+        }) else {
+            return false;
+        };
+        if colors.is_empty() {
+            return false;
+        }
+        let Some(tgt) = self.computed_permanent(target) else { return false };
+        tgt.card_types.contains(&crate::card::CardType::Creature)
+            && colors.iter().any(|c| tgt.colors.contains(c))
+    }
+
     pub fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
         // Both sides read through the layer system — share one gather.
         self.with_frozen_layers(|g| g.damage_prevented_by_protection_inner(source, target))
@@ -13926,6 +13953,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllDamageToController
             | StaticEffect::PreventNoncombatDamageToYourCreatures
             | StaticEffect::PreventDamageToYourCreaturesFromYourSources
+            | StaticEffect::PreventThisDamageToColor(_)
             | StaticEffect::UnspentManaBecomesColorless
             // Consulted directly at the step/phase pool-empty sites.
             | StaticEffect::ManaPoolsNeverEmpty

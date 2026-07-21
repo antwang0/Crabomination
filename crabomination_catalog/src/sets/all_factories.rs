@@ -9307,6 +9307,8 @@ static RAV: &[Factory] = &[
     super::rav::wojek_apothecary,
     super::rav::pariahs_shield,
     super::rav::razia_boros_archangel,
+    super::rav::grifters_blade,
+    super::rav::indentured_oaf,
     super::rav::glass_golem,
     super::rav::goliath_spider,
     super::rav::grayscaled_gharial,

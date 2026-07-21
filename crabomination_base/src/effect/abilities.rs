@@ -1423,6 +1423,10 @@ pub enum StaticEffect {
     /// funnel for creature targets; combat damage is marked on a separate path
     /// and is unaffected.
     PreventNoncombatDamageToYourCreatures,
+    /// CR 615 — "Prevent all damage that the source would deal to creatures of
+    /// the given color" (Indentured Oaf — prevents its own damage to red
+    /// creatures). Keyed on the damage source having this static.
+    PreventThisDamageToColor(crate::mana::Color),
     /// CR 615 — "Prevent all damage that would be dealt to creatures you
     /// control by sources you control." Light of Sanction. Consulted at both
     /// the combat strike-back and the shared non-combat damage funnel; the
