@@ -9337,6 +9337,12 @@ static POR: &[Factory] = &[
 ];
 static RAV: &[Factory] = &[
     super::rav::watchwolf,
+    super::rav::boros_swiftblade,
+    super::rav::courier_hawk,
+    super::rav::barbarian_riftcutter,
+    super::rav::dromad_purebred,
+    super::rav::conclave_equenaut,
+    super::rav::gate_hound,
     super::rav::lightning_helix,
     super::rav::putrefy,
 ];
