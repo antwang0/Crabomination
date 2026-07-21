@@ -160,6 +160,8 @@ pub enum CreatureType {
     Gnome,
     // Artifact creature subtype (Court Homunculus, Fblthp).
     Homunculus,
+    // Return to Ravnica (Catacomb Slug).
+    Slug,
     // Amonkhet Naga (Ramunap Excavator).
     Naga,
     // Strixhaven artifact-creature subtype (Biblioplex Assistant).

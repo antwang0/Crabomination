@@ -9411,6 +9411,19 @@ static RAV: &[Factory] = &[
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,
     super::rtr::ghor_clan_rampager,
+    super::rtr::bellows_lizard,
+    super::rtr::concordia_pegasus,
+    super::rtr::catacomb_slug,
+    super::rtr::brushstrider,
+    super::rtr::daggerdrome_imp,
+    super::rtr::centaur_healer,
+    super::rtr::batterhorn,
+    super::rtr::crosstown_courier,
+    super::rtr::aquus_steed,
+    super::rtr::centaurs_herald,
+    super::rtr::drainpipe_vermin,
+    super::rtr::dead_reveler,
+    super::rtr::doorkeeper,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,
