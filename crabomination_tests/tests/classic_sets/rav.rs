@@ -516,3 +516,92 @@ fn oathsworn_giant_team_buff() {
     assert_eq!((cp.power, cp.toughness), (2, 4), "+0/+2 anthem");
     assert!(cp.keywords.contains(&Keyword::Vigilance), "granted vigilance");
 }
+
+/// Moroii's upkeep trigger costs its controller 1 life.
+#[test]
+fn moroii_upkeep_life_loss() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::moroii());
+    let life0 = g.players[0].life;
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 - 1, "lost 1 on upkeep");
+}
+
+/// Keening Banshee shrinks a creature -2/-2 on entry.
+#[test]
+fn keening_banshee_shrinks_on_etb() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let banshee = g.add_card_to_hand(0, catalog::keening_banshee());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: banshee, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast banshee");
+    drain_stack(&mut g);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 became 0/0 and died");
+}
+
+/// Primordial Sage lets you draw when you cast a creature spell.
+#[test]
+fn primordial_sage_draws_on_creature_cast() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::primordial_sage());
+    g.add_card_to_library(0, catalog::forest());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear");
+    drain_stack(&mut g);
+    // Cast the bear (-1 from hand) then drew 1 → net same hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card off the creature cast");
+}
+
+/// Junktroller tucks a graveyard card to the bottom of its owner's library.
+#[test]
+fn junktroller_tucks_graveyard_card() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let troll = g.add_card_to_battlefield(0, catalog::junktroller());
+    g.clear_sickness(troll);
+    let corpse = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: troll, ability_index: 0,
+        target: Some(Target::Permanent(corpse)), additional_targets: vec![], x_value: None,
+    }).expect("tuck");
+    drain_stack(&mut g);
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == corpse), "left the graveyard");
+    assert!(g.players[1].library.iter().any(|c| c.id == corpse), "on the bottom of library");
+}
+
+/// Lore Broker wheels one card for every player.
+#[test]
+fn lore_broker_each_player_loots() {
+    let mut g = two_player_game();
+    let broker = g.add_card_to_battlefield(0, catalog::lore_broker());
+    g.clear_sickness(broker);
+    for p in 0..2 {
+        g.add_card_to_hand(p, catalog::grizzly_bears()); // a card to discard
+        g.add_card_to_library(p, catalog::forest()); // a card to draw
+    }
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: broker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("wheel");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0, "P0 drew one, discarded one");
+    assert_eq!(g.players[1].hand.len(), h1, "P1 drew one, discarded one");
+}

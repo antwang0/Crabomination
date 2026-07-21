@@ -9402,6 +9402,12 @@ static RAV: &[Factory] = &[
     super::rav::infectious_host,
     super::rav::loxodon_gatekeeper,
     super::rav::oathsworn_giant,
+    super::rav::moroii,
+    super::rav::keening_banshee,
+    super::rav::primordial_sage,
+    super::rav::junktroller,
+    super::rav::ivy_dancer,
+    super::rav::lore_broker,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,
