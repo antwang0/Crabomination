@@ -2,12 +2,12 @@
 //! activated-ability bodies filling the `set_gaps.py rav` remainder.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, LandType, Selector,
-    Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, LandType,
+    SelectionRequirement as R, Selector, StaticAbility, Subtypes, Value,
 };
-use crate::effect::shortcut::on_dies;
-use crate::effect::{Duration, Effect};
-use crate::mana::{cost, g, generic, hybrid, r, u, Color};
+use crate::effect::shortcut::{on_dies, target_filtered};
+use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneDest};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 
 /// Glass Golem — {5} 6/2 Golem artifact creature (vanilla).
 pub fn glass_golem() -> CardDefinition {
@@ -139,6 +139,168 @@ pub fn blazing_archon() -> CardDefinition {
             description: "Creatures can't attack you.",
             effect: StaticEffect::CreaturesCantAttackController { protect_planeswalkers: false },
         }],
+        ..Default::default()
+    }
+}
+
+/// Sell-Sword Brute — {1}{R} 2/2 Human Mercenary. When it dies, it deals 2
+/// damage to you.
+pub fn sell_sword_brute() -> CardDefinition {
+    CardDefinition {
+        name: "Sell-Sword Brute",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![on_dies(Effect::DealDamage {
+            to: Selector::You,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Screeching Griffin — {3}{W} 2/2 Griffin with flying. `{R}: Target creature
+/// can't block this creature this turn.`
+pub fn screeching_griffin() -> CardDefinition {
+    CardDefinition {
+        name: "Screeching Griffin",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::CantBlockSourceThisTurn { target: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Roofstalker Wight — {1}{B} 2/1 Zombie. `{1}{U}: This creature gains flying
+/// until end of turn.`
+pub fn roofstalker_wight() -> CardDefinition {
+    CardDefinition {
+        name: "Roofstalker Wight",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sewerdreg — {3}{B}{B} 3/3 Spirit with swampwalk. `Sacrifice this creature:
+/// Exile target card from a graveyard.`
+pub fn sewerdreg() -> CardDefinition {
+    CardDefinition {
+        name: "Sewerdreg",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Landwalk(LandType::Swamp)],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(R::InGraveyard),
+                to: ZoneDest::Exile,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Infectious Host — {2}{B} 1/1 Zombie. When it dies, target player loses 2 life.
+pub fn infectious_host() -> CardDefinition {
+    CardDefinition {
+        name: "Infectious Host",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Loxodon Gatekeeper — {2}{W}{W} 2/3 Elephant Soldier. Artifacts, creatures,
+/// and lands your opponents control enter tapped.
+pub fn loxodon_gatekeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Loxodon Gatekeeper",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Artifacts, creatures, and lands your opponents control enter tapped.",
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::EachPermanent(
+                    R::ControlledByOpponent.and(
+                        R::Artifact.or(R::Creature).or(R::Land),
+                    ),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Oathsworn Giant — {4}{W}{W} 3/4 Giant Soldier with vigilance. Other
+/// creatures you control get +0/+2 and have vigilance.
+pub fn oathsworn_giant() -> CardDefinition {
+    let others = || Selector::EachPermanent(
+        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Oathsworn Giant",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other creatures you control get +0/+2.",
+                effect: StaticEffect::PumpPT { applies_to: others(), power: 0, toughness: 2 },
+            },
+            StaticAbility {
+                description: "… and have vigilance.",
+                effect: StaticEffect::GrantKeyword { applies_to: others(), keyword: Keyword::Vigilance },
+            },
+        ],
         ..Default::default()
     }
 }

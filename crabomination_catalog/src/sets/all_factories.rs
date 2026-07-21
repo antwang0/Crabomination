@@ -9395,6 +9395,13 @@ static RAV: &[Factory] = &[
     super::rav::greater_forgeling,
     super::rav::goblin_fire_fiend,
     super::rav::blazing_archon,
+    super::rav::sell_sword_brute,
+    super::rav::screeching_griffin,
+    super::rav::roofstalker_wight,
+    super::rav::sewerdreg,
+    super::rav::infectious_host,
+    super::rav::loxodon_gatekeeper,
+    super::rav::oathsworn_giant,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

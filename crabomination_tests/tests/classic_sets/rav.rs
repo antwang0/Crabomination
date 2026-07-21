@@ -437,3 +437,82 @@ fn blazing_archon_bars_attacks() {
     }]));
     assert!(res.is_err(), "the attack is barred by Blazing Archon");
 }
+
+/// Sell-Sword Brute deals 2 to its controller when it dies.
+#[test]
+fn sell_sword_brute_burns_controller_on_death() {
+    let mut g = two_player_game();
+    let brute = g.add_card_to_battlefield(0, catalog::sell_sword_brute());
+    let life0 = g.players[0].life;
+    g.battlefield_find_mut(brute).unwrap().damage = 2;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 - 2, "controller took 2 on death");
+}
+
+/// Infectious Host drains a target player 2 when it dies.
+#[test]
+fn infectious_host_drains_on_death() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::infectious_host());
+    let life1 = g.players[1].life;
+    g.battlefield_find_mut(host).unwrap().damage = 1;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 2, "target player lost 2");
+}
+
+/// Roofstalker Wight grants itself flying until end of turn.
+#[test]
+fn roofstalker_wight_grants_flying() {
+    let mut g = two_player_game();
+    let w = g.add_card_to_battlefield(0, catalog::roofstalker_wight());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(!g.computed_permanent(w).unwrap().keywords.contains(&Keyword::Flying));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: w, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("grant flying");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(w).unwrap().keywords.contains(&Keyword::Flying), "has flying now");
+}
+
+/// Sewerdreg sacrifices itself to exile a card from a graveyard.
+#[test]
+fn sewerdreg_exiles_a_graveyard_card() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let dreg = g.add_card_to_battlefield(0, catalog::sewerdreg());
+    let corpse = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dreg, ability_index: 0,
+        target: Some(Target::Permanent(corpse)), additional_targets: vec![], x_value: None,
+    }).expect("sac to exile");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dreg).is_none(), "Sewerdreg sacrificed");
+    assert!(g.exile.iter().any(|c| c.id == corpse), "graveyard card exiled");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == corpse));
+}
+
+/// Loxodon Gatekeeper taps opponents' permanents as they enter.
+#[test]
+fn loxodon_gatekeeper_taps_opponents() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::loxodon_gatekeeper());
+    let foe = g.move_card_to_battlefield_for_test(1, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "opponent's creature entered tapped");
+}
+
+/// Oathsworn Giant gives other creatures you control +0/+2 and vigilance.
+#[test]
+fn oathsworn_giant_team_buff() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::oathsworn_giant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 4), "+0/+2 anthem");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+}
