@@ -1244,3 +1244,34 @@ pub fn prahv_spires_of_order() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Palliation Accord — {3}{W}{U} Enchantment. Whenever a creature an opponent
+/// controls becomes tapped, put a palliation counter on this. Remove a
+/// palliation counter: Prevent the next 1 damage that would be dealt to you
+/// this turn.
+pub fn palliation_accord() -> CardDefinition {
+    CardDefinition {
+        name: "Palliation Accord",
+        cost: cost(&[generic(3), w(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Palliation,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Palliation, 1)),
+            effect: Effect::PreventNextDamage { target: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -469,6 +469,9 @@ pub enum CounterType {
     /// Unlock counter — MKM's Cryptex tallies one per collect-evidence
     /// activation; its sacrifice ability is gated on five or more.
     Unlock,
+    /// Palliation counter — Palliation Accord accrues one whenever an opponent's
+    /// creature becomes tapped; remove one to prevent 1 damage to you.
+    Palliation,
 }
 
 /// Every zone a card can occupy.

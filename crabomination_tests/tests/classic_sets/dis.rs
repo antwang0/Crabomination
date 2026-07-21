@@ -221,6 +221,21 @@ fn jagged_poppet_discards_on_damage() {
     assert_eq!(g.players[0].hand.len(), h0 - 2, "discarded 2 (the damage dealt)");
 }
 
+/// Palliation Accord accrues a counter when an opponent's creature is tapped.
+#[test]
+fn palliation_accord_counters_on_opponent_tap() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let accord = g.add_card_to_battlefield(0, catalog::palliation_accord());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: foe, actor: None }]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(accord).unwrap().counter_count(CounterType::Palliation), 1,
+        "opponent tap added a palliation counter");
+}
+
 /// Stalking Vengeance turns a dying creature's power into damage to a player.
 #[test]
 fn stalking_vengeance_death_burns_target() {
