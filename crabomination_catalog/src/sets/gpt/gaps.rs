@@ -5,7 +5,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, LandType, SelectionRequirement as R, Subtypes, TriggeredAbility, Zone,
 };
-use crate::effect::shortcut::{etb, on_dies, target_filtered};
+use crate::effect::shortcut::{bloodthirst, etb, on_dies, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
@@ -212,6 +212,90 @@ pub fn benediction_of_moons() -> CardDefinition {
                 body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::PlayerCount }),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Burning-Tree Shaman — {1}{R}{G} 3/4 Centaur Shaman. Whenever a player
+/// activates an ability that isn't a mana ability, deal 1 damage to that player.
+pub fn burning_tree_shaman() -> CardDefinition {
+    CardDefinition {
+        name: "Burning-Tree Shaman",
+        cost: cost(&[generic(1), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AbilityActivated, EventScope::AnyPlayer),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Burning-Tree Bloodscale — {2}{R}{G} 2/2 Lizard Berserker with bloodthirst 1.
+/// `{2}{R}: Target creature can't block this creature this turn.` /
+/// `{2}{G}: Target creature blocks this creature this turn if able.`
+pub fn burning_tree_bloodscale() -> CardDefinition {
+    CardDefinition {
+        name: "Burning-Tree Bloodscale",
+        cost: cost(&[generic(2), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Bloodthirst(1)],
+        triggered_abilities: vec![bloodthirst(1)],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), r()]),
+                effect: Effect::CantBlockSourceThisTurn { target: target_filtered(R::Creature) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), g()]),
+                effect: Effect::MustBlockSource { what: target_filtered(R::Creature) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Culling Sun — {2}{W}{W}{B} Sorcery. Destroy each creature with mana value 3
+/// or less.
+pub fn culling_sun() -> CardDefinition {
+    CardDefinition {
+        name: "Culling Sun",
+        cost: cost(&[generic(2), w(), w(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(R::Creature.and(R::ManaValueAtMost(3))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ghostway — {2}{W} Instant. Exile each creature you control, then return them
+/// to the battlefield under their owner's control at the next end step.
+pub fn ghostway() -> CardDefinition {
+    CardDefinition {
+        name: "Ghostway",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExileReturnNextEndStep {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+        },
         ..Default::default()
     }
 }

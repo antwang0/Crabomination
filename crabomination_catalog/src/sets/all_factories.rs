@@ -7773,6 +7773,10 @@ static GPT: &[Factory] = &[
     super::gpt::agent_of_masks,
     super::gpt::exhumer_thrull,
     super::gpt::benediction_of_moons,
+    super::gpt::burning_tree_shaman,
+    super::gpt::burning_tree_bloodscale,
+    super::gpt::culling_sun,
+    super::gpt::ghostway,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,

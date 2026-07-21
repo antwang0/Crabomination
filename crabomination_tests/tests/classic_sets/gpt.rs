@@ -265,3 +265,66 @@ fn benediction_of_moons_gains_per_player() {
     resolve_spell(&mut g, catalog::benediction_of_moons(), vec![]);
     assert_eq!(g.players[0].life, life0 + 2, "1 life for each of the 2 players");
 }
+
+/// Burning-Tree Shaman pings a player who activates a non-mana ability.
+#[test]
+fn burning_tree_shaman_pings_ability_activator() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::burning_tree_shaman());
+    // Player 1 activates Crystal Seer's {4}{U} self-bounce (a non-mana ability).
+    let seer = g.add_card_to_battlefield(1, catalog::crystal_seer());
+    g.players[1].mana_pool.add_colorless(4);
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seer, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 1, "activator took 1 damage");
+}
+
+/// Burning-Tree Bloodscale enters with a +1/+1 counter (bloodthirst 1) when an
+/// opponent was dealt damage this turn.
+#[test]
+fn burning_tree_bloodscale_bloodthirst() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.players[1].life -= 1; // stand in for "an opponent was dealt damage"
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(1), 1, None, &mut evs);
+    let scale = g.move_card_to_battlefield_for_test(0, catalog::burning_tree_bloodscale());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(scale).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "entered with a bloodthirst counter");
+}
+
+/// Culling Sun destroys creatures with mana value 3 or less and spares bigger ones.
+#[test]
+fn culling_sun_sweeps_cheap_creatures() {
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // MV 5
+    resolve_spell(&mut g, catalog::culling_sun(), vec![]);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(small).is_none(), "MV 2 destroyed");
+    assert!(g.battlefield_find(big).is_some(), "MV 5 spared");
+}
+
+/// Ghostway blinks your creatures, returning them at the next end step.
+#[test]
+fn ghostway_blinks_your_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    resolve_spell(&mut g, catalog::ghostway(), vec![]);
+    assert!(g.battlefield_find(bear).is_none(), "exiled by Ghostway");
+    // Advance to the end step → the delayed trigger returns them.
+    g.active_player_idx = 0;
+    g.step = TurnStep::PostCombatMain;
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "returned at the next end step");
+}
