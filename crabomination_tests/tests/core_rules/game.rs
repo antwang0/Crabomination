@@ -7305,11 +7305,11 @@ fn loss_cause_records_authoritative_reason() {
     g.check_state_based_actions();
     assert_eq!(g.players[1].loss_cause, Some(LossCause::Poison));
 
-    // Concession → Other, even though the seat is at full life with a full
+    // Concession → Conceded, even though the seat is at full life with a full
     // library (a final-state guess would mislabel this).
     let mut g = two_player_game();
     g.concede(1);
-    assert_eq!(g.players[1].loss_cause, Some(LossCause::Other));
+    assert_eq!(g.players[1].loss_cause, Some(LossCause::Conceded));
 
     // Deck-out.
     let mut g = two_player_game();

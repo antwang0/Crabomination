@@ -26,6 +26,7 @@ fn loss_reason_label(r: &LossReason) -> &'static str {
         LossReason::Poison => "poison",
         LossReason::Decked => "decked",
         LossReason::CommanderDamage => "commander",
+        LossReason::Conceded => "concede",
         LossReason::Other => "other",
     }
 }

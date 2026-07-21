@@ -689,6 +689,12 @@ pub struct PlayerView {
     /// players' portraits and skip them in turn order display.
     #[serde(default)]
     pub eliminated: bool,
+    /// Why this player was eliminated, as a short label ("conceded", "life",
+    /// "poison", "decked", "commander", "lose effect"), or `None` if they're
+    /// still in the game or the cause wasn't recorded. Lets the UI annotate an
+    /// eliminated portrait with the actual cause (CR 104.3).
+    #[serde(default)]
+    pub loss_reason: Option<String>,
     /// Names of CR 114 emblems this player owns (command-zone, never
     /// leave). Surfaced so the UI can show active planeswalker-ultimate
     /// emblems. `#[serde(default)]` for snapshot back-compat.

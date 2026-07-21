@@ -629,6 +629,17 @@ fn project_player(
             })
             .collect(),
         eliminated: player.eliminated,
+        loss_reason: player.loss_cause.map(|c| {
+            match c {
+                crate::player::LossCause::LifeDepleted => "life",
+                crate::player::LossCause::Poison => "poison",
+                crate::player::LossCause::Decked => "decked",
+                crate::player::LossCause::CommanderDamage => "commander",
+                crate::player::LossCause::Conceded => "conceded",
+                crate::player::LossCause::Other => "lose effect",
+            }
+            .to_string()
+        }),
         // Emblem label = source name plus any static-ability text, so the UI
         // can show what an anthem emblem (Vivien Reid's −8) actually does
         // rather than just its name. Triggered-only emblems keep the bare name.
@@ -3547,6 +3558,20 @@ mod tests {
         assert_eq!(pv.crew_power_bonus, 2, "rider surfaces");
         let bv = view.battlefield.iter().find(|p| p.id == plain).expect("bears in view");
         assert_eq!(bv.crew_power_bonus, 0, "no rider on a plain creature");
+    }
+
+    /// PlayerView surfaces the elimination cause so the HUD can annotate an
+    /// eliminated portrait with why the player lost (CR 104.3).
+    #[test]
+    fn loss_reason_surfaces_in_player_view() {
+        let mut g = two_player_game();
+        assert_eq!(project(&g, 0).players[1].loss_reason, None, "still in the game");
+        g.concede(1);
+        assert_eq!(
+            project(&g, 0).players[1].loss_reason.as_deref(),
+            Some("conceded"),
+            "concession is surfaced as its own cause",
+        );
     }
 
     /// PlayerView surfaces the starting-life total so the HUD can render

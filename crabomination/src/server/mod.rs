@@ -301,8 +301,10 @@ pub enum LossReason {
     Decked,
     /// Took 21+ combat damage from a single commander (CR 903.10a).
     CommanderDamage,
-    /// Eliminated for some other reason (concession, "you lose the
-    /// game" effect, etc.) not distinguishable from final state alone.
+    /// The player conceded (CR 104.3a).
+    Conceded,
+    /// Eliminated for some other reason (a "you lose the game" effect,
+    /// etc.) not distinguishable from final state alone.
     Other,
 }
 
@@ -324,6 +326,7 @@ fn classify_loss(p: &crate::player::Player, took_commander_damage: bool) -> Opti
             crate::player::LossCause::Poison => LossReason::Poison,
             crate::player::LossCause::Decked => LossReason::Decked,
             crate::player::LossCause::CommanderDamage => LossReason::CommanderDamage,
+            crate::player::LossCause::Conceded => LossReason::Conceded,
             crate::player::LossCause::Other => LossReason::Other,
         });
     }

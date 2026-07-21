@@ -24,7 +24,11 @@ exercising each) was elided in a compaction pass; recover it from
   `Effect::SacrificeAndRemember` now surfaces a player-target slot so
   target-player edict-with-mana-value payoffs auto-target (Hit // Run). Cards:
   the DIS split cards (Crime // Punishment, Hit // Run, Rise // Fall) + the RAV/GPT
-  guild bounce-land cycle and simple guild spells/creatures.
+  guild bounce-land cycle and simple guild spells/creatures. Also this run:
+  `LossCause::Conceded` split out from `Other` (engine) → a `concede_wins`
+  alternate-win sub-bucket on `/status.json` + `/metrics` (server) and a
+  `PlayerView.loss_reason` label so the HUD can annotate *why* a seat was
+  eliminated (client).
 
 - **Dissension/Ravnica gap batches (recent301–304):** `FromYourGraveyard`-scoped
   `SpellCast` triggers now dispatch (the multicolored-recur Eidolon cycle);

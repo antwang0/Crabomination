@@ -58,7 +58,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"modal_turn_band\":\"{}\",\"fast_game_pct\":{},\"slow_game_pct\":{},\
          \"inconclusive\":{},\"inconclusive_pct\":{},\"decisive_pct\":{},\"draw_pct\":{},\
          \"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
-         \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
+         \"deckout_wins\":{},\"commander_damage_wins\":{},\"concede_wins\":{},\"other_wins\":{},\
          \"first_seat_win_pct\":{},\"avg_win_life_delta\":{},\
          \"median_win_life_delta\":{},\"win_life_delta_p90\":{},\"win_life_delta_stddev\":{:.2},\
          \"win_life_delta_iqr\":{},\"close_win_pct\":{},\
@@ -96,6 +96,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.poison_wins,
         st.deck_wins,
         st.commander_damage_wins,
+        st.concede_wins,
         st.other_wins,
         st.first_seat_win_pct(),
         st.avg_win_life_delta(),
@@ -221,6 +222,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
         ("poison", st.poison_wins),
         ("decked", st.deck_wins),
         ("commander_damage", st.commander_damage_wins),
+        ("concede", st.concede_wins),
         ("other", st.other_wins),
     ] {
         out.push_str(&format!("crab_wins_total{{kind=\"{kind}\"}} {value}\n"));
@@ -330,6 +332,7 @@ fn render_dashboard(started: Instant, slots: &SlotManager) -> String {
         ("poison", st.poison_wins),
         ("deck-out", st.deck_wins),
         ("cmdr dmg", st.commander_damage_wins),
+        ("concede", st.concede_wins),
         ("other", st.other_wins),
     ];
     let mut win_rows = String::new();
@@ -487,7 +490,8 @@ mod tests {
         // Key fields present with numeric values (no fresh-server nulls).
         for key in ["\"matches\":0", "\"connections_current\":0", "\"refusal_rate_pct\":0",
                     "\"avg_decisive_turns\":0", "\"avg_draw_turns\":0",
-                    "\"poison_wins\":0", "\"deckout_wins\":0", "\"other_wins\":0",
+                    "\"poison_wins\":0", "\"deckout_wins\":0",
+                    "\"concede_wins\":0", "\"other_wins\":0",
                     "\"first_seat_win_pct\":50", "\"avg_win_life_delta\":0",
                     "\"median_win_life_delta\":0", "\"win_life_delta_p90\":0",
                     "\"win_life_delta_stddev\":0.00",

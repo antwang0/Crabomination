@@ -203,6 +203,7 @@ mod tests {
                 commander_casts: vec![],
                 emblems: vec![],
                 eliminated: false,
+                loss_reason: None,
                 has_prevention_shield: false,
                 damage_fully_prevented: false,
                 devotion: [0; 5],

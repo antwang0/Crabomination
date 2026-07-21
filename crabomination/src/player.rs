@@ -63,7 +63,9 @@ pub enum LossCause {
     Decked,
     /// 21+ combat damage from a single commander (CR 903.10a).
     CommanderDamage,
-    /// A "you lose the game" effect, concession, or other cause.
+    /// The player conceded (CR 104.3a — a player can concede at any time).
+    Conceded,
+    /// A "you lose the game" effect or other cause.
     Other,
 }
 

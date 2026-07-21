@@ -158,11 +158,16 @@ pub(crate) struct MatchStats {
     /// the Commander/Brawl formats; reads alongside `poison_wins`/`deck_wins`
     /// as a third distinct alternate-win path.
     pub(crate) commander_damage_wins: u64,
+    /// Subset of `deckout_wins` where at least one losing seat conceded
+    /// (CR 104.3a). Split out from `other_wins` so a concession-heavy sample
+    /// (rage-quits, bot timeouts) is distinguishable from genuine "you lose
+    /// the game" effects.
+    pub(crate) concede_wins: u64,
     /// Subset of `deckout_wins` where at least one losing seat left for an
-    /// "other" reason (concession or a "you lose the game" effect — CR
-    /// 104.3a/104.3g) — not life, poison, deck-out, or commander damage.
-    /// Surfacing it completes the alternate-win decomposition so the
-    /// umbrella `deckout_wins` doesn't hide an unclassified residue.
+    /// "other" reason (a "you lose the game" effect — CR 104.3g) — not life,
+    /// poison, deck-out, commander damage, or concession. Surfacing it
+    /// completes the alternate-win decomposition so the umbrella `deckout_wins`
+    /// doesn't hide an unclassified residue.
     pub(crate) other_wins: u64,
     /// Running sum of squared final turn counts (`Σ turns²`). Paired with
     /// `total_turns` (`Σ turns`) and the match count it yields the
@@ -515,6 +520,9 @@ impl MatchStats {
             }
             if reasons.contains(&LossReason::CommanderDamage) {
                 self.commander_damage_wins = self.commander_damage_wins.saturating_add(1);
+            }
+            if reasons.contains(&LossReason::Conceded) {
+                self.concede_wins = self.concede_wins.saturating_add(1);
             }
             if reasons.contains(&LossReason::Other) {
                 self.other_wins = self.other_wins.saturating_add(1);
@@ -1245,6 +1253,18 @@ mod tests {
         s2.observe_win_kind(0, &[20, 15], &[None, Some(LossReason::Poison)]);
         assert_eq!(s2.poison_wins, 1);
         assert_eq!(s2.poison_of_alt_pct(), 100);
+    }
+
+    #[test]
+    fn concede_win_is_its_own_alternate_sub_bucket() {
+        // A concession is an alternate win (deckout umbrella) counted under
+        // `concede_wins`, kept distinct from the "you lose the game" residue.
+        let mut s = MatchStats { wins: 1, ..Default::default() };
+        s.observe_win_kind(0, &[20, 12], &[None, Some(LossReason::Conceded)]);
+        assert_eq!(s.deckout_wins, 1, "concession is an alternate win");
+        assert_eq!(s.concede_wins, 1, "counted as a concession");
+        assert_eq!(s.other_wins, 0, "not lumped into the other bucket");
+        assert_eq!(s.damage_wins, 0);
     }
 
     #[test]

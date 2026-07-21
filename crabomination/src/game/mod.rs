@@ -7972,7 +7972,7 @@ impl GameState {
             return Vec::new();
         }
         self.players[seat].eliminated = true;
-        self.players[seat].loss_cause.get_or_insert(crate::player::LossCause::Other);
+        self.players[seat].loss_cause.get_or_insert(crate::player::LossCause::Conceded);
         let mut events = vec![GameEvent::PlayerConceded { player: seat }];
         // CR 800.4a — the conceding player's objects leave with them. SBAs
         // skip already-eliminated seats, so this won't fire for them there.
