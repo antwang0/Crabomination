@@ -243,6 +243,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
         ("poison", st.poison_pct()),
         ("decked", st.deck_pct()),
         ("commander_damage", st.commander_damage_pct()),
+        ("concede", st.concede_pct()),
         ("other", st.other_pct()),
     ] {
         out.push_str(&format!("crab_wins_share_pct{{kind=\"{kind}\"}} {pct}\n"));

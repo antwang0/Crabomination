@@ -115,7 +115,10 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // blocked by [filter]" (Vindictive Mob's "…by Saprolings") only
         // excludes a slice of blockers → "Eva-" so the board doesn't read it
         // as fully evasive.
-        CantBeBlockedExceptBy(_) => "Eva",
+        // "Eva+·X" = can *only* be blocked by X (restrictive); its mirror
+        // "Eva-·X" = can't be blocked by X (exclusion). The +/- makes the two
+        // read as a pair rather than the ambiguous bare "Eva".
+        CantBeBlockedExceptBy(_) => "Eva+",
         CantBeBlockedBy(_) => "Eva-",
         // "Can't be blocked by more than one creature" (anti-gang-block).
         CantBeBlockedByMoreThanOne => "1Blk",
@@ -626,6 +629,21 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::CantBlockPowerAtLeast(4)]), "NoBlk≥4");
         // "Eva≥N" carries its threshold symmetrically with "Eva≤N".
         assert_eq!(keyword_strip(&[Keyword::CantBeBlockedByPowerAtLeast(3)]), "Eva≥3");
+    }
+
+    #[test]
+    fn evasion_restriction_and_exclusion_read_as_a_pair() {
+        use crabomination::card::SelectionRequirement as R;
+        // Sabertooth Alley Cat — can only be blocked by defenders ("Eva+·Def").
+        assert_eq!(
+            keyword_strip(&[Keyword::CantBeBlockedExceptBy(Box::new(R::HasKeyword(Keyword::Defender)))]),
+            "Eva+·Def",
+        );
+        // Gnat Alley Creeper — can't be blocked by flyers ("Eva-·Fly").
+        assert_eq!(
+            keyword_strip(&[Keyword::CantBeBlockedBy(Box::new(R::HasKeyword(Keyword::Flying)))]),
+            "Eva-·Fly",
+        );
     }
 
     #[test]

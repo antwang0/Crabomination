@@ -713,6 +713,13 @@ impl MatchStats {
     pub(crate) fn commander_damage_pct(&self) -> u64 {
         self.commander_damage_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
+    /// Percent of wins in which a losing seat conceded (CR 104.3a). Split out
+    /// from `other_pct` so a concession-heavy sample (rage-quits, bot timeouts)
+    /// is distinguishable from genuine "you lose the game" effects. A sub-split
+    /// of `deckout_pct`; 0 when no wins recorded.
+    pub(crate) fn concede_pct(&self) -> u64 {
+        self.concede_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
+    }
     /// Average turn count across all completed matches. Returns 0
     /// pre-warmup. Used by `format_match_stats` for the operator
     /// rolling-summary line.
@@ -1327,6 +1334,14 @@ mod tests {
         assert_eq!(s.concede_wins, 1, "counted as a concession");
         assert_eq!(s.other_wins, 0, "not lumped into the other bucket");
         assert_eq!(s.damage_wins, 0);
+        assert_eq!(s.concede_pct(), 100, "the only win was a concession");
+    }
+
+    #[test]
+    fn concede_pct_is_share_of_wins() {
+        let s = MatchStats { wins: 4, deckout_wins: 2, concede_wins: 1, ..Default::default() };
+        assert_eq!(s.concede_pct(), 25, "one of four wins was a concession");
+        assert_eq!(MatchStats::default().concede_pct(), 0, "no wins → 0");
     }
 
     #[test]
