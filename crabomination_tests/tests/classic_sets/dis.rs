@@ -1572,3 +1572,54 @@ fn carom_redirects_next_damage_and_draws() {
     assert_eq!(g.battlefield_find(a).unwrap().damage, 2, "1 of 3 redirected away");
     assert_eq!(g.battlefield_find(b).unwrap().damage, 1, "1 redirected onto b");
 }
+
+/// Trial returns all creatures blocking or blocked by the target creature.
+#[test]
+fn trial_bounces_combat_partners() {
+    use crabomination::game::types::{Target, TurnStep};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).expect("block");
+    // Trial targeting the attacker returns its blocker to hand (the attacker stays).
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(attacker)];
+    let evs = g.resolve_effect(&catalog::trial_error().effect, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(blocker).is_none(), "blocker returned to hand");
+    assert!(g.battlefield_find(attacker).is_some(), "the targeted attacker stays");
+    assert_eq!(g.players[1].hand.len(), 1, "blocker in its owner's hand");
+}
+
+/// Error counters a multicolored spell on the stack.
+#[test]
+fn error_counters_only_multicolored() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    // The active player casts a multicolored creature ({2}{G}{U}), then
+    // responds to their own spell with Error.
+    let multi = g.add_card_to_hand(0, catalog::assault_zeppelid());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: multi, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast multicolored");
+    let err = g.add_card_to_hand(0, catalog::trial_error());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: err, target: Some(Target::Permanent(multi)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Error");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(multi).is_none(), "multicolored spell countered — never resolved");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == multi), "countered spell in graveyard");
+}

@@ -150,6 +150,10 @@ pub enum Selector {
     /// "whenever this becomes blocked by a creature, [affect that creature]"
     /// triggers (Grasping Giant).
     BlockingCreatures,
+    /// Every creature blocking or blocked by the (resolved) subject creature —
+    /// the symmetric combat-partner set. Trial // Error's "return all creatures
+    /// blocking or blocked by target creature". Excludes the subject itself.
+    CreaturesInCombatWith(Box<Selector>),
     /// CR 702.76 — the card hidden (exiled) by the source via Hideaway: the
     /// exile-zone card stamped `exiled_with == ctx.source`. Resolves to that
     /// single card so the activated ability can play it from exile.

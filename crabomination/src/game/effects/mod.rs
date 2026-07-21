@@ -16790,6 +16790,28 @@ impl GameState {
                         .collect()
                 })
                 .unwrap_or_default(),
+            Selector::CreaturesInCombatWith(subject) => {
+                let Some(EntityRef::Permanent(subj)) =
+                    self.resolve_selector(subject, ctx).into_iter().next()
+                else {
+                    return vec![];
+                };
+                let mut out = Vec::new();
+                // If the subject is a blocker, the attacker it blocks.
+                if let Some(&aid) = self.block_map.get(&subj) {
+                    out.push(aid);
+                }
+                // Creatures blocking the subject (subject as attacker).
+                for (&bid, &aid) in &self.block_map {
+                    if aid == subj {
+                        out.push(bid);
+                    }
+                }
+                out.into_iter()
+                    .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                    .map(EntityRef::Permanent)
+                    .collect()
+            }
             Selector::CardExiledWithSource => self
                 .exile
                 .iter()
