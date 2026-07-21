@@ -7,7 +7,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility,
     Value,
 };
-use crate::effect::shortcut::{target_any, target_filtered};
+use crate::effect::shortcut::{forecast, target_any, target_filtered};
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, PlayerStaticTarget, StaticEffect, ZoneDest,
 };
@@ -824,7 +824,8 @@ pub fn freewind_equenaut() -> CardDefinition {
 }
 
 /// Govern the Guildless — {5}{U} Sorcery. Gain control of target monocolored
-/// creature. (Forecast is deferred — tracked in TODO.md.)
+/// creature. Forecast — {1}{U}: Target creature becomes the color or colors of
+/// your choice until end of turn.
 pub fn govern_the_guildless() -> CardDefinition {
     CardDefinition {
         name: "Govern the Guildless",
@@ -835,6 +836,13 @@ pub fn govern_the_guildless() -> CardDefinition {
             to: Some(PlayerRef::You),
             duration: Duration::Permanent,
         },
+        activated_abilities: vec![forecast(
+            cost(&[generic(1), u()]),
+            Effect::BecomeChosenColor {
+                what: target_filtered(R::Creature),
+                duration: Duration::EndOfTurn,
+            },
+        )],
         ..Default::default()
     }
 }
@@ -868,7 +876,8 @@ pub fn anthem_of_rakdos() -> CardDefinition {
 }
 
 /// Plumes of Peace — {1}{W}{U} Aura. Enchant creature. Enchanted creature
-/// doesn't untap during its controller's untap step. (Forecast deferred.)
+/// doesn't untap during its controller's untap step. Forecast — {W}{U}: Tap
+/// target creature.
 pub fn plumes_of_peace() -> CardDefinition {
     CardDefinition {
         name: "Plumes of Peace",
@@ -885,6 +894,10 @@ pub fn plumes_of_peace() -> CardDefinition {
                 applies_to: Selector::AttachedTo(Box::new(Selector::This)),
             },
         }],
+        activated_abilities: vec![forecast(
+            cost(&[w(), u()]),
+            Effect::Tap { what: target_filtered(R::Creature) },
+        )],
         ..Default::default()
     }
 }

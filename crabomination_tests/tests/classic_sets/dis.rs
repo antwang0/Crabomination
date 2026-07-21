@@ -26,6 +26,87 @@ fn sky_hussar_untaps_your_creatures_on_etb() {
     assert!(!g.battlefield_find(bear).unwrap().tapped, "ETB untapped your creature");
 }
 
+/// Sky Hussar's Forecast taps two W/U creatures you control to draw a card,
+/// from hand during your upkeep, leaving the card in hand.
+#[test]
+fn sky_hussar_forecast_taps_two_to_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    // Two W/U creatures to feed the tap cost.
+    let a = g.add_card_to_battlefield(0, catalog::azorius_first_wing()); // {W}{U} → W+U
+    let b = g.add_card_to_battlefield(0, catalog::azorius_first_wing());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    let hussar = g.add_card_to_hand(0, catalog::sky_hussar());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    let h0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hussar, ability_index: 0,
+        target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("Forecast activatable from hand in upkeep");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped,
+        "both W/U creatures tapped as the cost");
+    assert_eq!(g.players[0].hand.len(), h0 + 1, "drew a card (Hussar stays, +1 net)");
+    assert!(g.players[0].hand.iter().any(|c| c.id == hussar), "Sky Hussar stays in hand");
+}
+
+/// Plumes of Peace's Forecast taps a target creature from hand in upkeep.
+#[test]
+fn plumes_of_peace_forecast_taps_target() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let plumes = g.add_card_to_hand(0, catalog::plumes_of_peace());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: plumes, ability_index: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+    }).expect("Forecast activatable from hand in upkeep");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "Forecast tapped the bear");
+    assert!(g.players[0].hand.iter().any(|c| c.id == plumes), "card stays in hand");
+}
+
+/// Govern the Guildless's Forecast recolors a target creature from hand; the
+/// upkeep-only gate rejects activation at other times.
+#[test]
+fn govern_the_guildless_forecast_upkeep_only() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let govern = g.add_card_to_hand(0, catalog::govern_the_guildless());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Outside upkeep the Forecast is illegal.
+    g.step = TurnStep::PreCombatMain;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: govern, ability_index: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "Forecast is upkeep-only");
+    // During upkeep it recolors the creature.
+    g.step = TurnStep::Upkeep;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Color(Color::Red),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: govern, ability_index: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+    }).expect("Forecast activatable in upkeep");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().colors, vec![Color::Red],
+        "target became the chosen color");
+    assert!(g.players[0].hand.iter().any(|c| c.id == govern), "card stays in hand");
+}
+
 /// Stalking Vengeance turns a dying creature's power into damage to a player.
 #[test]
 fn stalking_vengeance_death_burns_target() {

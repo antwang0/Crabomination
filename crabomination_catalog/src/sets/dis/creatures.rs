@@ -3,7 +3,7 @@ use crate::card::{
     SelectionRequirement, Selector, Subtypes, Value,
 };
 use crate::effect::Duration;
-use crate::effect::shortcut::target_filtered;
+use crate::effect::shortcut::{forecast, target_filtered};
 use crate::mana::{cost, g, generic, r, u, w, Color};
 
 /// Azorius First-Wing — {1}{W}{U} 2/2 Bird Soldier Flying
@@ -181,10 +181,16 @@ pub fn assault_zeppelid() -> CardDefinition {
 }
 
 /// Sky Hussar — {3}{W}{U} 4/3 Human Knight with flying. When it enters, untap
-/// all creatures you control. (Forecast omitted — no upkeep-only hand-activated
-/// ability primitive.)
+/// all creatures you control. Forecast — Tap two untapped white and/or blue
+/// creatures you control: Draw a card.
 pub fn sky_hussar() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    let wu_creature = SelectionRequirement::Creature
+        .and(SelectionRequirement::ControlledByYou)
+        .and(
+            SelectionRequirement::HasColor(Color::White)
+                .or(SelectionRequirement::HasColor(Color::Blue)),
+        );
     CardDefinition {
         name: "Sky Hussar",
         cost: cost(&[generic(3), w(), u()]),
@@ -204,6 +210,10 @@ pub fn sky_hussar() -> CardDefinition {
                 ),
                 up_to: None,
             },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((wu_creature, 2)),
+            ..forecast(cost(&[]), Effect::Draw { who: Selector::You, amount: Value::ONE })
         }],
         ..Default::default()
     }
