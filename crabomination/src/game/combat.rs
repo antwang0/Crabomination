@@ -96,6 +96,28 @@ impl GameState {
             }
         }
 
+        // CR 701.15b — a goaded creature "attacks a player other than the
+        // controller of the [goad source] if able." Enforce the player-target
+        // half: a goaded attacker may not attack one of its own goaders while
+        // an unattacked, alive non-goader opponent it could instead attack
+        // exists. (Planeswalker/battle redirection is not modeled here.)
+        for atk in &attacks {
+            if let AttackTarget::Player(target_player) = atk.target
+                && let Some(c) = self.battlefield_find(atk.attacker)
+                && c.goaded_by.contains(&target_player)
+            {
+                let has_nongoader_option = (0..self.players.len()).any(|q| {
+                    q != self.active_player_idx
+                        && !self.same_team(self.active_player_idx, q)
+                        && self.players[q].is_alive()
+                        && !c.goaded_by.contains(&q)
+                });
+                if has_nongoader_option {
+                    return Err(GameError::InvalidAttackTarget(target_player));
+                }
+            }
+        }
+
         // CR 508.0 — "attacks only alone" (Master of Cruelties). If any
         // declared attacker carries AttacksAlone, the batch must be a
         // single attacker. Read from the computed keyword set so granted

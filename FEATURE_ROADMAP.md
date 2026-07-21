@@ -25,7 +25,9 @@ exercising each) was elided in a compaction pass; recover it from
   (color-spell-cast triggers), Earth Surge / Leyline of the Meek (symmetric two-sided
   anthems), Ulasht (`Value::Sum` enters-with-counters + modal remove-counter ability),
   Thunderheads (Replicate + transient token), Stratozeppelid, Schismotivate, To Arms!,
-  Starved Rusalka.
+  Starved Rusalka. CR conformance: 704.5j (legend rule reads continuous
+  supertypes), **701.15b** (goaded creatures must attack a non-goader player when
+  able — enforced in `declare_attackers`), 611.2c (during-your-turn anthem gate).
 - **GPT/RAV gap wave 2 (this run):** `Predicate::FirstNoncreatureSpellThisTurn`
   (+ `GameState.noncreature_spells_cast_this_turn` tracking — Nullstone Gargoyle).
   ~20 cards reusing existing primitives: the Magemark aura anthems (Fencer's,
