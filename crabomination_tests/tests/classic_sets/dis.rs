@@ -313,6 +313,48 @@ fn forecast_hand_activatable_only_in_upkeep() {
         "Forecast is offered during upkeep");
 }
 
+/// Rakdos Augermage's {T} makes both players discard a card.
+#[test]
+fn rakdos_augermage_mutual_discard() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::rakdos_augermage());
+    g.clear_sickness(mage);
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Augermage (sorcery speed, our main)");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 - 1, "you discarded one");
+    assert_eq!(g.players[1].hand.len(), h1 - 1, "opponent discarded one");
+}
+
+/// Drekavac sacrifices itself unless a noncreature card is discarded.
+#[test]
+fn drekavac_sacrificed_without_noncreature_discard() {
+    let mut g = two_player_game();
+    // Only creatures in hand → no valid discard → sacrifice.
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let drek = g.move_card_to_battlefield_for_test(0, catalog::drekavac());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(drek).is_none(), "sacrificed with no noncreature card");
+}
+
+/// Drekavac survives when a noncreature card is discarded.
+#[test]
+fn drekavac_kept_with_noncreature_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::forest()); // a noncreature (land) to discard
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    let drek = g.move_card_to_battlefield_for_test(0, catalog::drekavac());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(drek).is_some(), "kept by discarding a land");
+    assert_eq!(g.players[0].hand.len(), 0, "the land was discarded");
+}
+
 /// Stalking Vengeance turns a dying creature's power into damage to a player.
 #[test]
 fn stalking_vengeance_death_burns_target() {

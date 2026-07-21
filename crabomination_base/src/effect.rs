@@ -2516,6 +2516,20 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
+    /// Like [`Effect::MayDiscard`] but the discarded card(s) must match
+    /// `filter`. The gate offers the choice only when the controller holds
+    /// `count` matching cards; the auto-picker discards the highest-MV
+    /// matches. "Sacrifice this unless you discard a noncreature card"
+    /// (Drekavac) rides this with `then: Noop, else_: SacrificeSource`.
+    MayDiscardMatching {
+        description: String,
+        count: Value,
+        filter: SelectionRequirement,
+        then: Box<Effect>,
+        #[serde(default)]
+        else_: Option<Box<Effect>>,
+    },
+
     /// Reveal-from-hand gate: "you may reveal a [filter] card from your
     /// hand. If you do, run `then`; otherwise run `else_`." Used by the
     /// STX Snarl dual-land cycle (Frostboil, Furycalm, Necroblossom,

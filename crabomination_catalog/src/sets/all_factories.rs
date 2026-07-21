@@ -7219,6 +7219,8 @@ static DIS: &[Factory] = &[
     super::dis::jagged_poppet,
     super::dis::palliation_accord,
     super::dis::pain_magnification,
+    super::dis::rakdos_augermage,
+    super::dis::drekavac,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

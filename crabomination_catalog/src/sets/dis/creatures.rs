@@ -427,3 +427,60 @@ pub fn jagged_poppet() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rakdos Augermage — {B}{B}{R} 3/2 Human Wizard with first strike. `{T}: You
+/// discard a card, then target opponent reveals their hand and discards a card
+/// of your choice. Activate only as a sorcery.` (The printed "opponent chooses
+/// your discard" clause is approximated as your own discard.)
+pub fn rakdos_augermage() -> CardDefinition {
+    CardDefinition {
+        name: "Rakdos Augermage",
+        cost: cost(&[b(), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::DiscardChosen {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::ONE,
+                    filter: SelectionRequirement::Any,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Drekavac — {1}{B} 3/3 Beast. When it enters, sacrifice it unless you discard
+/// a noncreature card.
+pub fn drekavac() -> CardDefinition {
+    CardDefinition {
+        name: "Drekavac",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDiscardMatching {
+                description: "Discard a noncreature card to keep Drekavac?".into(),
+                count: Value::ONE,
+                filter: SelectionRequirement::Creature.negate(),
+                then: Box::new(Effect::Noop),
+                else_: Some(Box::new(Effect::SacrificeSource)),
+            },
+        }],
+        ..Default::default()
+    }
+}

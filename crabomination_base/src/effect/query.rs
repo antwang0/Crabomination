@@ -390,7 +390,8 @@ impl Effect {
             Effect::MaySacrifice { then, else_, .. }
             | Effect::MaySacrificeSource { then, else_, .. }
             | Effect::MayTap { then, else_, .. }
-            | Effect::MayDiscard { then, else_, .. } => {
+            | Effect::MayDiscard { then, else_, .. }
+            | Effect::MayDiscardMatching { then, else_, .. } => {
                 then.requires_target()
                     || else_.as_ref().is_some_and(|e| e.requires_target())
             }

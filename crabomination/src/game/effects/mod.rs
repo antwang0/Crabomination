@@ -2705,6 +2705,46 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayDiscardMatching { description, count, filter, then, else_ } => {
+                // Filtered reflexive discard: offer the choice only when the
+                // controller holds `n` cards matching `filter`; discard the
+                // highest-MV matches, then run `then` (else `else_`).
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let mut matches: Vec<(CardId, u32)> = self.players[ctx.controller]
+                    .hand
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                    .map(|c| (c.id, c.definition.cost.cmc()))
+                    .collect();
+                if n == 0
+                    || matches.len() < n
+                    || self.player_cant_be_made_to_discard(ctx.controller)
+                {
+                    if let Some(e) = else_ {
+                        self.run_effect(e, ctx, events)?;
+                    }
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor, ctx.controller, description.clone(), source, effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if yes {
+                    matches.sort_by_key(|(_, cmc)| std::cmp::Reverse(*cmc));
+                    for (id, _) in matches.into_iter().take(n) {
+                        self.discard_card(ctx.controller, id, events);
+                    }
+                    self.run_effect(then, ctx, events)?;
+                } else if let Some(e) = else_ {
+                    self.run_effect(e, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::DealDamage { to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }
