@@ -176,31 +176,26 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Dancer, Lore Broker, and the Hunted cycle.
   **Still-deferred RAV/GPT/DIS cards (each on one primitive):** Belltower Sphinx
   (needs a "source deals damage to this → that source's controller mills that
-  many" trigger — `EventKind::DamageDealtToThis` + a damage-source-controller
-  player binding + a `LastDamageToThis` value); **Selesnya Sagittars / Valor Made
-  Real** (need a "can block an additional creature" / "block any number" keyword
-  — the `block_map` is blocker→single-attacker today; a multi-block refactor
-  across ~9 files unblocks both); Indentured Oaf (prevent this creature's damage
-  to red creatures — a self-source damage-prevention static keyed on the
-  *recipient's* color, threaded through both the combat and noncombat damage
-  paths); Sabertooth Alley Cat ("creatures without defender can't block this"
-  mass restriction); Molten Sentry (coin-flip enters-as 5/2-haste or 2/5-defender
-  — `Effect::FlipCoin` exists; needs an enters-as-coin-flip replacement);
-  Spawnbroker (exchange control by power); Drake Familiar (ETB "sacrifice unless
-  you return an enchantment to hand" — needs a return-a-permanent-else-sacrifice
-  reflexive cost, the non-mana sibling of `Effect::MayPay`); Spectral Searchlight (choose a
-  player, that player adds one mana of any color they choose — needs a
-  choose-player-adds-any-color effect); Razia's Purification (each player keeps 3
-  permanents, sacrifices the rest — generalize `EachPlayerKeepsOneSacrificeRest`
-  to a keep-N count); other "another target creature" spells
-  could use a `DifferentFromTarget(slot)` requirement so the two slots can't
-  collapse to one creature (Schismotivate ships with the two-slot idiom today);
-  the complex Magemarks — Beastmaster's (becomes-blocked +1/+1-per-blocker rider),
-  Necromancer's (return-to-hand death replacement over your enchanted creatures);
-  Living Inferno (two-way divided-damage fight — the damaged creatures deal power
-  back to the source); Orzhov Pontiff (now unblocked — `Effect::ChooseMode` gives
-  a resolution-time "choose one" for triggered/activated abilities, as used by
-  Ulasht; just needs the ETB + haunt-death wiring).
+  many" trigger — a damage-source-controller player binding on the `DealtDamage`
+  event, threaded through `StackItem::Trigger`/`EffectContext` like
+  `event_amount`); **Selesnya Sagittars / Valor Made Real** (need a "can block an
+  additional creature" / "block any number" keyword — the `block_map` is
+  blocker→single-attacker today; a multi-block refactor across ~9 files unblocks
+  both — the biggest remaining combat primitive); Sabertooth Alley Cat
+  ("creatures without defender can't block this" mass restriction); Drake Familiar
+  (ETB "sacrifice unless you return an enchantment to hand" — a
+  return-a-permanent-else-sacrifice reflexive cost, the non-mana sibling of
+  `Effect::MayPay`); Razia's Purification (each player keeps 3 permanents,
+  sacrifices the rest — generalize `EachPlayerKeepsOneSacrificeRest` to a keep-N
+  count); "another target creature" spells could use a `DifferentFromTarget(slot)`
+  requirement so the two slots can't collapse (Carom/Razia ship with the two-slot
+  idiom today but don't enforce distinctness); the complex Magemarks —
+  Beastmaster's (becomes-blocked +1/+1-per-blocker rider), Necromancer's
+  (return-to-hand death replacement over your enchanted creatures); Living Inferno
+  (two-way divided-damage fight); Orzhov Pontiff (`Effect::ChooseMode` covers the
+  modal; needs Haunt ETB + haunt-death wiring). (Shipped this run: Indentured Oaf,
+  Molten Sentry, Spawnbroker, Spectral Searchlight, Carom + Razia's redirect,
+  Shadow of Doubt, Conjurer's Ban, Droning Bureaucrats.)
   **Still-deferred DIS/RAV cards (need new primitives):** Simic Basilisk (grant "destroy at end
   of combat on combat damage to a creature" until EOT); Ignorant Bliss
   (exile hand, delayed return next end step); Kindle the Carnage (repeatable

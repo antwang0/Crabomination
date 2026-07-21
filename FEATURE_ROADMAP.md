@@ -16,6 +16,18 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **RAV/GPT/DIS prevention & redirect wave (this run, 20 cards):** new CR 614.9
+  redirection — `Effect::RedirectNextDamage` + `PreventionShield.redirect_to`
+  (Carom, Razia) and `RedirectControllerDamageToEquippedCreature` (Pariah's
+  Shield); CR 615 source/target-scoped prevention statics
+  (`PreventDamageToYourCreaturesFromYourSources` — Light of Sanction,
+  `PreventThisDamageToColor` — Indentured Oaf); `Effect::PreventSearchesThisTurn`
+  (Shadow of Doubt). Cards on existing primitives: Overwhelm, Spawnbroker,
+  Firemane Angel, Halcyon Glaze, Spelltithe Enforcer, Goblin Flectomancer,
+  Trophy Hunter, Wojek Apothecary, Grifter's Blade, Spectral Searchlight,
+  Molten Sentry, Svogthos, Conjurer's Ban, Droning Bureaucrats. CR conformance:
+  614.9, 615, 701.10 (`cr_recent14`). Server: `blowout_win_pct`. Client: the
+  spell-cast trigger chip distinguishes "Creature cast" from "Magecraft".
 - **GPT gap wave 5 (this run, 6 cards):** Skarrg / Orzhova utility lands, Wreak
   Havoc (`Keyword::CantBeCountered` destroy), Parallectric Feedback
   (`Value::ManaValueOf` + `PlayerRef::ControllerOf` on a targeted stack spell),
