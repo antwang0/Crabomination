@@ -1505,3 +1505,55 @@ fn perilous_forays_fetches_land() {
     assert_eq!(lands_after, lands_before + 1, "a land entered");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Forest" && c.tapped), "and it's tapped");
 }
+
+// ── gap wave 10 ──────────────────────────────────────────────────────────────
+
+/// Stasis Cell keeps its enchanted creature from untapping.
+#[test]
+fn stasis_cell_prevents_untap() {
+    let mut g = two_player_game();
+    let cre = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cell = g.add_card_to_battlefield(0, catalog::stasis_cell());
+    g.battlefield_find_mut(cell).unwrap().attached_to = Some(cre);
+    g.battlefield_find_mut(cre).unwrap().tapped = true;
+    assert!(g.untap_prevented_by_static(cre), "enchanted creature is locked down");
+}
+
+/// Savra edicts each opponent when you sacrifice a black creature (paying 2 life).
+#[test]
+fn savra_edicts_on_black_sacrifice() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::{Effect, Selector};
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.add_card_to_battlefield(0, catalog::savra_queen_of_the_golgari());
+    let black = g.add_card_to_battlefield(0, catalog::woebringer_demon()); // mono-black
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Pay 2 life on Savra's reflexive prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(black)];
+    let evs = g
+        .resolve_effect(&Effect::SacrificePermanent { what: Selector::Target(0) }, &ctx)
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "each opponent sacrificed a creature");
+    assert_eq!(g.players[0].life, 18, "paid 2 life");
+}
+
+/// Searing Meditation pings any target when you gain life and pay {2}.
+#[test]
+fn searing_meditation_burns_on_lifegain() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    g.add_card_to_battlefield(0, catalog::searing_meditation());
+    g.players[0].mana_pool.add_colorless(2);
+    // Say yes to the {2} payment; the burn auto-aims at the opponent.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 1 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "2 damage dealt on the lifegain");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "paid the two generic");
+}
