@@ -880,3 +880,209 @@ fn glint_eye_nephilim_draws_on_combat_damage() {
     advance_to(&mut g, TurnStep::PostCombatMain);
     assert_eq!(g.players[0].hand.len(), h0 + 2, "drew cards equal to combat damage (2)");
 }
+
+// ── GPT gap wave 4 (gaps4.rs) ────────────────────────────────────────────────
+
+/// Storm Herd mints Pegasus tokens equal to your life total.
+#[test]
+fn storm_herd_tokens_equal_life() {
+    let mut g = two_player_game();
+    g.players[0].life = 22;
+    resolve_spell(&mut g, catalog::storm_herd(), vec![]);
+    let pegasi = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Pegasus" && c.controller == 0).count();
+    assert_eq!(pegasi, 22, "one Pegasus per point of life");
+}
+
+/// Starved Rusalka sacrifices a creature to gain 1 life.
+#[test]
+fn starved_rusalka_sacrifices_for_life() {
+    let mut g = two_player_game();
+    let rusalka = g.add_card_to_battlefield(0, catalog::starved_rusalka());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rusalka, ability_index: 0, target: None,
+        additional_targets: vec![Target::Permanent(fodder)], x_value: None,
+    }).expect("sac for life");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
+    assert_eq!(g.players[0].life, life + 1, "gained 1 life");
+}
+
+/// Stratozeppelid can block a flyer but not a grounded attacker.
+#[test]
+fn stratozeppelid_blocks_only_flyers() {
+    let mut g = two_player_game();
+    let zep = g.add_card_to_battlefield(0, catalog::stratozeppelid());
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 no flying
+    assert!(g.blocker_can_block_attacker(zep, flyer), "may block a flyer");
+    assert!(!g.blocker_can_block_attacker(zep, ground), "can't block a grounded attacker");
+}
+
+/// Schismotivate pumps one creature +4/+0 and shrinks another -4/-0.
+#[test]
+fn schismotivate_opposing_pumps() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    resolve_spell(&mut g, catalog::schismotivate(),
+        vec![Target::Permanent(mine), Target::Permanent(foe)]);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 6, "+4/+0");
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 0, "-4/-0");
+}
+
+/// To Arms! untaps your creatures and draws a card.
+#[test]
+fn to_arms_untaps_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    resolve_spell(&mut g, catalog::to_arms(), vec![]);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "creature untapped");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Thunderheads mints a Weird token that's exiled at the next end step.
+#[test]
+fn thunderheads_weird_exiled_at_end_step() {
+    let mut g = two_player_game();
+    resolve_spell(&mut g, catalog::thunderheads(), vec![]);
+    let weird = g.battlefield.iter().find(|c| c.definition.name == "Weird" && c.controller == 0)
+        .map(|c| c.id).expect("Weird token created");
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(weird).is_none(), "Weird exiled at end step");
+}
+
+/// Sky Swallower hands all your other permanents to the targeted opponent.
+#[test]
+fn sky_swallower_donates_permanents() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    // Resolve the ETB body directly with the opponent as the target player.
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    let effect = crabomination::effect::Effect::GainControl {
+        what: crabomination::effect::Selector::EachPermanent(
+            SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByYou)),
+        to: Some(crabomination::effect::PlayerRef::Target(0)),
+        duration: crabomination::effect::Duration::Permanent,
+    };
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "creature donated");
+    assert_eq!(g.battlefield_find(land).unwrap().controller, 0, "land kept (nonland only)");
+}
+
+/// Infiltrator's Magemark anthems the host and makes it unblockable except by
+/// defenders.
+#[test]
+fn infiltrators_magemark_evasion_and_anthem() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let aura = g.add_card_to_battlefield(0, catalog::infiltrators_magemark());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(host);
+    assert_eq!(g.computed_permanent(host).unwrap().power, 3, "anthem +1/+1");
+    let wall = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, no defender
+    assert!(!g.blocker_can_block_attacker(wall, host), "non-defender can't block");
+}
+
+/// Teysa mints a Spirit whenever another black creature you control dies.
+#[test]
+fn teysa_spirit_on_black_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teysa_orzhov_scion());
+    let corpse = g.add_card_to_battlefield(0, catalog::walking_corpse()); // black
+    g.battlefield_find_mut(corpse).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Spirit" && c.controller == 0).count();
+    assert_eq!(spirits, 1, "one Spirit for the dead black creature");
+}
+
+/// Tibor and Lumia pings each creature without flying when you cast a red spell.
+#[test]
+fn tibor_red_cast_pings_grounded() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tibor_and_lumia());
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    assert_eq!(g.battlefield_find(ground).unwrap().damage, 1, "grounded creature pinged");
+    assert_eq!(g.battlefield_find(flyer).unwrap().damage, 0, "flyer untouched");
+}
+
+/// Earth Surge grows a land that is a creature by +2/+2.
+#[test]
+fn earth_surge_pumps_creature_lands() {
+    let mut g = two_player_game();
+    let arbor = g.add_card_to_battlefield(0, catalog::dryad_arbor()); // 1/1 Land Creature
+    g.add_card_to_battlefield(0, catalog::earth_surge());
+    assert_eq!(g.computed_permanent(arbor).unwrap().power, 3, "creature-land gets +2/+2");
+}
+
+/// Leyline of the Meek anthems creature tokens.
+#[test]
+fn leyline_of_the_meek_anthems_tokens() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_the_meek());
+    resolve_spell(&mut g, catalog::storm_herd(), vec![]); // mints token Pegasi
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Pegasus")
+        .map(|c| c.id).expect("token minted");
+    assert_eq!(g.computed_permanent(token).unwrap().power, 2, "token gets +1/+1");
+}
+
+/// Leyline of Singularity makes all nonland permanents legendary, so the legend
+/// rule collapses same-named duplicates.
+#[test]
+fn leyline_of_singularity_collapses_duplicates() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_singularity());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    let bears = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Grizzly Bears" && c.controller == 0).count();
+    assert_eq!(bears, 1, "legend rule collapsed the duplicate");
+}
+
+/// Ulasht enters with a +1/+1 counter for each other red and green creature.
+#[test]
+fn ulasht_enters_with_counters() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    g.add_card_to_battlefield(0, catalog::goblin_king()); // red (see below)
+    let ulasht = g.move_card_to_battlefield_for_test(0, catalog::ulasht_the_hate_seed());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ulasht).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "one counter per red + green other creature");
+}
+
+/// Ulasht's ability removes a +1/+1 counter and (mode 0) pings a creature.
+#[test]
+fn ulasht_ability_removes_counter_and_pings() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goblin_king()); // red → Ulasht enters 1/1
+    let ulasht = g.move_card_to_battlefield_for_test(0, catalog::ulasht_the_hate_seed());
+    drain_stack(&mut g);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ulasht, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Ulasht");
+    drain_stack(&mut g);
+    // The +1/+1 counter paid as a cost drops Ulasht to 0/0 (it dies to SBA),
+    // but the mode-0 ping still resolved.
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 1, "mode 0 dealt 1 damage");
+}

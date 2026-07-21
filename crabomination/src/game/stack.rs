@@ -2681,11 +2681,30 @@ impl GameState {
             let mut order: Vec<(usize, &str)> = Vec::new();
             let mut groups: std::collections::HashMap<(usize, &str), Vec<(CardId, String)>> =
                 std::collections::HashMap::new();
+            // CR 704.5j reads *current* supertypes, so a continuous grant of
+            // the Legendary supertype (Leyline of Singularity, the Ring's
+            // emblem) counts. Only pay for the layer computation when such a
+            // grant is live; otherwise the printed supertype is authoritative.
+            let supertype_grant_active = self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::AllNonlandPermanentsAreLegendary
+                    )
+                })
+            }) || (0..self.players.len()).any(|s| self.players[s].ring_temptations >= 1);
+            let is_legendary = |c: &CardInstance| -> bool {
+                c.definition.supertypes.contains(&Supertype::Legendary)
+                    || (supertype_grant_active
+                        && self
+                            .computed_permanent(c.id)
+                            .is_some_and(|cp| cp.supertypes.contains(&Supertype::Legendary)))
+            };
             // Walk descending by id so each group's vec is newest-first.
             let mut by_id: Vec<_> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.definition.supertypes.contains(&Supertype::Legendary))
+                .filter(|c| is_legendary(c))
                 // Aeve — "isn't legendary if it's a token".
                 .filter(|c| !(c.is_token && c.definition.nonlegendary_as_token))
                 .collect();

@@ -277,6 +277,12 @@ pub enum StaticEffect {
         #[serde(default)]
         requires_five: bool,
     },
+    /// CR 613 layer 4 — "All nonland permanents are legendary" (Leyline of
+    /// Singularity). Adds the Legendary supertype to every nonland permanent
+    /// on the battlefield, so the legend rule (CR 704.5j) collapses duplicates
+    /// by name across all players. Materialized in
+    /// `gather_continuous_effects_inner` (scans the live battlefield).
+    AllNonlandPermanentsAreLegendary,
     /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.

@@ -16,6 +16,16 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **GPT gap wave 4 (this run):** `StaticEffect::AllNonlandPermanentsAreLegendary`
+  (Leyline of Singularity, layer-4 supertype add over the whole board); the legend
+  rule (CR 704.5j) now reads *computed* supertypes so continuous Legendary grants
+  (this Leyline + the Ring's emblem) collapse duplicates. 14 cards reusing existing
+  primitives: Storm Herd (`Value::LifeOf`), Sky Swallower (mass `GainControl`), the
+  Magemark evasion aura (Infiltrator's), Teysa Orzhov Scion, Tibor and Lumia
+  (color-spell-cast triggers), Earth Surge / Leyline of the Meek (symmetric two-sided
+  anthems), Ulasht (`Value::Sum` enters-with-counters + modal remove-counter ability),
+  Thunderheads (Replicate + transient token), Stratozeppelid, Schismotivate, To Arms!,
+  Starved Rusalka.
 - **GPT/RAV gap wave 2 (this run):** `Predicate::FirstNoncreatureSpellThisTurn`
   (+ `GameState.noncreature_spells_cast_this_turn` tracking — Nullstone Gargoyle).
   ~20 cards reusing existing primitives: the Magemark aura anthems (Fencer's,

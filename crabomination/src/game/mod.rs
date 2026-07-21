@@ -6623,6 +6623,32 @@ impl GameState {
                 }
             }
         }
+        // CR 613 layer 4 — Leyline of Singularity: all nonland permanents are
+        // legendary. Add the supertype to every nonland permanent so the legend
+        // rule collapses same-named duplicates across all players.
+        if self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::AllNonlandPermanentsAreLegendary)
+            })
+        }) {
+            let ids: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| !c.definition.card_types.contains(&crate::card::CardType::Land))
+                .map(|c| c.id)
+                .collect();
+            for id in ids {
+                all_effects.push(ContinuousEffect {
+                    timestamp: 0,
+                    source: id,
+                    affected: AffectedPermanents::Specific(vec![id]),
+                    layer: Layer::L4Type,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddSupertype(crate::card::Supertype::Legendary),
+                });
+            }
+        }
         // CR 701.54c — the Ring's level-1 emblem makes its controller's
         // Ring-bearer legendary (in addition to the can't-be-blocked rider,
         // which is enforced directly in `blocker_can_block_attacker`).
@@ -13644,6 +13670,9 @@ fn static_effect_to_effects(
             // NonAuraEnchantmentsAreCreatures — Starfield's gate reads the live
             // enchantment count; resolved in `gather_continuous_effects`.
             | StaticEffect::NonAuraEnchantmentsAreCreatures { .. }
+            // AllNonlandPermanentsAreLegendary — Leyline of Singularity scans
+            // the live battlefield; resolved in `gather_continuous_effects`.
+            | StaticEffect::AllNonlandPermanentsAreLegendary
             // DevotionBonus — read directly by `devotion_to`, no continuous effect.
             | StaticEffect::DevotionBonus
             // PreventCombatDamageToSelfAndGrow — consulted at the combat damage

@@ -186,20 +186,21 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   paths); Sabertooth Alley Cat ("creatures without defender can't block this"
   mass restriction); Molten Sentry (coin-flip enters-as 5/2-haste or 2/5-defender
   — `Effect::FlipCoin` exists; needs an enters-as-coin-flip replacement);
-  Spawnbroker (exchange control by power); Schismotivate / other "another target
-  creature" spells (need a `DifferentFromTarget(slot)` selection requirement so
-  the two slots can't collapse to one creature); the complex Magemarks —
-  Beastmaster's (becomes-blocked +1/+1-per-blocker rider), Infiltrator's
-  ("can't be blocked except by defenders" evasion keyword), Necromancer's
-  (return-to-hand death replacement over your enchanted creatures); Necroplasm
+  Spawnbroker (exchange control by power); other "another target creature" spells
+  could use a `DifferentFromTarget(slot)` requirement so the two slots can't
+  collapse to one creature (Schismotivate ships with the two-slot idiom today);
+  the complex Magemarks — Beastmaster's (becomes-blocked +1/+1-per-blocker rider),
+  Necromancer's (return-to-hand death replacement over your enchanted creatures);
+  Necroplasm
   (dredge + toughness-scaling end-step wrath); the Radiance mechanic (Surge of
   Zeal, Leave No Trace, Incite Hysteria — target + each other permanent sharing a
   color); Hex (needs an exactly-N-target `DestroyTargets` — the current variant is
   "up to X"); Sanguine Praetor (needs a creature-only "destroy each creature with
   MV = X"; `DestroyEachNonlandWithManaValue` also hits noncreature nonlands);
   Living Inferno (two-way divided-damage fight — the damaged creatures deal power
-  back to the source); Orzhov Pontiff (a *triggered-ability* modal "choose one" —
-  only `ChooseModesCast` at cast time exists today).
+  back to the source); Orzhov Pontiff (now unblocked — `Effect::ChooseMode` gives
+  a resolution-time "choose one" for triggered/activated abilities, as used by
+  Ulasht; just needs the ETB + haunt-death wiring).
   **Still-deferred DIS/RAV cards (need new primitives):** Simic Basilisk (grant "destroy at end
   of combat on combat damage to a creature" until EOT); Ignorant Bliss
   (exile hand, delayed return next end step); Kindle the Carnage (repeatable
