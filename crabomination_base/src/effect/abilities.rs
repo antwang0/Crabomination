@@ -1419,6 +1419,11 @@ pub enum StaticEffect {
     /// funnel for creature targets; combat damage is marked on a separate path
     /// and is unaffected.
     PreventNoncombatDamageToYourCreatures,
+    /// CR 615 — "Prevent all damage that would be dealt to creatures you
+    /// control by sources you control." Light of Sanction. Consulted at both
+    /// the combat strike-back and the shared non-combat damage funnel; the
+    /// source and target must share a controller who has this static.
+    PreventDamageToYourCreaturesFromYourSources,
     /// CR 615 self-replacement: "If noncombat damage would be dealt to
     /// this creature, prevent that damage. Put a +1/+1 counter on this
     /// creature for each 1 damage prevented this way." Checked in the

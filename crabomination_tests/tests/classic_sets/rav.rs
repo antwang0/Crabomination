@@ -1575,3 +1575,87 @@ fn bathe_in_light_radiance_protection() {
     assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Protection(Color::Red)));
     assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Protection(Color::Red)), "shared green → protected");
 }
+
+/// Overwhelm gives your whole team +3/+3 until end of turn.
+#[test]
+fn overwhelm_pumps_your_team() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::overwhelm().effect, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(a).unwrap().power, 5, "yours +3/+3");
+    assert_eq!(g.computed_permanent(b).unwrap().power, 5);
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 2, "opponent's untouched");
+}
+
+/// Spawnbroker exchanges control of your creature and an opponent's.
+#[test]
+fn spawnbroker_swaps_control() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(mine), Target::Permanent(theirs)];
+    let evs = g.resolve_effect(&catalog::spawnbroker().triggered_abilities[0].effect, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1, "my creature is now theirs");
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "their creature is now mine");
+}
+
+/// Firemane Angel returns itself from the graveyard during your upkeep.
+#[test]
+fn firemane_angel_recurs_from_graveyard() {
+    use crabomination::game::TurnStep;
+    let mut g = two_player_game();
+    let fma = g.add_card_to_graveyard(0, catalog::firemane_angel());
+    g.step = TurnStep::Upkeep;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(crabomination::game::GameAction::ActivateAbility {
+        card_id: fma, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("return from graveyard during upkeep");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fma).is_some(), "Firemane Angel is back on the battlefield");
+}
+
+/// Halcyon Glaze animates itself into a 4/4 flyer when you cast a creature.
+#[test]
+fn halcyon_glaze_animates_on_creature_cast() {
+    let mut g = two_player_game();
+    let glaze = g.add_card_to_battlefield(0, catalog::halcyon_glaze());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G} creature
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(crabomination::game::GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature spell");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(glaze).unwrap();
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+/// Light of Sanction prevents your own sources' damage to your creatures, but
+/// not an opponent's damage.
+#[test]
+fn light_of_sanction_shields_from_your_sources() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::light_of_sanction());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let my_src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let foe_src = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(mine), 2, Some(my_src), &mut evs);
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "your source's damage prevented");
+    g.deal_damage_to_from(EntityRef::Permanent(mine), 2, Some(foe_src), &mut evs);
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 2, "opponent's damage lands");
+}

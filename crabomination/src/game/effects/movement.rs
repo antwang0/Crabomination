@@ -366,6 +366,13 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — Light of Sanction: "prevent all damage to creatures you
+        // control by sources you control."
+        if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
+            && self.damage_from_your_source_to_your_creature_prevented(src, tgt)
+        {
+            return;
+        }
         // CR 615 — Iroas-style "prevent all damage to attacking creatures
         // you control".
         if let EntityRef::Permanent(tgt) = ent

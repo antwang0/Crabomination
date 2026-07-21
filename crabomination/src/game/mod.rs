@@ -6908,6 +6908,38 @@ impl GameState {
         })
     }
 
+    /// CR 615 — Light of Sanction: "prevent all damage to creatures you
+    /// control by sources you control." True when `source` and `target` share a
+    /// controller who has the static and `target` is a creature. Consulted on
+    /// both the combat and noncombat damage paths.
+    pub(crate) fn damage_from_your_source_to_your_creature_prevented(
+        &self,
+        source: CardId,
+        target: CardId,
+    ) -> bool {
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        let (Some(tgt), Some(src)) =
+            (self.battlefield_find(target), self.battlefield_find(source))
+        else {
+            return false;
+        };
+        if !tgt.definition.is_creature() || src.controller != tgt.controller {
+            return false;
+        }
+        let controller = tgt.controller;
+        self.battlefield.iter().any(|c| {
+            c.controller == controller
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::PreventDamageToYourCreaturesFromYourSources
+                    )
+                })
+        })
+    }
+
     pub fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
         // Both sides read through the layer system — share one gather.
         self.with_frozen_layers(|g| g.damage_prevented_by_protection_inner(source, target))
@@ -13892,6 +13924,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventDamageToYourAttackers
             | StaticEffect::PreventAllDamageToController
             | StaticEffect::PreventNoncombatDamageToYourCreatures
+            | StaticEffect::PreventDamageToYourCreaturesFromYourSources
             | StaticEffect::UnspentManaBecomesColorless
             // Consulted directly at the step/phase pool-empty sites.
             | StaticEffect::ManaPoolsNeverEmpty

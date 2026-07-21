@@ -1951,6 +1951,10 @@ impl GameState {
                     if self.damage_prevented_by_protection(atk.id, blocker_id) {
                         continue;
                     }
+                    // CR 615 — Light of Sanction: your source → your creature.
+                    if self.damage_from_your_source_to_your_creature_prevented(atk.id, blocker_id) {
+                        continue;
+                    }
                     // CR 615 — route attacker→blocker combat damage through
                     // the blocker's prevention shields. Lifelink and the
                     // wither/infect -1/-1 counters scale off the actual
@@ -2055,6 +2059,10 @@ impl GameState {
                     // CR 702.16e — a blocker whose color the attacker has
                     // protection from deals no combat damage to it.
                     .filter(|&bid| !self.damage_prevented_by_protection(bid, atk.id))
+                    // CR 615 — Light of Sanction: your source → your creature.
+                    .filter(|&bid| {
+                        !self.damage_from_your_source_to_your_creature_prevented(bid, atk.id)
+                    })
                     .collect();
 
                 let attacker_takes_strike_back =
