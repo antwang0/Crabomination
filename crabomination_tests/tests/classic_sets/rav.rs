@@ -668,3 +668,20 @@ fn hunted_troll_regenerates() {
     assert_eq!(g.battlefield_find(troll).unwrap().regeneration_shields, 1,
         "{{G}} stamps a regeneration shield");
 }
+
+/// Stoneshaker Shaman makes the active player sacrifice an untapped land at
+/// each end step.
+#[test]
+fn stoneshaker_shaman_eats_a_land_each_end_step() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::stoneshaker_shaman());
+    let land = g.add_card_to_battlefield(0, catalog::forest()); // untapped
+    g.active_player_idx = 0;
+    g.step = TurnStep::PostCombatMain;
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "the untapped land was sacrificed");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == land), "it's in the graveyard");
+}

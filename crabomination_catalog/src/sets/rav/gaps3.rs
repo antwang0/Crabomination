@@ -153,3 +153,28 @@ pub fn lore_broker() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Stoneshaker Shaman — {2}{R} 1/1 Human Shaman. At the beginning of each
+/// player's end step, that player sacrifices an untapped land of their choice.
+pub fn stoneshaker_shaman() -> CardDefinition {
+    CardDefinition {
+        name: "Stoneshaker Shaman",
+        cost: cost(&[generic(2), crate::mana::r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::End), EventScope::AnyPlayer),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::ActivePlayer),
+                count: Value::ONE,
+                filter: R::Land.and(R::Untapped),
+            },
+        }],
+        ..Default::default()
+    }
+}
