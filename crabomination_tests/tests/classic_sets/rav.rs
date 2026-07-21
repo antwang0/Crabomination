@@ -1820,3 +1820,25 @@ fn molten_sentry_coin_flip_stats() {
     assert_eq!((cp.power, cp.toughness), (2, 5), "tails → 2/5");
     assert!(cp.keywords.contains(&Keyword::Defender));
 }
+
+/// Svogthos animates into a Plant Zombie whose P/T equals your graveyard's
+/// creature count.
+#[test]
+fn svogthos_animates_to_graveyard_creatures() {
+    let mut g = two_player_game();
+    let tomb = g.add_card_to_battlefield(0, catalog::svogthos_the_restless_tomb());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // noncreature, not counted
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(crabomination::game::GameAction::ActivateAbility {
+        card_id: tomb, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("animate Svogthos");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(tomb).unwrap();
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "two creature cards in gy");
+}

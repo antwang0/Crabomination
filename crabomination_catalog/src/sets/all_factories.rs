@@ -9311,6 +9311,7 @@ static RAV: &[Factory] = &[
     super::rav::indentured_oaf,
     super::rav::spectral_searchlight,
     super::rav::molten_sentry,
+    super::rav::svogthos_the_restless_tomb,
     super::rav::glass_golem,
     super::rav::goliath_spider,
     super::rav::grayscaled_gharial,
