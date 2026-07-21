@@ -224,3 +224,122 @@ fn consult_necrosages_draw_mode() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), h0 - 1 + 2, "drew two (net +1 after casting)");
 }
+
+/// Caregiver sacrifices a creature to set up a 1-damage prevention shield.
+#[test]
+fn caregiver_prevents_one_damage() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let cg = g.add_card_to_battlefield(0, catalog::caregiver());
+    g.clear_sickness(cg);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cg, ability_index: 0,
+        target: Some(Target::Player(0)), additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Caregiver");
+    drain_stack(&mut g);
+    let life0 = g.players[0].life;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Player(0), 2, None, &mut evs);
+    assert_eq!(g.players[0].life, life0 - 1, "1 of the 2 damage prevented");
+}
+
+/// Cerulean Sphinx shuffles itself back into its owner's library.
+#[test]
+fn cerulean_sphinx_shuffles_self_away() {
+    let mut g = two_player_game();
+    let sphinx = g.add_card_to_battlefield(0, catalog::cerulean_sphinx());
+    g.clear_sickness(sphinx);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sphinx, ability_index: 0,
+        target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate shuffle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sphinx).is_none(), "Sphinx left the battlefield");
+    assert!(g.players[0].library.iter().any(|c| c.id == sphinx), "back in the library");
+}
+
+/// Drooling Groodion buffs one creature and shrinks another.
+#[test]
+fn drooling_groodion_split_pump() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let groo = g.add_card_to_battlefield(0, catalog::drooling_groodion());
+    g.clear_sickness(groo);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    let mine = g.add_card_to_battlefield(0, catalog::craw_wurm()); // 6/4
+    let theirs = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: groo, ability_index: 0,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], x_value: None,
+    }).expect("activate Groodion");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mine).map(|c| (c.power, c.toughness)), Some((8, 6)), "+2/+2");
+    assert_eq!(g.computed_permanent(theirs).map(|c| (c.power, c.toughness)), Some((4, 2)), "-2/-2");
+}
+
+/// Dryad's Caress gains life per creature and untaps your team when {W} was spent.
+#[test]
+fn dryads_caress_lifegain_and_white_untap() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().tapped = true;
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let caress = g.add_card_to_hand(0, catalog::dryads_caress());
+    // Pay the {4} generic with white mana so {W} counts as spent.
+    g.players[0].mana_pool.add(Color::White, 4);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    let life0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: caress, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dryad's Caress paying white");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 2, "gained 1 per creature on the battlefield");
+    assert!(!g.battlefield_find(mine).unwrap().tapped, "white spent -> untapped your creatures");
+}
+
+/// Empty the Catacombs returns every graveyard creature to its owner's hand.
+#[test]
+fn empty_the_catacombs_returns_all() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(1, catalog::craw_wurm());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // a noncreature stays
+    let spell = g.add_card_to_hand(0, catalog::empty_the_catacombs());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Empty the Catacombs");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a), "your creature returned");
+    assert!(g.players[1].hand.iter().any(|c| c.id == b), "their creature returned");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "the noncreature card stayed in the graveyard");
+}
+
+/// Conclave's Blessing grants +0/+2 for each creature you control.
+#[test]
+fn conclaves_blessing_scales_toughness() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::conclaves_blessing());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(host)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("attach Conclave's Blessing");
+    drain_stack(&mut g);
+    // Three creatures you control → +0/+6.
+    assert_eq!(g.computed_permanent(host).map(|c| c.toughness), Some(8), "+2 toughness per creature");
+}

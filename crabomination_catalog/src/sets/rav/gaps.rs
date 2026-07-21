@@ -3,12 +3,12 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
-    EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector, Subtypes,
-    TriggeredAbility, Value,
+    EquipScale, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R,
+    Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_any, target_filtered};
-use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, generic, r, u, w, Color};
+use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, ZoneDest, ZoneRef};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 use super::super::etb_tap;
 
@@ -199,6 +199,163 @@ pub fn consult_the_necrosages() -> CardDefinition {
             max: 1,
             allow_repeats: false,
         },
+        ..Default::default()
+    }
+}
+
+/// Caregiver — {W} 1/1 Human Cleric. `{W}, Sacrifice a creature: Prevent the
+/// next 1 damage that would be dealt to any target this turn.`
+pub fn caregiver() -> CardDefinition {
+    CardDefinition {
+        name: "Caregiver",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::PreventNextDamage { target: target_any(), amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cerulean Sphinx — {4}{U}{U} 5/5 Sphinx with flying. `{U}: This creature's
+/// owner shuffles it into their library.`
+pub fn cerulean_sphinx() -> CardDefinition {
+    CardDefinition {
+        name: "Cerulean Sphinx",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::This)),
+                    pos: crate::effect::LibraryPosition::Shuffled,
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Drooling Groodion — {3}{B}{B}{G} 4/3 Beast. `{2}{B}{G}, Sacrifice a creature:
+/// Target creature gets +2/+2 until end of turn. Another target creature gets
+/// -2/-2 until end of turn.`
+pub fn drooling_groodion() -> CardDefinition {
+    CardDefinition {
+        name: "Drooling Groodion",
+        cost: cost(&[generic(3), b(), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b(), g()]),
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::PumpPT {
+                    what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-2),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dryad's Caress — {4}{G}{G} Instant. You gain 1 life for each creature on the
+/// battlefield. If {W} was spent to cast this spell, untap all creatures you
+/// control.
+pub fn dryads_caress() -> CardDefinition {
+    CardDefinition {
+        name: "Dryad's Caress",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(R::Creature)),
+            },
+            Effect::If {
+                cond: Predicate::ManaSpentOfColorAtLeast { color: Color::White, at_least: 1 },
+                then: Box::new(Effect::Untap {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    up_to: None,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Empty the Catacombs — {3}{B} Sorcery. Each player returns all creature cards
+/// from their graveyard to their hand.
+pub fn empty_the_catacombs() -> CardDefinition {
+    CardDefinition {
+        name: "Empty the Catacombs",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::Player(PlayerRef::EachPlayer),
+            body: Box::new(Effect::Move {
+                what: Selector::EachMatching {
+                    zone: ZoneRef::Graveyard(PlayerRef::Triggerer),
+                    filter: R::Creature,
+                },
+                to: ZoneDest::Hand(PlayerRef::Triggerer),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Conclave's Blessing — {3}{W} Aura with Convoke. Enchant creature. Enchanted
+/// creature gets +0/+2 for each other creature you control. (The self-exclusion
+/// is approximated as all creatures you control.)
+pub fn conclaves_blessing() -> CardDefinition {
+    CardDefinition {
+        name: "Conclave's Blessing",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(EquipScale {
+                filter: R::Creature.and(R::ControlledByYou),
+                per_power: 0,
+                per_toughness: 2,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

@@ -9366,6 +9366,12 @@ static RAV: &[Factory] = &[
     super::rav::dimir_cutpurse,
     super::rav::clinging_darkness,
     super::rav::consult_the_necrosages,
+    super::rav::caregiver,
+    super::rav::cerulean_sphinx,
+    super::rav::drooling_groodion,
+    super::rav::dryads_caress,
+    super::rav::empty_the_catacombs,
+    super::rav::conclaves_blessing,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,
