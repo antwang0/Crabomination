@@ -1842,3 +1842,26 @@ fn svogthos_animates_to_graveyard_creatures() {
     assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
     assert_eq!((cp.power, cp.toughness), (2, 2), "two creature cards in gy");
 }
+
+/// Shadow of Doubt stops searches this turn (a fetch finds nothing) and draws.
+#[test]
+fn shadow_of_doubt_locks_out_searches() {
+    let mut g = two_player_game();
+    // Player 1 has a basic land to fetch.
+    g.add_card_to_library(1, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand0 = g.players[0].hand.len();
+    let bf1 = g.battlefield.iter().filter(|c| c.controller == 1).count();
+    // Resolve Shadow of Doubt for player 0.
+    let ctx0 = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::shadow_of_doubt().effect, &ctx0).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "Shadow of Doubt cantrips");
+    // Player 1's Rampant Growth now finds nothing.
+    let ctx1 = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+    g.resolve_effect(&catalog::rampant_growth().effect, &ctx1).unwrap();
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 1).count(),
+        bf1,
+        "no land entered — the search was locked out",
+    );
+}

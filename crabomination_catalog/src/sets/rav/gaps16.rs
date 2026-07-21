@@ -1,10 +1,11 @@
-//! Ravnica (RAV) gap wave 16: the Svogthos man-land. Tests in `classic_sets/rav`.
+//! Ravnica (RAV) gap wave 16: the Svogthos man-land and Shadow of Doubt.
+//! Tests in `classic_sets/rav`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, SelectionRequirement as R, Value,
 };
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector};
-use crate::mana::{b, cost, g, generic};
+use crate::mana::{b, cost, g, generic, hybrid, Color};
 
 /// Svogthos, the Restless Tomb — Land. {T}: Add {C}. {3}{B}{G}: Until end of
 /// turn, this land becomes a Plant Zombie creature whose power and toughness
@@ -39,6 +40,21 @@ pub fn svogthos_the_restless_tomb() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Shadow of Doubt — {U/B}{U/B} Instant. Players can't search libraries this
+/// turn. Draw a card.
+pub fn shadow_of_doubt() -> CardDefinition {
+    CardDefinition {
+        name: "Shadow of Doubt",
+        cost: cost(&[hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PreventSearchesThisTurn,
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
         ..Default::default()
     }
 }

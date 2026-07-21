@@ -817,6 +817,7 @@ impl Effect {
             Effect::PreventAllDamageThisTurn { target } => sel_has_target(target),
             Effect::ReplaceNextDamageWithDestroy { target } => sel_has_target(target),
             Effect::DamageCantBePreventedThisTurn => false,
+            Effect::PreventSearchesThisTurn => false,
             Effect::PlayerProtectionUntilNextTurn { .. } => false,
             Effect::WhenLastCreatedTokenLeaves { .. } => false,
             Effect::DiminishCreaturesExceptChosenType { power, toughness } => {

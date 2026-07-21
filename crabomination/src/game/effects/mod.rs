@@ -10389,6 +10389,11 @@ impl GameState {
                     _ => unreachable!(),
                 };
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // Shadow of Doubt — no player may search a library this turn, so
+                // the search simply doesn't happen (CR 701.19 "can't search").
+                if self.no_search_this_turn {
+                    return Ok(());
+                }
                 // CR 701.19a — the picker (when distinct) makes the pick;
                 // the searched library is still `p`'s.
                 let picker = picker_ref
@@ -14942,6 +14947,11 @@ impl GameState {
             Effect::DamageCantBePreventedThisTurn => {
                 // CR 615.12 — suppress every prevention shield for the turn.
                 self.damage_cant_be_prevented_this_turn = true;
+                Ok(())
+            }
+
+            Effect::PreventSearchesThisTurn => {
+                self.no_search_this_turn = true;
                 Ok(())
             }
 

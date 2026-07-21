@@ -5637,6 +5637,10 @@ pub enum Effect {
     /// turn. Skullcrack, Heated Debate, Impractical Joke's rider.
     DamageCantBePreventedThisTurn,
 
+    /// "Players can't search libraries this turn." (Shadow of Doubt.) Sets a
+    /// global flag; library searches that turn find nothing.
+    PreventSearchesThisTurn,
+
     /// "`who` gains protection from everything until their next turn"
     /// (The One Ring): can't be targeted, all damage prevented. Cleared
     /// when that player's turn begins.

@@ -946,6 +946,8 @@ pub struct GameState {
     /// Cleared at cleanup.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// CR — Shadow of Doubt: no player may search a library this turn.
+    pub no_search_this_turn: bool,
     /// Registered replacement effects (Phase H — Commander prerequisite).
     /// Walked by zone-change paths (`place_card_in_dest`,
     /// `remove_from_battlefield_to_*`) at placement time; a matching
@@ -1320,6 +1322,7 @@ impl Clone for GameState {
             attack_despite_defender_this_turn: self.attack_despite_defender_this_turn.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
+            no_search_this_turn: self.no_search_this_turn,
             replacement_effects: self.replacement_effects.clone(),
             next_replacement_id: self.next_replacement_id,
             commander_cast_count: self.commander_cast_count.clone(),
@@ -1500,6 +1503,7 @@ impl GameState {
             attack_despite_defender_this_turn: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
+            no_search_this_turn: false,
             replacement_effects: Vec::new(),
             next_replacement_id: 1,
             commander_cast_count: HashMap::new(),
