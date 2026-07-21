@@ -28,6 +28,14 @@ exercising each) was elided in a compaction pass; recover it from
   Starved Rusalka. CR conformance: 704.5j (legend rule reads continuous
   supertypes), **701.15b** (goaded creatures must attack a non-goader player when
   able — enforced in `declare_attackers`), 611.2c (during-your-turn anthem gate).
+  RAV gap waves 6–7 (this run, 25 more cards): `Effect::DestroyEachCreatureWithManaValue`
+  (Sanguine Praetor), plus board-sweepers (Hammerfist Giant, Blockbuster), the
+  Transmute pair (Dimir House Guard, Ethereal Usher), and a spread of simple
+  activated/triggered creatures & spells reusing existing primitives (Cyclopean
+  Snare, Festival of the Guildpact, Viashino Fangtail/Slasher, Undercity Shade,
+  War-Torch Goblin, Tattered Drake, Surveilling Sprite, Zephyr Spirit, Votary of
+  the Conclave, Torpid Moloch, Psychic Drain, Rolling Spoil, Quickchange, Ursapine,
+  Tidewater Minion, Twisted Justice, Strands of Undeath, Wizened Snitches).
 - **GPT/RAV gap wave 2 (this run):** `Predicate::FirstNoncreatureSpellThisTurn`
   (+ `GameState.noncreature_spells_cast_this_turn` tracking — Nullstone Gargoyle).
   ~20 cards reusing existing primitives: the Magemark aura anthems (Fencer's,
