@@ -10,6 +10,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crabomination::server::{LossReason, MatchOutcome};
 
+/// Match-log line schema version. Bump when the field set or their meaning
+/// changes so downstream consumers can branch on `"v"` instead of guessing.
+const SCHEMA_VERSION: u32 = 1;
+
 fn log_path() -> Option<&'static PathBuf> {
     static PATH: OnceLock<Option<PathBuf>> = OnceLock::new();
     PATH.get_or_init(|| std::env::var_os("CRAB_MATCH_LOG").map(PathBuf::from))
@@ -88,7 +92,8 @@ fn render_line(format_label: &str, duration: Duration, outcome: &MatchOutcome) -
         .max(outcome.loss_reasons.len())
         .max(outcome.final_library_sizes.len());
     format!(
-        "{{\"ts\":{ts},\"format\":\"{format_label}\",\"duration_ms\":{},\"turns\":{},\
+        "{{\"v\":{SCHEMA_VERSION},\"ts\":{ts},\"format\":\"{format_label}\",\
+         \"duration_ms\":{},\"turns\":{},\
          \"players\":{players},\"winner\":{winner},\"life\":[{life}],\
          \"loss_reasons\":[{losses}],\"libraries\":[{libs}]}}\n",
         duration.as_millis(),
@@ -131,6 +136,7 @@ mod tests {
         };
         let line = render_line("cube", Duration::from_millis(1500), &outcome);
         assert!(line.ends_with('\n'));
+        assert!(line.contains("\"v\":1"), "carries a schema version: {line}");
         assert!(line.contains("\"format\":\"cube\""), "{line}");
         assert!(line.contains("\"duration_ms\":1500"), "{line}");
         assert!(line.contains("\"turns\":12"), "{line}");
