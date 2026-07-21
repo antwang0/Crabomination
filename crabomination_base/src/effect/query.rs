@@ -94,6 +94,7 @@ impl Effect {
                 Selector::AttachedTo(i)
                 | Selector::AttachedToMe(i)
                 | Selector::RadianceGroup { subject: i }
+                | Selector::CreaturesInCombatWith(i)
                 | Selector::SharingNameWith(i) => sel_has_target(i),
                 Selector::Take { inner, count }
                 | Selector::TakeRandom { inner, count } => {
@@ -866,6 +867,7 @@ impl Effect {
                 | Selector::TakeRandom { inner, .. } => sel_filter(inner),
                 Selector::TakeWithSumCap { inner, .. } => sel_filter(inner),
                 Selector::RadianceGroup { subject } => sel_filter(subject),
+                Selector::CreaturesInCombatWith(subject) => sel_filter(subject),
                 _ => None,
             }
         }
@@ -1789,6 +1791,7 @@ impl Effect {
                 Selector::AttachedTo(i)
                 | Selector::AttachedToMe(i)
                 | Selector::RadianceGroup { subject: i }
+                | Selector::CreaturesInCombatWith(i)
                 | Selector::SharingNameWith(i) => sel_find(i, slot),
                 Selector::Take { inner, .. }
                 | Selector::TakeRandom { inner, .. } => sel_find(inner, slot),

@@ -1287,10 +1287,13 @@ now surface `amount`-embedded target slots (Soul's Grace). Still deferred:
 Shipped with existing primitives (Requiem Angel, Angel of the Dawn, Elderfang
 Disciple, Martial Coup, Beckon Apparition, Kytheon's Tactics, Rally the Ranks,
 Captain's Claws, Ancestral Blade). Noticed but deferred for want of a primitive:
-- **Trueheart Duelist** — "can block an additional creature" needs a
-  `Keyword::CanBlockAdditional(n)` wired into block declaration (blocks are
-  keyed blocker→attacker in a `HashMap`, so this is a combat-model refactor;
-  Embalm half ships).
+- **Trueheart Duelist** / **Selesnya Sagittars** (RAV) / **Valor Made Real**
+  (DIS, "block any number this turn") — all want "can block an additional/any
+  creature", i.e. a `Keyword::CanBlockAdditional(n)`/`CanBlockAny` wired into
+  block declaration. Blocks are keyed blocker→attacker in a `HashMap` used at
+  ~59 sites incl. combat-damage assignment, so this is a combat-model refactor
+  (make `block_map` one-to-many + per-blocker damage-assignment order). Deferred
+  this run as too invasive for a safe change.
 
 ## Discovered follow-ups — party sweep (`decks::recent58`)
 

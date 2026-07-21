@@ -16,6 +16,16 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **RAV/GPT/DIS + RTR wave (this run, 38 cards):** damage-into-counters
+  replacements (`ReplaceDamageToSelfWithCounters` — Phytohydra;
+  `CombatDamageToPlayerBecomesCountersAndMill` — Szadek; both CR-614 "instead",
+  fire through unpreventable); `Selector::CreaturesInCombatWith` (Trial // Error);
+  `Effect::ExileTopSelfPumpIfCreature` (Bioplasm). Cards on existing primitives:
+  Sabertooth Alley Cat, Yore-Tiller / Witch-Maw Nephilim, Orzhov Pontiff. RTR
+  set opened — 30 commons/uncommons (vanilla + Scavenge + Unleash + firebreathe
+  + coin flip + tokens). CR conformance: 614.6, 702.96, 702.98. Server:
+  `concede_pct`. Client: `Eva+`/`Eva-` evasion chips.
+
 - **RAV/GPT/DIS prevention & redirect wave (this run, 20 cards):** new CR 614.9
   redirection — `Effect::RedirectNextDamage` + `PreventionShield.redirect_to`
   (Carom, Razia) and `RedirectControllerDamageToEquippedCreature` (Pariah's
