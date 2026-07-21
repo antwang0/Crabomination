@@ -144,16 +144,32 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   `StaticEffect::OpponentSpellsCostMore`, `EquipScale.count_host_colors`,
   `Effect::CounterSpellOrAbility`, `DynamicPt::BaseMinusPerCardInHand`,
   `StaticEffect::DoubleYourSourcesDamageWhileHellbent`.
+  **Forecast (CR 702.56) shipped** via the `forecast()` shortcut for Plumes of
+  Peace, Govern the Guildless, Writ of Passage, Sky Hussar, and Paladin of Prahv
+  (whose rider rides the new `Effect::GainLifeWhenTargetDealsDamageThisTurn` /
+  `DelayedKind::SourceDealsDamageThisTurn`, fired from all three damage paths).
+  Also shipped this pass: Karoo bounce-lands (Azorius Chancery / Rakdos Carnarium
+  / Simic Growth Chamber), Flaring Flame-Kin, Haazda Shield Mate, Prahv, Jagged
+  Poppet, Palliation Accord (`CounterType::Palliation`), Pain Magnification (rode
+  a fix binding `event_subject` to the damaged player), Rakdos Augermage, Drekavac
+  (`Effect::MayDiscardMatching`), Crypt Champion (`Effect::EachPlayerReanimateCreatureMaxMv`).
   **Deferred DIS cards (need new primitives):** Swift Silence (counter-all-others
   + draw-per-countered — needs a stack-count of actual counters); Azorius Ploy
   (outgoing-only combat-damage prevention — the incoming half exists as
-  `PreventCombatDamageToTargetThisTurn`); Drekavac / (filtered "discard a
-  noncreature card or sacrifice" — `MayDiscard` has no filter); Simic Basilisk
-  (grant "destroy at end of combat on combat damage to a creature"); Protean Hulk
-  (search library for creatures up to a *total* mana value → battlefield —
-  `SearchUpToN` counts cards, not MV); Ignorant Bliss (exile hand, delayed
-  return next end step); Kindle the Carnage (repeatable random-discard damage
-  loop); Bronze Bombshell (control-change → sac + burn). Narrow approximation:
+  `PreventCombatDamageToTargetThisTurn`); Simic Basilisk (grant "destroy at end
+  of combat on combat damage to a creature" until EOT); Protean Hulk (search
+  library for creatures up to a *total* mana value → battlefield); Ignorant Bliss
+  (exile hand, delayed return next end step); Kindle the Carnage (repeatable
+  random-discard damage loop); Bronze Bombshell (needs a `GameEvent::ControlChanged`
+  + `EventKind::ControlChanged` emitted from every control-change site); Lyzolda /
+  Stormscale Anarch (need the cost-sacrificed / cost-discarded card's colors
+  stamped on the resolution context + `SacrificedWasColor`/`DiscardedWasColor`
+  predicates); Muse Vessel (needs "may play a card exiled with this source");
+  Evolution Vat (grant a counter-doubling activated ability until EOT); Azorius
+  Aethermage (needs a "permanent returned to your hand" trigger); Vigean Intuition
+  / Fertile Imagination (choose-a-card-type at resolution + type-routed reveal);
+  Isperia / Momir Vig / Experiment Kraj (complex legendaries); the RAV/GPT/DIS
+  split cards (need per-half effect plumbing). Narrow approximation:
   Magewright's Stone's target is any creature (should be "has a {T} activated
   ability"); Cytoshape's copied creature isn't restricted to nonlegendary.
 - **Dissension gap batch (dis/creatures) — shipped:** Assault Zeppelid, Sky
