@@ -107,6 +107,55 @@ fn govern_the_guildless_forecast_upkeep_only() {
     assert!(g.players[0].hand.iter().any(|c| c.id == govern), "card stays in hand");
 }
 
+/// A Karoo bounce-land enters tapped and returns a land you control to hand.
+#[test]
+fn karoo_enters_tapped_and_bounces_a_land() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest()); // a land to bounce
+    let h0 = g.players[0].hand.len();
+    let karoo = g.move_card_to_battlefield_for_test(0, catalog::azorius_chancery());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(karoo).unwrap().tapped, "Karoo enters tapped");
+    assert_eq!(g.players[0].hand.len(), h0 + 1, "a land was returned to hand");
+}
+
+/// A Karoo taps for both of its guild colors at once.
+#[test]
+fn karoo_taps_for_two_colors() {
+    let mut g = two_player_game();
+    // Bypass the ETB (add_card enters untapped, no trigger); tap for {G}{U}.
+    let karoo = g.add_card_to_battlefield(0, catalog::simic_growth_chamber());
+    g.clear_sickness(karoo);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: karoo, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("tap Karoo for two mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "added green");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "added blue");
+}
+
+/// Writ of Passage's Forecast makes a power-2-or-less creature unblockable.
+#[test]
+fn writ_of_passage_forecast_grants_unblockable() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → power 2
+    let writ = g.add_card_to_hand(0, catalog::writ_of_passage());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: writ, ability_index: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+    }).expect("Forecast activatable in upkeep");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable),
+        "power-2 creature became unblockable");
+    assert!(g.players[0].hand.iter().any(|c| c.id == writ), "card stays in hand");
+}
+
 /// Stalking Vengeance turns a dying creature's power into damage to a player.
 #[test]
 fn stalking_vengeance_death_burns_target() {

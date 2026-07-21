@@ -7,7 +7,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility,
     Value,
 };
-use crate::effect::shortcut::{forecast, target_any, target_filtered};
+use crate::effect::shortcut::{etb, forecast, target_any, target_filtered};
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, PlayerStaticTarget, StaticEffect, ZoneDest,
 };
@@ -1149,6 +1149,79 @@ pub fn leafdrake_roost() -> CardDefinition {
             }],
             ..Default::default()
         }),
+        ..Default::default()
+    }
+}
+
+/// A Karoo bounce-land (CR — Ravnica): enters tapped, returns a land you
+/// control to hand on entry, and taps for two guild colors at once.
+fn karoo(name: &'static str, a: Color, b: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![a, b]),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![
+            super::super::etb_tap(),
+            etb(Effect::Move {
+                what: target_filtered(R::Land.and(R::ControlledByYou)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+pub fn azorius_chancery() -> CardDefinition { karoo("Azorius Chancery", Color::White, Color::Blue) }
+pub fn rakdos_carnarium() -> CardDefinition { karoo("Rakdos Carnarium", Color::Black, Color::Red) }
+pub fn simic_growth_chamber() -> CardDefinition {
+    karoo("Simic Growth Chamber", Color::Green, Color::Blue)
+}
+
+/// Writ of Passage — {U} Aura. Enchant creature. Whenever enchanted creature
+/// attacks, if its power is 2 or less, it can't be blocked this turn.
+/// Forecast — {1}{U}: Target creature with power 2 or less can't be blocked
+/// this turn.
+pub fn writ_of_passage() -> CardDefinition {
+    CardDefinition {
+        name: "Writ of Passage",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::PowerAtMost(2),
+                    },
+                ),
+                effect: Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+            }],
+            ..Default::default()
+        }),
+        activated_abilities: vec![forecast(
+            cost(&[generic(1), u()]),
+            Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::PowerAtMost(2))),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+        )],
         ..Default::default()
     }
 }

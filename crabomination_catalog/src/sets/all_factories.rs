@@ -7209,6 +7209,10 @@ static DIS: &[Factory] = &[
     super::dis::blessing_of_the_nephilim,
     super::dis::biomantic_mastery,
     super::dis::leafdrake_roost,
+    super::dis::azorius_chancery,
+    super::dis::rakdos_carnarium,
+    super::dis::simic_growth_chamber,
+    super::dis::writ_of_passage,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,
