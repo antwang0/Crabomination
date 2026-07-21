@@ -4341,6 +4341,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopSelfPumpIfCreature => {
+                let p = ctx.controller;
+                let Some(src) = ctx.source else { return Ok(()) };
+                if let Some(card) = (!self.players[p].library.is_empty())
+                    .then(|| self.players[p].library.remove(0))
+                {
+                    let (is_creature, pow, tou) = (
+                        card.definition.card_types.contains(&crate::card::CardType::Creature),
+                        card.definition.power,
+                        card.definition.toughness,
+                    );
+                    let cid = card.id;
+                    self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+                    self.last_moved_cards.push(cid);
+                    if is_creature && let Some(c) = self.battlefield_find_mut(src) {
+                        c.power_bonus += pow;
+                        c.toughness_bonus += tou;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SetNoMaxHandSize { who } => {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {

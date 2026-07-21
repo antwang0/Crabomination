@@ -71,6 +71,22 @@ pub fn witch_maw_nephilim() -> CardDefinition {
     }
 }
 
+/// Bioplasm — {3}{G}{G} 4/4 Ooze. Whenever it attacks, exile the top card of
+/// your library; if it's a creature card, it gets +power/+toughness until end
+/// of turn equal to the exiled card's power and toughness.
+pub fn bioplasm() -> CardDefinition {
+    CardDefinition {
+        name: "Bioplasm",
+        cost: cost(&[crate::mana::generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::ExileTopSelfPumpIfCreature)],
+        ..Default::default()
+    }
+}
+
 /// Orzhov Pontiff — {1}{W}{B} 1/1 Cleric with haunt. When it enters or the
 /// creature it haunts dies, choose one — your creatures get +1/+1, or creatures
 /// you don't control get -1/-1, until end of turn.

@@ -9323,6 +9323,7 @@ static RAV: &[Factory] = &[
     super::gpt::yore_tiller_nephilim,
     super::gpt::witch_maw_nephilim,
     super::gpt::orzhov_pontiff,
+    super::gpt::bioplasm,
     super::rav::glass_golem,
     super::rav::goliath_spider,
     super::rav::grayscaled_gharial,

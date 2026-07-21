@@ -1387,3 +1387,22 @@ fn orzhov_pontiff_etb_debuffs_opponents() {
     let cp = g.computed_permanent(foe).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "opponent's 2/2 shrank to 1/1");
 }
+
+/// Bioplasm grows by the exiled card's stats when it's a creature.
+#[test]
+fn bioplasm_grows_from_creature() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let bio = g.add_card_to_battlefield(0, catalog::bioplasm()); // 4/4
+    g.clear_sickness(bio);
+    g.add_card_to_library(0, catalog::craw_wurm()); // 6/4 on top
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bio, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bio).unwrap();
+    assert_eq!((cp.power, cp.toughness), (10, 8), "4/4 + 6/4 exiled = 10/8");
+}

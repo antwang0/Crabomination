@@ -4095,6 +4095,10 @@ pub enum Effect {
     /// reanimate a creature "tapped and attacking" (Alesha, Who Smiles at Death,
     /// via `Selector::LastMoved`).
     JoinCombatAttacking { what: Selector },
+    /// Exile the top card of the source controller's library; if it's a
+    /// creature card, the source gets +power/+toughness until end of turn equal
+    /// to that card's power and toughness. Bioplasm's attack trigger.
+    ExileTopSelfPumpIfCreature,
     /// Myriad (CR 702.115): for each opponent of the source's controller
     /// other than the player the source is attacking, create a token that's
     /// a copy of the source, tapped and attacking that opponent. The copies
