@@ -1181,7 +1181,14 @@ fn project_permanent(
             })
         }).unwrap_or_default(),
         mana_value: card.definition.cost.cmc(),
-        is_legendary: card.definition.supertypes.contains(&crate::card::Supertype::Legendary),
+        // Computed supertypes so a continuous Legendary grant (Leyline of
+        // Singularity, the Ring's emblem) surfaces in the client, matching the
+        // legend-rule SBA (CR 704.5j / 613.1c).
+        is_legendary: cp
+            .map(|c| c.supertypes.contains(&crate::card::Supertype::Legendary))
+            .unwrap_or_else(|| {
+                card.definition.supertypes.contains(&crate::card::Supertype::Legendary)
+            }),
         has_plus_one_counters: card.counter_count(crate::card::CounterType::PlusOnePlusOne) > 0,
         has_minus_one_counters: card.counter_count(crate::card::CounterType::MinusOneMinusOne) > 0,
         total_counter_count: card.counters.values().sum(),
@@ -2304,6 +2311,17 @@ mod tests {
         assert!(v.battlefield.iter().find(|p| p.id == a).unwrap().goaded);
         assert!(v.battlefield.iter().find(|p| p.id == b).unwrap().monstrous);
         assert!(!v.battlefield.iter().find(|p| p.id == a).unwrap().monstrous);
+    }
+
+    #[test]
+    fn continuous_legendary_grant_surfaces_in_the_view() {
+        let mut state = two_player_game();
+        let bear = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        // A vanilla creature isn't legendary...
+        assert!(!project(&state, 0).battlefield.iter().find(|p| p.id == bear).unwrap().is_legendary);
+        // ...until Leyline of Singularity grants the supertype (CR 704.5j).
+        state.add_card_to_battlefield(0, catalog::leyline_of_singularity());
+        assert!(project(&state, 0).battlefield.iter().find(|p| p.id == bear).unwrap().is_legendary);
     }
 
     #[test]

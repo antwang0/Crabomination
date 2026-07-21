@@ -73,12 +73,18 @@ pub fn update_alt_tooltip(
     // shows the card art with its name). If there's nothing
     // interesting (no P/T mod, no loyalty, no counters, not tapped),
     // skip the tooltip entirely so we don't render an empty panel.
-    let Some(body) = build_tooltip_body(p) else {
+    let Some(mut body) = build_tooltip_body(p) else {
         for e in tooltip_q.iter() {
             commands.entity(e).despawn();
         }
         return;
     };
+    // The peek art can't show the *board* context that makes the legend rule
+    // (CR 704.5j) bite. When this legendary permanent has a same-named,
+    // same-controller twin already in play, warn that one is about to die.
+    if legend_rule_at_risk(&cv.battlefield, p) {
+        body.push_str("\n⚠ legend rule: another copy is in play");
+    }
 
     if tooltip_q.single_mut().is_ok() {
         // Existing tooltip — just refresh its text.
@@ -116,6 +122,20 @@ pub fn update_alt_tooltip(
             Pickable::IGNORE,
         ));
     });
+}
+
+/// True when this legendary permanent shares its name and controller with
+/// another legendary permanent already on the battlefield — the pair the legend
+/// rule (CR 704.5j) will collapse. `is_legendary` reads the *computed*
+/// supertype server-side, so a Leyline-of-Singularity grant counts too.
+fn legend_rule_at_risk(
+    battlefield: &[crabomination::net::PermanentView],
+    p: &crabomination::net::PermanentView,
+) -> bool {
+    p.is_legendary
+        && battlefield.iter().any(|q| {
+            q.id != p.id && q.controller == p.controller && q.name == p.name && q.is_legendary
+        })
 }
 
 /// Build the tooltip body. Returns `None` when the card has nothing
@@ -515,16 +535,16 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     }
 
     // Designation badges surfaced over the wire (CR 701.60 Suspect,
-    // CR 701.39 Goad, CR 701.27 Monstrosity). Each is a sticky game-state
+    // CR 701.15 Goad, CR 701.31 Monstrosity). Each is a sticky game-state
     // flag the player needs at a glance — a suspected creature has menace
     // and can't block, a goaded creature must attack a player other than
-    // its controller, and a monstrous creature has already paid its
+    // the goader if able, and a monstrous creature has already paid its
     // one-shot monstrosity cost. Push (claude/modern_decks).
     if p.suspected {
         lines.push(String::from("(suspected — has menace, can't block)"));
     }
     if p.goaded {
-        lines.push(String::from("(goaded — must attack)"));
+        lines.push(String::from("(goaded — must attack, and not the goader if able)"));
     }
     if p.monstrous {
         lines.push(String::from("(monstrous)"));
@@ -1249,7 +1269,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_tooltip_body, companion_restriction_text, humanize_keyword_debug, keyword_label, keyword_reminder};
+    use super::{build_tooltip_body, companion_restriction_text, humanize_keyword_debug, keyword_label, keyword_reminder, legend_rule_at_risk};
     use crabomination::card::{CardId, CardType, CounterType, Keyword};
     use crabomination::net::PermanentView;
 
@@ -1808,5 +1828,31 @@ mod tests {
         let parity = keyword_label(&Keyword::CantAttackOrBlockUnlessEvenCounters);
         assert!(parity.contains("even number of counters"), "got {parity}");
         assert!(!parity.contains("CantAttack"), "no raw debug shape: {parity}");
+    }
+
+    /// The legend-rule warning fires only for a legendary permanent with a
+    /// same-named, same-controller legendary twin in play.
+    #[test]
+    fn legend_rule_at_risk_detects_duplicate() {
+        let mut a = make_permanent_view(0, 2);
+        a.id = CardId(1);
+        a.name = "Ulasht, the Hate Seed".into();
+        a.is_legendary = true;
+        let mut b = a.clone();
+        b.id = CardId(2);
+        // A lone legend is safe; its twin makes both at risk.
+        assert!(!legend_rule_at_risk(std::slice::from_ref(&a), &a));
+        let board = vec![a.clone(), b.clone()];
+        assert!(legend_rule_at_risk(&board, &a), "duplicate triggers the warning");
+        // A non-legendary permanent never warns, even with a same-name twin.
+        let mut c = a.clone();
+        c.is_legendary = false;
+        let mut d = c.clone();
+        d.id = CardId(3);
+        assert!(!legend_rule_at_risk(&[c.clone(), d], &c));
+        // Different controller isn't a legend-rule pair.
+        let mut e = b.clone();
+        e.controller = 1;
+        assert!(!legend_rule_at_risk(&[a.clone(), e], &a));
     }
 }
