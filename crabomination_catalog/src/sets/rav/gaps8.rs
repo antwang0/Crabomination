@@ -100,6 +100,22 @@ pub fn leave_no_trace() -> CardDefinition {
     }
 }
 
+/// Bathe in Light — {1}{W} Instant. Radiance — choose a color. Target creature
+/// and each other creature that shares a color with it gain protection from the
+/// chosen color until end of turn.
+pub fn bathe_in_light() -> CardDefinition {
+    CardDefinition {
+        name: "Bathe in Light",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GrantProtectionFromChosenColor {
+            what: Selector::RadianceGroup { subject: Box::new(target_filtered(R::Creature)) },
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
 // ── Blue counters / mill ─────────────────────────────────────────────────────
 
 /// Induce Paranoia — {2}{U}{U} Instant. Counter target spell. If {B} was spent

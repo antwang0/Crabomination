@@ -9354,6 +9354,7 @@ static RAV: &[Factory] = &[
     super::rav::surge_of_zeal,
     super::rav::incite_hysteria,
     super::rav::leave_no_trace,
+    super::rav::bathe_in_light,
     super::rav::induce_paranoia,
     super::rav::mnemonic_nexus,
     super::rav::flash_conscription,

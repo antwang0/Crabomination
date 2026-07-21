@@ -1557,3 +1557,21 @@ fn searing_meditation_burns_on_lifegain() {
     assert_eq!(g.players[1].life, 18, "2 damage dealt on the lifegain");
     assert_eq!(g.players[0].mana_pool.total(), 0, "paid the two generic");
 }
+
+/// Bathe in Light's Radiance grants protection from a chosen color to the
+/// target and every creature sharing a color with it.
+#[test]
+fn bathe_in_light_radiance_protection() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    let b = g.add_card_to_battlefield(0, catalog::llanowar_elves()); // green
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(a)];
+    let evs = g.resolve_effect(&catalog::bathe_in_light().effect, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Protection(Color::Red)));
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Protection(Color::Red)), "shared green → protected");
+}
