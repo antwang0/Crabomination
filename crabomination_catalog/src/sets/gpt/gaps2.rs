@@ -3,9 +3,9 @@
 //! spells/creatures. Tests in `classic_sets/gpt`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind,
-    EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, StaticAbility,
-    Subtypes, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
+    EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R,
+    StaticAbility, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{bloodthirst, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
@@ -339,6 +339,91 @@ pub fn hatching_plans() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gruul War Plow — {4} Artifact. Creatures you control have trample. {1}{R}{G}:
+/// This artifact becomes a 4/4 Juggernaut artifact creature until end of turn.
+pub fn gruul_war_plow() -> CardDefinition {
+    CardDefinition {
+        name: "Gruul War Plow",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have trample.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::Creature,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Trample],
+                opponents: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r(), g()]),
+            effect: Effect::BecomeCreature {
+                what: Selector::This,
+                power: Value::Const(4),
+                toughness: Value::Const(4),
+                creature_types: vec![CreatureType::Juggernaut],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sinstriker's Will — {3}{W} Aura. Enchant creature. Enchanted creature has
+/// "{T}: This creature deals damage equal to its power to target attacking or
+/// blocking creature."
+pub fn sinstrikers_will() -> CardDefinition {
+    CardDefinition {
+        name: "Sinstriker's Will",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::DealDamageEqualToPower {
+                    source: Selector::This,
+                    target: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Cryptwailing — {3}{B} Enchantment. {1}, Exile two creature cards from your
+/// graveyard: Target player discards a card. Activate only as a sorcery.
+pub fn cryptwailing() -> CardDefinition {
+    CardDefinition {
+        name: "Cryptwailing",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sorcery_speed: true,
+            exile_other_filter: Some((R::Creature, 2)),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::ONE,
+                random: false,
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }

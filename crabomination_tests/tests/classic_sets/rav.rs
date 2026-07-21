@@ -685,3 +685,49 @@ fn stoneshaker_shaman_eats_a_land_each_end_step() {
     assert!(g.battlefield_find(land).is_none(), "the untapped land was sacrificed");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == land), "it's in the graveyard");
 }
+
+/// Boros Fury-Shield burns the creature's controller for its power when {R} was
+/// spent to cast it.
+#[test]
+fn boros_fury_shield_burns_when_red_spent() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    // Player 1 attacks with a 2/2.
+    g.active_player_idx = 1;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    // Player 0 responds with Fury-Shield, paying the two generic with red.
+    g.priority.player_with_priority = 0;
+    let shield = g.add_card_to_hand(0, catalog::boros_fury_shield());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: shield, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast fury-shield");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 2, "dealt power (2) to the creature's controller");
+}
+
+/// Siege of Towers animates a Mountain into a 3/1 that's still a land.
+#[test]
+fn siege_of_towers_animates_a_mountain() {
+    use crabomination::card::CardType;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let mtn = g.add_card_to_battlefield(0, catalog::mountain());
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(mtn)];
+    let def = catalog::siege_of_towers();
+    let evs = g.resolve_effect(&def.effect, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    let cp = g.computed_permanent(mtn).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 1), "becomes a 3/1");
+    assert!(cp.card_types.contains(&CardType::Creature), "now a creature");
+    assert!(cp.card_types.contains(&CardType::Land), "still a land");
+}

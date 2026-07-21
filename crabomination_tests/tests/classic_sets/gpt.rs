@@ -591,3 +591,54 @@ fn hatching_plans_draws_three_on_death() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 3, "drew three cards");
 }
+
+/// Gruul War Plow anthems your creatures with trample and can animate itself.
+#[test]
+fn gruul_war_plow_trample_anthem_and_animate() {
+    let mut g = two_player_game();
+    let plow = g.add_card_to_battlefield(0, catalog::gruul_war_plow());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+        "creatures you control have trample");
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: plow, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(plow).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "becomes a 4/4");
+}
+
+/// Sinstriker's Will grants the enchanted creature a tap-to-ping ability.
+#[test]
+fn sinstrikers_will_grants_ping_ability() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::sinstrikers_will());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    assert_eq!(g.granted_abilities_for(bear).len(), 1, "host gained the ping ability");
+}
+
+/// Cryptwailing exiles two creatures from your graveyard to force a discard.
+#[test]
+fn cryptwailing_forces_a_discard() {
+    let mut g = two_player_game();
+    let crypt = g.add_card_to_battlefield(0, catalog::cryptwailing());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_hand(1, catalog::forest());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crypt, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("force discard");
+    drain_stack(&mut g);
+    assert!(!g.players[1].hand.iter().any(|c| c.id == victim), "opponent discarded");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 0,
+        "two creatures exiled from graveyard as a cost");
+}

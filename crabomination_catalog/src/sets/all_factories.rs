@@ -7792,6 +7792,9 @@ static GPT: &[Factory] = &[
     super::gpt::runeboggle,
     super::gpt::primeval_light,
     super::gpt::hatching_plans,
+    super::gpt::gruul_war_plow,
+    super::gpt::sinstrikers_will,
+    super::gpt::cryptwailing,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,
@@ -9429,6 +9432,8 @@ static RAV: &[Factory] = &[
     super::rav::hunted_dragon,
     super::rav::hunted_lammasu,
     super::rav::hunted_troll,
+    super::rav::boros_fury_shield,
+    super::rav::siege_of_towers,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,
