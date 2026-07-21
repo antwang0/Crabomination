@@ -7686,6 +7686,8 @@ static GPT: &[Factory] = &[
     super::gpt::wurmweaver_coil,
     super::gpt::spelltithe_enforcer,
     super::gpt::goblin_flectomancer,
+    super::gpt::conjurers_ban,
+    super::gpt::droning_bureaucrats,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,

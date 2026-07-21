@@ -1254,3 +1254,46 @@ fn goblin_flectomancer_repoints_a_spell() {
     assert!(g.battlefield_find(gf).is_none(), "Flectomancer was sacrificed");
     assert_eq!(g.players[1].life, life1 - 3, "bolt now hits its caster");
 }
+
+/// Conjurer's Ban locks an opponent out of casting the named card and cantrips.
+#[test]
+fn conjurers_ban_names_and_cantrips() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand0 = g.players[0].hand.len();
+    // Name Lightning Bolt for the opponent.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        crabomination::decision::DecisionAnswer::NamedCard("Lightning Bolt".to_string()),
+    ]));
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::conjurers_ban().effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "Conjurer's Ban cantrips");
+    // Opponent can't cast the named spell.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "named spell is locked out");
+}
+
+/// Droning Bureaucrats stops creatures whose mana value equals the X paid.
+#[test]
+fn droning_bureaucrats_locks_matching_mv() {
+    let mut g = two_player_game();
+    let db = g.add_card_to_battlefield(0, catalog::droning_bureaucrats());
+    g.clear_sickness(db);
+    let two_drop = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let one_drop = g.add_card_to_battlefield(1, catalog::goblin_arsonist()); // MV 1
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: db, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(2),
+    }).expect("activate for X=2");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(two_drop).unwrap().keywords.contains(&Keyword::CantAttack),
+        "MV-2 creature can't attack");
+    assert!(!g.computed_permanent(one_drop).unwrap().keywords.contains(&Keyword::CantAttack),
+        "MV-1 creature is unaffected");
+}

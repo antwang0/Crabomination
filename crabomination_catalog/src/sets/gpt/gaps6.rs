@@ -4,11 +4,11 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
+    Keyword, SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Effect, PlayerRef, Selector};
-use crate::mana::{cost, generic, r, u, w};
+use crate::effect::{Duration, Effect, PlayerRef, Selector};
+use crate::mana::{b, cost, generic, r, u, w, x};
 
 /// Spelltithe Enforcer — {3}{W}{W} 3/3 Elephant Wizard. Whenever an opponent
 /// casts a spell, that player sacrifices a permanent of their choice unless
@@ -60,6 +60,50 @@ pub fn goblin_flectomancer() -> CardDefinition {
                     R::IsSpellOnStack
                         .and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
                 ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Conjurer's Ban — {W}{B} Sorcery. Choose a card name; until your next turn,
+/// spells with the chosen name can't be cast and lands with the chosen name
+/// can't be played. Draw a card. (Modeled as the opponent-scoped cast lock;
+/// the symmetric "you too" and land-play clauses are omitted.)
+pub fn conjurers_ban() -> CardDefinition {
+    CardDefinition {
+        name: "Conjurer's Ban",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::NameOpponentCastLock,
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Droning Bureaucrats — {3}{W} 1/4 Human Advisor. {X}, {T}: Each creature with
+/// mana value X can't attack or block this turn.
+pub fn droning_bureaucrats() -> CardDefinition {
+    CardDefinition {
+        name: "Droning Bureaucrats",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            tap_cost: true,
+            effect: Effect::GrantKeywords {
+                what: Selector::EachPermanent(R::Creature.and(R::ManaValueExactlyXFromCost)),
+                keywords: vec![Keyword::CantAttack, Keyword::CantBlock],
+                duration: Duration::EndOfTurn,
             },
             ..Default::default()
         }],
