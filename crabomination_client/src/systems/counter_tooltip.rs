@@ -1201,6 +1201,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Bait => "Bait",
         CounterType::Supply => "Supply",
         CounterType::Unlock => "Unlock",
+        CounterType::Palliation => "Palliation",
     }
 }
 
@@ -1241,6 +1242,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Bait => "Fishing Pole tally — removed on untap to make a 1/1 Fish.",
         CounterType::Supply => "Stocking the Pantry tally — remove one to draw a card.",
         CounterType::Unlock => "Cryptex tally — one per collect-evidence; sacrifice for its payoff at five or more.",
+        CounterType::Palliation => "Palliation Accord tally — one per opponent's creature tapped; remove one to prevent 1 damage to you.",
         _ => return None,
     })
 }
