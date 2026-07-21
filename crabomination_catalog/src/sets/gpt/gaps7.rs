@@ -6,7 +6,7 @@ use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
     Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::on_attack;
+use crate::effect::shortcut::{on_attack, on_dies};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
 use crate::mana::{b, cost, g, r, u, w};
 
@@ -66,6 +66,45 @@ pub fn witch_maw_nephilim() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Orzhov Pontiff — {1}{W}{B} 1/1 Cleric with haunt. When it enters or the
+/// creature it haunts dies, choose one — your creatures get +1/+1, or creatures
+/// you don't control get -1/-1, until end of turn.
+pub fn orzhov_pontiff() -> CardDefinition {
+    let modal = Effect::ChooseMode(vec![
+        Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        },
+    ]);
+    CardDefinition {
+        name: "Orzhov Pontiff",
+        cost: cost(&[crate::mana::generic(1), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: modal.clone(),
+            },
+            on_dies(Effect::HauntCreature { body: Box::new(modal) }),
         ],
         ..Default::default()
     }

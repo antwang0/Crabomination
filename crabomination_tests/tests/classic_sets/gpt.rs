@@ -1367,3 +1367,23 @@ fn sabertooth_only_blocked_by_defenders() {
 fn cat_has_must_attack(g: &crabomination::game::GameState, id: crabomination::card::CardId) -> bool {
     g.computed_permanent(id).unwrap().keywords.contains(&Keyword::MustAttack)
 }
+
+/// Orzhov Pontiff's ETB choose-one debuffs the opponent's creatures.
+#[test]
+fn orzhov_pontiff_etb_debuffs_opponents() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    // Pick mode 1: creatures you don't control get -1/-1.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    let pontiff = g.add_card_to_hand(0, catalog::orzhov_pontiff());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pontiff, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Pontiff");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(foe).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "opponent's 2/2 shrank to 1/1");
+}
