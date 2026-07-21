@@ -3,6 +3,12 @@ use crate::card::{CardType, Keyword};
 use crate::effect::{Effect, ManaPayload};
 use crate::mana::{Color as ManaColor, ManaSymbol};
 
+/// Per-pick snapshot of a permanent sacrificed to an additional cost:
+/// `(id, power, is_creature, toughness, mana_value, is_artifact, is_vehicle,
+/// colors)`. Stamped onto the resolution scratch so the spell body can read
+/// `Value::Sacrificed*` and `Predicate::SacrificedWas*`.
+type SacrificeSnapshot = (CardId, u32, bool, i32, u32, bool, bool, Vec<ManaColor>);
+
 /// Skip-Ward check. Ward variants whose payment is trivially affordable
 /// (free mana, 0 life, 0 discard) would always auto-pay and produce no
 /// visible difference from no Ward at all — so we skip the stack-churn
@@ -5623,7 +5629,7 @@ impl GameState {
                     // (tokens first, then lowest mana value, then lowest power)
                     // for any remainder. The first sacrifice's power becomes
                     // the spell's X.
-                    let chosen: Vec<(CardId, u32, bool, i32, u32, bool, bool, Vec<crate::mana::Color>)> = {
+                    let chosen: Vec<SacrificeSnapshot> = {
                         let mut picked: Vec<&crate::card::CardInstance> = Vec::new();
                         if let Some(ids) = chosen_override.take() {
                             for id in ids {
