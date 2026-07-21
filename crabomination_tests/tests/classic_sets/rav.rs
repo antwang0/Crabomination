@@ -369,3 +369,71 @@ fn cackling_imp_drains_a_life() {
     assert_eq!(g.players[1].life, foe_life - 1, "target player lost 1 life");
     assert!(g.battlefield_find(imp).unwrap().tapped, "tapped as the cost");
 }
+
+// ── RAV gap wave 2 ───────────────────────────────────────────────────────────
+
+/// Stat/keyword lines for the vanilla and french-vanilla gap-wave-2 creatures.
+#[test]
+fn rav_gap2_stat_lines() {
+    let golem = catalog::glass_golem();
+    assert_eq!((golem.power, golem.toughness), (6, 2));
+    assert!(golem.card_types.contains(&crabomination::card::CardType::Artifact));
+
+    let spider = catalog::goliath_spider();
+    assert_eq!((spider.power, spider.toughness), (7, 6));
+    assert!(spider.keywords.contains(&Keyword::Reach));
+
+    let gharial = catalog::grayscaled_gharial();
+    assert!(gharial.keywords.iter().any(|k| matches!(k,
+        Keyword::Landwalk(crabomination::card::LandType::Island))));
+
+    let fiend = catalog::goblin_fire_fiend();
+    assert!(fiend.keywords.contains(&Keyword::Haste) && fiend.keywords.contains(&Keyword::MustBeBlocked));
+}
+
+/// Greater Forgeling pumps +3/-3 until end of turn.
+#[test]
+fn greater_forgeling_pumps() {
+    let mut g = two_player_game();
+    let f = g.add_card_to_battlefield(0, catalog::greater_forgeling());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: f, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(f).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 1), "3/4 → 6/1 after +3/-3");
+}
+
+/// Centaur Safeguard's death trigger gains 3 life when accepted.
+#[test]
+fn centaur_safeguard_gains_on_death() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::centaur_safeguard());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life0 = g.players[0].life;
+    g.battlefield_find_mut(c).unwrap().damage = 1; // lethal vs 3/1
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 3, "gained 3 on death");
+}
+
+/// Blazing Archon — creatures can't attack the player who controls it.
+#[test]
+fn blazing_archon_bars_attacks() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blazing_archon()); // P0 is protected
+    g.active_player_idx = 1;
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    let res = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(0),
+    }]));
+    assert!(res.is_err(), "the attack is barred by Blazing Archon");
+}

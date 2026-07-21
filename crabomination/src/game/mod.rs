@@ -13549,6 +13549,8 @@ fn static_effect_to_effects(
             | StaticEffect::LifeGainBecomesLoss { .. }
             // AttackTaxToController — consulted in declare_attackers; no layer.
             | StaticEffect::AttackTaxToController { .. }
+            // CreaturesCantAttackController — consulted in declare_attackers; no layer.
+            | StaticEffect::CreaturesCantAttackController { .. }
             // BlockTaxToController — consulted in declare_blockers; no layer.
             | StaticEffect::BlockTaxToController { .. }
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no

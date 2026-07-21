@@ -336,6 +336,32 @@ impl GameState {
             }
         }
 
+        // CR 508.1 — absolute "creatures can't attack you" prohibition (Blazing
+        // Archon). Reject the whole declaration if any attacker targets a player
+        // (or protected planeswalker) whose controller has the static.
+        for atk in &attacks {
+            let (defender, at_planeswalker) = match atk.target {
+                crate::game::types::AttackTarget::Player(d) => (Some(d), false),
+                crate::game::types::AttackTarget::Planeswalker(pw) => {
+                    (self.battlefield_find(pw).map(|c| c.controller), true)
+                }
+                crate::game::types::AttackTarget::Battle(b) => {
+                    (self.battlefield_find(b).and_then(|c| c.protected_by), false)
+                }
+            };
+            let Some(d) = defender else { continue };
+            let barred = self.battlefield.iter().filter(|c| c.controller == d).any(|c| {
+                c.definition.static_abilities.iter().any(|sa| matches!(
+                    &sa.effect,
+                    crate::effect::StaticEffect::CreaturesCantAttackController { protect_planeswalkers }
+                        if !at_planeswalker || *protect_planeswalkers
+                ))
+            });
+            if barred {
+                return Err(GameError::CannotAttack(atk.attacker));
+            }
+        }
+
         // CR 508.1g — attack tax (Ghostly Prison / Propaganda). Sum {amount}
         // for each attacker hitting a player who controls an
         // `AttackTaxToController` static (copies stack), then pay it from the

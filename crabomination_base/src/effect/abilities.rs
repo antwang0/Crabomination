@@ -664,6 +664,11 @@ pub enum StaticEffect {
     /// of Safety = number of enchantments you control. Copies stack. Paid from
     /// the pool, auto-tapping mana sources for any shortfall.
     AttackTaxToController { amount: Value, protect_planeswalkers: bool },
+    /// CR 508.1 — absolute attack prohibition. "Creatures can't attack you"
+    /// (and, when `protect_planeswalkers`, a planeswalker you control) — a hard
+    /// no, not a tax. Checked in `declare_attackers`. Blazing Archon,
+    /// Peacekeeper-style locks. (`AttackTaxToController` is the payable sibling.)
+    CreaturesCantAttackController { protect_planeswalkers: bool },
     /// CR 509.1d — block tax. "Creatures can't block unless their controllers
     /// pay `amount` for each of those creatures." Checked in `declare_blockers`,
     /// which sums the tax across every active source and auto-pays it from each

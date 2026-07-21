@@ -9388,6 +9388,13 @@ static RAV: &[Factory] = &[
     super::rav::conclaves_blessing,
     super::rav::autochthon_wurm,
     super::rav::cackling_imp,
+    super::rav::glass_golem,
+    super::rav::goliath_spider,
+    super::rav::grayscaled_gharial,
+    super::rav::centaur_safeguard,
+    super::rav::greater_forgeling,
+    super::rav::goblin_fire_fiend,
+    super::rav::blazing_archon,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,
