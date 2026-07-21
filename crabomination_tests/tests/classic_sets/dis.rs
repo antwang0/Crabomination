@@ -297,6 +297,22 @@ fn pain_magnification_ignores_small_hit() {
     assert_eq!(g.players[1].hand.len(), h1, "2 damage is below the threshold");
 }
 
+/// A Forecast card is surfaced as `hand_activatable` only during the owner's
+/// upkeep (its printed timing gate), not in other steps.
+#[test]
+fn forecast_hand_activatable_only_in_upkeep() {
+    let mut g = two_player_game();
+    let plumes = g.add_card_to_hand(0, catalog::plumes_of_peace());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    assert!(!g.compute_hand_affordances(0).hand_activatable.contains(&plumes),
+        "Forecast is not offered outside upkeep");
+    g.step = TurnStep::Upkeep;
+    assert!(g.compute_hand_affordances(0).hand_activatable.contains(&plumes),
+        "Forecast is offered during upkeep");
+}
+
 /// Stalking Vengeance turns a dying creature's power into damage to a player.
 #[test]
 fn stalking_vengeance_death_burns_target() {

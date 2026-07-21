@@ -1309,13 +1309,47 @@ impl GameState {
     /// ability (Talon Gates' `{4}` put-into-play, Spirit Guides' pitch mana).
     /// A pure structural filter — `activate_ability` re-checks cost/zone — so
     /// it needs no probe clone.
+    /// Hand cards with a `from_hand` activated ability that is *currently*
+    /// usable — its once-per-turn slot is unspent (Forecast, CR 702.56) and its
+    /// printed "activate only …" `condition` (e.g. the upkeep timing gate)
+    /// holds now. Timing/budget-aware so the client doesn't highlight a Forecast
+    /// card outside its upkeep window or after it's been used; unconditional
+    /// pitch abilities (Spirit Guides) stay always-listed.
     fn hand_activatable_cards(&self, seat: usize) -> Vec<CardId> {
         self.players[seat]
             .hand
             .iter()
-            .filter(|c| c.definition.activated_abilities.iter().any(|a| a.from_hand))
+            .filter(|c| {
+                c.definition
+                    .activated_abilities
+                    .iter()
+                    .enumerate()
+                    .any(|(i, a)| a.from_hand && self.hand_ability_usable_now(seat, c.id, i, a))
+            })
             .map(|c| c.id)
             .collect()
+    }
+
+    /// Whether the `from_hand` ability at index `i` on hand card `card_id` is
+    /// usable right now: its once-per-turn slot is free and its `condition`
+    /// (if any) evaluates true against the current game state.
+    fn hand_ability_usable_now(
+        &self,
+        seat: usize,
+        card_id: CardId,
+        i: usize,
+        a: &crate::effect::ActivatedAbility,
+    ) -> bool {
+        if a.once_per_turn && self.triggered_once_per_turn_used.contains(&(card_id, i)) {
+            return false;
+        }
+        match &a.condition {
+            None => true,
+            Some(cond) => {
+                let ctx = crate::game::effects::EffectContext::for_trigger(card_id, seat, None, 0);
+                self.evaluate_predicate(cond, &ctx)
+            }
+        }
     }
 
     /// Extra generic mana the caster owes on top of `card`'s printed
