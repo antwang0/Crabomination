@@ -892,7 +892,6 @@ fn gtc6_slate_street_ruffian_discards_on_block() {
 
 use crabomination::card::{CardType, LandType};
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::effect::{Effect, Selector, Value};
 use crabomination::mana::Color;
 
 /// Stat / keyword lines for the wave-7 Evolve creatures.
@@ -1100,4 +1099,87 @@ fn gtc7_verdant_haven_gains_life() {
     }).expect("cast aura");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before + 2, "gained 2 life on ETB");
+}
+
+// ── Wave 8 (gtc8) ─────────────────────────────────────────────────────────────
+
+/// Shadow Alley Denizen grants intimidate when another black creature enters.
+#[test]
+fn gtc8_shadow_alley_denizen_grants_intimidate() {
+    let mut g = two_player_game();
+    let denizen = g.add_card_to_battlefield(0, catalog::shadow_alley_denizen()); // black
+    let target = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    // Another black creature entering (Shadow Alley Denizen is black; cast one).
+    let black = g.add_card_to_hand(0, catalog::shadow_alley_denizen());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: black, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast black creature");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Intimidate));
+    let _ = denizen;
+}
+
+/// Structural Collapse makes the target sacrifice an artifact and a land, then
+/// deals 2 damage.
+#[test]
+fn gtc8_structural_collapse_edict_and_burn() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::millennial_gargoyle()); // artifact
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let life_before = g.players[1].life;
+    let spell = g.add_card_to_hand(0, catalog::structural_collapse());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast structural collapse");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact sacrificed");
+    assert!(g.battlefield_find(land).is_none(), "land sacrificed");
+    assert_eq!(g.players[1].life, life_before - 2, "took 2 damage");
+}
+
+/// Coerced Confession mills four and draws one per creature card milled
+/// (exercises the new `Effect::MillThenDrawPerType`).
+#[test]
+fn gtc8_coerced_confession_mills_and_draws_per_creature() {
+    let mut g = two_player_game();
+    // Opponent's top four: two creatures, two lands → I should draw two.
+    g.add_card_to_library(1, catalog::gutter_skulk());
+    g.add_card_to_library(1, catalog::gutter_skulk());
+    g.add_card_to_library(1, catalog::forest());
+    g.add_card_to_library(1, catalog::forest());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); } // my draw fuel
+    let my_lib_before = g.players[0].library.len();
+    let spell = g.add_card_to_hand(0, catalog::coerced_confession());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast coerced confession");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 4, "milled four");
+    assert_eq!(g.players[0].library.len(), my_lib_before - 2, "drew one per creature milled (2)");
+}
+
+/// Serene Remembrance shuffles up to three cards from a graveyard into the
+/// library.
+#[test]
+fn gtc8_serene_remembrance_shuffles_graveyard() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_graveyard(1, catalog::gutter_skulk()); }
+    let lib_before = g.players[1].library.len();
+    let spell = g.add_card_to_hand(0, catalog::serene_remembrance());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast serene remembrance");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.len() <= 0, "up to three cards left the graveyard");
+    assert_eq!(g.players[1].library.len(), lib_before + 3, "three cards shuffled in");
 }

@@ -16,6 +16,11 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **GTC wave 8 (this run, 8 cards):** the Dimir Cipher package, Spell Rupture,
+  Angelic Skirmisher (each-combat keyword grant), graveyard hate, a typed edict,
+  and Coerced Confession. New engine primitive: `Effect::MillThenDrawPerType`
+  (mill N from a target, draw one per milled card matching a filter). Tests
+  `classic_sets/gtc` (`gtc8_*`).
 - **GTC wave 7 (this run, 23 cards):** the Simic Evolve package, Boros Battalion
   payoffs, Gruul Bloodrush/land-scaling, the Orzhov mode-sweep, and two land
   Auras. New engine primitive: **Realmwright** — `Effect::ChooseBasicLandTypeForSource`

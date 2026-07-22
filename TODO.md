@@ -54,7 +54,14 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (top-of-library fight), Grave Betrayal (mass reanimate replacement), Search the
   City (extra-turn combo), Azor's Elocutors (filibuster-counter win). Legends:
   Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
-- **Gatecrash (GTC) — in progress (modern_decks):** seven waves shipped. Wave 7
+- **Gatecrash (GTC) — in progress (modern_decks):** eight waves shipped. Wave 8
+  (gtc8) added the Dimir Cipher package (Mental Vapors, Call of the Nightwing),
+  Shadow Alley Denizen (colored-ETB intimidate), Spell Rupture (counter-unless-
+  pay-X = greatest power), Angelic Skirmisher (each-combat `ChooseMode` keyword
+  grant, `AnyPlayer` BeginCombat), Serene Remembrance (graveyard→library shuffle),
+  Structural Collapse (typed edict + burn), and **Coerced Confession** — drove
+  the new **`Effect::MillThenDrawPerType`** (mill N from a target, draw one per
+  milled card matching a filter). Tests `gtc8_*`. Wave 7
   (gtc7) added the Simic Evolve package (Crocanura, Adaptive Snapjaw, Battering
   Krasis, Shambleshark, Clinging Anemones, Simic Fluxmage, Renegade Krasis —
   its "whenever this evolves" payoff is modeled as a paired trigger off the
@@ -71,8 +78,13 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Still open primitives: Alms Beast (combat-relational "creatures blocking/
   blocked by this have lifelink" static), Simic Manipulator (gain control of a
   creature with power ≤ counters removed), a true `EventKind::Evolved` (would
-  let Renegade Krasis drop the paired-trigger approximation), and the remaining
-  guild commons. The Scryfall gap script over-reports (Aetherize, Kingpin's Pet,
+  let Renegade Krasis drop the paired-trigger approximation), Hindervines
+  (filtered fog — "prevent all combat damage by creatures with no +1/+1
+  counters"), Thrull Parasite (remove a counter of *any* kind — `Effect::
+  RemoveCounter` is kind-specific), Gridlock (tap X distinct targets at cast),
+  Guardian of the Gateless ("can block any number of creatures" keyword),
+  Mark for Death (force a creature to block + others can't block), and the
+  remaining guild commons. The Scryfall gap script over-reports (Aetherize, Kingpin's Pet,
   Wojek Halberdiers, Balustrade Spy, Nav Squad Commandos, and now many wave-7
   names ship under other set modules).
 - **Ravnica guild remainder (recent291 follow-ups):** shipped Simic Guildmage

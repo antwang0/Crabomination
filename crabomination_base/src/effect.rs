@@ -2919,6 +2919,11 @@ pub enum Effect {
         creature: Box<Effect>,
         noncreature: Box<Effect>,
     },
+    /// The resolved player mills `amount` cards; then the ability's controller
+    /// draws one card for each milled card matching `filter` (Coerced
+    /// Confession — "target player mills four cards; you draw a card for each
+    /// creature card put into their graveyard this way").
+    MillThenDrawPerType { who: Selector, amount: Value, filter: SelectionRequirement },
     /// Reveal cards from the top of each resolved player's library until
     /// `lands` land cards are revealed, then put all revealed cards into
     /// that player's graveyard (Mind Grind, Consuming Aberration's trigger).

@@ -7823,6 +7823,16 @@ static GTC7: &[Factory] = &[
     super::gtc7::verdant_haven,
     super::gtc7::skygames,
 ];
+static GTC8: &[Factory] = &[
+    super::gtc8::mental_vapors,
+    super::gtc8::call_of_the_nightwing,
+    super::gtc8::shadow_alley_denizen,
+    super::gtc8::spell_rupture,
+    super::gtc8::angelic_skirmisher,
+    super::gtc8::serene_remembrance,
+    super::gtc8::structural_collapse,
+    super::gtc8::coerced_confession,
+];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,
 ];
@@ -14502,6 +14512,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("gtc5", GTC5),
     ("gtc6", GTC6),
     ("gtc7", GTC7),
+    ("gtc8", GTC8),
     ("ice", ICE),
     ("inv", INV),
     ("khm", KHM),

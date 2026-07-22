@@ -4241,6 +4241,44 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MillThenDrawPerType { who, amount, filter } => {
+                // Mill `amount` from each resolved player, counting milled
+                // cards matching `filter`; the controller then draws that
+                // many. Coerced Confession.
+                let base = self.evaluate_value(amount, ctx).max(0) as usize;
+                let mut matched = 0usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        let n = self.mill_count_for(p, base);
+                        for _ in 0..n {
+                            if self.players[p].library.is_empty() { break; }
+                            let card = self.players[p].library.remove(0);
+                            let cid = card.id;
+                            if crate::game::layers::requirement_matches_card(
+                                filter, &card, ctx.controller,
+                            ) {
+                                matched += 1;
+                            }
+                            if !self.route_to_graveyard(card, events) {
+                                events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                            }
+                            self.last_moved_cards.push(cid);
+                        }
+                    }
+                }
+                if matched > 0 {
+                    self.run_effect(
+                        &Effect::Draw {
+                            who: Selector::You,
+                            amount: crate::effect::Value::Const(matched as i32),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::MillUntilLands { who, lands } => self.resolve_mill_until_lands(who, lands, ctx, events),
 
             Effect::MillThenToHand { amount, filter, otherwise } => {

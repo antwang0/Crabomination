@@ -454,6 +454,7 @@ impl Effect {
             }
             Effect::LoseHalfLife { who, .. }
             | Effect::MillHalf { who, .. }
+            | Effect::MillThenDrawPerType { who, .. }
             | Effect::DiscardHalf { who, .. }
             | Effect::DoubleLife { who }
             | Effect::SacrificeHalf { who, .. } => sel_has_target(who),
@@ -915,6 +916,7 @@ impl Effect {
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
             Effect::LoseHalfLife { who, .. }
             | Effect::MillHalf { who, .. }
+            | Effect::MillThenDrawPerType { who, .. }
             | Effect::DiscardHalf { who, .. }
             | Effect::DoubleLife { who }
             | Effect::SacrificeHalf { who, .. } => sel_filter(who),
@@ -1993,6 +1995,7 @@ impl Effect {
                 }
                 Effect::LoseHalfLife { who, .. }
                 | Effect::MillHalf { who, .. }
+                | Effect::MillThenDrawPerType { who, .. }
                 | Effect::DiscardHalf { who, .. }
                 | Effect::SacrificeHalf { who, .. } => sel_find(who, slot),
                 Effect::SetLifeTotal { who, .. } => sel_find(who, slot),
