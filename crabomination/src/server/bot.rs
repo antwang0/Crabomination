@@ -3293,6 +3293,16 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     state.with_frozen_layers(|state| pick_blocks_inner(state, seat))
 }
 
+/// A creature the bot may legally declare as a blocker: `can_block()` only
+/// checks creature-ness + untapped, so also exclude Decayed (CR 702.147 — a
+/// Decayed creature can't block) and a granted/printed `CantBlock`. Used by
+/// every blocker-candidate pass so the gang-block / must-be-blocked / menace
+/// top-up passes never assemble an illegal declaration the engine rejects.
+fn bot_can_block(c: &crate::card::CardInstance) -> bool {
+    use crate::card::Keyword;
+    c.can_block() && !c.has_keyword(&Keyword::Decayed) && !c.has_keyword(&Keyword::CantBlock)
+}
+
 fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // Improved blocker heuristic (push claude/modern_decks):
     //   1. Build the candidate set of (attacker, attacker_power,
@@ -3417,12 +3427,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         // `can_block()` only checks creature-ness + untapped; also exclude
         // creatures that genuinely can't block (Decayed CR 702.147, or a
         // granted "can't block") so the bot never submits an illegal block.
-        .filter(|c| {
-            c.controller == seat
-                && c.can_block()
-                && !c.has_keyword(&Keyword::Decayed)
-                && !c.has_keyword(&Keyword::CantBlock)
-        })
+        .filter(|c| c.controller == seat && bot_can_block(c))
         .map(|c| {
             (
                 c.id,
@@ -3600,7 +3605,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         let mut idle: Vec<(CardId, i32, i32, bool, bool, bool)> = state
             .battlefield
             .iter()
-            .filter(|c| c.controller == seat && c.can_block() && !used.contains(&c.id))
+            .filter(|c| c.controller == seat && bot_can_block(c) && !used.contains(&c.id))
             .map(|c| {
                 (
                     c.id,
@@ -3687,7 +3692,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             .iter()
             .filter(|c| {
                 c.controller == seat
-                    && c.can_block()
+                    && bot_can_block(c)
                     && !assignments.iter().any(|(bid, _)| *bid == c.id)
                     && (!a_flying
                         || c.has_keyword(&Keyword::Flying)
@@ -3730,7 +3735,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 .iter()
                 .filter(|c| {
                     c.controller == seat
-                        && c.can_block()
+                        && bot_can_block(c)
                         && !assignments.iter().any(|(bid, _)| *bid == c.id)
                         && (!a_flying
                             || c.has_keyword(&Keyword::Flying)
@@ -5081,6 +5086,35 @@ mod tests {
         let blocks = pick_blocks_for_test(&g, 1);
         assert_eq!(blocks, vec![(chump, atk)], "forced block uses the 1/1, sparing the 3/3");
         assert!(!blocks.iter().any(|(b, _)| *b == big), "the 3/3 is not thrown away");
+    }
+
+    /// CR 702.147 — a Decayed creature can't block, so the bot must not pull
+    /// one into a gang block even when its life is on the line.
+    #[test]
+    fn bot_never_gang_blocks_with_decayed_creature() {
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let mut big = catalog::grizzly_bears();
+        big.name = "Bruiser"; big.power = 6; big.toughness = 6;
+        let atk = g.add_card_to_battlefield(0, big);
+        g.clear_sickness(atk);
+        g.players[1].life = 5; // lethal is on the table → life_threatened
+        // Two Decayed 3/3s: enough raw power to "kill" the 6/6 on paper, but
+        // they can't legally block.
+        let mut zombie = catalog::grizzly_bears();
+        zombie.name = "Rotter"; zombie.power = 3; zombie.toughness = 3;
+        zombie.keywords.push(crate::card::Keyword::Decayed);
+        let z1 = g.add_card_to_battlefield(1, zombie.clone());
+        let z2 = g.add_card_to_battlefield(1, zombie);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: atk, target: AttackTarget::Player(1),
+        }])).expect("declare attacker");
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(!blocks.iter().any(|(b, _)| *b == z1 || *b == z2),
+            "Decayed creatures are never assigned as blockers");
     }
 
     /// An indestructible blocker walls a big attacker for free (CR 702.12) —

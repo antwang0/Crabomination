@@ -276,6 +276,17 @@ fn req_short(req: &crabomination::card::SelectionRequirement) -> Option<String> 
         R::Enchantment => "Ench".to_string(),
         R::Creature => "Cre".to_string(),
         R::Land => "Land".to_string(),
+        // Composite filters (e.g. "can't be blocked by white creatures" =
+        // And(Creature, HasColor(White))) — name the more specific half so
+        // the chip reads "Eva-·White" rather than a bare "Eva-". A plain
+        // "Cre" qualifier yields to the informative sibling.
+        R::And(a, b) => match (req_short(a), req_short(b)) {
+            (Some(sa), Some(sb)) if sa == "Cre" => sb,
+            (Some(sa), Some(sb)) if sb == "Cre" => sa,
+            (Some(sa), _) => sa,
+            (_, Some(sb)) => sb,
+            _ => return None,
+        },
         _ => return None,
     })
 }
@@ -563,8 +574,20 @@ pub fn sync_keyword_labels(
 
 #[cfg(test)]
 mod tests {
-    use super::{board_status_strip, keyword_strip};
+    use super::{board_status_strip, keyword_strip, req_short};
     use crabomination::card::Keyword;
+
+    #[test]
+    fn req_short_names_composite_filter_half() {
+        use crabomination::card::SelectionRequirement as R;
+        use crabomination::mana::Color;
+        // "can't be blocked by white creatures" → name the color, not "Cre".
+        let f = R::Creature.and(R::HasColor(Color::White));
+        assert_eq!(req_short(&f).as_deref(), Some("White"));
+        // A bare creature-type filter still names the type.
+        let f2 = R::Creature.and(R::HasCreatureType(crabomination::card::CreatureType::Goblin));
+        assert_eq!(req_short(&f2).as_deref(), Some("Goblin"));
+    }
 
     #[test]
     fn strip_dedupes_and_orders_combat_keywords() {
