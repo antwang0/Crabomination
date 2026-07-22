@@ -176,6 +176,26 @@ pub fn izzet_staticaster() -> CardDefinition {
     }
 }
 
+/// Urban Burgeoning — {G} Aura. Enchant land. Enchanted land has "Untap this
+/// land during each other player's untap step."
+pub fn urban_burgeoning() -> CardDefinition {
+    CardDefinition {
+        name: "Urban Burgeoning",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted land untaps during each other player's untap step.",
+            effect: StaticEffect::UntapAttachedEachUntapStep,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Street Sweeper — {6} 4/6 Construct artifact creature. Whenever it attacks,
 /// destroy all Auras attached to target land.
 pub fn street_sweeper() -> CardDefinition {

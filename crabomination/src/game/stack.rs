@@ -2108,6 +2108,30 @@ impl GameState {
                 card.tapped = false;
             }
         }
+        // CR 502.3 — an Aura's "Enchanted land untaps during each other
+        // player's untap step" (Urban Burgeoning). Collect the hosts whose
+        // aura carries the static and whose controller isn't the untapper.
+        let untap_hosts: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|src| {
+                !untappers.contains(&src.controller)
+                    && src.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, StaticEffect::UntapAttachedEachUntapStep)
+                    })
+            })
+            .filter_map(|src| src.attached_to)
+            .collect();
+        for host in untap_hosts {
+            if let Some(card) = self.battlefield_find_mut(host) {
+                if card.counter_count(CounterType::Stun) > 0 {
+                    card.remove_counters(CounterType::Stun, 1);
+                } else if card.tapped {
+                    card.tapped = false;
+                    untapped_now.push(host);
+                }
+            }
+        }
         // CR 701.38 — goad lasts "until your next turn." When the goader's
         // (= active player p's) turn begins, drop their goad on every
         // creature so the must-attack requirement lifts.

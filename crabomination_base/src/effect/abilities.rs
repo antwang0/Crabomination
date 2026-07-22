@@ -1631,6 +1631,11 @@ pub enum StaticEffect {
     /// (i.e. whenever the active player is someone else). Thousand Moons
     /// Infantry. Consulted by `do_untap` in a follow-up pass.
     UntapSelfEachUntapStep,
+    /// CR 502.3 — an Aura's "Enchanted [permanent] untaps during each other
+    /// player's untap step" (Urban Burgeoning). The source's attached host
+    /// untaps on every untap step its controller doesn't already untap on.
+    /// Consulted by `do_untap` alongside `UntapSelfEachUntapStep`.
+    UntapAttachedEachUntapStep,
     /// CR 502.3 — "Players can't untap more than one nonbasic land during their
     /// untap steps." Winter Moon / Mana Web-style lock. Consulted by `do_untap`:
     /// each untapping player untaps at most one nonbasic land (the rest stay

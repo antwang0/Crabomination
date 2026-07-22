@@ -1589,6 +1589,20 @@ fn volatile_rig_explodes_on_death() {
     assert_eq!(g.battlefield_find(bystander).unwrap().damage, 4, "bystander took 4");
 }
 
+/// Urban Burgeoning untaps its enchanted land during an opponent's untap step.
+#[test]
+fn urban_burgeoning_untaps_on_opponents_untap() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let aura = g.add_card_to_battlefield(0, catalog::urban_burgeoning());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(land);
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.active_player_idx = 1; // opponent's untap step
+    g.do_untap();
+    assert!(!g.battlefield_find(land).unwrap().tapped,
+        "enchanted land untapped on the opponent's untap step");
+}
+
 /// Street Sweeper destroys the Auras on a land when it attacks.
 #[test]
 fn street_sweeper_clears_land_auras() {

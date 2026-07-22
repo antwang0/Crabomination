@@ -13884,6 +13884,9 @@ fn static_effect_to_effects(
             // UntapSelfEachUntapStep (Thousand Moons Infantry) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapSelfEachUntapStep
+            // UntapAttachedEachUntapStep (Urban Burgeoning) — consulted by
+            // `do_untap`; no layer effect.
+            | StaticEffect::UntapAttachedEachUntapStep
             // MaxOneNonbasicLandUntap (Winter Moon) — consulted by `do_untap`;
             // no layer effect.
             | StaticEffect::MaxOneNonbasicLandUntap
