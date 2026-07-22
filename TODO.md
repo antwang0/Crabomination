@@ -66,13 +66,15 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
     (a real block-declaration / multi-block change; `block_map` is 1:1 today).
   - **Aurelia's Fury** — `DealDamageDivided` + tap each creature damaged *this
     way* + those players can't cast noncreature spells (a bound-recipient rider).
+    Cleanest path: a `damaged_this_resolution: Vec<Target>` scratch on GameState
+    (reset in the resolution-scratch block, appended in `deal_damage_to_from`
+    only where damage actually lands) + a `Selector::DamagedThisResolution(filter)`,
+    then `Seq[DealDamageDivided, Tap(damaged creatures), CantCastNoncreatureThisTurn(damaged players)]`.
   - **Vizkopa Confessor** — Extort ships; the ETB "pay any amount of life →
     target opponent reveals that many → you exile one" needs a pay-X-life +
     reveal-N-from-hand + choose-exile primitive.
   - **Glaring Spotlight** — an "ignore opponents' hexproof" targeting static
     (touches every hexproof check) + the easy sac ability.
-  - **Enter the Infinite** — draw = library size + `SetNoMaxHandSize` exist; the
-    "put a card from your hand on top of your library" clause has no primitive.
   - **Gideon, Champion of Justice** — planeswalker that animates to a
     loyalty-sized indestructible creature (self-animate + damage prevention).
   - **Lazav** (become-copy on opp-gy creature), **Nightveil Specter / Bane Alley
