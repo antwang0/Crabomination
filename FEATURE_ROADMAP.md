@@ -16,7 +16,24 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **GTC waves 10–14 (this run, 20 cards):** the five Primordial ETB Avatars,
+- **GTC wave 15 (this run, 15 cards):** Alms Beast (combat-partner lifelink via
+  live block-map resolution of `CreaturesInCombatWith` in the `PumpTeamIf`
+  gather), Hold the Gates, Way of the Thief, Diluvian Primordial (free-cast I/S
+  from opponents' graveyards), Five-Alarm Fire, Simic Manipulator, Tin Street
+  Market, Armored Transport, Vizkopa Guildmage, Duskmantle Guildmage, Mystic
+  Genesis (MV-sized Ooze via mint-time `dynamic_pt`), Borborygmos Enraged,
+  Obzedat, Ooze Flux, Mark for Death. New engine work:
+  `StaticEffect::PreventAllCombatDamageToThisFromBlockers` (Armored Transport),
+  `Effect::WheneverYouGainLifeThisTurn` + `DelayedKind::YouGainLifeThisTurn`
+  (Vizkopa Guildmage), `Effect::WheneverCardEntersOpponentGraveyardThisTurn` +
+  `DelayedKind::CardEntersOpponentGraveyardThisTurn` (Duskmantle Guildmage),
+  `Effect::RevealTopTakeMatchingRestToGraveyard` (Borborygmos),
+  `Effect::MayExileSelfReturnNextUpkeepHaste` (Obzedat),
+  `ActivatedAbility.remove_counter_among_x` (Ooze Flux),
+  `Selector::OtherCreaturesControlledByControllerOf` (Mark for Death). CR
+  conformance: 702.15 (lifelink), 302.6 (tap summoning-sickness), 601.2d
+  (divided damage). Server: `stalemate_grind_pct` gauge. Client: Unleash chip.
+- **GTC waves 10–14 (prior run, 20 cards):** the five Primordial ETB Avatars,
   Molten/Sepulchral/Sylvan/Luminate steal-destroy-reanimate ETBs, Treasury
   Thrull + Hellkite Tyrant (combat-damage payoffs + 20-artifact WinGame), Lord
   of the Void (exile-7-put-creature via `ExiledThisResolution`), Duskmantle Seer

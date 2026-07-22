@@ -54,30 +54,32 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (top-of-library fight), Grave Betrayal (mass reanimate replacement), Search the
   City (extra-turn combo), Azor's Elocutors (filibuster-counter win). Legends:
   Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
-- **Gatecrash (GTC) — in progress (modern_decks):** fourteen waves shipped
-  (gtc..gtc14). Waves 10–14 (this run) closed the Primordial cycle, the
-  combat-damage payoffs, Domri Rade, and the Aura/utility spread; see
-  FEATURE_ROADMAP "Already shipped". Newly resolved from this list: Hindervines
-  (`PreventCombatDamageExceptDealtBy`), Thrull Parasite (`Effect::
-  RemoveAnyCounter`), Gridlock (`TapUpToValue` X). **Still open primitives:**
-  - **Five-Alarm Fire** — needs a unified "a creature deals combat damage to
-    anything" event (only `DealsCombatDamageToPlayer` / `…ToCreature` exist, so
-    a payoff can't count both without double-counting a trample split). Also
-    wants a dedicated `CounterType::Blaze` (reused nothing this run).
+- **Gatecrash (GTC) — in progress (modern_decks):** fifteen waves shipped
+  (gtc..gtc15). Wave 15 (this run) closed most of the remaining gaps —
+  Alms Beast, Hold the Gates, Way of the Thief, Diluvian Primordial, Five-Alarm
+  Fire (reusing `CounterType::Charge` for blaze counters; two triggers cover the
+  player/creature combat-damage split), Simic Manipulator, Tin Street Market,
+  Armored Transport, Vizkopa/Duskmantle Guildmage, Mystic Genesis, Borborygmos,
+  Obzedat, Ooze Flux, Mark for Death; see FEATURE_ROADMAP "Already shipped".
+  **Still open (each needs a real new primitive):**
   - **Guardian of the Gateless** — "can block any number of creatures" keyword
-    (a real block-declaration change).
-  - **Mark for Death** — force a creature to block while its *other* controllers'
-    creatures can't; needs an "other than target" creature selector for the
-    CantBlock grant.
-  - **Mystic Genesis** — X/X token where X = the *countered spell's mana value*
-    (no such `Value`; `CounteredSpellManaSpent` is mana spent, not MV).
-  - **Vizkopa / Duskmantle Guildmage** — each needs a this-turn "whenever you
-    gain life / a card enters an opponent's graveyard, drain" delayed-static.
-  - **Simic Manipulator** (steal by counters removed), **Alms Beast**,
-    **Lazav** (become-copy on opp-gy creature), **Obzedat** (end-step self-blink
-    returning next upkeep), **Nightveil Specter / Bane Alley Broker** (play from
-    a personal exile stash), **Signal the Clans** (random pick of a distinct
-    reveal), **Gideon, Champion of Justice**, **Enter the Infinite**.
+    (a real block-declaration / multi-block change; `block_map` is 1:1 today).
+  - **Aurelia's Fury** — `DealDamageDivided` + tap each creature damaged *this
+    way* + those players can't cast noncreature spells (a bound-recipient rider).
+  - **Vizkopa Confessor** — Extort ships; the ETB "pay any amount of life →
+    target opponent reveals that many → you exile one" needs a pay-X-life +
+    reveal-N-from-hand + choose-exile primitive.
+  - **Glaring Spotlight** — an "ignore opponents' hexproof" targeting static
+    (touches every hexproof check) + the easy sac ability.
+  - **Enter the Infinite** — draw = library size + `SetNoMaxHandSize` exist; the
+    "put a card from your hand on top of your library" clause has no primitive.
+  - **Gideon, Champion of Justice** — planeswalker that animates to a
+    loyalty-sized indestructible creature (self-animate + damage prevention).
+  - **Lazav** (become-copy on opp-gy creature), **Nightveil Specter / Bane Alley
+    Broker** (play from a personal exile stash), **Soul Ransom** (control-steal
+    Aura + opponent-activated sac), **Illusionist's Bracers** (copy an activated
+    ability), **Signal the Clans / Unexpected Results** (random pick / shuffled
+    top).
   Note: `Effect::ExileReturnNextEndStep` always returns under You **with a
   +1/+1 counter** (Semester's End shape); the plain flickers that reuse it
   (Cloudshift-likes) shouldn't add a counter — audit and split them onto the

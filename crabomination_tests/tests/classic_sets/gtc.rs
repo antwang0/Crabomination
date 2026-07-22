@@ -1180,7 +1180,7 @@ fn gtc8_serene_remembrance_shuffles_graveyard() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast serene remembrance");
     drain_stack(&mut g);
-    assert!(g.players[1].graveyard.len() <= 0, "up to three cards left the graveyard");
+    assert!(g.players[1].graveyard.is_empty(), "up to three cards left the graveyard");
     assert_eq!(g.players[1].library.len(), lib_before + 3, "three cards shuffled in");
 }
 
