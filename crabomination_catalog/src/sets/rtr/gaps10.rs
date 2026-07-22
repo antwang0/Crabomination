@@ -3,15 +3,16 @@
 //! X-charge-counter mana enchantment. Tests in `classic_sets/rtr`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, Subtypes,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect,
+    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
+    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value,
 };
 use crate::card::DynamicPt;
-use crate::effect::{ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
-use crate::effect::shortcut::{on_dies, target_filtered};
-use crate::mana::{b, cost, g, generic, r, u, x, ManaCost};
+use crate::effect::shortcut::{etb, on_dies, target_filtered};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
 
 /// Conjured Currency — {5}{U} Enchantment. At the beginning of your upkeep, you
 /// may exchange control of this enchantment and target permanent you neither
@@ -49,7 +50,7 @@ pub fn jarad_golgari_lich_lord() -> CardDefinition {
         name: "Jarad, Golgari Lich Lord",
         cost: cost(&[b(), b(), g(), g()]),
         card_types: vec![CardType::Creature],
-        supertypes: vec![crate::card::Supertype::Legendary],
+        supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie, CreatureType::Elf],
             ..Default::default()
@@ -170,6 +171,85 @@ pub fn izzet_staticaster() -> CardDefinition {
                 amount: Value::ONE,
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Racecourse Fury — {R} Aura. Enchant land. Enchanted land has "{T}: Target
+/// creature gains haste until end of turn."
+pub fn racecourse_fury() -> CardDefinition {
+    CardDefinition {
+        name: "Racecourse Fury",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted land has \"{T}: Target creature gains haste until end of turn.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::GrantKeyword {
+                        what: target_filtered(R::Creature),
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Security Blockade — {2}{W} Aura. Enchant land. When it enters, create a 2/2
+/// white Knight creature token with vigilance. Enchanted land has "{T}: Prevent
+/// the next 1 damage that would be dealt to you this turn."
+pub fn security_blockade() -> CardDefinition {
+    let knight = TokenDefinition {
+        name: "Knight".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Security Blockade",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: knight,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted land has \"{T}: Prevent the next 1 damage that would be dealt to you this turn.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::PreventNextDamage {
+                        target: Selector::Player(PlayerRef::You),
+                        amount: Value::ONE,
+                    },
+                    ..Default::default()
+                },
+                condition: None,
+            },
         }],
         ..Default::default()
     }

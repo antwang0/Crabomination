@@ -1589,6 +1589,59 @@ fn volatile_rig_explodes_on_death() {
     assert_eq!(g.battlefield_find(bystander).unwrap().damage, 4, "bystander took 4");
 }
 
+/// Racecourse Fury lets its enchanted land grant haste.
+#[test]
+fn racecourse_fury_grants_haste() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::mountain());
+    let fury = g.add_card_to_battlefield(0, catalog::racecourse_fury());
+    g.battlefield_find_mut(fury).unwrap().attached_to = Some(land);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    // Index 0 is the land's own mana ability; the granted haste ability is 1.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("grant haste");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
+        "enchanted land granted haste");
+}
+
+/// Security Blockade mints a Knight and its land prevents 1 damage.
+#[test]
+fn security_blockade_knight_and_prevention() {
+    use crabomination::game::effects::EntityRef;
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::plains());
+    let aura = g.add_card_to_hand(0, catalog::security_blockade());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let knights_before = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_creature()).count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count(),
+        knights_before + 1, "made a Knight token");
+    // Activate the granted prevention (index 1; 0 is the land's mana), then
+    // 3 damage lands as 2.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("prevent shield");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 3, None, &mut evs);
+    assert_eq!(g.players[0].life, life - 2, "1 of 3 damage prevented");
+}
+
 /// Izzet Staticaster pings the target creature and every same-named creature.
 #[test]
 fn izzet_staticaster_pings_same_name() {
