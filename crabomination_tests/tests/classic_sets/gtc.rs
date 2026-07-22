@@ -1747,3 +1747,100 @@ fn gtc14_frontline_medic_counters_x_spell() {
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == xspell), "the X spell was countered");
 }
+
+// ── Wave 15 ──────────────────────────────────────────────────────────────────
+
+/// Alms Beast grants lifelink to a creature blocking it.
+#[test]
+fn gtc15_alms_beast_grants_lifelink_in_combat() {
+    let mut g = two_player_game();
+    let beast = g.add_card_to_battlefield(0, catalog::alms_beast());
+    g.clear_sickness(beast);
+    let blocker = g.add_card_to_battlefield(1, catalog::ruination_wurm());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: beast, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, beast)])).expect("block");
+    assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::Lifelink),
+        "the blocker gains lifelink while in combat with Alms Beast");
+}
+
+/// Hold the Gates buffs and gives vigilance, scaling toughness per Gate.
+#[test]
+fn gtc15_hold_the_gates_scales_with_gates() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::azorius_guildgate());
+    g.add_card_to_battlefield(0, catalog::dimir_guildgate());
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
+    g.add_card_to_battlefield(0, catalog::hold_the_gates());
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.toughness, 4, "+0/+1 per Gate (two Gates)");
+    assert!(c.keywords.contains(&Keyword::Vigilance), "has vigilance");
+}
+
+/// Way of the Thief makes its host unblockable only while you control a Gate.
+#[test]
+fn gtc15_way_of_the_thief_conditional_unblockable() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
+    let aura = g.add_card_to_battlefield(0, catalog::way_of_the_thief());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "+2/+2");
+    assert!(!c.keywords.contains(&Keyword::Unblockable), "not unblockable without a Gate");
+    g.add_card_to_battlefield(0, catalog::azorius_guildgate());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable),
+        "unblockable once you control a Gate");
+}
+
+/// Diluvian Primordial casts an instant from an opponent's graveyard for free.
+#[test]
+fn gtc15_diluvian_primordial_casts_from_opp_gy() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let prim = g.add_card_to_battlefield(0, catalog::diluvian_primordial());
+    let total_before: i32 = g.players.iter().map(|p| p.life).sum();
+    // Accept the free cast (the I/S target and the Bolt's target are auto-picked).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_self_etb_triggers(prim, 0);
+    drain_stack(&mut g);
+    // The stolen Bolt was cast (3 damage dealt somewhere) and exiled, not
+    // returned to the opponent's graveyard.
+    let total_after: i32 = g.players.iter().map(|p| p.life).sum();
+    assert_eq!(total_after, total_before - 3, "the stolen Bolt dealt 3");
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != bolt), "Bolt exiled, not back in gy");
+}
+
+/// Five-Alarm Fire accrues a counter on combat damage and burns for 5 at five.
+#[test]
+fn gtc15_five_alarm_fire_accrues_and_burns() {
+    let mut g = two_player_game();
+    let fire = g.add_card_to_battlefield(0, catalog::five_alarm_fire());
+    g.battlefield_find_mut(fire).unwrap().add_counters(CounterType::Charge, 4);
+    let attacker = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
+    g.clear_sickness(attacker);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(fire).unwrap().counters.get(&CounterType::Charge).copied().unwrap_or(0),
+        5, "a fifth counter from the combat-damage trigger");
+    // Remove five counters to deal 5 to the opponent.
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fire, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("burn");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 5, "dealt 5");
+    assert_eq!(g.battlefield_find(fire).unwrap().counters.get(&CounterType::Charge).copied().unwrap_or(0),
+        0, "five counters removed");
+}

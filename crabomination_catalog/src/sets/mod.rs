@@ -301,6 +301,7 @@ pub mod gtc11;
 pub mod gtc12;
 pub mod gtc13;
 pub mod gtc14;
+pub mod gtc15;
 pub mod ice;
 pub mod inv;
 pub mod khm;

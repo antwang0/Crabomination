@@ -5778,7 +5778,27 @@ impl GameState {
                 if !self.evaluate_predicate(condition, &ctx) {
                     continue;
                 }
-                if let Some(affected) = selector_to_affected(applies_to, card) {
+                // `selector_to_affected` covers the printed-characteristic
+                // selectors; combat-relationship selectors (Alms Beast's
+                // "creatures blocking or blocked by this") need the live
+                // block map, so resolve those to a concrete id set here.
+                let affected = selector_to_affected(applies_to, card).or_else(|| {
+                    matches!(applies_to, crate::effect::Selector::CreaturesInCombatWith(inner)
+                        if matches!(inner.as_ref(), crate::effect::Selector::This))
+                        .then(|| {
+                            let mut ids = Vec::new();
+                            if let Some(&aid) = self.block_map.get(&card.id) {
+                                ids.push(aid);
+                            }
+                            for (&bid, &aid) in &self.block_map {
+                                if aid == card.id {
+                                    ids.push(bid);
+                                }
+                            }
+                            AffectedPermanents::Specific(ids)
+                        })
+                });
+                if let Some(affected) = affected {
                     if *power != 0 || *toughness != 0 {
                         all_effects.push(ContinuousEffect {
                             timestamp: card.object_timestamp(),

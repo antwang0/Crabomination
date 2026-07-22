@@ -7849,6 +7849,11 @@ static GTC9: &[Factory] = &[
     super::gtc13::gridlock,
     super::gtc14::one_thousand_lashes,
     super::gtc14::frontline_medic,
+    super::gtc15::alms_beast,
+    super::gtc15::hold_the_gates,
+    super::gtc15::way_of_the_thief,
+    super::gtc15::diluvian_primordial,
+    super::gtc15::five_alarm_fire,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,
