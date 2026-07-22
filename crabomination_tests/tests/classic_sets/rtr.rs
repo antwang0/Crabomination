@@ -393,3 +393,189 @@ fn chaos_imps_trample_gated_on_counter() {
     assert!(g.computed_permanent(imps).unwrap().keywords.contains(&Keyword::Trample),
         "trample once it has a +1/+1 counter");
 }
+
+// ── RTR gap wave 5 (gaps4.rs) ────────────────────────────────────────────────
+
+/// Stat/keyword lines for the wave-5 vanilla / french-vanilla creatures.
+#[test]
+fn rtr_wave5_stat_lines() {
+    assert!(catalog::trained_caracal().keywords.contains(&Keyword::Lifelink));
+    assert!(catalog::fencing_ace().keywords.contains(&Keyword::DoubleStrike));
+    let hb = catalog::hover_barrier();
+    assert_eq!((hb.power, hb.toughness), (0, 6));
+    assert!(hb.keywords.contains(&Keyword::Defender) && hb.keywords.contains(&Keyword::Flying));
+    let hp = catalog::hussar_patrol();
+    assert!(hp.keywords.contains(&Keyword::Flash) && hp.keywords.contains(&Keyword::Vigilance));
+    assert!(catalog::golgari_decoy().keywords.contains(&Keyword::AllMustBlock));
+}
+
+/// Izzet Keyrune taps for U or R, then animates into a 2/1 creature.
+#[test]
+fn izzet_keyrune_animates() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let rune = g.add_card_to_battlefield(0, catalog::izzet_keyrune());
+    g.clear_sickness(rune);
+    // Not a creature at rest.
+    assert!(!g.computed_permanent(rune).unwrap().card_types.contains(&crabomination::card::CardType::Creature));
+    // Animate for {U}{R}.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rune, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(rune).unwrap();
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "became a creature");
+    assert_eq!((cp.power, cp.toughness), (2, 1), "2/1 Elemental");
+}
+
+/// Armory Guard has vigilance only while you control a Gate.
+#[test]
+fn armory_guard_gate_vigilance() {
+    let mut g = two_player_game();
+    let guard = g.add_card_to_battlefield(0, catalog::armory_guard());
+    assert!(!g.computed_permanent(guard).unwrap().keywords.contains(&Keyword::Vigilance),
+        "no vigilance without a Gate");
+    g.add_card_to_battlefield(0, catalog::azorius_guildgate());
+    assert!(g.computed_permanent(guard).unwrap().keywords.contains(&Keyword::Vigilance),
+        "vigilance once you control a Gate");
+}
+
+/// Axebane Guardian taps for mana equal to your defenders.
+#[test]
+fn axebane_guardian_mana_scales_with_defenders() {
+    let mut g = two_player_game();
+    let axe = g.add_card_to_battlefield(0, catalog::axebane_guardian()); // itself a defender
+    g.clear_sickness(axe);
+    g.add_card_to_battlefield(0, catalog::hover_barrier()); // second defender
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: axe, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("mana");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "two mana (two defenders)");
+}
+
+/// Lobber Crew pings each opponent and untaps when you cast a multicolored spell.
+#[test]
+fn lobber_crew_pings_and_untaps_on_multicolor() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let crew = g.add_card_to_battlefield(0, catalog::lobber_crew());
+    g.clear_sickness(crew);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crew, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "1 damage to opponent");
+    assert!(g.battlefield_find(crew).unwrap().tapped, "tapped after activating");
+    // Cast a multicolored spell → untap.
+    let gold = g.add_card_to_hand(0, catalog::auger_spree()); // {1}{B}{R} multicolored
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gold,
+        target: Some(crabomination::game::types::Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast multicolored");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(crew).unwrap().tapped, "untapped by the multicolored cast");
+}
+
+/// Judge's Familiar sacrifices to counter an instant unless {1} is paid.
+#[test]
+fn judges_familiar_counters_unpaid_spell() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bird = g.add_card_to_battlefield(0, catalog::judges_familiar());
+    // Opponent casts Explosive Impact ({5}{R}) with no spare mana to pay the {1}.
+    let bolt = g.add_card_to_hand(1, catalog::explosive_impact());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add_colorless(5);
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crabomination::game::types::Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    // Sacrifice the Bird to counter the spell on the stack.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bird, ability_index: 0,
+        target: Some(crabomination::game::types::Target::Permanent(bolt)),
+        additional_targets: vec![], x_value: None,
+    }).expect("sac to counter");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "spell countered into graveyard");
+    assert!(g.battlefield_find(bird).is_none(), "Bird sacrificed");
+}
+
+/// Korozda Guildmage's second ability sacrifices a creature for Saprolings equal
+/// to its toughness.
+#[test]
+fn korozda_guildmage_makes_saprolings() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hover_barrier()); // 0/6 nontoken fodder (sacrificed first)
+    let mage = g.add_card_to_battlefield(0, catalog::korozda_guildmage());
+    g.clear_sickness(mage);
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for saprolings");
+    drain_stack(&mut g);
+    let saps = g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count();
+    assert_eq!(saps, 6, "six Saprolings (sacrificed 0/6's toughness)");
+}
+
+/// Rootborn Defenses gives your creatures indestructible.
+#[test]
+fn rootborn_defenses_grants_indestructible() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::rootborn_defenses());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible),
+        "your creature gains indestructible");
+}
+
+/// Civic Saber pumps +1/+0 for each color of the equipped creature.
+#[test]
+fn civic_saber_scales_with_host_colors() {
+    let mut g = two_player_game();
+    // Watchwolf is G/W — two colors.
+    let wolf = g.add_card_to_battlefield(0, catalog::watchwolf());
+    let saber = g.add_card_to_battlefield(0, catalog::civic_saber());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: saber, target: wolf }).expect("equip");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(wolf).unwrap().power, 3 + 2, "+2/+0 (two colors)");
+}
+
+/// Ogre Jailbreaker can attack despite defender while you control a Gate.
+#[test]
+fn ogre_jailbreaker_attacks_with_gate() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let ogre = g.add_card_to_battlefield(0, catalog::ogre_jailbreaker());
+    g.clear_sickness(ogre);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ogre, target: AttackTarget::Player(1) }])).is_err(),
+        "can't attack without a Gate (defender)",
+    );
+    g.add_card_to_battlefield(0, catalog::golgari_guildgate());
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ogre, target: AttackTarget::Player(1) }]))
+        .expect("can attack once you control a Gate");
+}
