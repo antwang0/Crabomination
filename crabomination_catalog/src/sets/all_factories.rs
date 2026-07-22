@@ -7854,6 +7854,8 @@ static GTC9: &[Factory] = &[
     super::gtc15::way_of_the_thief,
     super::gtc15::diluvian_primordial,
     super::gtc15::five_alarm_fire,
+    super::gtc15::simic_manipulator,
+    super::gtc15::tin_street_market,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,

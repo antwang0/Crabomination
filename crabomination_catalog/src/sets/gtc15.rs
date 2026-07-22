@@ -162,3 +162,55 @@ pub fn five_alarm_fire() -> CardDefinition {
     }
 }
 
+/// Simic Manipulator — {1}{U}{U} 0/1 Mutant Wizard. Evolve; {T}, remove X +1/+1
+/// counters from it: gain control of target creature with power ≤ X.
+pub fn simic_manipulator() -> CardDefinition {
+    use crate::effect::{Duration, PlayerRef};
+    CardDefinition {
+        name: "Simic Manipulator",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Mutant, CreatureType::Wizard]),
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::evolve()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            remove_counter_x: Some(CounterType::PlusOnePlusOne),
+            effect: Effect::GainControl {
+                what: target_filtered(R::Creature.and(R::PowerAtMostXFromCost)),
+                to: Some(PlayerRef::You),
+                duration: Duration::Permanent,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tin Street Market — {4}{R} Aura. Enchant land; it gains "{T}, Discard a card:
+/// Draw a card."
+pub fn tin_street_market() -> CardDefinition {
+    CardDefinition {
+        name: "Tin Street Market",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: aura(),
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted land has \"{T}, Discard a card: Draw a card.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    discard_cost: Some((R::Any, 1)),
+                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+

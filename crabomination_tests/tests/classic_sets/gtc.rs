@@ -1844,3 +1844,42 @@ fn gtc15_five_alarm_fire_accrues_and_burns() {
     assert_eq!(g.battlefield_find(fire).unwrap().counters.get(&CounterType::Charge).copied().unwrap_or(0),
         0, "five counters removed");
 }
+
+/// Simic Manipulator removes counters to steal a small enough creature.
+#[test]
+fn gtc15_simic_manipulator_steals_by_counters() {
+    let mut g = two_player_game();
+    let manip = g.add_card_to_battlefield(0, catalog::simic_manipulator());
+    g.battlefield_find_mut(manip).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.clear_sickness(manip);
+    let foe = g.add_card_to_battlefield(1, catalog::gutter_skulk()); // 2/2, power 2
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: manip, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: Some(2),
+    }).expect("activate removing 2 counters");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().controller, 0, "gained control (power 2 <= 2)");
+    assert_eq!(g.battlefield_find(manip).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        0, "both +1/+1 counters removed");
+}
+
+/// Tin Street Market grants its enchanted land a loot ability.
+#[test]
+fn gtc15_tin_street_market_grants_loot() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let aura = g.add_card_to_battlefield(0, catalog::tin_street_market());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(land);
+    g.add_card_to_library(0, catalog::gutter_skulk());
+    let discard_fodder = g.add_card_to_hand(0, catalog::gutter_skulk());
+    let hand_before = g.players[0].hand.len();
+    // The granted loot ability is appended after the land's intrinsic mana ability.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("activate granted loot");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped, "land tapped for the ability");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == discard_fodder), "discarded a card");
+    assert_eq!(g.players[0].hand.len(), hand_before, "discard one, draw one nets zero");
+}
