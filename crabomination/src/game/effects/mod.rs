@@ -17237,6 +17237,22 @@ impl GameState {
                     .collect()
             }
 
+            Selector::OtherCreaturesControlledByControllerOf(subject) => {
+                let Some(EntityRef::Permanent(subj)) =
+                    self.resolve_selector(subject, ctx).into_iter().next()
+                else {
+                    return vec![];
+                };
+                let Some(owner) = self.battlefield_find(subj).map(|c| c.controller) else {
+                    return vec![];
+                };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.controller == owner && c.id != subj && c.definition.is_creature())
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
+
             // CR 701.21 — the controller's least-toughness creature.
             Selector::LeastToughnessYouControl => self
                 .battlefield

@@ -210,6 +210,10 @@ pub enum Selector {
     /// touch every permanent a *targeted* player controls (Sleep: tap +
     /// stun all creatures target player controls).
     ControlledBy { who: PlayerRef, filter: SelectionRequirement },
+    /// Every creature controlled by the controller of `subject`, **except**
+    /// `subject` itself ("other creatures that player controls" — Mark for
+    /// Death). Empty if `subject` resolves to nothing.
+    OtherCreaturesControlledByControllerOf(Box<Selector>),
     /// The single creature `ctx.controller` controls with the least
     /// toughness (first in battlefield order on a tie). Resolves to an
     /// empty set when the controller has no creatures. Powers Bolster

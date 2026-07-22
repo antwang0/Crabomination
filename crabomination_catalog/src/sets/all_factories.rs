@@ -7863,6 +7863,7 @@ static GTC9: &[Factory] = &[
     super::gtc15::borborygmos_enraged,
     super::gtc15::obzedat_ghost_council,
     super::gtc15::ooze_flux,
+    super::gtc15::mark_for_death,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,

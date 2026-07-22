@@ -2078,3 +2078,25 @@ fn gtc15_ooze_flux_makes_sized_ooze() {
     let c = g.computed_permanent(ooze.id).unwrap();
     assert_eq!((c.power, c.toughness), (2, 2), "X/X where X = counters removed (2)");
 }
+
+/// Mark for Death forces one blocker and locks the rest of that player's team.
+#[test]
+fn gtc15_mark_for_death_forces_and_locks() {
+    let mut g = two_player_game();
+    let marked = g.add_card_to_battlefield(1, catalog::gutter_skulk());
+    let other = g.add_card_to_battlefield(1, catalog::ruination_wurm());
+    g.battlefield_find_mut(marked).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::mark_for_death());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.cast_spell(spell, Some(Target::Permanent(marked)), vec![], None, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(marked).unwrap().tapped, "the marked creature was untapped");
+    assert!(g.computed_permanent(marked).unwrap().keywords.contains(&Keyword::MustBlock),
+        "marked creature must block");
+    assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::CantBlock),
+        "other creatures that player controls can't block");
+}

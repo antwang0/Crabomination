@@ -227,6 +227,35 @@ pub fn vizkopa_guildmage() -> CardDefinition {
     }
 }
 
+/// Mark for Death — {3}{R} Sorcery. Target creature an opponent controls blocks
+/// this turn if able and is untapped; other creatures that player controls can't
+/// block this turn.
+pub fn mark_for_death() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Mark for Death",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Untap {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                up_to: None,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::MustBlock,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::OtherCreaturesControlledByControllerOf(Box::new(Selector::Target(0))),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Ooze Flux — {3}{G} Enchantment. {1}{G}, remove one or more +1/+1 counters
 /// from among creatures you control: create an X/X green Ooze, where X is the
 /// number of counters removed.
