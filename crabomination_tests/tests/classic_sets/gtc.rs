@@ -1274,3 +1274,156 @@ fn gtc9_truefire_captain_reflects_damage() {
     drain_stack_targeting(&mut g, Target::Player(1));
     assert_eq!(g.players[1].life, opp_before - 3, "reflected 3 to the player");
 }
+
+// ── Wave 10 ──────────────────────────────────────────────────────────────────
+
+/// Wrecking Ogre has double strike and its Bloodrush grants +3/+3 + double strike.
+#[test]
+fn gtc10_wrecking_ogre_bloodrush() {
+    use crabomination::mana::Color;
+    let ogre = catalog::wrecking_ogre();
+    assert!(ogre.keywords.contains(&Keyword::DoubleStrike));
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
+    g.clear_sickness(attacker);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }]).expect("attack");
+    let card = g.add_card_to_hand(0, catalog::wrecking_ogre());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: card, ability_index: 0, target: Some(Target::Permanent(attacker)),
+        additional_targets: vec![], x_value: None,
+    }).expect("bloodrush");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(attacker).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 5), "2/2 + 3/3");
+    assert!(c.keywords.contains(&Keyword::DoubleStrike), "gained double strike");
+}
+
+/// Incursion Specialist pumps +2/+0 and turns unblockable on the second spell.
+#[test]
+fn gtc10_incursion_specialist_second_spell() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let spec = g.add_card_to_battlefield(0, catalog::incursion_specialist());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Cast two creature spells; the flurry fires on the second.
+    for _ in 0..2 {
+        let s = g.add_card_to_hand(0, catalog::gutter_skulk());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.perform_action(GameAction::CastSpell {
+            card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast");
+        drain_stack(&mut g);
+    }
+    let c = g.computed_permanent(spec).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "1/3 + 2/0");
+    assert!(c.keywords.contains(&Keyword::Unblockable), "can't be blocked this turn");
+}
+
+/// Molten Primordial's ETB steals an opponent's creature with haste.
+#[test]
+fn gtc10_molten_primordial_steals() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::ruination_wurm());
+    let prim = g.add_card_to_battlefield(0, catalog::molten_primordial());
+    g.fire_self_etb_triggers(prim, 0);
+    drain_stack(&mut g);
+    let c = g.computed_permanent(foe).unwrap();
+    assert_eq!(c.controller, 0, "gained control of the opponent's creature");
+    assert!(c.keywords.contains(&Keyword::Haste), "it has haste");
+}
+
+/// Sepulchral Primordial reanimates from an opponent's graveyard under your control.
+#[test]
+fn gtc10_sepulchral_primordial_reanimates_opponent_gy() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::ruination_wurm());
+    let prim = g.add_card_to_battlefield(0, catalog::sepulchral_primordial());
+    g.fire_self_etb_triggers(prim, 0);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(dead).expect("reanimated onto battlefield");
+    assert_eq!(c.controller, 0, "under your control");
+}
+
+/// Luminate Primordial exiles an opponent's creature; that player gains its power.
+#[test]
+fn gtc10_luminate_primordial_exiles_and_gains() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::ruination_wurm()); // power 7
+    let opp_before = g.players[1].life;
+    let prim = g.add_card_to_battlefield(0, catalog::luminate_primordial());
+    g.fire_self_etb_triggers(prim, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature exiled");
+    assert_eq!(g.players[1].life, opp_before + 7, "controller gained life equal to power");
+}
+
+/// Sylvan Primordial destroys an opponent's noncreature and fetches a tapped Forest.
+#[test]
+fn gtc10_sylvan_primordial_destroys_and_ramps() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::razortip_whip()); // an artifact
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let prim = g.add_card_to_battlefield(0, catalog::sylvan_primordial());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.fire_self_etb_triggers(prim, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "opponent's artifact destroyed");
+    let f = g.battlefield_find(forest).expect("Forest fetched onto the battlefield");
+    assert!(f.tapped, "Forest enters tapped");
+}
+
+/// Treasury Thrull returns a permanent from your graveyard on combat damage.
+#[test]
+fn gtc10_treasury_thrull_recurs_on_damage() {
+    let mut g = two_player_game();
+    let thrull = g.add_card_to_battlefield(0, catalog::treasury_thrull());
+    let dead = g.add_card_to_graveyard(0, catalog::razortip_whip()); // an artifact
+    g.clear_sickness(thrull);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: thrull, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_some(), "artifact returned from graveyard");
+}
+
+/// Hellkite Tyrant steals all of the damaged player's artifacts.
+#[test]
+fn gtc10_hellkite_tyrant_steals_artifacts() {
+    let mut g = two_player_game();
+    let tyrant = g.add_card_to_battlefield(0, catalog::hellkite_tyrant());
+    let rock = g.add_card_to_battlefield(1, catalog::razortip_whip());
+    g.clear_sickness(tyrant);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: tyrant, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(rock).unwrap().controller, 0, "artifact stolen");
+}
+
+/// Hellkite Tyrant wins the game with twenty artifacts at upkeep.
+#[test]
+fn gtc10_hellkite_tyrant_artifact_win() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hellkite_tyrant());
+    for _ in 0..20 { g.add_card_to_battlefield(0, catalog::razortip_whip()); }
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.players[1].eliminated || g.game_over.is_some(),
+        "controller wins with 20 artifacts");
+}

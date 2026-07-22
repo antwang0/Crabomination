@@ -7829,6 +7829,14 @@ static GTC9: &[Factory] = &[
     super::gtc9::razortip_whip,
     super::gtc9::murder_investigation,
     super::gtc9::dying_wish,
+    super::gtc10::wrecking_ogre,
+    super::gtc10::incursion_specialist,
+    super::gtc10::molten_primordial,
+    super::gtc10::sepulchral_primordial,
+    super::gtc10::luminate_primordial,
+    super::gtc10::sylvan_primordial,
+    super::gtc10::treasury_thrull,
+    super::gtc10::hellkite_tyrant,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,
