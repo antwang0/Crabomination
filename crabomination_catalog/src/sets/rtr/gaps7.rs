@@ -222,12 +222,22 @@ pub fn faerie_impostor() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::MayDo {
-            description: "Return another creature you control to its owner's hand?".into(),
-            body: Box::new(Effect::Move {
-                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+        // "Sacrifice it unless you return another creature" — mandatory bounce
+        // when you control one, else sacrifice (the Quickling pattern).
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorExists(Selector::EachPermanent(
+                R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+            )),
+            then: Box::new(Effect::Move {
+                what: Selector::Take {
+                    inner: Box::new(Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                    )),
+                    count: Box::new(Value::ONE),
+                },
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             }),
+            else_: Box::new(Effect::SacrificeSource),
         })],
         ..Default::default()
     }

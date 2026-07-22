@@ -10811,6 +10811,30 @@ impl GameState {
             Vec::new()
         };
 
+        // Pre-flight exile-a-spell-you-control gate (CR 602.5b "Exile [a
+        // spell] you control:"). Find the top-most matching spell the
+        // activator controls on the stack; it leaves without resolving.
+        // Nivmagus Elemental. Identified by CardId so it can be located
+        // again after tap/mana are paid.
+        let exile_spell_pick: Option<CardId> = if let Some(filter) =
+            ability.exile_spell_cost.as_ref()
+        {
+            let pick = self.stack.iter().rev().find_map(|item| match item {
+                StackItem::Spell { card, caster, .. }
+                    if *caster == p && self.evaluate_requirement_on_card(filter, card, p) =>
+                {
+                    Some(card.id)
+                }
+                _ => None,
+            });
+            match pick {
+                Some(id) => Some(id),
+                None => return Err(GameError::SelectionRequirementViolated),
+            }
+        } else {
+            None
+        };
+
         // Pre-flight remove-counter-cost gate (CR 602.5b "Remove a [kind]
         // counter from this:"). The source must carry `count` counters of
         // the named kind; removed after payment so the ability can't be
@@ -11416,6 +11440,23 @@ impl GameState {
         for other_cid in tap_n_picks {
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid) {
                 c.tapped = true;
+            }
+        }
+
+        // Exile-a-spell-you-control-as-cost (CR 602.5b): with tap/mana/life
+        // paid, pull the cost-picked spell off the stack and exile it — it
+        // won't resolve. Nivmagus Elemental.
+        if let Some(spell_id) = exile_spell_pick {
+            if let Some(pos) = self.stack.iter().position(|item| {
+                matches!(item, StackItem::Spell { card, .. } if card.id == spell_id)
+            }) {
+                if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                    // The spell leaves the stack without resolving; it isn't
+                    // "countered" (no counter-a-spell payoff should fire).
+                    self.exile.push(*card);
+                    self.players[p].cards_exiled_this_turn =
+                        self.players[p].cards_exiled_this_turn.saturating_add(1);
+                }
             }
         }
 

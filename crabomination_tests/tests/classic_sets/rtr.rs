@@ -1800,3 +1800,57 @@ fn cr_514_2_racecourse_haste_expires_at_cleanup() {
     assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
         "haste ended at cleanup");
 }
+
+/// Nivmagus Elemental exiles an instant spell it controls as an activation
+/// cost, adds two +1/+1 counters, and the exiled spell doesn't resolve.
+#[test]
+fn nivmagus_elemental_eats_a_spell_for_counters() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let niv = g.add_card_to_battlefield(0, catalog::nivmagus_elemental());
+    // Put an instant on the stack (Player 0 controls it).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.cast_spell(bolt, Some(Target::Player(1)), vec![], None, None).expect("cast bolt");
+    assert_eq!(g.stack.len(), 1, "bolt is on the stack");
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: niv, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("eat the spell");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(niv).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "gained two +1/+1 counters");
+    assert!(g.stack.is_empty(), "the exiled spell left the stack");
+    assert_eq!(g.players[1].life, opp_life, "the exiled bolt never resolved");
+}
+
+/// With no other spell you control on the stack, Nivmagus can't activate.
+#[test]
+fn nivmagus_elemental_needs_a_spell_to_eat() {
+    let mut g = two_player_game();
+    let niv = g.add_card_to_battlefield(0, catalog::nivmagus_elemental());
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: niv, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(res.is_err(), "no spell to exile → activation rejected");
+}
+
+/// Faerie Impostor bounces another creature you control on ETB; with none, it
+/// sacrifices itself.
+#[test]
+fn faerie_impostor_bounces_or_sacrifices() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let imp = g.add_card_to_battlefield(0, catalog::faerie_impostor());
+    g.fire_self_etb_triggers(imp, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the bear was bounced");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bear returned to hand");
+    assert!(g.battlefield_find(imp).is_some(), "impostor stayed");
+
+    // A second impostor entering with no other creature sacrifices itself.
+    let lonely = g.add_card_to_battlefield(1, catalog::faerie_impostor());
+    g.fire_self_etb_triggers(lonely, 1);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lonely).is_none(), "lonely impostor sacrificed itself");
+}

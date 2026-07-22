@@ -42,17 +42,15 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   primitive.
 - **Rotisserie Elemental** (skewer-counter impulse), **Sentinel of Lost Lore**
   (exile-Adventure modal) — still deferred (see WOE section).
-- **RTR gap remainder — deferred, each on one primitive:** Faerie Impostor
-  ("sacrifice it unless you return another creature you control"). Slaughter Games
+- **RTR gap remainder — deferred, each on one primitive:** Slaughter Games
   (name a card → exile all copies from a target opponent's gy/hand/library +
   shuffle — a `NameCard` suspend/resume sweep). Angel of Serenity (exile up to
   three battlefield creatures *and/or* graveyard creature cards, linked to the
   source, returning to hand on LTB — multi-target ExileUntilLeaves across zones).
   Righteous Authority (aura whose buff scales with the enchanted creature's
   controller's hand size — dynamic aura pump). Sphinx of the Chimes
-  (discard-two-same-name activation cost). Nivmagus Elemental (exile-a-spell-you-
-  control-from-the-stack cost). Epic Experiment (exile top X, free-cast only I/S
-  with MV≤X, rest to graveyard — a filtered `ExileTopAndGrantMayPlay`). Tablet of
+  (discard-two-same-name activation cost). Epic Experiment (exile top X, free-cast
+  only I/S with MV≤X, rest to graveyard — a filtered `ExileTopAndGrantMayPlay`). Tablet of
   the Guilds (choose-two-colors + cast-of-chosen-color lifegain). Guild Feud
   (top-of-library fight), Grave Betrayal (mass reanimate replacement), Search the
   City (extra-turn combo), Azor's Elocutors (filibuster-counter win). Legends:

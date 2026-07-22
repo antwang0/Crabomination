@@ -2045,6 +2045,15 @@ pub struct ActivatedAbility {
     /// Researcher's tap-untap sibling. Defaults to None.
     #[serde(default)]
     pub collect_evidence_cost: Option<u32>,
+    /// Optional cost: exile a spell the activator controls from the stack
+    /// matching this filter (CR 602.5b "Exile [a spell] you control:"). The
+    /// exiled spell leaves the stack and won't resolve. Powers Nivmagus
+    /// Elemental (`Exile an instant or sorcery spell you control: …`). The
+    /// auto-picker exiles the top-most (most recently cast) matching spell.
+    /// Rejected with `GameError::SelectionRequirementViolated` when no
+    /// controlled spell matches. Defaults to None.
+    #[serde(default)]
+    pub exile_spell_cost: Option<SelectionRequirement>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

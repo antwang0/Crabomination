@@ -9570,6 +9570,7 @@ static RTR: &[Factory] = &[
     super::rtr::racecourse_fury,
     super::rtr::security_blockade,
     super::rtr::mana_bloom,
+    super::rtr::nivmagus_elemental,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,
