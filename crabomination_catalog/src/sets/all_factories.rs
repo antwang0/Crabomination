@@ -7645,6 +7645,18 @@ static GTC: &[Factory] = &[
     super::gtc::debtors_pulpit,
     super::gtc::illness_in_the_ranks,
     super::gtc::smog_elemental,
+    super::gtc2::bomber_corps,
+    super::gtc2::warmind_infantry,
+    super::gtc2::daring_skyjek,
+    super::gtc2::nav_squad_commandos,
+    super::gtc2::keymaster_rogue,
+    super::gtc2::truefire_paladin,
+    super::gtc2::horror_of_the_dim,
+    super::gtc2::gateway_shade,
+    super::gtc2::rubblebelt_raiders,
+    super::gtc2::riot_gear,
+    super::gtc2::skarrg_goliath,
+    super::gtc2::predators_rapport,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

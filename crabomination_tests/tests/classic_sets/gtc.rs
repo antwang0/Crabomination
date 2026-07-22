@@ -247,3 +247,121 @@ fn drain_stack_targeting(g: &mut GameState, tgt: Target) {
     }
     drain_stack(g);
 }
+
+// ── wave 2 ───────────────────────────────────────────────────────────────────
+
+/// Battalion: Warmind Infantry pumps +2/+0 when it and two others attack.
+#[test]
+fn battalion_triggers_with_three_attackers() {
+    let mut g = two_player_game();
+    let warmind = g.add_card_to_battlefield(0, catalog::warmind_infantry()); // 2/3
+    let b1 = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    let b2 = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    for id in [warmind, b1, b2] { g.clear_sickness(id); }
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![
+        Attack { attacker: warmind, target: AttackTarget::Player(1) },
+        Attack { attacker: b1, target: AttackTarget::Player(1) },
+        Attack { attacker: b2, target: AttackTarget::Player(1) },
+    ]).expect("attack with three");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(warmind).unwrap().power, 4, "battalion pumped +2/+0");
+}
+
+/// Battalion does NOT trigger with only two attackers.
+#[test]
+fn battalion_silent_with_two_attackers() {
+    let mut g = two_player_game();
+    let warmind = g.add_card_to_battlefield(0, catalog::warmind_infantry());
+    let b1 = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    for id in [warmind, b1] { g.clear_sickness(id); }
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![
+        Attack { attacker: warmind, target: AttackTarget::Player(1) },
+        Attack { attacker: b1, target: AttackTarget::Player(1) },
+    ]).expect("attack with two");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(warmind).unwrap().power, 2, "battalion did not fire");
+}
+
+/// Rubblebelt Raiders grows by the number of attacking creatures you control.
+#[test]
+fn rubblebelt_raiders_grows_with_attackers() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let raider = g.add_card_to_battlefield(0, catalog::rubblebelt_raiders());
+    let other = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    for id in [raider, other] { g.clear_sickness(id); }
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![
+        Attack { attacker: raider, target: AttackTarget::Player(1) },
+        Attack { attacker: other, target: AttackTarget::Player(1) },
+    ]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(raider).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "one counter per attacking creature you control");
+}
+
+/// Truefire Paladin's firebreathing pump.
+#[test]
+fn truefire_paladin_pumps() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let p = g.add_card_to_battlefield(0, catalog::truefire_paladin());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: p, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(p).unwrap().power, 4, "+2/+0");
+}
+
+/// Riot Gear equips for +1/+2.
+#[test]
+fn riot_gear_equips() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
+    let gear = g.add_card_to_battlefield(0, catalog::riot_gear());
+    g.battlefield_find_mut(gear).unwrap().attached_to = Some(bear);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 4), "+1/+2 from Riot Gear");
+}
+
+/// Predator's Rapport gains life equal to a creature's power + toughness.
+#[test]
+fn predators_rapport_gains_life() {
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(0, catalog::ruination_wurm()); // 7/6
+    g.players[0].life = 20;
+    let spell = g.add_card_to_hand(0, catalog::predators_rapport());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.cast_spell(spell, Some(Target::Permanent(wurm)), vec![], None, None).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 33, "gained 7 + 6 = 13 life");
+}
+
+/// Keymaster Rogue is unblockable and bounces one of your creatures on ETB.
+#[test]
+fn keymaster_rogue_unblockable_and_bounces() {
+    let mut g = two_player_game();
+    let friend = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    let rogue = g.add_card_to_battlefield(0, catalog::keymaster_rogue());
+    assert!(rogue_is_unblockable(&g, rogue));
+    g.fire_self_etb_triggers(rogue, 0);
+    drain_stack(&mut g);
+    // The only other creature you control is bounced (auto-picked).
+    assert!(g.battlefield_find(friend).is_none() || g.battlefield_find(rogue).is_none(),
+        "a controlled creature returned to hand");
+}
+
+fn rogue_is_unblockable(g: &GameState, id: crabomination::card::CardId) -> bool {
+    g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Unblockable)
+}
