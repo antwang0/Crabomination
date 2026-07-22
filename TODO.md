@@ -56,7 +56,7 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
 - **Gatecrash (GTC) — in progress (modern_decks):** nine waves shipped. Wave 9
   (gtc9): Skyblinder Staff (Equipment — +1/0 + can't-be-blocked-by-flyers),
-  Razortip Whip (ping artifact), Murder Investigation + Dying Wish (on-death
+  Truefire Captain (Mentor + damage-reflect), Razortip Whip, Murder Investigation + Dying Wish (on-death
   Auras scaling by the host's power via the CR 603.10 die snapshot). Tests
   `gtc9_*`. Wave 8
   (gtc8) added the Dimir Cipher package (Mental Vapors, Call of the Nightwing),

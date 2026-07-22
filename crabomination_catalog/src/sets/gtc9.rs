@@ -8,10 +8,38 @@ use crate::card::{
 };
 use crate::effect::shortcut::{target_any, target_filtered};
 use crate::effect::{PlayerRef, Selector};
-use crate::mana::{b, cost, generic, w, Color};
+use crate::mana::{b, cost, generic, r, w, Color};
 
 fn aura() -> Subtypes {
     Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() }
+}
+
+/// Truefire Captain — {R}{R}{W}{W} 4/3 Human Knight. Mentor; whenever it's
+/// dealt damage, it deals that much damage to target player.
+pub fn truefire_captain() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Truefire Captain",
+        cost: cost(&[r(), r(), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![
+            crate::effect::shortcut::mentor(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+                effect: Effect::DealDamage {
+                    to: target_filtered(R::Player),
+                    amount: Value::TriggerEventAmount,
+                },
+            },
+        ],
+        ..Default::default()
+    }
 }
 
 /// Skyblinder Staff — {1} Equipment. Equipped creature gets +1/+0 and can't be

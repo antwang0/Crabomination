@@ -7824,6 +7824,7 @@ static GTC7: &[Factory] = &[
     super::gtc7::skygames,
 ];
 static GTC9: &[Factory] = &[
+    super::gtc9::truefire_captain,
     super::gtc9::skyblinder_staff,
     super::gtc9::razortip_whip,
     super::gtc9::murder_investigation,

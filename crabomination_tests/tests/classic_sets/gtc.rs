@@ -1261,3 +1261,16 @@ fn gtc9_dying_wish_drains() {
     assert_eq!(g.players[1].life, opp_before - 7, "opponent lost 7");
     assert_eq!(g.players[0].life, me_before + 7, "I gained 7");
 }
+
+/// Truefire Captain reflects damage dealt to it onto a target player.
+#[test]
+fn gtc9_truefire_captain_reflects_damage() {
+    let mut g = two_player_game();
+    let cap = g.add_card_to_battlefield(0, catalog::truefire_captain());
+    let opp_before = g.players[1].life;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(cap), 3, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack_targeting(&mut g, Target::Player(1));
+    assert_eq!(g.players[1].life, opp_before - 3, "reflected 3 to the player");
+}
