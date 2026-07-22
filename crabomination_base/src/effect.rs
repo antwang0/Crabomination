@@ -5579,6 +5579,12 @@ pub enum Effect {
     /// flag plus the per-dealer exception filter.
     PreventCombatDamageExceptDealtBy { except: SelectionRequirement },
 
+    /// CR 615 — "Prevent all combat damage that would be dealt to `who` this
+    /// turn" (Druid's Deliverance's player-scoped fog). Records the resolved
+    /// player(s) in `GameState.combat_damage_prevented_to_players_this_turn`;
+    /// the combat resolver zeroes any combat hit aimed at them.
+    PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef },
+
     /// CR 614.9 — "Prevent all combat damage that would be dealt to and dealt
     /// by `target` this turn." Adds the target creature to
     /// `GameState.combat_damage_prevented_creatures`; the combat resolver

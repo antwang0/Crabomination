@@ -2329,6 +2329,13 @@ impl GameState {
                 if self.all_damage_to_player_prevented(p) {
                     return 0;
                 }
+                // CR 615 — turn-scoped "prevent all combat damage that would be
+                // dealt to you this turn" (Druid's Deliverance).
+                if !self.damage_cant_be_prevented_this_turn
+                    && self.combat_damage_prevented_to_players_this_turn.contains(&p)
+                {
+                    return 0;
+                }
                 // CR 702.16j — protection from a card type (Serra's Emissary):
                 // no combat damage from an attacker of that type.
                 if let Some(src) = source {

@@ -896,6 +896,11 @@ pub struct GameState {
     /// The mirror of `combat_damage_prevented_to_this_turn`. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_by_this_turn: Vec<CardId>,
+    /// CR 615 — players who have "prevent all combat damage that would be dealt
+    /// to you this turn" active (Druid's Deliverance). Consulted in
+    /// `prevent_combat_to_target` for the player-target case. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_to_players_this_turn: Vec<usize>,
     /// CR 510.1c — attackers that became blocked this combat. An attacker
     /// stays blocked even if all its blockers leave combat (double-strike
     /// step-one kills, post-block removal): without trample it assigns no
@@ -1312,6 +1317,9 @@ impl Clone for GameState {
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             combat_damage_prevented_to_this_turn: self.combat_damage_prevented_to_this_turn.clone(),
             combat_damage_prevented_by_this_turn: self.combat_damage_prevented_by_this_turn.clone(),
+            combat_damage_prevented_to_players_this_turn: self
+                .combat_damage_prevented_to_players_this_turn
+                .clone(),
             blocked_attackers: self.blocked_attackers.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
@@ -1493,6 +1501,7 @@ impl GameState {
             combat_damage_prevented_creatures: Vec::new(),
             combat_damage_prevented_to_this_turn: Vec::new(),
             combat_damage_prevented_by_this_turn: Vec::new(),
+            combat_damage_prevented_to_players_this_turn: Vec::new(),
             blocked_attackers: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
             search_tax_paid_this_turn: Vec::new(),

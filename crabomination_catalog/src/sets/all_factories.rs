@@ -9498,6 +9498,7 @@ static RTR: &[Factory] = &[
     super::rtr::eyes_in_the_skies,
     super::rtr::coursers_accord,
     super::rtr::horncallers_chant,
+    super::rtr::druids_deliverance,
     super::rtr::civic_saber,
 ];
 static SHM: &[Factory] = &[

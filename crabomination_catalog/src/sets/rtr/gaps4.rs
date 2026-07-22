@@ -716,6 +716,21 @@ pub fn horncallers_chant() -> CardDefinition {
     }
 }
 
+/// Druid's Deliverance — {1}{G} Instant. Prevent all combat damage that would be
+/// dealt to you this turn, then populate.
+pub fn druids_deliverance() -> CardDefinition {
+    CardDefinition {
+        name: "Druid's Deliverance",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: E::Seq(vec![
+            E::PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef::You },
+            E::Populate { who: PlayerRef::You },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Civic Saber — {1} Equipment. Equipped creature gets +1/+0 for each of its
 /// colors. Equip {1}.
 pub fn civic_saber() -> CardDefinition {

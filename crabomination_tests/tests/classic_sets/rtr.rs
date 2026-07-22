@@ -579,3 +579,37 @@ fn ogre_jailbreaker_attacks_with_gate() {
     g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ogre, target: AttackTarget::Player(1) }]))
         .expect("can attack once you control a Gate");
 }
+
+/// Druid's Deliverance prevents all combat damage to you this turn (CR 615).
+#[test]
+fn druids_deliverance_prevents_combat_damage_to_you() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    // Player 1 has an attacker; it's player 1's turn.
+    g.active_player_idx = 1;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bear);
+    // Player 0 casts Druid's Deliverance in response.
+    let spell = g.add_card_to_hand(0, catalog::druids_deliverance());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.resolve_combat().expect("combat");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "combat damage to you prevented");
+}

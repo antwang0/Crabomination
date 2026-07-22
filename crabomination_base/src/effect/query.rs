@@ -808,6 +808,7 @@ impl Effect {
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
             Effect::PreventCombatDamageExceptDealtBy { .. } => false,
+            Effect::PreventAllCombatDamageToPlayerThisTurn { .. } => false,
             Effect::PreventAllCombatDamageInvolving { target } => sel_has_target(target),
             Effect::PreventCombatDamageToTargetThisTurn { target } => sel_has_target(target),
             Effect::PreventCombatDamageByTargetThisTurn { target } => sel_has_target(target),

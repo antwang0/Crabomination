@@ -14663,6 +14663,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventAllCombatDamageToPlayerThisTurn { who } => {
+                // CR 615 — Druid's Deliverance's player-scoped fog.
+                for p in self.resolve_players(who, ctx) {
+                    if !self.combat_damage_prevented_to_players_this_turn.contains(&p) {
+                        self.combat_damage_prevented_to_players_this_turn.push(p);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventAllCombatDamageInvolving { target } => {
                 // CR 614.9 — Maze of Ith: prevent all combat damage to and by
                 // the target creature for the rest of the turn.
