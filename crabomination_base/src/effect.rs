@@ -5282,6 +5282,13 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// "Until end of turn, whenever you gain life, [body]." Registers a
+    /// turn-scoped delayed trigger (CR 603.4) firing per `LifeGained` event for
+    /// the controller; the amount is bound via `Value::TriggerEventAmount`.
+    /// Expires at cleanup. Vizkopa Guildmage's second activated ability
+    /// ("each opponent loses that much life").
+    WheneverYouGainLifeThisTurn { body: Box<Effect> },
+
     /// "Whenever you cast a spell this turn, [body]" — like
     /// `OnYourNextSpellCastThisTurn` but repeating until cleanup
     /// (Rediscover the Way chapter III; gate the body with an

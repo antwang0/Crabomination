@@ -188,6 +188,45 @@ pub fn simic_manipulator() -> CardDefinition {
     }
 }
 
+/// Vizkopa Guildmage — {W}{B} 2/2 Human Wizard. {1}{W}{B}: target creature gains
+/// lifelink until end of turn. {1}{W}{B}: until end of turn, whenever you gain
+/// life, each opponent loses that much life.
+pub fn vizkopa_guildmage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Duration, PlayerRef};
+    let wb = || cost(&[generic(1), w(), b()]);
+    CardDefinition {
+        name: "Vizkopa Guildmage",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: wb(),
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: wb(),
+                effect: Effect::WheneverYouGainLifeThisTurn {
+                    body: Box::new(Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::TriggerEventAmount,
+                    }),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Armored Transport — {3} 2/1 Construct. Prevent all combat damage that would
 /// be dealt to it by creatures blocking it.
 pub fn armored_transport() -> CardDefinition {

@@ -740,6 +740,11 @@ pub enum DelayedKind {
     /// `Value::TriggerEventAmount`; the body runs for `DelayedTrigger.controller`.
     /// Expires at cleanup. Paladin of Prahv's Forecast rider.
     SourceDealsDamageThisTurn(crate::card::CardId),
+    /// "Until end of turn, whenever you gain life, [body]" (CR 603.4). Fires per
+    /// `LifeGained` event whose recipient is `DelayedTrigger.controller`, with
+    /// the amount bound via `Value::TriggerEventAmount`. Expires at cleanup.
+    /// Vizkopa Guildmage's second ability.
+    YouGainLifeThisTurn,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

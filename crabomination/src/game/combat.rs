@@ -2673,6 +2673,32 @@ impl GameState {
         }
     }
 
+    /// CR 603.4 — fire any `YouGainLifeThisTurn` delayed triggers whose
+    /// controller is `player` (Vizkopa Guildmage's "whenever you gain life,
+    /// each opponent loses that much"). The gained amount rides in via
+    /// `Value::TriggerEventAmount`.
+    pub(crate) fn fire_life_gained_watchers(&mut self, player: usize, amount: u32) {
+        if amount == 0 {
+            return;
+        }
+        let watchers: Vec<crate::game::types::DelayedTrigger> = self
+            .delayed_triggers
+            .iter()
+            .filter(|dt| {
+                dt.controller == player
+                    && matches!(dt.kind, crate::game::types::DelayedKind::YouGainLifeThisTurn)
+            })
+            .cloned()
+            .collect();
+        for dt in watchers {
+            self.stack.push(
+                TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                    .event_amount(amount)
+                    .build(),
+            );
+        }
+    }
+
     /// Push triggered abilities of `source` whose event spec is
     /// `DealsCombatDamageToCreature` onto the stack, binding the damaged
     /// creature to the trigger's target so "destroy / exile / -1/-1 that

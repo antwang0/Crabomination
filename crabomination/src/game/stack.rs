@@ -2476,6 +2476,7 @@ impl GameState {
                     | crate::game::types::DelayedKind::EachCombatThisTurn
                     | crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(_)
                     | crate::game::types::DelayedKind::SourceDealsDamageThisTurn(_)
+                    | crate::game::types::DelayedKind::YouGainLifeThisTurn
             )
         });
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention

@@ -10149,6 +10149,14 @@ impl GameState {
                 self.life_gain_flag_pending.push(*player);
             }
         }
+        // CR 603.4 — "until end of turn, whenever you gain life" delayed
+        // triggers (Vizkopa Guildmage). Fire per LifeGained event for a watcher
+        // whose controller is the recipient; the amount rides in for the body.
+        for ev in events {
+            if let GameEvent::LifeGained { player, amount } = ev {
+                self.fire_life_gained_watchers(*player, *amount);
+            }
+        }
         // May suspend on a networked controller's `OrderTriggers` pick
         // (CR 603.3b) — the resume path re-enters
         // `push_ordered_trigger_candidates` with the finished order.

@@ -1906,3 +1906,29 @@ fn gtc15_armored_transport_prevents_blocker_damage() {
     // The 2/1 took no damage from its 2/2 blocker (would otherwise die).
     assert!(g.battlefield_find(transport).is_some(), "blocker's combat damage prevented");
 }
+
+/// Vizkopa Guildmage: after arming its second ability, gaining life drains foes.
+#[test]
+fn gtc15_vizkopa_guildmage_lifegain_drains() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::vizkopa_guildmage());
+    g.clear_sickness(mage);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Arm the "whenever you gain life, each opponent loses that much" ability.
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("arm drain");
+    drain_stack(&mut g);
+    let opp = g.players[1].life;
+    // Now gaining 4 life should drain the opponent 4.
+    let evs = vec![crabomination::game::GameEvent::LifeGained { player: 0, amount: 4 }];
+    g.adjust_life(0, 4);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 4, "opponent lost life equal to the life gained");
+}

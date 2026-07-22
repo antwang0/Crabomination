@@ -7857,6 +7857,7 @@ static GTC9: &[Factory] = &[
     super::gtc15::simic_manipulator,
     super::gtc15::tin_street_market,
     super::gtc15::armored_transport,
+    super::gtc15::vizkopa_guildmage,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,

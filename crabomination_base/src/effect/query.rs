@@ -751,6 +751,7 @@ impl Effect {
             Effect::EachPlayerReanimateCreatureMaxMv { .. } => false,
             Effect::CreaturesYouControlDyingThisTurn { .. } => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
+            Effect::WheneverYouGainLifeThisTurn { .. } => false,
             Effect::PayOrLoseGame { .. } => false,
             Effect::SacrificeAndRemember { who, .. } => player_has_target(who),
             Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),
