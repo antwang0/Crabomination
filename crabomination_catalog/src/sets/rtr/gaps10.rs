@@ -8,10 +8,10 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::card::DynamicPt;
-use crate::effect::shortcut::on_dies;
 use crate::effect::{ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, u, x, ManaCost};
+use crate::effect::shortcut::{on_dies, target_filtered};
+use crate::mana::{b, cost, g, generic, r, u, x, ManaCost};
 
 /// Conjured Currency — {5}{U} Enchantment. At the beginning of your upkeep, you
 /// may exchange control of this enchantment and target permanent you neither
@@ -144,6 +144,33 @@ pub fn volatile_rig() -> CardDefinition {
                 ])),
             }),
         ],
+        ..Default::default()
+    }
+}
+
+/// Izzet Staticaster — {1}{U}{R} 0/3 Human Wizard with flash and haste.
+/// {T}: This creature deals 1 damage to target creature and each other creature
+/// with the same name as that creature.
+pub fn izzet_staticaster() -> CardDefinition {
+    CardDefinition {
+        name: "Izzet Staticaster",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        keywords: vec![Keyword::Flash, Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::SameNameDamage {
+                subject: target_filtered(R::Creature),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

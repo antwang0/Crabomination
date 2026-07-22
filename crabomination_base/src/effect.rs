@@ -2591,6 +2591,11 @@ pub enum Effect {
     /// legality flows through the normal slot-0 path; the fan-out then reads the
     /// chosen creature's computed colors. A colorless subject hits only itself.
     RadianceDamage { subject: Selector, amount: Value },
+    /// Deal `amount` damage to the creature `subject` resolves to *and* each
+    /// other creature on the battlefield with the same name (Izzet Staticaster).
+    /// `subject` carries the target slot; the fan-out reads the chosen
+    /// creature's printed name. Mirrors `RadianceDamage`'s shape.
+    SameNameDamage { subject: Selector, amount: Value },
     /// Each creature the controller controls deals `amount` damage to the `to`
     /// target — each damage is sourced from that creature (so its deathtouch /
     /// lifelink apply). "Each creature you control deals 1 damage to that

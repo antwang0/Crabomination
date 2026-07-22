@@ -2793,6 +2793,33 @@ impl GameState {
                 Ok(())
             }
 
+            // Izzet Staticaster — the subject creature and each other creature
+            // with the same name take `amount` damage.
+            Effect::SameNameDamage { subject, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                let Some(EntityRef::Permanent(subj)) =
+                    self.resolve_selector(subject, ctx).into_iter().next()
+                else {
+                    return Ok(());
+                };
+                let Some(name) = self.battlefield_find(subj).map(|c| c.definition.name) else {
+                    return Ok(());
+                };
+                let mut recipients = vec![subj];
+                for c in &self.battlefield {
+                    if c.id != subj && c.definition.is_creature() && c.definition.name == name {
+                        recipients.push(c.id);
+                    }
+                }
+                for id in recipients {
+                    self.deal_damage_to_from(EntityRef::Permanent(id), amt, ctx.source, events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::EachControlledCreatureDealsDamage { to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 let targets = self.resolve_selector(to, ctx);

@@ -1589,6 +1589,26 @@ fn volatile_rig_explodes_on_death() {
     assert_eq!(g.battlefield_find(bystander).unwrap().damage, 4, "bystander took 4");
 }
 
+/// Izzet Staticaster pings the target creature and every same-named creature.
+#[test]
+fn izzet_staticaster_pings_same_name() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let caster = g.add_card_to_battlefield(0, catalog::izzet_staticaster());
+    g.clear_sickness(caster);
+    let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(1, catalog::risen_sanctuary());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: caster, ability_index: 0, target: Some(Target::Permanent(bear1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear1).unwrap().damage, 1, "target bear pinged");
+    assert_eq!(g.battlefield_find(bear2).unwrap().damage, 1, "same-named bear pinged");
+    assert_eq!(g.battlefield_find(other).unwrap().damage, 0, "different name untouched");
+}
+
 /// Mana Bloom enters with X charge counters and taps them for any color.
 #[test]
 fn mana_bloom_enters_with_counters_and_taps_for_mana() {

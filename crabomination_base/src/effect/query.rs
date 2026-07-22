@@ -423,7 +423,8 @@ impl Effect {
             Effect::DealDamageExcessToController { to, amount } => {
                 sel_has_target(to) || value_has_target(amount)
             }
-            Effect::RadianceDamage { subject, amount } => {
+            Effect::RadianceDamage { subject, amount }
+            | Effect::SameNameDamage { subject, amount } => {
                 sel_has_target(subject) || value_has_target(amount)
             }
             // Divided damage always targets (one or more chosen targets).
@@ -883,7 +884,8 @@ impl Effect {
                     _ => None,
                 })
             }
-            Effect::RadianceDamage { subject, .. } => sel_filter(subject),
+            Effect::RadianceDamage { subject, .. }
+            | Effect::SameNameDamage { subject, .. } => sel_filter(subject),
             Effect::CreateTokenBlocking { filter, .. }
             | Effect::DealDamageDivided { filter, .. }
             | Effect::DealDamageDividedEvenly { filter, .. }
@@ -1940,7 +1942,8 @@ impl Effect {
                 | Effect::DealDamageExcessToController { to, amount } => {
                     sel_find(to, slot).or_else(|| val_find(amount, slot))
                 }
-                Effect::RadianceDamage { subject, amount } => {
+                Effect::RadianceDamage { subject, amount }
+                | Effect::SameNameDamage { subject, amount } => {
                     sel_find(subject, slot).or_else(|| val_find(amount, slot))
                 }
                 Effect::PayAnyEnergyDealDamage { to } => sel_find(to, slot),
