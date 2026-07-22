@@ -260,14 +260,15 @@ pub fn grisly_spectacle() -> CardDefinition {
         name: "Grisly Spectacle",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Instant],
+        // Mill runs first so it reads the creature's power while it's still on
+        // the battlefield; the Destroy carries the `target_filtered` so the
+        // target slot is surfaced at cast time (CR 601.2c).
         effect: Effect::Seq(vec![
             Effect::Mill {
-                who: Selector::Player(PlayerRef::ControllerOf(Box::new(target_filtered(
-                    R::Creature.and(R::Artifact.negate()),
-                )))),
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
-            Effect::Destroy { what: Selector::Target(0) },
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::Artifact.negate())) },
         ]),
         ..Default::default()
     }
