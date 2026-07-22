@@ -9500,6 +9500,14 @@ static RTR: &[Factory] = &[
     super::rtr::horncallers_chant,
     super::rtr::druids_deliverance,
     super::rtr::civic_saber,
+    super::rtr::deadbridge_goliath,
+    super::rtr::archweaver,
+    super::rtr::lotleth_troll,
+    super::rtr::cryptborn_horror,
+    super::rtr::stab_wound,
+    super::rtr::pursuit_of_flight,
+    super::rtr::deviant_glee,
+    super::rtr::knightly_valor,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,

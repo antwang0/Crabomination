@@ -613,3 +613,128 @@ fn druids_deliverance_prevents_combat_damage_to_you() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life, "combat damage to you prevented");
 }
+
+// ── RTR gap wave 6 (gaps5.rs) ────────────────────────────────────────────────
+
+/// Stat lines for the wave-6 vanilla / french-vanilla creatures.
+#[test]
+fn rtr_wave6_stat_lines() {
+    let arch = catalog::archweaver();
+    assert_eq!((arch.power, arch.toughness), (5, 5));
+    assert!(arch.keywords.contains(&Keyword::Reach) && arch.keywords.contains(&Keyword::Trample));
+    let troll = catalog::lotleth_troll();
+    assert!(troll.keywords.contains(&Keyword::Trample));
+}
+
+/// Lotleth Troll grows by discarding a creature card.
+#[test]
+fn lotleth_troll_discards_creature_for_counter() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let troll = g.add_card_to_battlefield(0, catalog::lotleth_troll());
+    g.clear_sickness(troll);
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a creature card to pitch
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: troll, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("discard for counter");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(troll).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "grew a +1/+1 counter");
+}
+
+/// Cryptborn Horror enters with counters equal to opponents' life lost this turn.
+#[test]
+fn cryptborn_horror_enters_with_life_lost_counters() {
+    use crabomination::card::CounterType;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.players[1].life -= 5; // opponent lost 5 life this turn
+    g.players[1].life_lost_this_turn = 5;
+    let horror = g.add_card_to_hand(0, catalog::cryptborn_horror());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: horror, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(horror).unwrap().counter_count(CounterType::PlusOnePlusOne), 5,
+        "entered with 5 +1/+1 counters");
+}
+
+/// Stab Wound shrinks the creature and drains its controller each upkeep.
+#[test]
+fn stab_wound_drains_and_shrinks() {
+    use crabomination::game::types::{Target, TurnStep};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let aura = g.add_card_to_hand(0, catalog::stab_wound());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    // -2/-2 kills the 2/2.
+    assert!(g.battlefield_find(bear).is_none(), "2/2 dies to -2/-2");
+    // Enchant a bigger creature and check the upkeep drain.
+    let ogre = g.add_card_to_battlefield(1, catalog::risen_sanctuary()); // 8/8
+    let aura2 = g.add_card_to_battlefield(0, catalog::stab_wound());
+    g.battlefield_find_mut(aura2).unwrap().attached_to = Some(ogre);
+    let life = g.players[1].life;
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "controller loses 2 at upkeep");
+}
+
+/// Pursuit of Flight pumps and grants an activated flying ability.
+#[test]
+fn pursuit_of_flight_pumps_and_grants_flying() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let aura = g.add_card_to_hand(0, catalog::pursuit_of_flight());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "no flying until activated");
+    // Activate the granted {U}: flying ability (index 0 on the enchanted creature).
+    g.clear_sickness(bear);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("grant flying");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        "granted flying until end of turn");
+}
+
+/// Knightly Valor makes a Knight token on entry and buffs the host.
+#[test]
+fn knightly_valor_makes_knight_and_buffs() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let aura = g.add_card_to_hand(0, catalog::knightly_valor());
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Knight"
+        && c.definition.keywords.contains(&Keyword::Vigilance)), "made a 2/2 vigilance Knight");
+}
