@@ -274,6 +274,8 @@ fn req_short(req: &crabomination::card::SelectionRequirement) -> Option<String> 
         R::HasColor(c) => format!("{c:?}"),
         R::Artifact => "Art".to_string(),
         R::Enchantment => "Ench".to_string(),
+        R::Creature => "Cre".to_string(),
+        R::Land => "Land".to_string(),
         _ => return None,
     })
 }
@@ -661,6 +663,11 @@ mod tests {
         assert_eq!(
             keyword_strip(&[Keyword::CantBeBlockedBy(Box::new(R::HasKeyword(Keyword::Flying)))]),
             "Eva-·Fly",
+        );
+        // Simple Creature / Land blocker classes now name themselves too.
+        assert_eq!(
+            keyword_strip(&[Keyword::CantBeBlockedExceptBy(Box::new(R::Creature))]),
+            "Eva+·Cre",
         );
     }
 
