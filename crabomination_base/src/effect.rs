@@ -3667,6 +3667,11 @@ pub enum Effect {
     /// extra counter. The plain-flicker sibling of `ExileReturnNextEndStep`
     /// (Voidwalk, Voyager Staff — "return it under its owner's control").
     ExileReturnToOwnerNextEndStep { what: Selector },
+    /// "You may exile this. If you do, return it to the battlefield under its
+    /// owner's control at the beginning of your next upkeep. It gains haste."
+    /// An optional self-flicker whose return is deferred to the controller's
+    /// next upkeep (CR 603.4). Obzedat, Ghost Council's end-step ability.
+    MayExileSelfReturnNextUpkeepHaste,
     /// CR 702.55 — Haunt. Exile the source card (the dying creature, or the
     /// resolving instant/sorcery) "haunting" a creature, then register a
     /// `DelayedKind::WhenHauntedCreatureDies` delayed trigger that runs `body`

@@ -2027,3 +2027,30 @@ fn gtc15_borborygmos_partition_and_burn() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 3, "dealt 3 to the opponent");
 }
+
+/// Obzedat drains on entry and blinks itself away at end step, back at upkeep.
+#[test]
+fn gtc15_obzedat_drains_and_blinks() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let obz = g.add_card_to_battlefield(0, catalog::obzedat_ghost_council());
+    let opp = g.players[1].life;
+    let me = g.players[0].life;
+    // ETB drain (target the opponent).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    g.fire_self_etb_triggers(obz, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "opponent lost 2");
+    assert_eq!(g.players[0].life, me + 2, "you gained 2");
+    // End step: choose to exile it.
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(obz).is_none(), "Obzedat exiled itself at end step");
+    // Next upkeep it returns with haste.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(obz).expect("returned at upkeep");
+    assert!(g.computed_permanent(back.id).unwrap().keywords.contains(&Keyword::Haste), "returns with haste");
+}

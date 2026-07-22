@@ -754,6 +754,7 @@ impl Effect {
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::WheneverYouGainLifeThisTurn { .. } => false,
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. } => false,
+            Effect::MayExileSelfReturnNextUpkeepHaste => false,
             Effect::PayOrLoseGame { .. } => false,
             Effect::SacrificeAndRemember { who, .. } => player_has_target(who),
             Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),

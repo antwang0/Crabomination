@@ -5586,6 +5586,48 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayExileSelfReturnNextUpkeepHaste => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::game::types::{DelayedKind, DelayedTrigger};
+                let Some(cid) = ctx.source else { return Ok(()); };
+                if self.battlefield_find(cid).is_none() { return Ok(()); }
+                // "You may exile" — ask the controller.
+                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    source: cid,
+                    description: "Exile this and return it at your next upkeep?".to_string(),
+                });
+                if !matches!(answer, DecisionAnswer::Bool(true)) { return Ok(()); }
+                self.remove_from_battlefield_to_exile(cid);
+                if ctx.controller < self.players.len() {
+                    self.players[ctx.controller].cards_exiled_this_turn =
+                        self.players[ctx.controller].cards_exiled_this_turn.saturating_add(1);
+                }
+                events.push(GameEvent::PermanentExiled { card_id: cid });
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source: cid,
+                    kind: DelayedKind::YourNextUpkeep,
+                    effect: Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                                tapped: false,
+                            },
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: crate::card::Keyword::Haste,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ]),
+                    target: Some(Target::Permanent(cid)),
+                    bound_token: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
             Effect::HauntCreature { body } => {
                 // CR 702.55 — pick a creature to haunt (prefer an opponent's),
                 // exile the source card, and register the death-watch trigger.

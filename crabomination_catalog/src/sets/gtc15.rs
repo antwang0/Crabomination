@@ -227,6 +227,36 @@ pub fn vizkopa_guildmage() -> CardDefinition {
     }
 }
 
+/// Obzedat, Ghost Council — {1}{W}{W}{B}{B} 5/5 Legendary Spirit Advisor. ETB:
+/// target opponent loses 2 life, you gain 2. At your end step, you may exile it,
+/// returning it at your next upkeep with haste.
+pub fn obzedat_ghost_council() -> CardDefinition {
+    CardDefinition {
+        name: "Obzedat, Ghost Council",
+        cost: cost(&[generic(1), w(), w(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: creatures(vec![CreatureType::Spirit, CreatureType::Advisor]),
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![
+            etb(Effect::Drain {
+                from: target_filtered(R::OpponentPlayer),
+                to: Selector::You,
+                amount: Value::Const(2),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::MayExileSelfReturnNextUpkeepHaste,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Borborygmos Enraged — {4}{R}{R}{G}{G} 7/6 Legendary Cyclops. Trample; on
 /// combat damage to a player, reveal top three, lands to hand, rest to gy.
 /// Discard a land card: deal 3 damage to any target.

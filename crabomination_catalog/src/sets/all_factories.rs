@@ -7861,6 +7861,7 @@ static GTC9: &[Factory] = &[
     super::gtc15::duskmantle_guildmage,
     super::gtc15::mystic_genesis,
     super::gtc15::borborygmos_enraged,
+    super::gtc15::obzedat_ghost_council,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,
