@@ -2699,6 +2699,31 @@ impl GameState {
         }
     }
 
+    /// CR 603.4 — fire `CardEntersOpponentGraveyardThisTurn` delayed triggers
+    /// (Duskmantle Guildmage) when a card is put into `owner`'s graveyard, for
+    /// each watcher that treats `owner` as an opponent. The owner is bound as
+    /// the body's `Target(0)` so "that player loses 1 life" is exact.
+    pub(crate) fn fire_opponent_graveyard_watchers(&mut self, owner: usize) {
+        let watchers: Vec<crate::game::types::DelayedTrigger> = self
+            .delayed_triggers
+            .iter()
+            .filter(|dt| {
+                matches!(
+                    dt.kind,
+                    crate::game::types::DelayedKind::CardEntersOpponentGraveyardThisTurn
+                ) && self.opponents_of(dt.controller).contains(&owner)
+            })
+            .cloned()
+            .collect();
+        for dt in watchers {
+            self.stack.push(
+                TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                    .target(Some(Target::Player(owner)))
+                    .build(),
+            );
+        }
+    }
+
     /// Push triggered abilities of `source` whose event spec is
     /// `DealsCombatDamageToCreature` onto the stack, binding the damaged
     /// creature to the trigger's target so "destroy / exile / -1/-1 that

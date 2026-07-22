@@ -10157,6 +10157,13 @@ impl GameState {
                 self.fire_life_gained_watchers(*player, *amount);
             }
         }
+        // CR 603.4 — "whenever a card is put into an opponent's graveyard this
+        // turn" delayed triggers (Duskmantle Guildmage).
+        for ev in events {
+            if let GameEvent::CardPutIntoGraveyard { player, .. } = ev {
+                self.fire_opponent_graveyard_watchers(*player);
+            }
+        }
         // May suspend on a networked controller's `OrderTriggers` pick
         // (CR 603.3b) — the resume path re-enters
         // `push_ordered_trigger_candidates` with the finished order.

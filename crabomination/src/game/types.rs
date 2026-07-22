@@ -745,6 +745,12 @@ pub enum DelayedKind {
     /// the amount bound via `Value::TriggerEventAmount`. Expires at cleanup.
     /// Vizkopa Guildmage's second ability.
     YouGainLifeThisTurn,
+    /// "Whenever a card is put into an opponent's graveyard from anywhere this
+    /// turn, [body]" (CR 603.4). Fires per `CardPutIntoGraveyard` event whose
+    /// owner is an opponent of `DelayedTrigger.controller`; that owner is bound
+    /// as the body's `Target(0)` (so "that player loses 1 life" is exact in
+    /// multiplayer). Expires at cleanup. Duskmantle Guildmage's first ability.
+    CardEntersOpponentGraveyardThisTurn,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

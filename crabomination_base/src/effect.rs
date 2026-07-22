@@ -5289,6 +5289,12 @@ pub enum Effect {
     /// ("each opponent loses that much life").
     WheneverYouGainLifeThisTurn { body: Box<Effect> },
 
+    /// "Until end of turn, whenever a card is put into an opponent's graveyard
+    /// from anywhere, [body]." Registers a turn-scoped delayed trigger
+    /// (CR 603.4); the graveyard's owner is bound as the body's `Target(0)`
+    /// (Duskmantle Guildmage — "that player loses 1 life"). Expires at cleanup.
+    WheneverCardEntersOpponentGraveyardThisTurn { body: Box<Effect> },
+
     /// "Whenever you cast a spell this turn, [body]" — like
     /// `OnYourNextSpellCastThisTurn` but repeating until cleanup
     /// (Rediscover the Way chapter III; gate the body with an

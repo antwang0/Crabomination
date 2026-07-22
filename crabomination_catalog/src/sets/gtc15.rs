@@ -227,6 +227,43 @@ pub fn vizkopa_guildmage() -> CardDefinition {
     }
 }
 
+/// Duskmantle Guildmage — {U}{B} 2/2 Human Wizard. {1}{U}{B}: until end of turn,
+/// whenever a card is put into an opponent's graveyard, that player loses 1 life.
+/// {2}{U}{B}: target player mills two cards.
+pub fn duskmantle_guildmage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        name: "Duskmantle Guildmage",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), u(), b()]),
+                effect: Effect::WheneverCardEntersOpponentGraveyardThisTurn {
+                    body: Box::new(Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::ONE,
+                    }),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), u(), b()]),
+                effect: Effect::Mill {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::Const(2),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Armored Transport — {3} 2/1 Construct. Prevent all combat damage that would
 /// be dealt to it by creatures blocking it.
 pub fn armored_transport() -> CardDefinition {

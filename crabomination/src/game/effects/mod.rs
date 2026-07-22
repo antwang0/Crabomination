@@ -13468,6 +13468,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WheneverCardEntersOpponentGraveyardThisTurn { body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::CardEntersOpponentGraveyardThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    fires_once: false,
+                });
+                Ok(())
+            }
+
             Effect::SearchSplitWithOpponent { count } => {
                 use crate::card::CardType;
                 use crate::effect::ZoneDest;

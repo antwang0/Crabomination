@@ -1932,3 +1932,36 @@ fn gtc15_vizkopa_guildmage_lifegain_drains() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 4, "opponent lost life equal to the life gained");
 }
+
+/// Duskmantle Guildmage: mill ability, and the armed graveyard-drain punisher.
+#[test]
+fn gtc15_duskmantle_guildmage_mills_and_drains() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::duskmantle_guildmage());
+    g.clear_sickness(mage);
+    for _ in 0..5 { g.add_card_to_library(1, catalog::gutter_skulk()); }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Arm the graveyard-drain (ability 0).
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("arm drain");
+    drain_stack(&mut g);
+    // Mill two off the opponent (ability 1) — the two milled cards each drain 1.
+    let opp = g.players[1].life;
+    let lib = g.players[1].library.len();
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 1, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("mill two");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - 2, "milled two cards");
+    assert_eq!(g.players[1].life, opp - 2, "each milled card drained 1 (2 total)");
+}
