@@ -1589,6 +1589,27 @@ fn volatile_rig_explodes_on_death() {
     assert_eq!(g.battlefield_find(bystander).unwrap().damage, 4, "bystander took 4");
 }
 
+/// Street Sweeper destroys the Auras on a land when it attacks.
+#[test]
+fn street_sweeper_clears_land_auras() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let sweeper = g.add_card_to_battlefield(0, catalog::street_sweeper());
+    g.clear_sickness(sweeper);
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let aura = g.add_card_to_battlefield(1, catalog::racecourse_fury());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(land);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sweeper, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "the land's Aura was destroyed");
+    assert!(g.battlefield_find(land).is_some(), "the land itself survives");
+}
+
 /// Jarad's Orders fetches one creature to hand and one to the graveyard.
 #[test]
 fn jarads_orders_splits_hand_and_graveyard() {

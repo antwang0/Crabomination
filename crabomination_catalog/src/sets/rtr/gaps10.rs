@@ -11,7 +11,7 @@ use crate::card::{
 use crate::card::DynamicPt;
 use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
-use crate::effect::shortcut::{etb, on_dies, target_filtered};
+use crate::effect::shortcut::{etb, on_attack, on_dies, target_filtered};
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
 
 /// Conjured Currency — {5}{U} Enchantment. At the beginning of your upkeep, you
@@ -172,6 +172,23 @@ pub fn izzet_staticaster() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Street Sweeper — {6} 4/6 Construct artifact creature. Whenever it attacks,
+/// destroy all Auras attached to target land.
+pub fn street_sweeper() -> CardDefinition {
+    CardDefinition {
+        name: "Street Sweeper",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 4,
+        toughness: 6,
+        triggered_abilities: vec![on_attack(Effect::Destroy {
+            what: Selector::AttachedToMe(Box::new(target_filtered(R::Land))),
+        })],
         ..Default::default()
     }
 }
