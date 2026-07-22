@@ -7769,6 +7769,19 @@ static GTC3: &[Factory] = &[
     super::gtc3::massive_raid,
     super::gtc3::ground_assault,
 ];
+static GTC4: &[Factory] = &[
+    super::gtc4::sapphire_drake,
+    super::gtc4::crowned_ceratok,
+    super::gtc4::hellraiser_goblin,
+    super::gtc4::ogre_slumlord,
+    super::gtc4::court_street_denizen,
+    super::gtc4::sages_row_denizen,
+    super::gtc4::high_priest_of_penance,
+    super::gtc4::frilled_oculus,
+    super::gtc4::dinrova_horror,
+    super::gtc4::grisly_spectacle,
+    super::gtc4::crackling_perimeter,
+];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,
 ];
@@ -14444,6 +14457,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("gtc", GTC),
     ("gtc2", GTC2),
     ("gtc3", GTC3),
+    ("gtc4", GTC4),
     ("ice", ICE),
     ("inv", INV),
     ("khm", KHM),

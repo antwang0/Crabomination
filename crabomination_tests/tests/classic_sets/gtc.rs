@@ -534,3 +534,149 @@ fn gtc3_ground_assault_scales_with_lands() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(wurm).unwrap().damage, 4, "4 lands → 4 damage");
 }
+
+// ── Wave 4 ───────────────────────────────────────────────────────────────────
+
+/// Sapphire Drake / Crowned Ceratok grant evasion to your +1/+1-countered team.
+#[test]
+fn gtc4_counter_lords_grant_evasion() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sapphire_drake());
+    g.add_card_to_battlefield(0, catalog::crowned_ceratok());
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2, no counter yet
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying), "no counter → no grant");
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let c = g.computed_permanent(bear).unwrap();
+    assert!(c.keywords.contains(&Keyword::Flying) && c.keywords.contains(&Keyword::Trample));
+}
+
+/// Hellraiser Goblin gives your creatures haste and "attacks each combat".
+#[test]
+fn gtc4_hellraiser_grants_haste_mustattack() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hellraiser_goblin());
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    let c = g.computed_permanent(bear).unwrap();
+    assert!(c.keywords.contains(&Keyword::Haste) && c.keywords.contains(&Keyword::MustAttack));
+}
+
+/// Ogre Slumlord mints a Rat when a nontoken creature dies; Rats have deathtouch.
+#[test]
+fn gtc4_ogre_slumlord_rats_have_deathtouch() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ogre_slumlord());
+    let victim = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // nontoken
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    kill_perm(&mut g, victim);
+    g.dispatch_triggers_for_events(&[GameEvent::CreatureDied { card_id: victim }]);
+    drain_stack(&mut g);
+    let rat = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Rat").expect("rat token").id;
+    assert!(g.computed_permanent(rat).unwrap().keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Court Street Denizen taps an opponent's creature when another white creature enters.
+#[test]
+fn gtc4_court_street_taps_on_white_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::court_street_denizen());
+    let foe = g.add_card_to_battlefield(1, catalog::ruination_wurm());
+    let ally = g.add_card_to_battlefield(0, catalog::urbis_protector()); // white
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ally }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "opponent's creature tapped");
+}
+
+/// Sage's Row Denizen mills when another blue creature enters.
+#[test]
+fn gtc4_sages_row_mills_on_blue_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sages_row_denizen());
+    for _ in 0..5 { g.add_card_to_library(1, catalog::gutter_skulk()); }
+    let ally = g.add_card_to_battlefield(0, catalog::merfolk_of_the_depths()); // blue
+    let before = g.players[1].library.len();
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ally }]);
+    drain_stack_targeting(&mut g, Target::Player(1));
+    assert_eq!(g.players[1].library.len(), before - 2, "milled two");
+}
+
+/// High Priest of Penance destroys a nonland permanent when dealt damage.
+#[test]
+fn gtc4_high_priest_destroys_on_damage() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let priest = g.add_card_to_battlefield(0, catalog::high_priest_of_penance());
+    let foe = g.add_card_to_battlefield(1, catalog::ruination_wurm());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(priest), 1, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "nonland permanent destroyed");
+}
+
+/// Frilled Oculus can only pump once each turn.
+#[test]
+fn gtc4_frilled_oculus_once_per_turn() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let o = g.add_card_to_battlefield(0, catalog::frilled_oculus());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: o, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("first pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(o).unwrap().power, 3, "1/3 → 3/5");
+    let second = g.perform_action(GameAction::ActivateAbility {
+        card_id: o, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(second.is_err(), "second activation this turn is illegal");
+}
+
+/// Dinrova Horror bounces a permanent then makes its owner discard.
+#[test]
+fn gtc4_dinrova_bounces_and_discards() {
+    let mut g = two_player_game();
+    let d = g.add_card_to_battlefield(0, catalog::dinrova_horror());
+    let foe = g.add_card_to_battlefield(1, catalog::ruination_wurm());
+    g.add_card_to_hand(1, catalog::gutter_skulk()); // something to discard
+    let hand_before = g.players[1].hand.len();
+    g.fire_self_etb_triggers(d, 0);
+    drain_stack_targeting(&mut g, Target::Permanent(foe));
+    assert!(g.battlefield_find(foe).is_none(), "permanent bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == foe), "bounced card is in owner's hand");
+    assert_eq!(g.players[1].hand.len(), hand_before + 1 - 1, "returned one, discarded one");
+}
+
+/// Grisly Spectacle destroys a nonartifact creature and mills its power.
+#[test]
+fn gtc4_grisly_spectacle_destroys_and_mills() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::ruination_wurm()); // 7/6
+    for _ in 0..10 { g.add_card_to_library(1, catalog::gutter_skulk()); }
+    let before = g.players[1].library.len();
+    let gs = g.add_card_to_hand(0, catalog::grisly_spectacle());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.cast_spell(gs, Some(Target::Permanent(foe)), vec![], None, None).expect("grisly");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "destroyed");
+    assert_eq!(g.players[1].library.len(), before - 7, "milled 7 (its power)");
+}
+
+/// Crackling Perimeter pings each opponent for 1 by tapping a Gate.
+#[test]
+fn gtc4_crackling_perimeter_pings() {
+    let mut g = two_player_game();
+    let perim = g.add_card_to_battlefield(0, catalog::crackling_perimeter());
+    let gate = g.add_card_to_battlefield(0, catalog::azorius_guildgate()); // a Gate to tap
+    g.battlefield_find_mut(gate).unwrap().tapped = false;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: perim, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "opponent pinged for 1");
+}

@@ -290,6 +290,7 @@ pub mod gpt;
 pub mod gtc;
 pub mod gtc2;
 pub mod gtc3;
+pub mod gtc4;
 pub mod ice;
 pub mod inv;
 pub mod khm;
