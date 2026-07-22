@@ -10908,10 +10908,14 @@ impl GameState {
             },
         ];
 
-        // Push ability effects onto the stack.
+        // Push ability effects onto the stack. Auto-fill additional target
+        // slots (Domri Rade's −2 "target creature you control fights another
+        // target creature"); the single-target action only carries slot 0.
+        let extra_targets = self.auto_extra_targets_for(&ability.effect, card_id, p, target.clone());
         self.stack.push(
             TriggerPush::new(card_id, p, ability.effect)
                 .target(target)
+                .additional_targets(extra_targets)
                 .x_value(x)
                 .build(),
         );

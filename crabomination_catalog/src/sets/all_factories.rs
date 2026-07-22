@@ -7842,6 +7842,8 @@ static GTC9: &[Factory] = &[
     super::gtc11::duskmantle_seer,
     super::gtc11::deathpact_angel,
     super::gtc11::voidwalk,
+    super::gtc12::clan_defiance,
+    super::gtc12::domri_rade,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,

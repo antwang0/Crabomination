@@ -1544,3 +1544,73 @@ fn gtc11_voidwalk_blinks() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Ruination Wurm" && c.controller == 1),
         "creature returned under its owner's control");
 }
+
+// ── Wave 12 ──────────────────────────────────────────────────────────────────
+
+/// Clan Defiance deals X to a flyer and X to a player when both modes are chosen.
+#[test]
+fn gtc12_clan_defiance_modal_x_burn() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::assault_griffin()); // has flying
+    let spell = g.add_card_to_hand(0, catalog::clan_defiance());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3); // X=3
+    let opp_before = g.players[1].life;
+    // Modes 0 (flyer) and 2 (player), X=3.
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: spell,
+        spree_modes: vec![0, 2],
+        target: Some(Target::Permanent(flyer)),
+        additional_targets: vec![Target::Player(1)],
+        x_value: Some(3),
+    }).expect("cast Clan Defiance");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(flyer).is_none(), "3 damage killed the 3-toughness griffin");
+    assert_eq!(g.players[1].life, opp_before - 3, "player took 3");
+}
+
+/// Domri Rade's −2 makes your creature fight an enemy.
+#[test]
+fn gtc12_domri_rade_fight() {
+    let mut g = two_player_game();
+    let domri = g.add_card_to_battlefield(0, catalog::domri_rade());
+    let mine = g.add_card_to_battlefield(0, catalog::ruination_wurm()); // 7/6
+    let foe = g.add_card_to_battlefield(1, catalog::gutter_skulk()); // 2/2
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: domri, ability_index: 1,
+        target: Some(Target::Permanent(mine)),
+        x_value: None,
+    }).expect("fight");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "the 2/2 died to the 7/6");
+    assert!(g.battlefield_find(mine).is_some(), "my wurm survived the 2 back");
+}
+
+/// Domri Rade's −7 emblem grants your creatures double strike, trample,
+/// hexproof, and haste.
+#[test]
+fn gtc12_domri_rade_emblem() {
+    let mut g = two_player_game();
+    let domri = g.add_card_to_battlefield(0, catalog::domri_rade());
+    g.battlefield_find_mut(domri).unwrap().counters.insert(CounterType::Loyalty, 7);
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: domri, ability_index: 2, target: None, x_value: None,
+    }).expect("ultimate");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    for kw in [Keyword::DoubleStrike, Keyword::Trample, Keyword::Hexproof, Keyword::Haste] {
+        assert!(c.keywords.contains(&kw), "emblem grants {kw:?}");
+    }
+}
