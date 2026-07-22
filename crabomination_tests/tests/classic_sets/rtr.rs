@@ -1589,6 +1589,30 @@ fn volatile_rig_explodes_on_death() {
     assert_eq!(g.battlefield_find(bystander).unwrap().damage, 4, "bystander took 4");
 }
 
+/// Jarad's Orders fetches one creature to hand and one to the graveyard.
+#[test]
+fn jarads_orders_splits_hand_and_graveyard() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::grizzly_bears());
+    let b = g.add_card_to_library(0, catalog::risen_sanctuary());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(a)),
+        DecisionAnswer::Search(Some(b)),
+    ]));
+    let ord = g.add_card_to_hand(0, catalog::jarads_orders());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ord, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a), "first pick to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == b), "second pick to graveyard");
+}
+
 /// Racecourse Fury lets its enchanted land grant haste.
 #[test]
 fn racecourse_fury_grants_haste() {

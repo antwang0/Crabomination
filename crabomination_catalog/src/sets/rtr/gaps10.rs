@@ -176,6 +176,32 @@ pub fn izzet_staticaster() -> CardDefinition {
     }
 }
 
+/// Jarad's Orders — {2}{B}{G} Sorcery. Search your library for up to two
+/// creature cards, put one into your hand and the other into your graveyard,
+/// then shuffle. (Two sequential single searches — the player routes each pick.)
+pub fn jarads_orders() -> CardDefinition {
+    CardDefinition {
+        name: "Jarad's Orders",
+        cost: cost(&[generic(2), b(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::Creature,
+                to: ZoneDest::Hand(PlayerRef::You),
+                count: Value::ONE,
+            },
+            Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::Creature,
+                to: ZoneDest::Graveyard,
+                count: Value::ONE,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Racecourse Fury — {R} Aura. Enchant land. Enchanted land has "{T}: Target
 /// creature gains haste until end of turn."
 pub fn racecourse_fury() -> CardDefinition {
