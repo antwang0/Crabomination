@@ -28,7 +28,8 @@ fn render_status(started: Instant, slots: &SlotManager) -> String {
     let sl = slots.snapshot();
     format!(
         "crabomination_server\nuptime: {}\ncatalog: {} cards\n{}\nconnections: {} current, {} peak, \
-         {} accepted, {} refused ({} global / {} per-IP, {}% refusal rate)\n",
+         {} accepted, {} refused ({} global / {} per-IP, {}% refusal rate)\n\
+         ip spread: {} distinct, {} max/IP (peak {}), {}% occupancy\n",
         format_duration(started.elapsed()),
         catalog_card_count(),
         format_match_stats(&stats_snapshot),
@@ -39,6 +40,10 @@ fn render_status(started: Instant, slots: &SlotManager) -> String {
         sl.refused_global,
         sl.refused_per_ip,
         sl.refusal_rate_pct(),
+        sl.distinct_ips,
+        sl.max_per_ip,
+        sl.peak_per_ip,
+        sl.occupancy_pct(),
     )
 }
 
@@ -516,6 +521,8 @@ mod tests {
         assert!(body.contains("\ncatalog: ") && body.contains(" cards\n"), "catalog line present");
         assert!(body.contains("served "), "match stats line present");
         assert!(body.contains("connections: 0 current, 0 peak"), "slot line present");
+        assert!(body.contains("ip spread: 0 distinct") && body.contains("% occupancy"),
+            "IP-spread/occupancy line surfaces the abuse & saturation signals");
     }
 
     #[test]
