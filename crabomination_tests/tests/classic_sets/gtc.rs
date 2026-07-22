@@ -1674,3 +1674,76 @@ fn gtc13_thrull_parasite_removes_counter() {
         "one +1/+1 counter removed");
     assert_eq!(g.players[0].life, life - 2, "paid 2 life");
 }
+
+// ── Wave 14 ──────────────────────────────────────────────────────────────────
+
+/// One Thousand Lashes locks a creature down and drains its controller.
+#[test]
+fn gtc14_one_thousand_lashes() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::ruination_wurm());
+    let aura = g.add_card_to_hand(0, catalog::one_thousand_lashes());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.cast_spell(aura, Some(Target::Permanent(foe)), vec![], None, None).expect("cast aura");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(foe).unwrap();
+    assert!(c.keywords.contains(&Keyword::CantAttack) && c.keywords.contains(&Keyword::CantBlock),
+        "enchanted creature can't attack or block");
+    // The enchanted creature's controller (P1) loses 1 at their upkeep.
+    g.active_player_idx = 1;
+    let life = g.players[1].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "controller drained 1 at upkeep");
+}
+
+/// Frontline Medic's Battalion makes your team indestructible.
+#[test]
+fn gtc14_frontline_medic_battalion() {
+    let mut g = two_player_game();
+    let medic = g.add_card_to_battlefield(0, catalog::frontline_medic());
+    let a = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    let b = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    for c in [medic, a, b] { g.clear_sickness(c); }
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![
+        Attack { attacker: medic, target: AttackTarget::Player(1) },
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]).expect("attack with three");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Indestructible),
+        "battalion granted indestructible");
+}
+
+/// Frontline Medic's sacrifice counters an X spell unless its controller pays.
+#[test]
+fn gtc14_frontline_medic_counters_x_spell() {
+    let mut g = two_player_game();
+    let medic = g.add_card_to_battlefield(0, catalog::frontline_medic());
+    g.clear_sickness(medic);
+    // P1 casts an X spell (Gridlock, {X}{U}).
+    let xspell = g.add_card_to_hand(1, catalog::gridlock());
+    let dummy = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.cast_spell(xspell, Some(Target::Permanent(dummy)), vec![], None, Some(1)).expect("cast X spell");
+    // P0 sacrifices the Medic to counter it (P1 can't/won't pay {3}).
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: medic, ability_index: 0, target: Some(Target::Permanent(xspell)),
+        additional_targets: vec![], x_value: None,
+    }).expect("sac to counter");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == xspell), "the X spell was countered");
+}

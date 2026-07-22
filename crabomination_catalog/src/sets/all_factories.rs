@@ -7847,6 +7847,8 @@ static GTC9: &[Factory] = &[
     super::gtc13::undercity_plague,
     super::gtc13::thrull_parasite,
     super::gtc13::gridlock,
+    super::gtc14::one_thousand_lashes,
+    super::gtc14::frontline_medic,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,
