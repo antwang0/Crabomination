@@ -174,6 +174,8 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("slow_game_pct", "gauge", "Percent of completed matches that ran 13 turns or longer.", st.slow_game_pct().to_string());
     m("inconclusive_total", "counter", "Matches that ended with no declared outcome (stuck / disconnected).", st.inconclusive.to_string());
     m("inconclusive_pct", "gauge", "Percent of completed matches that were inconclusive.", st.inconclusive_pct().to_string());
+    m("unresolved_total", "counter", "Matches counted that produced neither a win nor a draw (watchdog teardown / lost winner observation).", st.unresolved().to_string());
+    m("unresolved_pct", "gauge", "Percent of completed matches left unresolved — the alertable rate form of unresolved_total.", st.unresolved_pct().to_string());
     m("decisive_pct", "gauge", "Percent of resolved matches (wins+draws) that ended decisively.", st.decisive_pct().to_string());
     m("draw_pct", "gauge", "Percent of completed matches that ended in a draw.", st.draw_pct().to_string());
     m("avg_duration_seconds", "gauge", "Average match duration in seconds.", st.avg_duration().as_secs().to_string());

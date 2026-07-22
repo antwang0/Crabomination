@@ -13453,6 +13453,30 @@ fn static_effect_to_effects(
                     None => vec![],
                 }
             }
+            StaticEffect::LandsYouControlAreChosenType => {
+                // Realmwright — lands the source's controller controls are the
+                // chosen basic type in addition (layer-4 additive). No-op until
+                // the ETB choice stamps `chosen_land_type`.
+                match card.chosen_land_type {
+                    Some(land_type) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: AffectedPermanents::All {
+                            controller: Some(card.controller),
+                            card_types: vec![CardType::Land],
+                            exclude_source: false,
+                            color: None,
+                            token: None,
+                            colorless: false,
+                        },
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddLandType(land_type),
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::GrantAllColors { applies_to } => {
                 use crate::mana::Color;
                 match selector_to_affected(applies_to, card) {

@@ -176,6 +176,7 @@ impl Effect {
             // Group / each-player effects with no cast-time target slot.
             | Effect::EachPlayerPutsHandCardOnTop { .. }
             | Effect::LandsBecomeChosenBasicType { .. }
+            | Effect::ChooseBasicLandTypeForSource
             | Effect::ExileTopSelfPumpIfCreature
             | Effect::DistributeCountersAmongLastCreated { .. } => false,
             // Mills the controller's own library, then branches on the milled

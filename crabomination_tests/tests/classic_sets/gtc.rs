@@ -887,3 +887,217 @@ fn gtc6_slate_street_ruffian_discards_on_block() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), hand_before - 1, "defending player discarded on block");
 }
+
+// ── Wave 7 (gtc7) ─────────────────────────────────────────────────────────────
+
+use crabomination::card::{CardType, LandType};
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+use crabomination::effect::{Effect, Selector, Value};
+use crabomination::mana::Color;
+
+/// Stat / keyword lines for the wave-7 Evolve creatures.
+#[test]
+fn gtc7_evolve_keyword_lines() {
+    assert!(catalog::crocanura().keywords.contains(&Keyword::Reach));
+    assert!(catalog::battering_krasis().keywords.contains(&Keyword::Trample));
+    assert!(catalog::shambleshark().keywords.contains(&Keyword::Flash));
+    assert!(catalog::clinging_anemones().keywords.contains(&Keyword::Defender));
+    let snap = catalog::adaptive_snapjaw();
+    assert_eq!((snap.power, snap.toughness), (6, 2));
+}
+
+/// A bigger creature entering evolves Crocanura (0/0 → after counter).
+#[test]
+fn gtc7_crocanura_evolves() {
+    let mut g = two_player_game();
+    let croc = g.add_card_to_battlefield(0, catalog::crocanura()); // 1/3
+    let wurm = g.add_card_to_hand(0, catalog::ruination_wurm()); // 7/6
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast wurm");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(croc).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Renegade Krasis: when it evolves, each other counter-bearing creature you
+/// control gets a +1/+1 counter too.
+#[test]
+fn gtc7_renegade_krasis_payoff() {
+    let mut g = two_player_game();
+    let renegade = g.add_card_to_battlefield(0, catalog::renegade_krasis()); // 3/2
+    // Another (non-evolve) creature with a +1/+1 counter already on it.
+    let other = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    g.battlefield_find_mut(other).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let wurm = g.add_card_to_hand(0, catalog::ruination_wurm()); // 7/6 evolves the 3/2
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast wurm");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(renegade).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "evolved");
+    assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "payoff added one");
+}
+
+/// Miming Slime makes an Ooze whose P/T equals the greatest power you control.
+#[test]
+fn gtc7_miming_slime_token_size() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ruination_wurm()); // 7/6 — greatest power 7
+    let slime = g.add_card_to_hand(0, catalog::miming_slime());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: slime, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast slime");
+    drain_stack(&mut g);
+    let ooze = g.battlefield.iter().find(|c| c.definition.name == "Ooze").expect("token exists").id;
+    assert_eq!(g.computed_permanent(ooze).unwrap().power, 7, "X = greatest power (7)");
+}
+
+/// Realmwright makes the controller's lands the chosen basic type in addition.
+#[test]
+fn gtc7_realmwright_adds_chosen_land_type() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
+    g.move_card_to_battlefield_for_test(0, catalog::realmwright());
+    drain_stack(&mut g);
+    let types = &g.computed_permanent(forest).unwrap().subtypes.land_types;
+    assert!(types.contains(&LandType::Island), "gained the chosen Island type");
+    assert!(types.contains(&LandType::Forest), "kept its Forest type");
+}
+
+/// Gruul Ragebeast: on entering, it fights an opponent's creature.
+#[test]
+fn gtc7_gruul_ragebeast_fights_on_etb() {
+    let mut g = two_player_game();
+    let prey = g.add_card_to_battlefield(1, catalog::gutter_skulk()); // 2/2
+    g.move_card_to_battlefield_for_test(0, catalog::gruul_ragebeast()); // 6/6 fights the 2/2
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prey).is_none(), "prey died to the fight");
+}
+
+/// Merciless Eviction mode 1 exiles all creatures.
+#[test]
+fn gtc7_merciless_eviction_exiles_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    let b = g.add_card_to_battlefield(1, catalog::ruination_wurm());
+    let spell = g.add_card_to_hand(0, catalog::merciless_eviction());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast eviction"); // mode 1 = exile all creatures
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both creatures exiled");
+}
+
+/// Skarrg Guildmage animates one of your lands into a 4/4.
+#[test]
+fn gtc7_skarrg_animates_land() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::skarrg_guildmage());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.clear_sickness(mage);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 1, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], x_value: None,
+    }).expect("animate land");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(land).unwrap();
+    assert!(c.card_types.contains(&CardType::Creature) && c.card_types.contains(&CardType::Land));
+    assert_eq!((c.power, c.toughness), (4, 4));
+}
+
+/// Simic Fluxmage moves a +1/+1 counter off itself onto another creature.
+#[test]
+fn gtc7_simic_fluxmage_moves_counter() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::simic_fluxmage());
+    g.battlefield_find_mut(mage).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let target = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    g.clear_sickness(mage);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], x_value: None,
+    }).expect("move counter");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mage).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Fortress Cyclops gets +3/+0 when it attacks.
+#[test]
+fn gtc7_fortress_cyclops_attack_pump() {
+    let mut g = two_player_game();
+    let cyc = g.add_card_to_battlefield(0, catalog::fortress_cyclops());
+    g.clear_sickness(cyc);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cyc, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(cyc).unwrap().power, 6, "3 + 3 attack pump");
+}
+
+/// Zameck Guildmage draws by removing a +1/+1 counter from a creature you control.
+#[test]
+fn gtc7_zameck_removes_counter_to_draw() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::zameck_guildmage());
+    let dude = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    g.battlefield_find_mut(dude).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.add_card_to_library(0, catalog::gutter_skulk());
+    g.clear_sickness(mage);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("remove counter, draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+    assert_eq!(g.battlefield_find(dude).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "counter removed");
+}
+
+/// Foundry Champion's ETB deals damage equal to creatures you control.
+#[test]
+fn gtc7_foundry_champion_etb_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    let life_before = g.players[1].life;
+    // Foundry Champion itself counts too: 2 skulks + the champion = 3.
+    g.move_card_to_battlefield_for_test(0, catalog::foundry_champion());
+    // Auto-target picks the opponent (only "any target" legal choice defaults to a player).
+    drain_stack(&mut g);
+    assert!(g.players[1].life < life_before, "opponent took ETB damage");
+}
+
+/// Verdant Haven gains 2 life when it enters.
+#[test]
+fn gtc7_verdant_haven_gains_life() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let life_before = g.players[0].life;
+    let aura = g.add_card_to_hand(0, catalog::verdant_haven());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(land)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2, "gained 2 life on ETB");
+}

@@ -689,6 +689,16 @@ impl MatchStats {
     pub(crate) fn unresolved(&self) -> u64 {
         self.total_matches().saturating_sub(self.wins + self.draws)
     }
+    /// `unresolved()` as a percentage of all completed matches — the alertable
+    /// rate form of the raw count. Distinct from `inconclusive_pct` (which
+    /// counts only games `observe_winner(None)` saw): this derives from the
+    /// match counter, so a match that finished without any winner observation
+    /// at all still shows up here. Returns 0 before any match completes.
+    pub(crate) fn unresolved_pct(&self) -> u64 {
+        let total = self.total_matches();
+        if total == 0 { return 0; }
+        self.unresolved().saturating_mul(100) / total
+    }
     /// Percent of wins that closed via something other than lethal face
     /// damage (deckout / poison / mill / win-the-game). Returns 0 when no
     /// wins have been recorded. A rising share flags a stall regression
@@ -1496,5 +1506,15 @@ mod tests {
         assert_eq!(s.duration_cv_pct(), 33);
         // No matches → 0 rather than dividing by zero.
         assert_eq!(MatchStats::default().duration_cv_pct(), 0);
+    }
+
+    #[test]
+    fn unresolved_pct_is_rate_over_all_matches() {
+        // 4 matches: 2 wins + 1 draw = 3 resolved → 1 unresolved = 25%.
+        let s = MatchStats { bot_matches: 4, wins: 2, draws: 1, ..Default::default() };
+        assert_eq!(s.unresolved(), 1);
+        assert_eq!(s.unresolved_pct(), 25);
+        // No matches → 0 rather than dividing by zero.
+        assert_eq!(MatchStats::default().unresolved_pct(), 0);
     }
 }

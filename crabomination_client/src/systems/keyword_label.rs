@@ -276,6 +276,8 @@ fn req_short(req: &crabomination::card::SelectionRequirement) -> Option<String> 
         R::Enchantment => "Ench".to_string(),
         R::Creature => "Cre".to_string(),
         R::Land => "Land".to_string(),
+        R::Planeswalker => "PW".to_string(),
+        R::HasLandType(t) => format!("{t:?}"),
         // Composite filters (e.g. "can't be blocked by white creatures" =
         // And(Creature, HasColor(White))) — name the more specific half so
         // the chip reads "Eva-·White" rather than a bare "Eva-". A plain
@@ -600,6 +602,12 @@ mod tests {
         // A bare creature-type filter still names the type.
         let f2 = R::Creature.and(R::HasCreatureType(crabomination::card::CreatureType::Goblin));
         assert_eq!(req_short(&f2).as_deref(), Some("Goblin"));
+        // The full card-type filter set is named, including planeswalkers.
+        assert_eq!(req_short(&R::Planeswalker).as_deref(), Some("PW"));
+        assert_eq!(
+            req_short(&R::HasLandType(crabomination::card::LandType::Island)).as_deref(),
+            Some("Island"),
+        );
     }
 
     #[test]

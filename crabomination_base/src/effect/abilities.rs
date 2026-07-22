@@ -1027,6 +1027,12 @@ pub enum StaticEffect {
         land_type: crate::card::LandType,
         replace: bool,
     },
+    /// CR 305.7 — "Lands you control are the [chosen] type in addition to
+    /// their other types." Reads the source permanent's `chosen_land_type`
+    /// (stamped by `Effect::ChooseBasicLandTypeForSource` as it entered) and
+    /// adds that basic land type to every land the source's controller
+    /// controls (layer-4, additive). No-op until a type is chosen. Realmwright.
+    LandsYouControlAreChosenType,
     /// CR 305.7 — a `LandTypeChanger` gated on the source carrying at least `n`
     /// counters of `kind`. The layer effect only materializes while the
     /// threshold holds (Zhao, the Moon Slayer — "As long as Zhao has a

@@ -4046,6 +4046,10 @@ pub struct CardInstance {
     /// "unrestricted" (legacy behaviour, used by tests that hand-craft a
     /// Cavern via `add_card_to_battlefield` without firing its ETB).
     pub chosen_creature_type: Option<CreatureType>,
+    /// "As [this] enters, choose a basic land type." Realmwright. Read by
+    /// `StaticEffect::LandsYouControlAreChosenType` to add that type to the
+    /// controller's lands. `None` until the ETB choice resolves.
+    pub chosen_land_type: Option<LandType>,
     /// A number chosen as this permanent entered (Sanctum Prelate — "choose a
     /// number"). Read by `noncreature_spell_cast_locked` for the chosen-MV lock.
     pub chosen_number: Option<u32>,
@@ -4418,6 +4422,7 @@ impl CardInstance {
             cast_from_exile: false,
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
+            chosen_land_type: None,
             chosen_number: None,
             chosen_mode: None,
             chosen_card_type: None,
@@ -4991,6 +4996,8 @@ struct CardInstanceWire {
     may_cast_back_from_graveyard: bool,
     chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
+    chosen_land_type: Option<LandType>,
+    #[serde(default)]
     chosen_number: Option<u32>,
     #[serde(default)]
     chosen_mode: Option<u8>,
@@ -5212,6 +5219,7 @@ impl serde::Serialize for CardInstance {
             cast_from_exile: self.cast_from_exile,
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
+            chosen_land_type: self.chosen_land_type,
             chosen_number: self.chosen_number,
             chosen_mode: self.chosen_mode,
             chosen_card_type: self.chosen_card_type.clone(),
@@ -5356,6 +5364,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_collected_evidence = wire.cast_collected_evidence;
         c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
+        c.chosen_land_type = wire.chosen_land_type;
         c.chosen_number = wire.chosen_number;
         c.chosen_mode = wire.chosen_mode;
         // CR 614 — re-bake the recorded Siege mode onto the freshly-resolved

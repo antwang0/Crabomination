@@ -4354,6 +4354,11 @@ pub enum Effect {
     /// Terraformer — "{1}: Choose a basic land type. Each land you control
     /// becomes that type until end of turn."
     LandsBecomeChosenBasicType { what: Selector, duration: Duration },
+    /// "As [this] enters, choose a basic land type." Asks the controller (via
+    /// the `ChooseColor` decision, basics mapping 1:1 onto colors) and stamps
+    /// the choice on the source's `chosen_land_type`. Paired with
+    /// `StaticEffect::LandsYouControlAreChosenType` (Realmwright).
+    ChooseBasicLandTypeForSource,
     /// CR 305 — each resolved permanent *gains* all five basic land types for
     /// `duration` (additive, keeping existing types and abilities). Installs a
     /// layer-4 `AddLandType` continuous effect per basic type so the lands tap

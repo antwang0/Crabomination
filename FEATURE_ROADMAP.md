@@ -16,7 +16,17 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **GTC waves 3–5 (this run, 40 cards):** guild Keyrunes, Extort creatures,
+- **GTC wave 7 (this run, 23 cards):** the Simic Evolve package, Boros Battalion
+  payoffs, Gruul Bloodrush/land-scaling, the Orzhov mode-sweep, and two land
+  Auras. New engine primitive: **Realmwright** — `Effect::ChooseBasicLandTypeForSource`
+  (as-enters basic-type choice, stamped on `CardInstance.chosen_land_type`) +
+  `StaticEffect::LandsYouControlAreChosenType` (additive layer-4 land-type static;
+  the intrinsic mana ability follows, CR 305.6). Renegade Krasis's "whenever this
+  evolves" is modeled as a paired trigger. CR conformance: 305.6, 701.12 (fight
+  simultaneity), 509.1c (can't-attack-alone). Server: `unresolved_pct` health-rate
+  gauge on `/metrics`. Client: `req_short` now names Planeswalker + land-type
+  blocker filters.
+- **GTC waves 3–5 (prior run, 40 cards):** guild Keyrunes, Extort creatures,
   +1/+1-counter evasion lords, team haste/must-attack statics, colour-filtered
   another-ETB triggers, and a spread of tricks/removal. Engine: **`EachMatching`
   (zone selector) now runs `resolve_x` on its filter** like `EachPermanent`, so

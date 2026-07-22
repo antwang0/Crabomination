@@ -54,28 +54,27 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (top-of-library fight), Grave Betrayal (mass reanimate replacement), Search the
   City (extra-turn combo), Azor's Elocutors (filibuster-counter win). Legends:
   Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
-- **Gatecrash (GTC) — in progress (modern_decks):** six waves shipped (~90
-  cards): beaters, dies/ETB triggers, combat spells, Auras, Battalion,
-  Bloodrush, an Equipment, the two host-controller-zone-scaling Auras (Righteous
-  Authority / Death's Approach), the five guild Keyrunes, Extort creatures,
-  +1/+1-counter evasion lords (Sapphire Drake / Crowned Ceratok), Homing
-  Lightning (`SameNameDamage`), Ogre Slumlord, Dinrova Horror, Grisly Spectacle,
-  Immortal Servitude (X-scaled mass reanimate — drove the `EachMatching`
-  `{X}`-from-cost fix), Biovisionary (win-con), Giant Adephage (self-copy),
-  Leyline Phantom, Martial Glory, Alpha Authority, Agoraphobia, Greenside
-  Watcher, Slate Street Ruffian, Scab-Clan Charger / Scorchwalker (Bloodrush).
-  ~80 cards remain (the Scryfall gap script's raw count over-reports: several
-  GTC names — Aetherize, Kingpin's Pet, Wojek Halberdiers, Balustrade Spy, Nav
-  Squad Commandos — already ship under other set modules). Notable primitives
-  still needed:
-  Realmwright (choose-a-basic-land-type-as-enters continuous "lands you control
-  are that type in addition" — note: `LandsBecomeChosenBasicType` already ships
-  for Terraformer; Realmwright wants the enters-choice + additive variant),
-  Gruul Ragebeast (ETB-of-any-creature fight), Merciless Eviction (4-mode
-  exile-all sweep — `ChooseMode` + exile-each-of-a-type), Alms Beast (combat-
-  relational "creatures blocking/blocked by this have lifelink" static),
-  Miming Slime (X/X token where X = greatest power you control), Cipher/Evolve
-  carriers, and the remaining Battalion/Bloodrush commons.
+- **Gatecrash (GTC) — in progress (modern_decks):** seven waves shipped. Wave 7
+  (gtc7) added the Simic Evolve package (Crocanura, Adaptive Snapjaw, Battering
+  Krasis, Shambleshark, Clinging Anemones, Simic Fluxmage, Renegade Krasis —
+  its "whenever this evolves" payoff is modeled as a paired trigger off the
+  identical greater-P/T ETB filter), Species Gorger, Zameck Guildmage,
+  **Realmwright** (drove the new `Effect::ChooseBasicLandTypeForSource` +
+  `StaticEffect::LandsYouControlAreChosenType` — an as-enters basic-land-type
+  choice stamped on `CardInstance.chosen_land_type`, then an additive layer-4
+  land-type static; the intrinsic mana ability follows per CR 305.6), Miming
+  Slime, **Gruul Ragebeast** (self-ETB + AnotherOfYours ETB fight), Merciless
+  Eviction (`ChooseMode` + `Exile { EachPermanent }`), Skarrg Guildmage,
+  Hydroform, Foundry Champion, Viashino Firstblade, Ordruun Veteran, Fortress
+  Cyclops, Rust Scarab, Rubblebelt Maaka, Verdant Haven, Skygames. Tests in
+  `classic_sets/gtc` (`gtc7_*`) + CR conformance `core_rules/cr_recent18`.
+  Still open primitives: Alms Beast (combat-relational "creatures blocking/
+  blocked by this have lifelink" static), Simic Manipulator (gain control of a
+  creature with power ≤ counters removed), a true `EventKind::Evolved` (would
+  let Renegade Krasis drop the paired-trigger approximation), and the remaining
+  guild commons. The Scryfall gap script over-reports (Aetherize, Kingpin's Pet,
+  Wojek Halberdiers, Balustrade Spy, Nav Squad Commandos, and now many wave-7
+  names ship under other set modules).
 - **Ravnica guild remainder (recent291 follow-ups):** shipped Simic Guildmage
   (`Effect::MoveCounter` + `Effect::Attach` aura-restitch), Golgari Guildmage,
   Necromantic Thirst (`EquipBonus.triggered_abilities` combat-damage trigger),
@@ -4306,7 +4305,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   land-type static ✅ (CR 305.7 — `StaticEffect::LandTypeChangerWhileCounters`
   only materializes while the source holds ≥N of a counter kind; Zhao, the Moon
   Slayer — "nonbasic lands are Mountains while Zhao has a conqueror counter";
-  `zhao_taps_nonbasics_and_conquers_to_mountains`).
+  `zhao_taps_nonbasics_and_conquers_to_mountains`). As-enters *chosen*-basic-type
+  additive static ✅ (CR 305.6/305.7 — `Effect::ChooseBasicLandTypeForSource`
+  stamps `CardInstance.chosen_land_type`, `StaticEffect::LandsYouControlAreChosenType`
+  adds it to your lands with the intrinsic mana ability following; Realmwright,
+  `cr_305_6_realmwright_land_taps_for_chosen_color`).
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).
 - 🟡 **CR 702.15 — Lifelink** — LKI corner (702.15c): triggered-ability source leaving the battlefield mid-resolution.
 - 🟡 **CR 701.34 — Proliferate** — permanents' counters + player poison ✅;

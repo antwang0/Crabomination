@@ -14195,6 +14195,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseBasicLandTypeForSource => {
+                // "As [this] enters, choose a basic land type." Rides the
+                // ChooseColor decision (basics map 1:1 onto colors) and stamps
+                // the source; the paired static reads it. Realmwright.
+                use crate::card::LandType;
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::mana::Color;
+                let Some(source) = ctx.source else { return Ok(()) };
+                let land_type = match self.decider.decide(&Decision::ChooseColor {
+                    source,
+                    legal: vec![
+                        Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                    ],
+                }) {
+                    DecisionAnswer::Color(Color::White) => LandType::Plains,
+                    DecisionAnswer::Color(Color::Blue) => LandType::Island,
+                    DecisionAnswer::Color(Color::Black) => LandType::Swamp,
+                    DecisionAnswer::Color(Color::Red) => LandType::Mountain,
+                    _ => LandType::Forest,
+                };
+                if let Some(inst) = self.battlefield_find_mut(source) {
+                    inst.chosen_land_type = Some(land_type);
+                }
+                Ok(())
+            }
+
             Effect::CopySpell { what, count } => {
                 // Resolve which spell to copy. We support two main patterns:
                 // 1. `Selector::TriggerSource` — the spell that fired this
