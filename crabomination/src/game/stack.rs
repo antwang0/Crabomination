@@ -1435,9 +1435,22 @@ impl GameState {
                             if let Some(Target::Permanent(tid)) = &auto_target {
                                 avoid.push(*tid);
                             }
+                            // CR 115.1c — an engine-resolved "up to N target"
+                            // ETB ability (Azorius Justiciar's detain-two)
+                            // maximizes its targets; fill slots 1.. the way the
+                            // cast path threads `additional_targets`.
+                            let additional = self.auto_extra_targets_for(
+                                &effect, card_id, caster, auto_target.clone(),
+                            );
+                            for t in &additional {
+                                if let Target::Permanent(tid) = t {
+                                    avoid.push(*tid);
+                                }
+                            }
                             self.stack.push(
                                 TriggerPush::new(card_id, caster, effect.clone())
                                     .target(auto_target.clone())
+                                    .additional_targets(additional)
                                     .mode(mode)
                                     .x_value(x_value)
                                     .converged_value(converged_value)

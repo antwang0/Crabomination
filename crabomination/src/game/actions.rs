@@ -4790,16 +4790,7 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash
-            || (!self.player_locked_to_sorcery_timing(p)
-            && self.battlefield.iter().any(|c| {
-                c.controller == p
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(&sa.effect,
-                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
-                                if self.evaluate_requirement_on_card(filter, &card, p))
-                    })
-            }));
+        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
@@ -6696,16 +6687,7 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash
-            || (!self.player_locked_to_sorcery_timing(p)
-            && self.battlefield.iter().any(|c| {
-                c.controller == p
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(&sa.effect,
-                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
-                                if self.evaluate_requirement_on_card(filter, &card, p))
-                    })
-            }));
+        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -7006,16 +6988,7 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash
-            || (!self.player_locked_to_sorcery_timing(p)
-            && self.battlefield.iter().any(|c| {
-                c.controller == p
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(&sa.effect,
-                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
-                                if self.evaluate_requirement_on_card(filter, &card, p))
-                    })
-            }));
+        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -7108,16 +7081,7 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash
-            || (!self.player_locked_to_sorcery_timing(p)
-            && self.battlefield.iter().any(|c| {
-                c.controller == p
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(&sa.effect,
-                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
-                                if self.evaluate_requirement_on_card(filter, &card, p))
-                    })
-            }));
+        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -7226,16 +7190,7 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash
-            || (!self.player_locked_to_sorcery_timing(p)
-            && self.battlefield.iter().any(|c| {
-                c.controller == p
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(&sa.effect,
-                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
-                                if self.evaluate_requirement_on_card(filter, &card, p))
-                    })
-            }));
+        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -7546,16 +7501,7 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash
-            || (!self.player_locked_to_sorcery_timing(p)
-            && self.battlefield.iter().any(|c| {
-                c.controller == p
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(&sa.effect,
-                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
-                                if self.evaluate_requirement_on_card(filter, &card, p))
-                    })
-            }));
+        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
@@ -8166,6 +8112,27 @@ impl GameState {
             c.controller != player
                 && c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, StaticEffect::OpponentsSorceryTimingOnly)
+                })
+        })
+    }
+
+    /// CR 702.8 — true if a permanent `player` controls grants `card` flash via
+    /// a `ControllerSpellsHaveFlash` (filtered) or `ControllerSorceriesAsFlash`
+    /// (Teferi, Time Raveler; Hypersonic Dragon) static. Excludes the
+    /// card-intrinsic `SelfFlashIf` path, which each cast site handles inline.
+    pub(crate) fn battlefield_grants_flash(&self, player: usize, card: &CardInstance) -> bool {
+        use crate::effect::StaticEffect;
+        if self.player_locked_to_sorcery_timing(player) {
+            return false;
+        }
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    StaticEffect::ControllerSpellsHaveFlash { filter } => {
+                        self.evaluate_requirement_on_card(filter, card, player)
+                    }
+                    StaticEffect::ControllerSorceriesAsFlash => card.definition.is_sorcery(),
+                    _ => false,
                 })
         })
     }

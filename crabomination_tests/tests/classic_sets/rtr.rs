@@ -970,3 +970,540 @@ fn chemisters_trick_overload_hits_each() {
     assert_eq!(g.computed_permanent(b).unwrap().power, 0, "2/2 → 0/2");
     assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::MustAttack), "must attack");
 }
+
+// ── Gap wave 8 (guild legends / rares) ───────────────────────────────────────
+
+/// Collective Blessing pumps your creatures +3/+3.
+#[test]
+fn collective_blessing_anthem() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::collective_blessing());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 5), "2/2 → 5/5");
+}
+
+/// Armada Wurm enters with a 5/5 trample Wurm token.
+#[test]
+fn armada_wurm_makes_token() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::armada_wurm());
+    drain_stack(&mut g);
+    let tokens: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Wurm" && c.definition.keywords.contains(&Keyword::Trample))
+        .collect();
+    assert_eq!(tokens.len(), 1, "one 5/5 Wurm token minted");
+    assert_eq!((tokens[0].definition.power, tokens[0].definition.toughness), (5, 5));
+}
+
+/// Slime Molding makes an X/X Ooze.
+#[test]
+fn slime_molding_x_token() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let sm = g.add_card_to_hand(0, catalog::slime_molding());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sm, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast");
+    drain_stack(&mut g);
+    let ooze = g.battlefield.iter().find(|c| c.definition.name == "Ooze").expect("Ooze token");
+    assert_eq!((g.computed_permanent(ooze.id).unwrap().power, g.computed_permanent(ooze.id).unwrap().toughness), (3, 3));
+}
+
+/// Dark Revenant returns to the top of its owner's library when it dies.
+#[test]
+fn dark_revenant_returns_to_top() {
+    let mut g = two_player_game();
+    let rev = g.add_card_to_battlefield(0, catalog::dark_revenant());
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(rev), 2, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rev).is_none(), "Dark Revenant left the battlefield");
+    assert_eq!(g.players[0].library.first().map(|c| c.definition.name), Some("Dark Revenant"),
+        "put on top of library");
+}
+
+/// Gobbling Ooze grows by sacrificing another creature.
+#[test]
+fn gobbling_ooze_grows() {
+    use crabomination::card::CounterType;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let ooze = g.add_card_to_battlefield(0, catalog::gobbling_ooze());
+    g.clear_sickness(ooze);
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ooze, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for counter");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.battlefield_find(ooze).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Hypersonic Dragon lets you cast sorceries outside your main phase.
+#[test]
+fn hypersonic_dragon_flash_sorcery() {
+    use crabomination::mana::Color;
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hypersonic_dragon());
+    let sorcery = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.step = TurnStep::DeclareAttackers; // sorcery-illegal window
+    g.perform_action(GameAction::CastSpell {
+        card_id: sorcery, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hypersonic Dragon grants sorcery-as-flash");
+}
+
+/// Azorius Justiciar detains up to two opposing creatures on entry.
+#[test]
+fn azorius_justiciar_detains_two() {
+    let mut g = two_player_game();
+    g.step = crabomination::game::TurnStep::PreCombatMain;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let jus = g.add_card_to_hand(0, catalog::azorius_justiciar());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: jus, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast + detain two");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().detained_by.is_some(), "first detained");
+    assert!(g.battlefield_find(b).unwrap().detained_by.is_some(), "second detained");
+}
+
+/// Traitorous Instinct steals a creature, untaps it, and gives haste + pump.
+#[test]
+fn traitorous_instinct_steals() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    cast_at(&mut g, catalog::traitorous_instinct(), Target::Permanent(foe), 3,
+        &[(crabomination::mana::Color::Red, 1)]);
+    let c = g.battlefield_find(foe).unwrap();
+    assert_eq!(c.controller, 0, "gained control");
+    assert!(!c.tapped, "untapped");
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 4, "2/2 → 4/2");
+    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+}
+
+/// Wayfaring Temple's P/T equals the number of creatures you control.
+#[test]
+fn wayfaring_temple_cda() {
+    let mut g = two_player_game();
+    let temple = g.add_card_to_battlefield(0, catalog::wayfaring_temple());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.computed_permanent(temple).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 2), "2 creatures → 2/2");
+}
+
+/// Trostani gains life equal to another creature's toughness on entry.
+#[test]
+fn trostani_gains_life_on_etb() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::trostani_selesnyas_voice());
+    let life = g.players[0].life;
+    let big = g.add_card_to_hand(0, catalog::risen_sanctuary()); // 8/8
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast 8/8");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 8, "gained 8 (its toughness)");
+}
+
+/// Havoc Festival halves each player's life at their upkeep and blocks lifegain.
+#[test]
+fn havoc_festival_upkeep_halves_life() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::havoc_festival());
+    g.players[0].life = 20;
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 10, "20 → 10 (half, rounded up)");
+    // Lifegain is blocked by the static.
+    g.adjust_life(0, 5);
+    assert_eq!(g.players[0].life, 10, "can't gain life");
+}
+
+/// Seek the Horizon fetches up to three basics to hand.
+#[test]
+fn seek_the_horizon_fetches_basics() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let f: Vec<_> = (0..4).map(|_| g.add_card_to_library(0, catalog::forest())).collect();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(f[0])),
+        DecisionAnswer::Search(Some(f[1])),
+        DecisionAnswer::Search(Some(f[2])),
+    ]));
+    let hand = g.players[0].hand.len();
+    let seek = g.add_card_to_hand(0, catalog::seek_the_horizon());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: seek, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // Seek leaves the hand to the stack; three basics arrive → net +3 from the pre-cast size.
+    assert_eq!(g.players[0].hand.len(), hand + 3, "fetched three basics");
+}
+
+/// Psychic Spiral mills the target equal to your graveyard size.
+#[test]
+fn psychic_spiral_mills_graveyard_size() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    for _ in 0..5 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    let lib1 = g.players[1].library.len();
+    cast_at(&mut g, catalog::psychic_spiral(), Target::Player(1), 4,
+        &[(crabomination::mana::Color::Blue, 1)]);
+    assert_eq!(g.players[1].library.len(), lib1 - 3, "milled 3 (graveyard size)");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the three bears were shuffled out of the graveyard");
+}
+
+/// Launch Party sacrifices a creature, destroys a target, and drains 2.
+#[test]
+fn launch_party_sac_destroy_drain() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let l1 = g.players[1].life;
+    cast_at(&mut g, catalog::launch_party(), Target::Permanent(victim), 3,
+        &[(crabomination::mana::Color::Black, 1)]);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert!(g.battlefield_find(victim).is_none(), "target destroyed");
+    assert_eq!(g.players[1].life, l1 - 2, "controller lost 2");
+}
+// temp debug appended
+
+/// Archon of the Triumvirate detains two nonland permanents when it attacks.
+#[test]
+fn archon_detains_two_on_attack() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let archon = g.add_card_to_battlefield(0, catalog::archon_of_the_triumvirate());
+    g.clear_sickness(archon);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: archon, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().detained_by.is_some(), "first detained");
+    assert!(g.battlefield_find(b).unwrap().detained_by.is_some(), "second detained");
+}
+
+/// Utvara Hellkite mints a 6/6 Dragon whenever a Dragon you control attacks.
+#[test]
+fn utvara_hellkite_makes_dragon_on_attack() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let utvara = g.add_card_to_battlefield(0, catalog::utvara_hellkite());
+    g.clear_sickness(utvara);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: utvara, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let dragons = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Dragon" && c.definition.keywords.contains(&Keyword::Flying))
+        .count();
+    assert_eq!(dragons, 1, "one 6/6 Dragon token minted on the Hellkite's own attack");
+}
+
+/// Necropolis Regent grows a creature by the combat damage it deals to a player.
+#[test]
+fn necropolis_regent_adds_counters_on_combat_damage() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::necropolis_regent());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bear);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.resolve_combat().expect("combat");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "gained 2 counters (its combat damage)");
+}
+
+// ── Gap wave 9 (guildmages, counters, Overload) ──────────────────────────────
+
+/// Tower Drake firebreathes +0/+1 for {W}.
+#[test]
+fn tower_drake_toughness_pump() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let drake = g.add_card_to_battlefield(0, catalog::tower_drake());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: drake, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(drake).unwrap().toughness, 2, "2/1 → 2/2");
+}
+
+/// Paralyzing Grasp keeps the enchanted creature from untapping.
+#[test]
+fn paralyzing_grasp_prevents_untap() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    cast_at(&mut g, catalog::paralyzing_grasp(), Target::Permanent(foe), 2,
+        &[(crabomination::mana::Color::Blue, 1)]);
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(foe).unwrap().tapped, "still tapped after its untap step");
+}
+
+/// Essence Backlash counters a creature spell and burns its controller for its power.
+#[test]
+fn essence_backlash_counters_and_burns() {
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_hand(1, catalog::risen_sanctuary()); // 8/8
+    g.players[1].mana_pool.add_colorless(5);
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts 8/8");
+    g.priority.player_with_priority = 0;
+    let l1 = g.players[1].life;
+    let eb = g.add_card_to_hand(0, catalog::essence_backlash());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eb, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("counter it");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "creature spell countered");
+    assert_eq!(g.players[1].life, l1 - 8, "controller took 8 (its power)");
+}
+
+/// Counterflux counters an opponent's spell.
+#[test]
+fn counterflux_counters_opponent_spell() {
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts Bolt");
+    g.priority.player_with_priority = 0;
+    let cf = g.add_card_to_hand(0, catalog::counterflux());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cf, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("counterflux");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "Bolt countered — no damage");
+}
+
+/// Mercurial Chemister's second ability exiles a graveyard I/S for damage = its MV.
+#[test]
+fn mercurial_chemister_gy_exile_burn() {
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let chem = g.add_card_to_battlefield(0, catalog::mercurial_chemister());
+    g.clear_sickness(chem);
+    let wrath = g.add_card_to_graveyard(0, catalog::wrath_of_god()); // MV 4
+    let l1 = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: chem, ability_index: 1,
+        target: Some(Target::Permanent(wrath)),
+        additional_targets: vec![Target::Player(1)],
+        x_value: None,
+    }).expect("exile + burn");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == wrath), "the I/S card was exiled");
+    assert_eq!(g.players[1].life, l1 - 4, "dealt 4 (its mana value)");
+}
+
+/// Grove of the Guardian sacrifices itself and taps two creatures to make an 8/8.
+#[test]
+fn grove_of_the_guardian_makes_elemental() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let grove = g.add_card_to_battlefield(0, catalog::grove_of_the_guardian());
+    g.clear_sickness(grove);
+    let c1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: grove, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("make elemental");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(grove).is_none(), "Grove sacrificed");
+    assert!(g.battlefield_find(c1).unwrap().tapped && g.battlefield_find(c2).unwrap().tapped, "two creatures tapped");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Elemental"
+        && c.definition.power == 8 && c.definition.keywords.contains(&Keyword::Vigilance)),
+        "8/8 vigilant Elemental minted");
+}
+
+// ── Gap wave 10 (punisher / death payoffs / magecraft) ───────────────────────
+
+/// Shrieking Affliction drains a hellbent opponent at their upkeep.
+#[test]
+fn shrieking_affliction_drains_low_hand() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::shrieking_affliction());
+    g.players[1].hand.clear(); // 0 cards ≤ 1
+    let l1 = g.players[1].life;
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 3, "opponent lost 3 (hellbent)");
+}
+
+/// Shrieking Affliction does nothing when the opponent holds 2+ cards.
+#[test]
+fn shrieking_affliction_skips_full_hand() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::shrieking_affliction());
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    let l1 = g.players[1].life;
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1, "no drain with a full hand");
+}
+
+/// Desecration Demon taps and grows when an opponent sacrifices to it.
+#[test]
+fn desecration_demon_sac_taps_and_grows() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::TurnStep;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let demon = g.add_card_to_battlefield(0, catalog::desecration_demon());
+    let fodder = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "opponent sacrificed a creature");
+    assert!(g.battlefield_find(demon).unwrap().tapped, "Demon tapped");
+    assert_eq!(g.battlefield_find(demon).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "grew");
+}
+
+/// Death's Presence puts counters equal to the dead creature's power.
+#[test]
+fn deaths_presence_counters_on_death() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::deaths_presence());
+    let target = g.add_card_to_battlefield(0, catalog::risen_sanctuary()); // 8/8 recipient
+    let dying = g.add_card_to_battlefield(0, catalog::risen_sanctuary()); // 8/8 dies
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(dying), 8, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 8,
+        "8 counters (dead creature's power)");
+}
+
+/// Pyroconvergence pings when you cast a multicolored spell.
+#[test]
+fn pyroconvergence_pings_on_multicolor_cast() {
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pyroconvergence());
+    // Rites of Reaping is a gold {4}{B}{G} sorcery already in the RTR set.
+    let gold = g.add_card_to_hand(0, catalog::rites_of_reaping());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::risen_sanctuary());
+    let l1 = g.players[1].life;
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gold, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("cast gold spell");
+    // The magecraft-style trigger goes on the stack above the spell; drain it.
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 2, "Pyroconvergence dealt 2 to the opponent");
+}
+
+/// Firemind's Foresight tutors three instants of mana value 3, 2, and 1.
+#[test]
+fn fireminds_foresight_fetches_three_costs() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let one = g.add_card_to_library(0, catalog::lightning_bolt());   // {R} = MV1
+    let two = g.add_card_to_library(0, catalog::dramatic_rescue());  // {W}{U} = MV2
+    let three = g.add_card_to_library(0, catalog::counterflux());    // {U}{U}{R} = MV3
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(three)),
+        DecisionAnswer::Search(Some(two)),
+        DecisionAnswer::Search(Some(one)),
+    ]));
+    let ff = g.add_card_to_hand(0, catalog::fireminds_foresight());
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ff, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    for (id, mv) in [(one, 1), (two, 2), (three, 3)] {
+        assert!(g.players[0].hand.iter().any(|c| c.id == id), "fetched the MV{mv} instant");
+    }
+}

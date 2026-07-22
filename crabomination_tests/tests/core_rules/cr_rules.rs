@@ -8937,6 +8937,25 @@ fn cr_115_1c_attack_trigger_fills_all_target_slots() {
     assert_eq!(g.battlefield_find(v2).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
+/// CR 115.1c — an engine-resolved "up to N target" **ETB** ability maximizes its
+/// targets: Azorius Justiciar detains *two* opposing creatures, not one.
+#[test]
+fn cr_115_1c_etb_trigger_fills_all_target_slots() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let jus = g.add_card_to_hand(0, catalog::azorius_justiciar());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: jus, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().detained_by.is_some(), "first detained");
+    assert!(g.battlefield_find(b).unwrap().detained_by.is_some(), "second detained");
+}
+
 /// CR 601.2b — a permanent's ETB *triggered* ability reads the cast's X. Casting
 /// Dune Drifter for X=4 lets its ETB return an MV-4 card from the graveyard;
 /// before this run the trigger evaluated X as 0.

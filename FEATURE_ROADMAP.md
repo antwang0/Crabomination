@@ -16,7 +16,22 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **RTR gap waves 5–7 (this run, 56 cards):** the guild Keyrune mana-rock cycle
+- **RTR gap waves 8–10 (this run, 38 cards):** the guild legends/rares/mythics —
+  Collective Blessing anthem, Armada Wurm, Isperia, Trostani + Wayfaring Temple
+  (populate + CDA `PumpSelfByControlledPermanents`), Necropolis Regent (combat
+  damage → counters via `Value::TriggerEventAmount`, CR 119.3), Hypersonic Dragon,
+  the Azorius/Archon detain-two payoffs, Transguild Promenade, Havoc Festival,
+  the guildmages, Counterflux (Overload counter-each), Grove of the Guardian
+  (`tap_n_filter` + sac), Desecration Demon (`PlayersMayAccept` opponent-sac),
+  Shrieking Affliction, Death's Presence, Pyroconvergence, Firemind's Foresight.
+  Engine: **CR 702.8** — the cast-timing check now honors the
+  `ControllerSorceriesAsFlash` static (was a no-op; Teferi, Time Raveler +
+  Hypersonic Dragon) via a new `battlefield_grants_flash` helper collapsing six
+  duplicated blocks; **CR 115.1c** — the ETB "up to N target" auto-targeter now
+  maximizes slots like the Attacks path (Azorius Justiciar detains two). Server:
+  `avg_concede_turn` metric (average turn a game was thrown in). Client: a
+  "NoUntap" board chip for `PreventUntap`-locked permanents (Paralyzing Grasp).
+- **RTR gap waves 5–7 (prior run, 56 cards):** the guild Keyrune mana-rock cycle
   (`ManaPayload::OfColors` tap + `BecomeCreature`/`BecomeColor` animate), the
   guildmage cycle, the populate spells, the Aura package (stat-drain + upkeep
   drain, aura-granted activated keyword abilities, ETB-token Auras, aura-on-land

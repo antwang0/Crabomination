@@ -252,6 +252,11 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     ] {
         out.push_str(&format!("crab_wins_share_pct{{kind=\"{kind}\"}} {pct}\n"));
     }
+    // Average turn a conceded game was thrown in — a low value next to a high
+    // concede share flags a bot that rage-quits winnable positions.
+    out.push_str("# HELP crab_avg_concede_turn Average final turn of wins via concession.\n");
+    out.push_str("# TYPE crab_avg_concede_turn gauge\n");
+    out.push_str(&format!("crab_avg_concede_turn {}\n", st.avg_concede_turn()));
     // Match-duration histogram (see `MatchStats.duration_buckets`) as a labelled
     // series so operators can watch the distribution shift (e.g. a spike in the
     // "<30s" bucket flags bots conceding turn 1).

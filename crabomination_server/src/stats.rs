@@ -169,6 +169,12 @@ pub(crate) struct MatchStats {
     /// (rage-quits, bot timeouts) is distinguishable from genuine "you lose
     /// the game" effects.
     pub(crate) concede_wins: u64,
+    /// Running sum of final turn counts for wins where a losing seat conceded.
+    /// Paired with `concede_wins` it yields [`avg_concede_turn`](Self::
+    /// avg_concede_turn) — the average turn a game was thrown in. A low value
+    /// (bots concede on turn 3) flags a broken evaluation that gives up too
+    /// early; a high one means concessions are genuine end-game resignations.
+    pub(crate) concede_turn_sum: u64,
     /// Subset of `deckout_wins` where at least one losing seat left for an
     /// "other" reason (a "you lose the game" effect — CR 104.3g) — not life,
     /// poison, deck-out, commander damage, or concession. Surfacing it
@@ -304,6 +310,15 @@ impl MatchStats {
                 self.observe_win_life_delta(w, &outcome.final_life_totals);
                 self.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
                 self.observe_winner_board(w, &outcome.final_board_sizes);
+                if outcome
+                    .loss_reasons
+                    .iter()
+                    .enumerate()
+                    .any(|(i, r)| i != w && *r == Some(LossReason::Conceded))
+                {
+                    self.concede_turn_sum =
+                        self.concede_turn_sum.saturating_add(outcome.final_turn as u64);
+                }
             }
             Some(None) => {
                 self.draw_turn_sum = self.draw_turn_sum.saturating_add(outcome.final_turn as u64);
@@ -707,6 +722,12 @@ impl MatchStats {
     /// `deckout_pct`; 0 when no wins recorded.
     pub(crate) fn other_pct(&self) -> u64 {
         self.other_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
+    }
+    /// Average final turn of wins where a seat conceded, or 0 with none.
+    /// Watched alongside `concede_pct`: a concession share that spikes at a
+    /// *low* average turn flags an evaluation that rage-quits winnable games.
+    pub(crate) fn avg_concede_turn(&self) -> u64 {
+        self.concede_turn_sum.checked_div(self.concede_wins).unwrap_or(0)
     }
     /// Percent of wins via 21+ commander damage (CR 903.10a).
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.

@@ -1035,6 +1035,31 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn avg_concede_turn_tracks_only_conceded_wins() {
+        use crabomination::server::MatchOutcome;
+        let mut s = MatchStats::default();
+        let concede = MatchOutcome {
+            final_turn: 6,
+            winner: Some(Some(0)),
+            final_life_totals: vec![18, 10],
+            loss_reasons: vec![None, Some(LossReason::Conceded)],
+            ..Default::default()
+        };
+        let lethal = MatchOutcome {
+            final_turn: 20,
+            winner: Some(Some(0)),
+            final_life_totals: vec![7, 0],
+            loss_reasons: vec![None, Some(LossReason::LifeDepleted)],
+            ..Default::default()
+        };
+        s.record_outcome(&concede, Format::Demo, std::time::Duration::from_secs(30), false);
+        s.record_outcome(&lethal, Format::Demo, std::time::Duration::from_secs(30), false);
+        assert_eq!(s.concede_wins, 1);
+        assert_eq!(s.avg_concede_turn(), 6, "only the conceded game's turn folds in");
+        assert_eq!(MatchStats::default().avg_concede_turn(), 0, "no concessions → 0");
+    }
+
+    #[test]
     pub(crate) fn split_turn_averages_separate_wins_from_draws() {
         use crabomination::server::MatchOutcome;
         let mut s = MatchStats::default();

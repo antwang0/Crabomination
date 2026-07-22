@@ -4341,6 +4341,23 @@ fn teferi_static_does_not_restrict_controllers_own_casts() {
 }
 
 #[test]
+fn teferi_static_grants_controller_sorceries_as_flash() {
+    // Teferi's *static* ("you may cast sorcery spells as though they had
+    // flash") lets its controller cast a sorcery outside their main phase —
+    // no loyalty activation needed. Regression: the cast-timing check used to
+    // consult only `ControllerSpellsHaveFlash`, leaving this static a no-op.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    let sorcery = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.step = TurnStep::DeclareAttackers; // sorcery-illegal window
+    g.perform_action(GameAction::CastSpell {
+        card_id: sorcery, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Teferi's static should let its controller cast a sorcery at flash speed");
+}
+
+#[test]
 fn teferi_plus_one_grants_sorceries_as_flash_until_next_turn() {
     // P0's Teferi +1 lets P0 cast sorceries at instant speed even when it
     // isn't their turn. Once P0's next turn rolls around (do_untap), the
