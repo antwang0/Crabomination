@@ -17437,6 +17437,10 @@ impl GameState {
                 .resolve_selector(sel, ctx)
                 .into_iter()
                 .find_map(|e| match e {
+                    // "Controller of a player" is that player — lets a
+                    // "target player or planeswalker" spell bind its follow-up
+                    // to the damaged player (Rakdos's Return's discard).
+                    EntityRef::Player(p) => Some(p),
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
                         .battlefield_find(cid)
                         .map(|c| c.controller)
@@ -17449,7 +17453,6 @@ impl GameState {
                         .or_else(|| self.died_card_snapshots.get(&cid).map(|c| c.controller))
                         .or_else(|| self.leaves_bf_lki.get(&cid).map(|c| c.controller))
                         .or_else(|| self.find_card_owner(cid)),
-                    _ => None,
                 }),
             PlayerRef::CombatDamagerController(sel) => self
                 .resolve_selector(sel, ctx)

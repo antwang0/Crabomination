@@ -9,6 +9,7 @@ mod spells;
 mod gaps3;
 mod gaps4;
 mod gaps5;
+mod gaps6;
 
 pub use creatures::*;
 pub use gaps::*;
@@ -17,3 +18,4 @@ pub use spells::*;
 pub use gaps3::*;
 pub use gaps4::*;
 pub use gaps5::*;
+pub use gaps6::*;

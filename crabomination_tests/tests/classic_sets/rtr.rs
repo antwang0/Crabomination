@@ -832,3 +832,141 @@ fn soul_tithe_kept_when_paid() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(ogre).is_some(), "kept when the MV is paid");
 }
+
+// ── RTR gap wave 7 (gaps6.rs) ────────────────────────────────────────────────
+
+/// Cast a targeted sorcery/instant `def` by player 0 at `target`.
+fn cast_at(g: &mut GameState, def: crabomination::card::CardDefinition, tgt: crabomination::game::types::Target,
+           colorless: u32, colors: &[(crabomination::mana::Color, u32)]) -> crabomination::card::CardId {
+    let id = g.add_card_to_hand(0, def);
+    g.players[0].mana_pool.add_colorless(colorless);
+    for (c, n) in colors { g.players[0].mana_pool.add(*c, *n); }
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(tgt), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(g);
+    id
+}
+
+/// Trostani's Judgment exiles a creature.
+#[test]
+fn trostanis_judgment_exiles() {
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast_at(&mut g, catalog::trostanis_judgment(), Target::Permanent(bear), 5, &[(Color::White, 1)]);
+    assert!(g.battlefield_find(bear).is_none(), "creature exiled");
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != bear), "exiled, not in graveyard");
+}
+
+/// Rakdos's Return burns for X and forces X discards.
+#[test]
+fn rakdos_return_burns_and_discards() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    let hand = g.players[1].hand.len();
+    let life = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::rakdos_return());
+    g.players[0].mana_pool.add_colorless(2); // X=2
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "2 damage");
+    assert_eq!(g.players[1].hand.len(), hand - 2, "discarded 2");
+}
+
+/// Thoughtflare draws four then discards two (net +2).
+#[test]
+fn thoughtflare_draws_four_discards_two() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let hand = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::thoughtflare());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // Spent the Thoughtflare from hand (-1), drew 4, discarded 2 → net +1 vs start.
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew 4, discarded 2 (net +2)");
+}
+
+/// Search Warrant gains life equal to the target's hand size.
+#[test]
+fn search_warrant_gains_life_per_hand() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    let life = g.players[0].life;
+    cast_at(&mut g, catalog::search_warrant(), Target::Player(1), 0,
+        &[(crabomination::mana::Color::White, 1), (crabomination::mana::Color::Blue, 1)]);
+    assert_eq!(g.players[0].life, life + 4, "gained life = opponent's 4-card hand");
+}
+
+/// Rites of Reaping pumps one creature and shrinks another.
+#[test]
+fn rites_of_reaping_pumps_and_shrinks() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::risen_sanctuary()); // 8/8
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::rites_of_reaping());
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 11, "+3/+3");
+    assert!(g.battlefield_find(theirs).is_none(), "2/2 dies to -3/-3");
+}
+
+/// Inaction Injunction detains and cantrips.
+#[test]
+fn inaction_injunction_detains_and_draws() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    cast_at(&mut g, catalog::inaction_injunction(), Target::Permanent(foe), 1,
+        &[(crabomination::mana::Color::Blue, 1)]);
+    assert!(g.battlefield_find(foe).unwrap().detained_by.is_some(), "detained");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Treasured Find returns a graveyard card and exiles itself.
+#[test]
+fn treasured_find_recurs_then_exiles_self() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = cast_at(&mut g, catalog::treasured_find(), Target::Permanent(dead), 0,
+        &[(crabomination::mana::Color::Black, 1), (crabomination::mana::Color::Green, 1)]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "card returned to hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id), "Treasured Find exiled itself, not in graveyard");
+}
+
+/// Chemister's Trick overload debuffs each opposing creature.
+#[test]
+fn chemisters_trick_overload_hits_each() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::risen_sanctuary()); // 8/8
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let over = catalog::chemisters_trick().alternative_cost.unwrap().effect_override.unwrap();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&over, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.computed_permanent(a).unwrap().power, 6, "8/8 → 6/8");
+    assert_eq!(g.computed_permanent(b).unwrap().power, 0, "2/2 → 0/2");
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::MustAttack), "must attack");
+}

@@ -9511,6 +9511,16 @@ static RTR: &[Factory] = &[
     super::rtr::hellhole_flailer,
     super::rtr::chronic_flooding,
     super::rtr::soul_tithe,
+    super::rtr::trostanis_judgment,
+    super::rtr::rakdos_return,
+    super::rtr::thoughtflare,
+    super::rtr::dramatic_rescue,
+    super::rtr::search_warrant,
+    super::rtr::survey_the_wreckage,
+    super::rtr::rites_of_reaping,
+    super::rtr::inaction_injunction,
+    super::rtr::treasured_find,
+    super::rtr::chemisters_trick,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,
