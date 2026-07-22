@@ -9563,6 +9563,7 @@ static RTR: &[Factory] = &[
     super::rtr::jarad_golgari_lich_lord,
     super::rtr::volatile_rig,
     super::rtr::izzet_staticaster,
+    super::rtr::oak_street_innkeeper,
     super::rtr::urban_burgeoning,
     super::rtr::street_sweeper,
     super::rtr::jarads_orders,

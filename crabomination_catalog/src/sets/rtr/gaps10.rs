@@ -176,6 +176,31 @@ pub fn izzet_staticaster() -> CardDefinition {
     }
 }
 
+/// Oak Street Innkeeper — {2}{G} 1/2 Elf. During turns other than yours, tapped
+/// creatures you control have hexproof.
+pub fn oak_street_innkeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Oak Street Innkeeper",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "During turns other than yours, tapped creatures you control have hexproof.",
+            effect: StaticEffect::WhileNotYourTurn {
+                inner: Box::new(StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature.and(R::Tapped).and(R::ControlledByYou),
+                    ),
+                    keyword: Keyword::Hexproof,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Urban Burgeoning — {G} Aura. Enchant land. Enchanted land has "Untap this
 /// land during each other player's untap step."
 pub fn urban_burgeoning() -> CardDefinition {

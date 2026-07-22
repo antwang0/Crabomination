@@ -5023,6 +5023,12 @@ impl GameState {
                             }
                             eff = inner;
                         }
+                        crate::effect::StaticEffect::WhileNotYourTurn { inner } => {
+                            if self.active_player_idx == card.controller {
+                                gated_out = true;
+                            }
+                            eff = inner;
+                        }
                         _ => break,
                     }
                 }
@@ -13268,6 +13274,15 @@ fn static_effect_to_effects(
                     static_effect_to_effects(inner, card, timestamp, your_turn)
                 } else {
                     vec![]
+                }
+            }
+            // CR 611.2 — mirror gate: emit the inner effect only during turns
+            // other than the source controller's (Oak Street Innkeeper).
+            StaticEffect::WhileNotYourTurn { inner } => {
+                if your_turn {
+                    vec![]
+                } else {
+                    static_effect_to_effects(inner, card, timestamp, your_turn)
                 }
             }
             StaticEffect::PumpPT { applies_to, power, toughness } => {

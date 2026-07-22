@@ -1589,6 +1589,25 @@ fn volatile_rig_explodes_on_death() {
     assert_eq!(g.battlefield_find(bystander).unwrap().damage, 4, "bystander took 4");
 }
 
+/// Oak Street Innkeeper gives your tapped creatures hexproof only on others' turns.
+#[test]
+fn oak_street_innkeeper_hexproofs_tapped_on_others_turns() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::oak_street_innkeeper());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.active_player_idx = 1; // opponent's turn
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+        "tapped creature is hexproof on the opponent's turn");
+    g.battlefield_find_mut(bear).unwrap().tapped = false;
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+        "untapped creature isn't hexproof");
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.active_player_idx = 0; // your own turn
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+        "no hexproof during your own turn");
+}
+
 /// Urban Burgeoning untaps its enchanted land during an opponent's untap step.
 #[test]
 fn urban_burgeoning_untaps_on_opponents_untap() {

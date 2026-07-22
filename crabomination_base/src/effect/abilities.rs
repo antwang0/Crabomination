@@ -148,6 +148,11 @@ pub enum StaticEffect {
     /// "during your turn, equipped creatures you control have double strike and
     /// haste"). Nests inside `WhileClassLevelAtLeast`.
     WhileYourTurn { inner: Box<StaticEffect> },
+    /// CR 611.2 — the mirror of `WhileYourTurn`: the wrapped continuous effect
+    /// applies only during turns *other than* the source controller's (Oak
+    /// Street Innkeeper's "during turns other than yours, tapped creatures you
+    /// control have hexproof"). Emitted only while `active_player != controller`.
+    WhileNotYourTurn { inner: Box<StaticEffect> },
     /// CR 702.122e / 702.171 — "crews Vehicles and saddles Mounts as though
     /// its power were N greater." Adds `amount` to each affected creature's
     /// power *only* when summing crew / saddle totals (it is not a real P/T
