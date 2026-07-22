@@ -4672,7 +4672,31 @@ impl GameState {
             // for each artifact/enchantment the Equipment's controller controls).
             let (mut bp, mut bt) = (bonus.power, bonus.toughness);
             if let Some(scale) = &bonus.scale {
-                let n = if scale.count_host_colors {
+                // The host creature's controller (Righteous Authority /
+                // Death's Approach scale on the *enchanted* creature's
+                // controller's zones, which may be an opponent).
+                let host_controller = self
+                    .battlefield
+                    .iter()
+                    .find(|c| c.id == target)
+                    .map(|c| c.controller);
+                let n = if scale.count_host_controller_hand {
+                    // "+1/+1 for each card in its controller's hand".
+                    host_controller
+                        .map(|hc| self.players[hc].hand.len() as i32)
+                        .unwrap_or(0)
+                } else if let Some(gy_filter) = &scale.count_host_controller_graveyard {
+                    // "-X/-X for each creature card in its controller's gy".
+                    host_controller
+                        .map(|hc| {
+                            self.players[hc]
+                                .graveyard
+                                .iter()
+                                .filter(|c| self.evaluate_requirement_on_card(gy_filter, c, hc))
+                                .count() as i32
+                        })
+                        .unwrap_or(0)
+                } else if scale.count_host_colors {
                     // "+1/+1 for each of the host's colors" (Blessing of the
                     // Nephilim) — read the host's printed colors.
                     self.battlefield

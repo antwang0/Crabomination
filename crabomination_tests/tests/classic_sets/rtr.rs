@@ -1854,3 +1854,17 @@ fn faerie_impostor_bounces_or_sacrifices() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(lonely).is_none(), "lonely impostor sacrificed itself");
 }
+
+/// Righteous Authority scales +1/+1 with the enchanted creature's controller's
+/// hand size.
+#[test]
+fn righteous_authority_scales_with_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let aura = g.add_card_to_battlefield(0, catalog::righteous_authority());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    // Give player 0 a three-card hand.
+    for _ in 0..3 { g.add_card_to_hand(0, catalog::grizzly_bears()); }
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 5), "2/2 + 3 cards in hand");
+}

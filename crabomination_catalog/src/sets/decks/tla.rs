@@ -5341,7 +5341,7 @@ pub fn avatar_destiny() -> CardDefinition {
                 count_self_counters: None,
                 count_graveyard: Some(SelectionRequirement::HasCardType(CardType::Creature)),
                 count_all_graveyards: None,
-                count_host_colors: false,
+                count_host_colors: false, ..Default::default()
             }),
             add_creature_types: vec![CreatureType::Avatar],
             ..Default::default()

@@ -303,3 +303,30 @@ pub fn predators_rapport() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Death's Approach — {B} Aura. Enchanted creature gets -X/-X, where X is the
+/// number of creature cards in its controller's graveyard.
+pub fn deaths_approach() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus, EquipScale};
+    CardDefinition {
+        name: "Death's Approach",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(EquipScale {
+                filter: R::Any,
+                per_power: -1,
+                per_toughness: -1,
+                count_host_controller_graveyard: Some(R::Creature),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

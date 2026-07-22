@@ -367,3 +367,17 @@ fn keymaster_rogue_unblockable_and_bounces() {
 fn rogue_is_unblockable(g: &GameState, id: crabomination::card::CardId) -> bool {
     g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Unblockable)
 }
+
+/// Death's Approach shrinks the host by the number of creature cards in its
+/// controller's graveyard.
+#[test]
+fn deaths_approach_scales_with_graveyard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::ruination_wurm()); // 7/6, P1 controls
+    let aura = g.add_card_to_battlefield(0, catalog::deaths_approach());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    // Two creature cards in P1's graveyard → -2/-2.
+    for _ in 0..2 { g.add_card_to_graveyard(1, catalog::gutter_skulk()); }
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 4), "7/6 minus 2/2 from two gy creatures");
+}

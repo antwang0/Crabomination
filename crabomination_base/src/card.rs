@@ -3011,6 +3011,16 @@ pub struct EquipScale {
     /// any board/graveyard count.
     #[serde(default)]
     pub count_host_colors: bool,
+    /// When true, the count is the number of cards in the *host creature's
+    /// controller's* hand (Righteous Authority — "+1/+1 for each card in its
+    /// controller's hand"), rather than the source-controller counts above.
+    #[serde(default)]
+    pub count_host_controller_hand: bool,
+    /// When set, the count is the number of cards matching this filter in the
+    /// *host creature's controller's* graveyard (Death's Approach — "-X/-X
+    /// where X is the number of creature cards in its controller's graveyard").
+    #[serde(default)]
+    pub count_host_controller_graveyard: Option<SelectionRequirement>,
 }
 
 /// Characteristic-defining dynamic P/T formula. Read by

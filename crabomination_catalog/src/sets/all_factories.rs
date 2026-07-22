@@ -7657,6 +7657,7 @@ static GTC: &[Factory] = &[
     super::gtc2::riot_gear,
     super::gtc2::skarrg_goliath,
     super::gtc2::predators_rapport,
+    super::gtc2::deaths_approach,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
@@ -9617,6 +9618,7 @@ static RTR: &[Factory] = &[
     super::rtr::security_blockade,
     super::rtr::mana_bloom,
     super::rtr::nivmagus_elemental,
+    super::rtr::righteous_authority,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,

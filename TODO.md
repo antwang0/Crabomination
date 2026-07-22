@@ -47,8 +47,7 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   shuffle — a `NameCard` suspend/resume sweep). Angel of Serenity (exile up to
   three battlefield creatures *and/or* graveyard creature cards, linked to the
   source, returning to hand on LTB — multi-target ExileUntilLeaves across zones).
-  Righteous Authority (aura whose buff scales with the enchanted creature's
-  controller's hand size — dynamic aura pump). Sphinx of the Chimes
+  Sphinx of the Chimes
   (discard-two-same-name activation cost). Epic Experiment (exile top X, free-cast
   only I/S with MV≤X, rest to graveyard — a filtered `ExileTopAndGrantMayPlay`). Tablet of
   the Guilds (choose-two-colors + cast-of-chosen-color lifegain). Guild Feud
@@ -57,10 +56,11 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
 - **Gatecrash (GTC) — started (modern_decks):** two waves shipped (~42 cards:
   vanilla/keyword beaters, dies triggers, combat spells, Auras, Battalion,
-  Bloodrush, an Equipment). ~130 cards remain. Notable primitives still needed:
-  Righteous Authority / Death's Approach (aura P/T scaling by the host
-  controller's hand size / graveyard creature count — no `EquipScale` for zone
-  counts yet), Realmwright (choose-a-basic-land-type-as-enters continuous "lands
+  Bloodrush, an Equipment, plus the two host-controller-zone-scaling Auras
+  Righteous Authority / Death's Approach via new `EquipScale`
+  `count_host_controller_hand`/`count_host_controller_graveyard`). ~128 cards
+  remain. Notable primitives still needed:
+  Realmwright (choose-a-basic-land-type-as-enters continuous "lands
   you control are that type in addition"), Homing Lightning (same-name damage
   sweep), Gruul Ragebeast (ETB-of-any-creature fight), Merciless Eviction
   (4-mode exile-all sweep), Extort cards (keyword exists — Syndicate Enforcer et

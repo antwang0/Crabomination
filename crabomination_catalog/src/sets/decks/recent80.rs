@@ -40,7 +40,7 @@ pub fn bonehoard() -> CardDefinition {
                 count_self_counters: None,
                 count_graveyard: None,
                 count_all_graveyards: Some(R::Creature),
-                count_host_colors: false,
+                count_host_colors: false, ..Default::default()
             }),
             ..Default::default()
         }),
