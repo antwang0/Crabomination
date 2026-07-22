@@ -7788,6 +7788,16 @@ static GTC5: &[Factory] = &[
     super::gtc5::giant_adephage,
     super::gtc5::executioners_swing,
 ];
+static GTC6: &[Factory] = &[
+    super::gtc6::scab_clan_charger,
+    super::gtc6::scorchwalker,
+    super::gtc6::leyline_phantom,
+    super::gtc6::martial_glory,
+    super::gtc6::alpha_authority,
+    super::gtc6::agoraphobia,
+    super::gtc6::greenside_watcher,
+    super::gtc6::slate_street_ruffian,
+];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,
 ];
@@ -14465,6 +14475,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("gtc3", GTC3),
     ("gtc4", GTC4),
     ("gtc5", GTC5),
+    ("gtc6", GTC6),
     ("ice", ICE),
     ("inv", INV),
     ("khm", KHM),

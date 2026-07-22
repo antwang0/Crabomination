@@ -761,3 +761,129 @@ fn gtc5_executioners_swing_hits_damager() {
     let c = g.computed_permanent(foe).unwrap();
     assert_eq!((c.power, c.toughness), (2, 1), "7/6 shrunk by -5/-5");
 }
+
+// ── Wave 6 ───────────────────────────────────────────────────────────────────
+
+/// Scab-Clan Charger's Bloodrush pumps a target attacker from hand.
+#[test]
+fn gtc6_bloodrush_pumps_attacker() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
+    g.clear_sickness(attacker);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }]).expect("attack");
+    let charger = g.add_card_to_hand(0, catalog::scab_clan_charger());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: charger, ability_index: 0, target: Some(Target::Permanent(attacker)),
+        additional_targets: vec![], x_value: None,
+    }).expect("bloodrush");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(attacker).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 6), "2/2 + 2/4");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == charger), "charger discarded as cost");
+}
+
+/// Martial Glory's second mode grants +0/+3.
+#[test]
+fn gtc6_martial_glory_modal() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::martial_glory());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("mode 1 = +0/+3");
+    drain_stack(&mut g);
+    assert_eq!((g.computed_permanent(bear).unwrap().power, g.computed_permanent(bear).unwrap().toughness), (2, 5));
+}
+
+/// Alpha Authority grants hexproof and "can't be blocked by more than one".
+#[test]
+fn gtc6_alpha_authority_grants() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    let aura = g.add_card_to_battlefield(0, catalog::alpha_authority());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let c = g.computed_permanent(bear).unwrap();
+    assert!(c.keywords.contains(&Keyword::Hexproof) && c.keywords.contains(&Keyword::CantBeBlockedByMoreThanOne));
+}
+
+/// Agoraphobia shrinks the host by 5 power and can return itself to hand.
+#[test]
+fn gtc6_agoraphobia_shrinks_and_returns() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(1, catalog::ruination_wurm()); // 7/6
+    let aura = g.add_card_to_battlefield(0, catalog::agoraphobia());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(wurm);
+    assert_eq!(g.computed_permanent(wurm).unwrap().power, 2, "7 - 5 = 2");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("return aura");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "aura back in hand");
+    assert_eq!(g.computed_permanent(wurm).unwrap().power, 7, "host restored");
+}
+
+/// Greenside Watcher untaps a Gate.
+#[test]
+fn gtc6_greenside_watcher_untaps_gate() {
+    let mut g = two_player_game();
+    let watcher = g.add_card_to_battlefield(0, catalog::greenside_watcher());
+    g.clear_sickness(watcher);
+    let gate = g.add_card_to_battlefield(0, catalog::azorius_guildgate());
+    g.battlefield_find_mut(gate).unwrap().tapped = true;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: watcher, ability_index: 0, target: Some(Target::Permanent(gate)),
+        additional_targets: vec![], x_value: None,
+    }).expect("untap gate");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(gate).unwrap().tapped, "gate untapped");
+}
+
+/// Leyline Phantom returns to hand after dealing combat damage.
+#[test]
+fn gtc6_leyline_phantom_bounces() {
+    let mut g = two_player_game();
+    let phantom = g.add_card_to_battlefield(0, catalog::leyline_phantom());
+    g.clear_sickness(phantom);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: phantom, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(phantom).is_none() && g.players[0].hand.iter().any(|c| c.id == phantom),
+        "phantom returned to hand after combat damage");
+}
+
+/// Slate Street Ruffian makes the defending player discard when it's blocked.
+#[test]
+fn gtc6_slate_street_ruffian_discards_on_block() {
+    let mut g = two_player_game();
+    let ruffian = g.add_card_to_battlefield(0, catalog::slate_street_ruffian());
+    let blocker = g.add_card_to_battlefield(1, catalog::gutter_skulk());
+    g.add_card_to_hand(1, catalog::gutter_skulk()); // discard fodder
+    g.clear_sickness(ruffian);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: ruffian, target: AttackTarget::Player(1) }]).expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, ruffian)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand_before - 1, "defending player discarded on block");
+}
