@@ -16,7 +16,25 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **GTC wave 9 (this run, 4 cards):** Skyblinder Staff (Equipment), Razortip Whip
+- **GTC waves 10–14 (this run, 20 cards):** the five Primordial ETB Avatars,
+  Molten/Sepulchral/Sylvan/Luminate steal-destroy-reanimate ETBs, Treasury
+  Thrull + Hellkite Tyrant (combat-damage payoffs + 20-artifact WinGame), Lord
+  of the Void (exile-7-put-creature via `ExiledThisResolution`), Duskmantle Seer
+  (`ForEach EachPlayer` symmetric reveal-drain), Deathpact Angel (token-with-
+  recur), Voidwalk (blink + Cipher), Clan Defiance (`ChooseModesCast` X-burn),
+  Domri Rade (planeswalker), Undercity Plague, Gridlock, Thrull Parasite, One
+  Thousand Lashes (upkeep-drain lock Aura), Frontline Medic (Battalion +
+  `CounterUnlessPaid`). New engine work: **combat-damage triggers that also move
+  a card now bind the damaged player** (`sel_find` surfaces `Player(Target(n))`;
+  the dispatcher prefers the damaged player when slot 0 accepts one — Lord of
+  the Void); **`Effect::ExileReturnToOwnerNextEndStep`** (owner-control flicker,
+  no counter — Voidwalk); **loyalty abilities auto-fill additional target
+  slots** (Domri's −2 two-target fight); **`Effect::RemoveAnyCounter`** (Thrull
+  Parasite). CR conformance: 122.3 (counter annihilation), 606.3 (loyalty
+  timing), 702.2 (deathtouch). Server: `bot_match_pct` ladder-composition gauge.
+  Client: effect labels for the new effects + Rampage/Bushido/Annihilator/
+  Absorb/Frenzy board chips.
+- **GTC wave 9 (prior run, 4 cards):** Skyblinder Staff (Equipment), Razortip Whip
   (ping artifact), and two on-death Auras (Murder Investigation, Dying Wish) that
   scale by the host's power via the CR 603.10 die snapshot. All on existing
   primitives. Tests `classic_sets/gtc` (`gtc9_*`).
@@ -1020,8 +1038,10 @@ Each unblocks a large swath of cards.
 - 🟡 **Loyalty fidelity:** loyalty-set effects ✅, proliferate on loyalty ✅
   (`CounterType::Loyalty`, test `cr_701_34_proliferate_adds_loyalty_counter`),
   combat damage to a planeswalker removes loyalty ✅ (CR 306.9, test
-  `cr_306_9_combat_damage_to_planeswalker_removes_loyalty`). Remaining: "any
-  time" activation riders.
+  `cr_306_9_combat_damage_to_planeswalker_removes_loyalty`); multi-target
+  loyalty abilities now auto-fill slots 1.. (`auto_extra_targets_for` — Domri
+  Rade's −2 two-target fight). Remaining: "any time" activation riders;
+  UI-chosen (rather than auto-picked) extra loyalty targets.
 - ✅ **State-based action coverage:** ±1/±1 annihilation ✅, counter caps ✅,
   legend rule ✅, saga sacrifice ✅, world rule ✅, illegally-attached Aura ✅
   (704.5n — host fails the printed enchant filter). Dungeons ✅ (CR 309/701.49

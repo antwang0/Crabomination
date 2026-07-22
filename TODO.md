@@ -54,43 +54,34 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (top-of-library fight), Grave Betrayal (mass reanimate replacement), Search the
   City (extra-turn combo), Azor's Elocutors (filibuster-counter win). Legends:
   Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
-- **Gatecrash (GTC) — in progress (modern_decks):** nine waves shipped. Wave 9
-  (gtc9): Skyblinder Staff (Equipment — +1/0 + can't-be-blocked-by-flyers),
-  Truefire Captain (Mentor + damage-reflect), Razortip Whip, Murder Investigation + Dying Wish (on-death
-  Auras scaling by the host's power via the CR 603.10 die snapshot). Tests
-  `gtc9_*`. Wave 8
-  (gtc8) added the Dimir Cipher package (Mental Vapors, Call of the Nightwing),
-  Shadow Alley Denizen (colored-ETB intimidate), Spell Rupture (counter-unless-
-  pay-X = greatest power), Angelic Skirmisher (each-combat `ChooseMode` keyword
-  grant, `AnyPlayer` BeginCombat), Serene Remembrance (graveyard→library shuffle),
-  Structural Collapse (typed edict + burn), and **Coerced Confession** — drove
-  the new **`Effect::MillThenDrawPerType`** (mill N from a target, draw one per
-  milled card matching a filter). Tests `gtc8_*`. Wave 7
-  (gtc7) added the Simic Evolve package (Crocanura, Adaptive Snapjaw, Battering
-  Krasis, Shambleshark, Clinging Anemones, Simic Fluxmage, Renegade Krasis —
-  its "whenever this evolves" payoff is modeled as a paired trigger off the
-  identical greater-P/T ETB filter), Species Gorger, Zameck Guildmage,
-  **Realmwright** (drove the new `Effect::ChooseBasicLandTypeForSource` +
-  `StaticEffect::LandsYouControlAreChosenType` — an as-enters basic-land-type
-  choice stamped on `CardInstance.chosen_land_type`, then an additive layer-4
-  land-type static; the intrinsic mana ability follows per CR 305.6), Miming
-  Slime, **Gruul Ragebeast** (self-ETB + AnotherOfYours ETB fight), Merciless
-  Eviction (`ChooseMode` + `Exile { EachPermanent }`), Skarrg Guildmage,
-  Hydroform, Foundry Champion, Viashino Firstblade, Ordruun Veteran, Fortress
-  Cyclops, Rust Scarab, Rubblebelt Maaka, Verdant Haven, Skygames. Tests in
-  `classic_sets/gtc` (`gtc7_*`) + CR conformance `core_rules/cr_recent18`.
-  Still open primitives: Alms Beast (combat-relational "creatures blocking/
-  blocked by this have lifelink" static), Simic Manipulator (gain control of a
-  creature with power ≤ counters removed), a true `EventKind::Evolved` (would
-  let Renegade Krasis drop the paired-trigger approximation), Hindervines
-  (filtered fog — "prevent all combat damage by creatures with no +1/+1
-  counters"), Thrull Parasite (remove a counter of *any* kind — `Effect::
-  RemoveCounter` is kind-specific), Gridlock (tap X distinct targets at cast),
-  Guardian of the Gateless ("can block any number of creatures" keyword),
-  Mark for Death (force a creature to block + others can't block), and the
-  remaining guild commons. The Scryfall gap script over-reports (Aetherize, Kingpin's Pet,
-  Wojek Halberdiers, Balustrade Spy, Nav Squad Commandos, and now many wave-7
-  names ship under other set modules).
+- **Gatecrash (GTC) — in progress (modern_decks):** fourteen waves shipped
+  (gtc..gtc14). Waves 10–14 (this run) closed the Primordial cycle, the
+  combat-damage payoffs, Domri Rade, and the Aura/utility spread; see
+  FEATURE_ROADMAP "Already shipped". Newly resolved from this list: Hindervines
+  (`PreventCombatDamageExceptDealtBy`), Thrull Parasite (`Effect::
+  RemoveAnyCounter`), Gridlock (`TapUpToValue` X). **Still open primitives:**
+  - **Five-Alarm Fire** — needs a unified "a creature deals combat damage to
+    anything" event (only `DealsCombatDamageToPlayer` / `…ToCreature` exist, so
+    a payoff can't count both without double-counting a trample split). Also
+    wants a dedicated `CounterType::Blaze` (reused nothing this run).
+  - **Guardian of the Gateless** — "can block any number of creatures" keyword
+    (a real block-declaration change).
+  - **Mark for Death** — force a creature to block while its *other* controllers'
+    creatures can't; needs an "other than target" creature selector for the
+    CantBlock grant.
+  - **Mystic Genesis** — X/X token where X = the *countered spell's mana value*
+    (no such `Value`; `CounteredSpellManaSpent` is mana spent, not MV).
+  - **Vizkopa / Duskmantle Guildmage** — each needs a this-turn "whenever you
+    gain life / a card enters an opponent's graveyard, drain" delayed-static.
+  - **Simic Manipulator** (steal by counters removed), **Alms Beast**,
+    **Lazav** (become-copy on opp-gy creature), **Obzedat** (end-step self-blink
+    returning next upkeep), **Nightveil Specter / Bane Alley Broker** (play from
+    a personal exile stash), **Signal the Clans** (random pick of a distinct
+    reveal), **Gideon, Champion of Justice**, **Enter the Infinite**.
+  Note: `Effect::ExileReturnNextEndStep` always returns under You **with a
+  +1/+1 counter** (Semester's End shape); the plain flickers that reuse it
+  (Cloudshift-likes) shouldn't add a counter — audit and split them onto the
+  new `ExileReturnToOwnerNextEndStep` / a counter-less You variant.
 - **Ravnica guild remainder (recent291 follow-ups):** shipped Simic Guildmage
   (`Effect::MoveCounter` + `Effect::Attach` aura-restitch), Golgari Guildmage,
   Necromantic Thirst (`EquipBonus.triggered_abilities` combat-damage trigger),
