@@ -1507,3 +1507,108 @@ fn fireminds_foresight_fetches_three_costs() {
         assert!(g.players[0].hand.iter().any(|c| c.id == id), "fetched the MV{mv} instant");
     }
 }
+
+/// Jarad's power grows with creature cards in your graveyard, and his sac
+/// ability drains each opponent for the sacrificed creature's power.
+#[test]
+fn jarad_grows_and_drains() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    let jarad = g.add_card_to_battlefield(0, catalog::jarad_golgari_lich_lord());
+    assert_eq!(g.computed_permanent(jarad).unwrap().power, 5, "2 base + 3 creatures in gy");
+    let fodder = g.add_card_to_battlefield(0, catalog::risen_sanctuary()); // 8/8 to sacrifice
+    let opp = g.players[1].life;
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jarad, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac-drain");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.players[1].life, opp - 8, "opponent drained for sacrificed power");
+}
+
+/// Jarad returns himself from the graveyard by sacrificing a Swamp and Forest.
+#[test]
+fn jarad_recurs_from_graveyard() {
+    let mut g = two_player_game();
+    let jarad = g.add_card_to_graveyard(0, catalog::jarad_golgari_lich_lord());
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jarad, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("recur");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == jarad), "Jarad back in hand");
+    assert!(g.battlefield_find(swamp).is_none() && g.battlefield_find(forest).is_none(),
+        "Swamp and Forest sacrificed");
+}
+
+/// Conjured Currency swaps control of itself with an opponent's permanent.
+#[test]
+fn conjured_currency_swaps_control() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    let curr = g.add_card_to_battlefield(0, catalog::conjured_currency());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "took the bear");
+    assert_eq!(g.battlefield_find(curr).unwrap().controller, 1, "gave up the currency");
+}
+
+/// Volatile Rig, on losing its death coin flip, explodes for 4 to everything.
+#[test]
+fn volatile_rig_explodes_on_death() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let rig = g.add_card_to_battlefield(0, catalog::volatile_rig()); // 4/4
+    let bystander = g.add_card_to_battlefield(1, catalog::risen_sanctuary()); // 8/8 survives 4
+    // Lost dealt-damage flip → sacrifice; lost death flip → 4 to all.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false), DecisionAnswer::Bool(false),
+    ]));
+    let opp = g.players[1].life;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(rig), 4, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rig).is_none(), "Rig gone");
+    assert_eq!(g.players[1].life, opp - 4, "opponent took 4 from the blast");
+    assert_eq!(g.battlefield_find(bystander).unwrap().damage, 4, "bystander took 4");
+}
+
+/// Mana Bloom enters with X charge counters and taps them for any color.
+#[test]
+fn mana_bloom_enters_with_counters_and_taps_for_mana() {
+    use crabomination::card::CounterType;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bloom = g.add_card_to_hand(0, catalog::mana_bloom());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bloom, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast for X=3");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bloom).unwrap().counter_count(CounterType::Charge), 3,
+        "entered with 3 charge counters");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bloom, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bloom).unwrap().counter_count(CounterType::Charge), 2,
+        "spent one counter");
+    assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
+}

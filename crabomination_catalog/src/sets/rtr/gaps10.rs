@@ -1,0 +1,185 @@
+//! Return to Ravnica (RTR) gap wave 11: an upkeep control-swap enchantment, a
+//! graveyard-recursion Golgari legend, a coin-flip artifact bomb, and an
+//! X-charge-counter mana enchantment. Tests in `classic_sets/rtr`.
+
+use crate::card::{
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, Subtypes,
+    TriggeredAbility, Value,
+};
+use crate::card::DynamicPt;
+use crate::effect::shortcut::on_dies;
+use crate::effect::{ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::game::TurnStep;
+use crate::mana::{b, cost, g, generic, u, x, ManaCost};
+
+/// Conjured Currency — {5}{U} Enchantment. At the beginning of your upkeep, you
+/// may exchange control of this enchantment and target permanent you neither
+/// own nor control.
+pub fn conjured_currency() -> CardDefinition {
+    CardDefinition {
+        name: "Conjured Currency",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Exchange control of Conjured Currency and target permanent?".into(),
+                body: Box::new(Effect::ExchangeControl {
+                    a: Selector::This,
+                    b: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Permanent
+                            .and(R::ControlledByYou.negate())
+                            .and(R::OwnedByYou.negate()),
+                    },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Jarad, Golgari Lich Lord — {B}{B}{G}{G} 2/2 Zombie Elf. +1/+1 for each
+/// creature card in your graveyard; {1}{B}{G}, Sacrifice another creature: each
+/// opponent loses life equal to its power; Sacrifice a Swamp and a Forest:
+/// return Jarad from your graveyard to your hand.
+pub fn jarad_golgari_lich_lord() -> CardDefinition {
+    CardDefinition {
+        name: "Jarad, Golgari Lich Lord",
+        cost: cost(&[b(), b(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Elf],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        dynamic_pt: Some(DynamicPt::BasePlusCreaturesInControllerGraveyard { base: 2 }),
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), b(), g()]),
+                sac_other_filter: Some((R::Creature.and(R::OtherThanSource), 1)),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::SacrificedPower,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: ManaCost::default(),
+                from_graveyard: true,
+                condition: Some(Predicate::All(vec![
+                    Predicate::ValueAtLeast(land_count(LandType::Swamp), Value::ONE),
+                    Predicate::ValueAtLeast(land_count(LandType::Forest), Value::ONE),
+                ])),
+                effect: Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::ONE,
+                        filter: R::HasLandType(LandType::Swamp),
+                    },
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::ONE,
+                        filter: R::HasLandType(LandType::Forest),
+                    },
+                    Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+fn land_count(ty: LandType) -> Value {
+    Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(R::ControlledByYou)),
+        filter: R::HasLandType(ty),
+    }
+}
+
+/// Volatile Rig — {4} 4/4 Construct with trample that attacks each combat if
+/// able. When it's dealt damage, flip a coin; lose the flip → sacrifice it.
+/// When it dies, flip a coin; lose the flip → 4 damage to each creature and
+/// each player.
+pub fn volatile_rig() -> CardDefinition {
+    CardDefinition {
+        name: "Volatile Rig",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample, Keyword::MustAttack],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+                effect: Effect::FlipCoin {
+                    count: Value::ONE,
+                    on_heads: Box::new(Effect::Noop),
+                    on_tails: Box::new(Effect::SacrificePermanent { what: Selector::This }),
+                },
+            },
+            on_dies(Effect::FlipCoin {
+                count: Value::ONE,
+                on_heads: Box::new(Effect::Noop),
+                on_tails: Box::new(Effect::Seq(vec![
+                    Effect::ForEach {
+                        selector: Selector::EachPermanent(R::Creature),
+                        body: Box::new(Effect::DealDamage {
+                            to: Selector::TriggerSource,
+                            amount: Value::Const(4),
+                        }),
+                    },
+                    Effect::ForEach {
+                        selector: Selector::Player(PlayerRef::EachPlayer),
+                        body: Box::new(Effect::DealDamage {
+                            to: Selector::TriggerSource,
+                            amount: Value::Const(4),
+                        }),
+                    },
+                ])),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mana Bloom — {X}{G} Enchantment. Enters with X charge counters. Remove a
+/// charge counter: add one mana of any color (once each turn). At the beginning
+/// of your upkeep, if it has no charge counters, return it to its owner's hand.
+pub fn mana_bloom() -> CardDefinition {
+    CardDefinition {
+        name: "Mana Bloom",
+        cost: cost(&[x(), g()]),
+        card_types: vec![CardType::Enchantment],
+        enters_with_counters: Some((CounterType::Charge, Value::XFromCost)),
+        activated_abilities: vec![ActivatedAbility {
+            once_per_turn: true,
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::ONE,
+                },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::ONE),
+                },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
+                .with_filter(Predicate::ValueAtMost(
+                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
+                    Value::Const(0),
+                )),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+        }],
+        ..Default::default()
+    }
+}

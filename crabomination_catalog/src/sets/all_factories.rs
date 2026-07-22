@@ -9559,6 +9559,10 @@ static RTR: &[Factory] = &[
     super::rtr::deaths_presence,
     super::rtr::pyroconvergence,
     super::rtr::fireminds_foresight,
+    super::rtr::conjured_currency,
+    super::rtr::jarad_golgari_lich_lord,
+    super::rtr::volatile_rig,
+    super::rtr::mana_bloom,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,
