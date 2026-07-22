@@ -755,6 +755,12 @@ exercising each) was elided in a compaction pass; recover it from
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
   Aura/Equipment's host so the client tooltip shows "Equipping/Enchanting: …"
   without a battlefield scan.
+- **Cost / combat primitives (modern_decks — GTC/RTR):**
+  `ActivatedAbility.exile_spell_cost` ("Exile [a spell] you control:" — pulls the
+  top-most matching spell off the stack, which won't resolve; Nivmagus Elemental),
+  and `SelectionRequirement::IsBlocked` (a blocked attacker — Smite). Battalion
+  rides the existing `Predicate::AttackingWithAtLeast(3)` gate on a SelfSource
+  Attacks trigger; Bloodrush reuses `from_hand` + `discard_self_cost`.
 - **Selectors/filters:** `Selector::BlockingCreatures` (every creature blocking
   the source attacker — Grasping Giant), `SelectionRequirement::HasPlaneswalkerType`
   (Sunlit Hoplite / Swimmer's Elspeth/Ashiok riders),

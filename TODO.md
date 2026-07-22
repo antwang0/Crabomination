@@ -55,6 +55,16 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (top-of-library fight), Grave Betrayal (mass reanimate replacement), Search the
   City (extra-turn combo), Azor's Elocutors (filibuster-counter win). Legends:
   Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
+- **Gatecrash (GTC) — started (modern_decks):** two waves shipped (~42 cards:
+  vanilla/keyword beaters, dies triggers, combat spells, Auras, Battalion,
+  Bloodrush, an Equipment). ~130 cards remain. Notable primitives still needed:
+  Righteous Authority / Death's Approach (aura P/T scaling by the host
+  controller's hand size / graveyard creature count — no `EquipScale` for zone
+  counts yet), Realmwright (choose-a-basic-land-type-as-enters continuous "lands
+  you control are that type in addition"), Homing Lightning (same-name damage
+  sweep), Gruul Ragebeast (ETB-of-any-creature fight), Merciless Eviction
+  (4-mode exile-all sweep), Extort cards (keyword exists — Syndicate Enforcer et
+  al.), Cipher/Evolve carriers, and the remaining Battalion/Bloodrush commons.
 - **Ravnica guild remainder (recent291 follow-ups):** shipped Simic Guildmage
   (`Effect::MoveCounter` + `Effect::Attach` aura-restitch), Golgari Guildmage,
   Necromantic Thirst (`EquipBonus.triggered_abilities` combat-damage trigger),
