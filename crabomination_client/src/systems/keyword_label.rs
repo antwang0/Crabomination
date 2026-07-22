@@ -245,6 +245,10 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Annihilator(_) => "Anh",
         Absorb(_) => "Abs",
         Frenzy(_) => "Frz",
+        // Unleash (CR 702.98, Rakdos/GTC) — the marker flags an unleashed
+        // creature; once it carries a +1/+1 counter the injected `CantBlock`
+        // adds the "NoBlk" read, but the tag identifies the mechanic up front.
+        Unleash => "Unl",
         _ => return None,
     })
 }
@@ -811,6 +815,8 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::Poisonous(1)]), "Psn1");
         // Two different Rampage magnitudes are distinct chips, not deduped.
         assert_eq!(keyword_strip(&[Keyword::Rampage(1), Keyword::Rampage(2)]), "Rmp1 Rmp2");
+        // Unleash surfaces its own marker chip (CR 702.98).
+        assert_eq!(keyword_strip(&[Keyword::Unleash]), "Unl");
     }
 
     #[test]

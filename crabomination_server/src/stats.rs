@@ -336,6 +336,18 @@ impl MatchStats {
     pub(crate) fn avg_draw_turns(&self) -> u64 {
         self.draw_turn_sum.checked_div(self.draws).unwrap_or(0)
     }
+    /// Draw length as a percentage of decisive length — the "stalemate grind"
+    /// gauge the `decisive_turn_sum`/`draw_turn_sum` field docs call for,
+    /// surfaced as one number instead of leaving operators to divide the two
+    /// averages by hand. 100 = draws end as fast as wins; 200 = draws grind
+    /// twice as long (a stalemate-detection knob is likely worthwhile). Returns
+    /// 0 when either sample is empty (no ratio is defined yet).
+    pub(crate) fn stalemate_grind_pct(&self) -> u64 {
+        let decisive = self.avg_decisive_turns();
+        let draw = self.avg_draw_turns();
+        if decisive == 0 || draw == 0 { return 0; }
+        draw.saturating_mul(100) / decisive
+    }
     /// Bump the cumulative turn counter — called at match completion
     /// from the record paths if the caller has a final turn number.
     /// Defensive against double-counting since this is invoked exactly
@@ -1523,6 +1535,23 @@ mod tests {
         assert_eq!(s.duration_cv_pct(), 33);
         // No matches → 0 rather than dividing by zero.
         assert_eq!(MatchStats::default().duration_cv_pct(), 0);
+    }
+
+    #[test]
+    fn stalemate_grind_is_draw_over_decisive_length() {
+        // Decisive games average 10 turns, draws average 25 → 250%.
+        let s = MatchStats {
+            wins: 2, decisive_turn_sum: 20,
+            draws: 1, draw_turn_sum: 25,
+            ..Default::default()
+        };
+        assert_eq!(s.avg_decisive_turns(), 10);
+        assert_eq!(s.avg_draw_turns(), 25);
+        assert_eq!(s.stalemate_grind_pct(), 250);
+        // Either sample empty → 0 (no ratio defined).
+        let only_wins = MatchStats { wins: 1, decisive_turn_sum: 8, ..Default::default() };
+        assert_eq!(only_wins.stalemate_grind_pct(), 0);
+        assert_eq!(MatchStats::default().stalemate_grind_pct(), 0);
     }
 
     #[test]

@@ -57,7 +57,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
     let refused = sl.refused_global + sl.refused_per_ip;
     format!(
         "{{\"uptime_secs\":{},\"matches\":{},\"bot_matches\":{},\"pair_matches\":{},\
-         \"avg_turns\":{},\"avg_decisive_turns\":{},\"avg_draw_turns\":{},\
+         \"avg_turns\":{},\"avg_decisive_turns\":{},\"avg_draw_turns\":{},\"stalemate_grind_pct\":{},\
          \"min_turns\":{},\"max_turns\":{},\"turn_stddev\":{:.2},\"turn_cv_pct\":{},\
          \"median_turns\":{},\"turn_p10\":{},\"turn_p90\":{},\"turn_p95\":{},\"turn_iqr\":{},\
          \"modal_turn_band\":\"{}\",\"fast_game_pct\":{},\"slow_game_pct\":{},\
@@ -81,6 +81,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.avg_turns(),
         st.avg_decisive_turns(),
         st.avg_draw_turns(),
+        st.stalemate_grind_pct(),
         st.min_turns.unwrap_or(0),
         st.max_turns.unwrap_or(0),
         st.turn_count_stddev(),
@@ -162,6 +163,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("avg_turns", "gauge", "Average turns per match.", st.avg_turns().to_string());
     m("avg_decisive_turns", "gauge", "Average final-turn count of matches with a winner.", st.avg_decisive_turns().to_string());
     m("avg_draw_turns", "gauge", "Average final-turn count of drawn matches.", st.avg_draw_turns().to_string());
+    m("stalemate_grind_pct", "gauge", "Draw length as a percent of decisive length (100=equal, 200=draws grind twice as long).", st.stalemate_grind_pct().to_string());
     m("min_turns", "gauge", "Fewest turns in a completed match.", st.min_turns.unwrap_or(0).to_string());
     m("max_turns", "gauge", "Most turns in a completed match.", st.max_turns.unwrap_or(0).to_string());
     m("turn_stddev", "gauge", "Standard deviation of final turn counts.", format!("{:.2}", st.turn_count_stddev()));
