@@ -1614,3 +1614,44 @@ fn gtc12_domri_rade_emblem() {
         assert!(c.keywords.contains(&kw), "emblem grants {kw:?}");
     }
 }
+
+// ── Wave 13 ──────────────────────────────────────────────────────────────────
+
+/// Undercity Plague makes the target lose life, discard, and sacrifice.
+#[test]
+fn gtc13_undercity_plague() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::gutter_skulk()); // discard fodder
+    let perm = g.add_card_to_battlefield(1, catalog::gutter_skulk()); // sac fodder
+    let spell = g.add_card_to_hand(0, catalog::undercity_plague());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let life = g.players[1].life;
+    let hand = g.players[1].hand.len();
+    g.cast_spell(spell, Some(Target::Player(1)), vec![], None, None).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "lost 1 life");
+    assert_eq!(g.players[1].hand.len(), hand - 1, "discarded a card");
+    assert!(g.battlefield_find(perm).is_none(), "sacrificed a permanent");
+}
+
+/// Gridlock taps X target nonland permanents.
+#[test]
+fn gtc13_gridlock_taps_x() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::gutter_skulk());
+    let b = g.add_card_to_battlefield(1, catalog::ruination_wurm());
+    let spell = g.add_card_to_hand(0, catalog::gridlock());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2); // X=2
+    g.cast_spell(spell, Some(Target::Permanent(a)), vec![Target::Permanent(b)], None, Some(2)).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped,
+        "both targets tapped");
+}

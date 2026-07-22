@@ -66,6 +66,7 @@ pub use sets::gtc9::*;
 pub use sets::gtc10::*;
 pub use sets::gtc11::*;
 pub use sets::gtc12::*;
+pub use sets::gtc13::*;
 pub use sets::ice::*;
 pub use sets::inv::*;
 pub use sets::khm::*;
