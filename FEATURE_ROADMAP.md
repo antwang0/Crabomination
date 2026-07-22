@@ -16,7 +16,18 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **RAV/GPT/DIS + RTR wave (this run, 61 cards):** damage-into-counters
+- **RTR gap waves 5–7 (this run, 56 cards):** the guild Keyrune mana-rock cycle
+  (`ManaPayload::OfColors` tap + `BecomeCreature`/`BecomeColor` animate), the
+  guildmage cycle, the populate spells, the Aura package (stat-drain + upkeep
+  drain, aura-granted activated keyword abilities, ETB-token Auras, aura-on-land
+  `EventKind::Tapped` mill), plus scavenge/unleash/detain/burn commons. New engine
+  primitives: `Effect::PreventAllCombatDamageToPlayerThisTurn` (CR 615 player-scoped
+  fog — Druid's Deliverance), `Effect::SacrificeSourceUnlessPayManaValue` (CR 701.16
+  — Soul Tithe), and `PlayerRef::ControllerOf` now resolves a player entity to itself
+  (Rakdos's Return's "opponent-or-planeswalker → that player discards"). Server: p95
+  turn/duration tail metrics on `/status.json` + `/metrics`. Client: a "Detain"
+  board chip (CR 701.35) and a fixed stale evasion-label test.
+- **RAV/GPT/DIS + RTR wave (prior run, 61 cards):** damage-into-counters
   replacements (`ReplaceDamageToSelfWithCounters` — Phytohydra;
   `CombatDamageToPlayerBecomesCountersAndMill` — Szadek; both CR-614 "instead",
   fire through unpreventable); `Selector::CreaturesInCombatWith` (Trial // Error);
