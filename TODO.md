@@ -54,15 +54,20 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (top-of-library fight), Grave Betrayal (mass reanimate replacement), Search the
   City (extra-turn combo), Azor's Elocutors (filibuster-counter win). Legends:
   Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
-- **Gatecrash (GTC) — in progress (modern_decks):** five waves shipped (~82
+- **Gatecrash (GTC) — in progress (modern_decks):** six waves shipped (~90
   cards): beaters, dies/ETB triggers, combat spells, Auras, Battalion,
   Bloodrush, an Equipment, the two host-controller-zone-scaling Auras (Righteous
   Authority / Death's Approach), the five guild Keyrunes, Extort creatures,
   +1/+1-counter evasion lords (Sapphire Drake / Crowned Ceratok), Homing
   Lightning (`SameNameDamage`), Ogre Slumlord, Dinrova Horror, Grisly Spectacle,
   Immortal Servitude (X-scaled mass reanimate — drove the `EachMatching`
-  `{X}`-from-cost fix), Biovisionary (win-con), Giant Adephage (self-copy).
-  ~85 cards remain. Notable primitives still needed:
+  `{X}`-from-cost fix), Biovisionary (win-con), Giant Adephage (self-copy),
+  Leyline Phantom, Martial Glory, Alpha Authority, Agoraphobia, Greenside
+  Watcher, Slate Street Ruffian, Scab-Clan Charger / Scorchwalker (Bloodrush).
+  ~80 cards remain (the Scryfall gap script's raw count over-reports: several
+  GTC names — Aetherize, Kingpin's Pet, Wojek Halberdiers, Balustrade Spy, Nav
+  Squad Commandos — already ship under other set modules). Notable primitives
+  still needed:
   Realmwright (choose-a-basic-land-type-as-enters continuous "lands you control
   are that type in addition" — note: `LandsBecomeChosenBasicType` already ships
   for Terraformer; Realmwright wants the enters-choice + additive variant),
