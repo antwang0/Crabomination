@@ -7782,6 +7782,12 @@ static GTC4: &[Factory] = &[
     super::gtc4::grisly_spectacle,
     super::gtc4::crackling_perimeter,
 ];
+static GTC5: &[Factory] = &[
+    super::gtc5::immortal_servitude,
+    super::gtc5::biovisionary,
+    super::gtc5::giant_adephage,
+    super::gtc5::executioners_swing,
+];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,
 ];
@@ -14458,6 +14464,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("gtc2", GTC2),
     ("gtc3", GTC3),
     ("gtc4", GTC4),
+    ("gtc5", GTC5),
     ("ice", ICE),
     ("inv", INV),
     ("khm", KHM),

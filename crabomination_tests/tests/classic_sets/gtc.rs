@@ -680,3 +680,84 @@ fn gtc4_crackling_perimeter_pings() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 1, "opponent pinged for 1");
 }
+
+// ── Wave 5 ───────────────────────────────────────────────────────────────────
+
+/// Immortal Servitude returns each creature card of mana value X from your
+/// graveyard — exercising `EachMatching`'s new `{X}`-from-cost resolution.
+#[test]
+fn gtc5_immortal_servitude_reanimates_by_x() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    // Graveyard: two 2-MV creatures (Gutter Skulk {1}{B}) and one 6-MV (Ruination Wurm).
+    g.add_card_to_graveyard(0, catalog::gutter_skulk());
+    g.add_card_to_graveyard(0, catalog::gutter_skulk());
+    g.add_card_to_graveyard(0, catalog::ruination_wurm());
+    let spell = g.add_card_to_hand(0, catalog::immortal_servitude());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add_colorless(2); // X=2
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast X=2");
+    drain_stack(&mut g);
+    let skulks = g.battlefield.iter().filter(|c| c.definition.name == "Gutter Skulk" && c.controller == 0).count();
+    assert_eq!(skulks, 2, "both MV-2 creatures returned");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Ruination Wurm"), "MV-6 creature stayed in graveyard");
+}
+
+/// Biovisionary wins the game at end step with four copies in play.
+#[test]
+fn gtc5_biovisionary_wins_with_four() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_battlefield(0, catalog::biovisionary()); }
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    // Resolve the win trigger; PassPriority errors once the game ends, so stop
+    // as soon as game_over is set.
+    while !g.stack.is_empty() && g.perform_action(GameAction::PassPriority).is_ok() {}
+    assert_eq!(g.game_over, Some(Some(0)), "controller wins with four Biovisionaries");
+}
+
+/// Three Biovisionaries is not enough — the game continues.
+#[test]
+fn gtc5_biovisionary_needs_four() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::biovisionary()); }
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.is_game_over(), "three is not enough to win");
+}
+
+/// Giant Adephage copies itself on dealing combat damage to a player.
+#[test]
+fn gtc5_giant_adephage_copies_on_damage() {
+    let mut g = two_player_game();
+    let ade = g.add_card_to_battlefield(0, catalog::giant_adephage());
+    g.clear_sickness(ade);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ade, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    let copies = g.battlefield.iter().filter(|c| c.definition.name == "Giant Adephage" && c.controller == 0).count();
+    assert_eq!(copies, 2, "original plus one token copy");
+}
+
+/// Executioner's Swing shrinks a creature that dealt damage this turn.
+#[test]
+fn gtc5_executioners_swing_hits_damager() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::ruination_wurm()); // 7/6
+    g.battlefield_find_mut(foe).unwrap().dealt_damage_this_turn = true;
+    let swing = g.add_card_to_hand(0, catalog::executioners_swing());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.cast_spell(swing, Some(Target::Permanent(foe)), vec![], None, None).expect("swing");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(foe).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 1), "7/6 shrunk by -5/-5");
+}

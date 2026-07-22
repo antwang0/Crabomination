@@ -16996,7 +16996,14 @@ impl GameState {
                 vec![]
             }
 
-            Selector::EachMatching { zone, filter } => self.entities_in_zone(zone, filter, ctx),
+            Selector::EachMatching { zone, filter } => {
+                // Concretize `{X}`-from-cost filters against the paid X, as the
+                // battlefield-scoped `EachPermanent` arm does — so a zone sweep
+                // like "return each creature with mana value X from your
+                // graveyard" (Immortal Servitude) reads the cast's X.
+                let filter = filter.resolve_x(ctx.x_value);
+                self.entities_in_zone(zone, &filter, ctx)
+            }
             Selector::EachPermanent(filter) => {
                 // Concretize `{X}`-from-cost filters against the paid X so
                 // "destroy each artifact with mana value X" (Dauntless
