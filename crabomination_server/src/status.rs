@@ -54,7 +54,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         "{{\"uptime_secs\":{},\"matches\":{},\"bot_matches\":{},\"pair_matches\":{},\
          \"avg_turns\":{},\"avg_decisive_turns\":{},\"avg_draw_turns\":{},\
          \"min_turns\":{},\"max_turns\":{},\"turn_stddev\":{:.2},\"turn_cv_pct\":{},\
-         \"median_turns\":{},\"turn_p10\":{},\"turn_p90\":{},\"turn_iqr\":{},\
+         \"median_turns\":{},\"turn_p10\":{},\"turn_p90\":{},\"turn_p95\":{},\"turn_iqr\":{},\
          \"modal_turn_band\":\"{}\",\"fast_game_pct\":{},\"slow_game_pct\":{},\
          \"inconclusive\":{},\"inconclusive_pct\":{},\"decisive_pct\":{},\"draw_pct\":{},\
          \"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
@@ -66,7 +66,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
          \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
          \"avg_duration_secs\":{},\"min_duration_secs\":{},\"max_duration_secs\":{},\
-         \"duration_stddev_secs\":{},\"duration_buckets\":[{},{},{},{},{},{}],\
+         \"duration_stddev_secs\":{},\"duration_p95_secs\":{},\"duration_buckets\":[{},{},{},{},{},{}],\
          \"avg_winner_board\":{},\"winner_board_stddev\":{:.2},\"winner_board_cv_pct\":{},\
          \"catalog_cards\":{}}}\n",
         started.elapsed().as_secs(),
@@ -83,6 +83,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.turn_percentile(0.5),
         st.turn_percentile(0.1),
         st.turn_percentile(0.9),
+        st.turn_percentile(0.95),
         st.turn_count_iqr(),
         st.turn_count_mode_bucket().unwrap_or("n/a"),
         st.fast_game_pct(),
@@ -120,6 +121,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.min_duration.map(|d| d.as_secs()).unwrap_or(0),
         st.max_duration.map(|d| d.as_secs()).unwrap_or(0),
         st.duration_stddev().as_secs(),
+        st.percentile(0.95).as_secs(),
         st.duration_buckets[0],
         st.duration_buckets[1],
         st.duration_buckets[2],
@@ -161,6 +163,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("median_turns", "gauge", "Median (p50) final turn count.", st.turn_percentile(0.5).to_string());
     m("turn_p10", "gauge", "10th-percentile final turn count (how fast the quickest games end).", st.turn_percentile(0.1).to_string());
     m("turn_p90", "gauge", "90th-percentile final turn count.", st.turn_percentile(0.9).to_string());
+    m("turn_p95", "gauge", "95th-percentile final turn count (grindiest-tail bound for alerting).", st.turn_percentile(0.95).to_string());
     m("turn_iqr", "gauge", "Interquartile range (p75-p25) of final turn counts.", st.turn_count_iqr().to_string());
     m("fast_game_pct", "gauge", "Percent of completed matches decided in 5 turns or fewer.", st.fast_game_pct().to_string());
     m("slow_game_pct", "gauge", "Percent of completed matches that ran 13 turns or longer.", st.slow_game_pct().to_string());
@@ -176,6 +179,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     // match feel snappy?" want the p50, and the p90 flags the slow tail.
     m("median_duration_seconds", "gauge", "Median (p50) match duration in seconds (histogram upper bound).", st.percentile(0.5).as_secs().to_string());
     m("duration_p90_seconds", "gauge", "90th-percentile match duration in seconds (slow-tail bound).", st.percentile(0.9).as_secs().to_string());
+    m("duration_p95_seconds", "gauge", "95th-percentile match duration in seconds (slow-tail bound for alerting).", st.percentile(0.95).as_secs().to_string());
     m("duration_stddev_seconds", "gauge", "Standard deviation of match duration in seconds (spread of game length).", st.duration_stddev().as_secs().to_string());
     m("winner_board_avg", "gauge", "Average permanents the winner controls at game end (board width of a win).", st.avg_winner_board().to_string());
     m("winner_board_stddev", "gauge", "Standard deviation of the winner's board size (burn-narrow vs. grind-wide spread).", format!("{:.2}", st.winner_board_stddev()));
@@ -517,12 +521,13 @@ mod tests {
                     "\"median_win_life_delta\":0", "\"win_life_delta_p90\":0",
                     "\"win_life_delta_stddev\":0.00",
                     "\"min_turns\":0", "\"max_turns\":0", "\"turn_stddev\":0.00",
-                    "\"median_turns\":0", "\"turn_p10\":0", "\"turn_p90\":0", "\"turn_iqr\":0",
+                    "\"median_turns\":0", "\"turn_p10\":0", "\"turn_p90\":0",
+                    "\"turn_p95\":0", "\"turn_iqr\":0",
                     "\"fast_game_pct\":0", "\"slow_game_pct\":0",
                     "\"inconclusive\":0", "\"inconclusive_pct\":0",
                     "\"decisive_pct\":0", "\"draw_pct\":0",
                     "\"avg_duration_secs\":0", "\"min_duration_secs\":0",
-                    "\"duration_stddev_secs\":0",
+                    "\"duration_stddev_secs\":0", "\"duration_p95_secs\":0",
                     "\"duration_buckets\":[0,0,0,0,0,0]"] {
             assert!(body.contains(key), "missing {key} in {body}");
         }
@@ -630,6 +635,7 @@ mod tests {
         assert!(body.contains("crab_avg_duration_seconds 0"));
         assert!(body.contains("crab_median_duration_seconds 0"));
         assert!(body.contains("crab_duration_p90_seconds 0"));
+        assert!(body.contains("crab_duration_p95_seconds 0"));
         assert!(body.contains("crab_duration_stddev_seconds 0"));
         assert!(body.contains("crab_match_duration_bucket{band=\"<30s\"} 0"));
         // Refusal breakdown by reason + peak-per-ip gauge.
@@ -643,6 +649,7 @@ mod tests {
         assert!(body.contains("crab_turn_stddev 0.00"));
         assert!(body.contains("crab_median_turns 0"));
         assert!(body.contains("crab_turn_p90 0"));
+        assert!(body.contains("crab_turn_p95 0"));
         assert!(body.contains("crab_turn_iqr 0"));
         // Turn-count histogram + per-seat wins as labelled series.
         assert!(body.contains("crab_match_turn_bucket{band=\"1-2\"} 0"));
