@@ -4,11 +4,12 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
-    StaticAbility, Subtypes, TriggeredAbility, Value,
+    StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_any, target_filtered};
-use crate::effect::{Effect, Predicate, Selector, StaticEffect};
-use crate::mana::{b, cost, generic, r, u, w};
+use crate::effect::{Effect, PlayerRef, Selector, StaticEffect};
+use crate::effect::Predicate;
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
     Subtypes { creature_types: t, ..Default::default() }
@@ -165,7 +166,7 @@ pub fn five_alarm_fire() -> CardDefinition {
 /// Simic Manipulator — {1}{U}{U} 0/1 Mutant Wizard. Evolve; {T}, remove X +1/+1
 /// counters from it: gain control of target creature with power ≤ X.
 pub fn simic_manipulator() -> CardDefinition {
-    use crate::effect::{Duration, PlayerRef};
+    use crate::effect::Duration;
     CardDefinition {
         name: "Simic Manipulator",
         cost: cost(&[generic(1), u(), u()]),
@@ -192,8 +193,7 @@ pub fn simic_manipulator() -> CardDefinition {
 /// lifelink until end of turn. {1}{W}{B}: until end of turn, whenever you gain
 /// life, each opponent loses that much life.
 pub fn vizkopa_guildmage() -> CardDefinition {
-    use crate::card::ActivatedAbility;
-    use crate::effect::{Duration, PlayerRef};
+    use crate::effect::Duration;
     let wb = || cost(&[generic(1), w(), b()]);
     CardDefinition {
         name: "Vizkopa Guildmage",
@@ -227,12 +227,40 @@ pub fn vizkopa_guildmage() -> CardDefinition {
     }
 }
 
+/// Mystic Genesis — {2}{G}{U}{U} Instant. Counter target spell; create an X/X
+/// green Ooze token, where X is that spell's mana value.
+pub fn mystic_genesis() -> CardDefinition {
+    let mv = || Value::ManaValueOf(Box::new(Selector::Target(0)));
+    CardDefinition {
+        name: "Mystic Genesis",
+        cost: cost(&[generic(2), g(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        // Mint the Ooze first (reads the still-on-stack spell's MV), then counter.
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Ooze".into(),
+                    power: 0,
+                    toughness: 0,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: creatures(vec![CreatureType::Ooze]),
+                    dynamic_pt: Some((mv(), mv())),
+                    ..Default::default()
+                },
+            },
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Duskmantle Guildmage — {U}{B} 2/2 Human Wizard. {1}{U}{B}: until end of turn,
 /// whenever a card is put into an opponent's graveyard, that player loses 1 life.
 /// {2}{U}{B}: target player mills two cards.
 pub fn duskmantle_guildmage() -> CardDefinition {
-    use crate::card::ActivatedAbility;
-    use crate::effect::PlayerRef;
     CardDefinition {
         name: "Duskmantle Guildmage",
         cost: cost(&[u(), b()]),

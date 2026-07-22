@@ -1965,3 +1965,30 @@ fn gtc15_duskmantle_guildmage_mills_and_drains() {
     assert_eq!(g.players[1].library.len(), lib - 2, "milled two cards");
     assert_eq!(g.players[1].life, opp - 2, "each milled card drained 1 (2 total)");
 }
+
+/// Mystic Genesis counters a spell and mints an Ooze sized to its mana value.
+#[test]
+fn gtc15_mystic_genesis_counters_and_mints_ooze() {
+    let mut g = two_player_game();
+    // P1 casts Ruination Wurm ({4}{R}{G}, mana value 6).
+    let wurm = g.add_card_to_hand(1, catalog::ruination_wurm());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[1].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(4);
+    g.cast_spell(wurm, None, vec![], None, None).expect("cast wurm");
+    // P0 responds with Mystic Genesis.
+    let genesis = g.add_card_to_hand(0, catalog::mystic_genesis());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.cast_spell(genesis, Some(Target::Permanent(wurm)), vec![], None, None).expect("cast genesis");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == wurm), "the wurm was countered");
+    let ooze = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Ooze").expect("ooze token");
+    let c = g.computed_permanent(ooze.id).unwrap();
+    assert_eq!((c.power, c.toughness), (6, 6), "X/X where X = countered spell's mana value (6)");
+}
