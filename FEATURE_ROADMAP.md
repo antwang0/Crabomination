@@ -16,6 +16,10 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **GTC wave 9 (this run, 4 cards):** Skyblinder Staff (Equipment), Razortip Whip
+  (ping artifact), and two on-death Auras (Murder Investigation, Dying Wish) that
+  scale by the host's power via the CR 603.10 die snapshot. All on existing
+  primitives. Tests `classic_sets/gtc` (`gtc9_*`).
 - **GTC wave 8 (this run, 8 cards):** the Dimir Cipher package, Spell Rupture,
   Angelic Skirmisher (each-combat keyword grant), graveyard hate, a typed edict,
   and Coerced Confession. New engine primitive: `Effect::MillThenDrawPerType`

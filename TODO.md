@@ -54,7 +54,11 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (top-of-library fight), Grave Betrayal (mass reanimate replacement), Search the
   City (extra-turn combo), Azor's Elocutors (filibuster-counter win). Legends:
   Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
-- **Gatecrash (GTC) — in progress (modern_decks):** eight waves shipped. Wave 8
+- **Gatecrash (GTC) — in progress (modern_decks):** nine waves shipped. Wave 9
+  (gtc9): Skyblinder Staff (Equipment — +1/0 + can't-be-blocked-by-flyers),
+  Razortip Whip (ping artifact), Murder Investigation + Dying Wish (on-death
+  Auras scaling by the host's power via the CR 603.10 die snapshot). Tests
+  `gtc9_*`. Wave 8
   (gtc8) added the Dimir Cipher package (Mental Vapors, Call of the Nightwing),
   Shadow Alley Denizen (colored-ETB intimidate), Spell Rupture (counter-unless-
   pay-X = greatest power), Angelic Skirmisher (each-combat `ChooseMode` keyword

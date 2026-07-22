@@ -1183,3 +1183,81 @@ fn gtc8_serene_remembrance_shuffles_graveyard() {
     assert!(g.players[1].graveyard.len() <= 0, "up to three cards left the graveyard");
     assert_eq!(g.players[1].library.len(), lib_before + 3, "three cards shuffled in");
 }
+
+// ── Wave 9 (gtc9) ─────────────────────────────────────────────────────────────
+
+/// Skyblinder Staff pumps +1/+0 and stops flying blockers.
+#[test]
+fn gtc9_skyblinder_staff_buffs_and_evades() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
+    let staff = g.add_card_to_battlefield(0, catalog::skyblinder_staff());
+    g.battlefield_find_mut(staff).unwrap().attached_to = Some(bear);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.power, 3, "2 + 1");
+    assert!(c.keywords.iter().any(|k| matches!(k, Keyword::CantBeBlockedBy(_))));
+}
+
+/// Razortip Whip pings for 1.
+#[test]
+fn gtc9_razortip_whip_pings() {
+    let mut g = two_player_game();
+    let whip = g.add_card_to_battlefield(0, catalog::razortip_whip());
+    let life_before = g.players[1].life;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: whip, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 1, "dealt 1");
+}
+
+/// Murder Investigation makes Soldiers equal to the dead creature's power.
+#[test]
+fn gtc9_murder_investigation_makes_soldiers() {
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(0, catalog::ruination_wurm()); // 7/6
+    let aura = g.add_card_to_hand(0, catalog::murder_investigation());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(wurm).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Soldier" && c.controller == 0).count();
+    assert_eq!(soldiers, 7, "one Soldier per power");
+}
+
+/// Dying Wish drains life equal to the dead creature's power.
+#[test]
+fn gtc9_dying_wish_drains() {
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(0, catalog::ruination_wurm()); // power 7
+    let aura = g.add_card_to_hand(0, catalog::dying_wish());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    let opp_before = g.players[1].life;
+    let me_before = g.players[0].life;
+    g.battlefield_find_mut(wurm).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack_targeting(&mut g, Target::Player(1));
+    assert_eq!(g.players[1].life, opp_before - 7, "opponent lost 7");
+    assert_eq!(g.players[0].life, me_before + 7, "I gained 7");
+}

@@ -295,6 +295,7 @@ pub mod gtc5;
 pub mod gtc6;
 pub mod gtc7;
 pub mod gtc8;
+pub mod gtc9;
 pub mod ice;
 pub mod inv;
 pub mod khm;
