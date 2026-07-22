@@ -7845,6 +7845,7 @@ static GTC9: &[Factory] = &[
     super::gtc12::clan_defiance,
     super::gtc12::domri_rade,
     super::gtc13::undercity_plague,
+    super::gtc13::thrull_parasite,
     super::gtc13::gridlock,
 ];
 static GTC8: &[Factory] = &[

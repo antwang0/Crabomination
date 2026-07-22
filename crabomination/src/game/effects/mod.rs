@@ -8068,6 +8068,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RemoveAnyCounter { what } => {
+                // Remove one counter of any one kind (auto-pick the first
+                // present kind). Thrull Parasite.
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        let ctrl = c.controller;
+                        if let Some(kind) = c.counters.iter().find(|(_, n)| **n > 0).map(|(k, _)| *k) {
+                            let removed = c.remove_counters(kind, 1);
+                            if removed > 0 {
+                                if kind == CounterType::Oil {
+                                    self.players[ctrl].oil_activity_this_turn = true;
+                                }
+                                events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count: removed });
+                            }
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             // CR 603.7e — register a one-shot "your next creature spell this
             // turn enters with N counters" rider on the controller.
             Effect::GrantNextCreatureSpellCounters { kind, amount } => {

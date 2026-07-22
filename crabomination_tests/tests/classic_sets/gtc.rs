@@ -1655,3 +1655,22 @@ fn gtc13_gridlock_taps_x() {
     assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped,
         "both targets tapped");
 }
+
+/// Thrull Parasite removes a counter from a target permanent.
+#[test]
+fn gtc13_thrull_parasite_removes_counter() {
+    let mut g = two_player_game();
+    let parasite = g.add_card_to_battlefield(0, catalog::thrull_parasite());
+    let foe = g.add_card_to_battlefield(1, catalog::gutter_skulk());
+    g.battlefield_find_mut(foe).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.clear_sickness(parasite);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: parasite, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1,
+        "one +1/+1 counter removed");
+    assert_eq!(g.players[0].life, life - 2, "paid 2 life");
+}

@@ -3907,6 +3907,10 @@ pub enum Effect {
     /// Remove every counter of every kind from `what` (CR 122.6 — Vampire
     /// Hexmage's "remove all counters from target permanent").
     RemoveAllCounters { what: Selector },
+    /// Remove a single counter of any one kind from `what` (the controller's
+    /// choice; auto-picks the first present kind). Thrull Parasite's "remove a
+    /// counter from target nonland permanent".
+    RemoveAnyCounter { what: Selector },
     /// Set the loyalty (CR 606) of `what` to `value` — a loyalty-set effect
     /// ("its loyalty becomes …" / "reset to its starting loyalty"). Overwrites
     /// the `Loyalty` counter count outright rather than adding/removing.

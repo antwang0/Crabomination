@@ -1,8 +1,11 @@
 //! Gatecrash (GTC) wave 13: a Dimir Cipher edict-drain and an X-tapper. Tests
 //! in `classic_sets/gtc`.
 
-use crate::card::{CardDefinition, CardType, SelectionRequirement as R, Value};
-use crate::effect::shortcut::target_filtered;
+use crate::card::{
+    ActivatedAbility, CardDefinition, CardType, CreatureType, SelectionRequirement as R, Subtypes,
+    Value,
+};
+use crate::effect::shortcut::{extort, target_filtered};
 use crate::effect::{Effect, Selector};
 use crate::mana::{b, cost, generic, u, x};
 
@@ -20,6 +23,29 @@ pub fn undercity_plague() -> CardDefinition {
             Effect::Sacrifice { who: Selector::Target(0), count: Value::ONE, filter: R::Permanent },
             Effect::Cipher,
         ]),
+        ..Default::default()
+    }
+}
+
+/// Thrull Parasite — {B} 1/1 Thrull. Extort; {T}, Pay 2 life: remove a counter
+/// from target nonland permanent.
+pub fn thrull_parasite() -> CardDefinition {
+    CardDefinition {
+        name: "Thrull Parasite",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thrull], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![extort()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            life_cost: 2,
+            effect: Effect::RemoveAnyCounter {
+                what: target_filtered(R::Permanent.and(R::Not(Box::new(R::Land)))),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

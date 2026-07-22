@@ -655,7 +655,7 @@ impl Effect {
             Effect::MoveCounter { from, to, amount, .. } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
-            Effect::RemoveAllCounters { what } => sel_has_target(what),
+            Effect::RemoveAllCounters { what } | Effect::RemoveAnyCounter { what } => sel_has_target(what),
             Effect::SetLoyalty { what, value } => sel_has_target(what) || value_has_target(value),
             Effect::GrantLoyaltyTwiceThisTurn { what }
             | Effect::BecomeTreasure { what }
@@ -984,6 +984,7 @@ impl Effect {
             Effect::AddCounter { what, .. }
             | Effect::RemoveCounter { what, .. }
             | Effect::RemoveAllCounters { what }
+            | Effect::RemoveAnyCounter { what }
             | Effect::SetLoyalty { what, .. }
             | Effect::GrantLoyaltyTwiceThisTurn { what }
             | Effect::BecomeTreasure { what }
@@ -2079,7 +2080,7 @@ impl Effect {
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)
                 }
-                Effect::RemoveAllCounters { what } => sel_find(what, slot),
+                Effect::RemoveAllCounters { what } | Effect::RemoveAnyCounter { what } => sel_find(what, slot),
                 Effect::AddKeywordCounter { what, .. }
                 | Effect::RemoveKeywordCounter { what, .. }
                 | Effect::AddRandomMissingCounter { what, .. } => sel_find(what, slot),
