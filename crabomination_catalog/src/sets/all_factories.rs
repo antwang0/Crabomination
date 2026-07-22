@@ -9508,6 +9508,9 @@ static RTR: &[Factory] = &[
     super::rtr::pursuit_of_flight,
     super::rtr::deviant_glee,
     super::rtr::knightly_valor,
+    super::rtr::hellhole_flailer,
+    super::rtr::chronic_flooding,
+    super::rtr::soul_tithe,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,

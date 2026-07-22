@@ -5585,6 +5585,13 @@ pub enum Effect {
     /// the combat resolver zeroes any combat hit aimed at them.
     PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef },
 
+    /// CR 701.16 — "[source's controller] sacrifices [the source] unless they
+    /// pay {X}, where X is its mana value." The pay-or-sacrifice threat used by
+    /// Soul Tithe (granted to the enchanted permanent via its Aura). Reads the
+    /// source permanent's live mana value; the controller keeps it by paying
+    /// that much generic mana (auto-tapping), otherwise it is sacrificed.
+    SacrificeSourceUnlessPayManaValue,
+
     /// CR 614.9 — "Prevent all combat damage that would be dealt to and dealt
     /// by `target` this turn." Adds the target creature to
     /// `GameState.combat_damage_prevented_creatures`; the combat resolver

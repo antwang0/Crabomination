@@ -90,6 +90,32 @@ pub fn cryptborn_horror() -> CardDefinition {
     }
 }
 
+/// Hellhole Flailer — {1}{B}{R} 3/2 Ogre Warrior with unleash. `{2}{B}{R},
+/// Sacrifice this creature: It deals damage equal to its power to target player
+/// or planeswalker.` (The sac-as-cost stamps `Value::SacrificedPower`.)
+pub fn hellhole_flailer() -> CardDefinition {
+    CardDefinition {
+        name: "Hellhole Flailer",
+        cost: cost(&[generic(1), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ogre, CreatureType::Warrior], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Unleash],
+        triggered_abilities: vec![crate::effect::shortcut::unleash()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b(), r()]),
+            sac_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Player.or(R::Planeswalker)),
+                amount: Value::SacrificedPower,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// A stat-drain Aura that also drains the enchanted creature's controller each
 /// upkeep (CR 702.6e aura-granted step trigger, keyed on the host controller).
 fn drain_aura(name: &'static str, mana: crate::mana::ManaCost, pt: (i32, i32), loss: i32) -> CardDefinition {
@@ -105,6 +131,50 @@ fn drain_aura(name: &'static str, mana: crate::mana::ManaCost, pt: (i32, i32), l
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
                 effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(loss) },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Soul Tithe — {1}{W} Aura. Enchant nonland permanent. At the beginning of the
+/// enchanted permanent's controller's upkeep, that player sacrifices it unless
+/// they pay {X}, where X is its mana value (CR 701.16).
+pub fn soul_tithe() -> CardDefinition {
+    CardDefinition {
+        name: "Soul Tithe",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Permanent.and(R::Nonland)),
+        },
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::SacrificeSourceUnlessPayManaValue,
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Chronic Flooding — {1}{U} Aura. Enchant land. Whenever enchanted land becomes
+/// tapped, its controller mills three cards.
+pub fn chronic_flooding() -> CardDefinition {
+    CardDefinition {
+        name: "Chronic Flooding",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                effect: Effect::Mill { who: Selector::You, amount: Value::Const(3) },
             }],
             ..Default::default()
         }),

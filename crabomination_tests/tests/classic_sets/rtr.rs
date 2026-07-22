@@ -738,3 +738,97 @@ fn knightly_valor_makes_knight_and_buffs() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Knight"
         && c.definition.keywords.contains(&Keyword::Vigilance)), "made a 2/2 vigilance Knight");
 }
+
+/// Hellhole Flailer sacrifices itself to burn for its power (CR — sac_cost
+/// stamps Value::SacrificedPower).
+#[test]
+fn hellhole_flailer_sacs_for_power_damage() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let flailer = g.add_card_to_battlefield(0, catalog::hellhole_flailer()); // 3/2
+    g.clear_sickness(flailer);
+    // Unleash it up to a 4/3 so the sacrifice reads a pumped power.
+    g.battlefield_find_mut(flailer).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: flailer, ability_index: 0,
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("sac to burn");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(flailer).is_none(), "Flailer sacrificed");
+    assert_eq!(g.players[1].life, life - 4, "dealt 4 (its unleashed power)");
+}
+
+/// Chronic Flooding mills the enchanted land's controller when it taps for mana
+/// (aura-granted `EventKind::Tapped` trigger keyed on the host land).
+#[test]
+fn chronic_flooding_mills_on_land_tap() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::island()); // opponent's land
+    let aura = g.add_card_to_hand(0, catalog::chronic_flooding());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    for _ in 0..5 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    let lib = g.players[1].library.len();
+    // Land becomes tapped → enchanted-land trigger mills its controller (player 1).
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: land, actor: None }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - 3, "controller milled 3 on tap");
+}
+
+/// Soul Tithe forces a pay-mana-value-or-sacrifice each upkeep (CR 701.16).
+#[test]
+fn soul_tithe_sacrifices_when_unpaid() {
+    use crabomination::game::types::{Target, TurnStep};
+    let mut g = two_player_game();
+    // Risen Sanctuary ({5}{G}{W}, MV 7) belonging to the opponent.
+    let ogre = g.add_card_to_battlefield(1, catalog::risen_sanctuary());
+    let aura = g.add_card_to_hand(0, catalog::soul_tithe());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(ogre)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    // Opponent's upkeep with no mana → they can't pay 5 → sacrifice.
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ogre).is_none(), "sacrificed when the MV goes unpaid");
+}
+
+/// Soul Tithe lets the controller keep the permanent when they can pay its MV.
+#[test]
+fn soul_tithe_kept_when_paid() {
+    use crabomination::game::types::{Target, TurnStep};
+    let mut g = two_player_game();
+    let ogre = g.add_card_to_battlefield(1, catalog::risen_sanctuary()); // {5}{G}{W}, MV 7
+    let aura = g.add_card_to_hand(0, catalog::soul_tithe());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(ogre)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add_colorless(7); // enough to pay the {7}
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ogre).is_some(), "kept when the MV is paid");
+}
