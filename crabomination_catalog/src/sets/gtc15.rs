@@ -227,6 +227,36 @@ pub fn vizkopa_guildmage() -> CardDefinition {
     }
 }
 
+/// Borborygmos Enraged — {4}{R}{R}{G}{G} 7/6 Legendary Cyclops. Trample; on
+/// combat damage to a player, reveal top three, lands to hand, rest to gy.
+/// Discard a land card: deal 3 damage to any target.
+pub fn borborygmos_enraged() -> CardDefinition {
+    CardDefinition {
+        name: "Borborygmos Enraged",
+        cost: cost(&[generic(4), r(), r(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: creatures(vec![CreatureType::Cyclops]),
+        power: 7,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::RevealTopTakeMatchingRestToGraveyard {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                filter: R::Land,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Land, 1)),
+            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Mystic Genesis — {2}{G}{U}{U} Instant. Counter target spell; create an X/X
 /// green Ooze token, where X is that spell's mana value.
 pub fn mystic_genesis() -> CardDefinition {

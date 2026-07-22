@@ -11618,6 +11618,29 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopTakeMatchingRestToGraveyard { who, count, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if revealed.is_empty() { return Ok(()); }
+                let taken: Vec<crate::card::CardId> = revealed.iter().copied().filter(|id| {
+                    self.evaluate_requirement_static(filter, &Target::Permanent(*id), p, ctx.source)
+                }).collect();
+                for id in &taken {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, *id) {
+                        self.players[p].hand.push(card);
+                    }
+                }
+                // The rest go to the graveyard (top-down order).
+                for id in revealed.iter().copied().filter(|id| !taken.contains(id)) {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                        self.route_to_graveyard(card, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::LookTopMayDeployAttacking { count, filter } => {
                 use crate::game::types::{Attack, AttackTarget};
                 // Only meaningful mid-combat.

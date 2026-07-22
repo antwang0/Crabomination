@@ -3316,6 +3316,15 @@ pub enum Effect {
     /// (the value-maximizing default). Torsten, Founder of Benalia's
     /// "reveal seven, take creatures and/or lands."
     RevealTopTakeMatchingToHand { who: PlayerRef, count: Value, filter: SelectionRequirement },
+    /// Reveal the top `count` cards of `who`'s library, put every card matching
+    /// `filter` into their hand, and put the rest into their graveyard (CR 701).
+    /// The graveyard-partition sibling of `RevealTopTakeMatchingToHand`.
+    /// Borborygmos Enraged's combat trigger ("lands to hand, the rest to gy").
+    RevealTopTakeMatchingRestToGraveyard {
+        who: PlayerRef,
+        count: Value,
+        filter: SelectionRequirement,
+    },
     /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
     /// in hand moves to the graveyard and every card in the graveyard moves to
     /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card

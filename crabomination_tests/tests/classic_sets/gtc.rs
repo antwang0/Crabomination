@@ -1992,3 +1992,38 @@ fn gtc15_mystic_genesis_counters_and_mints_ooze() {
     let c = g.computed_permanent(ooze.id).unwrap();
     assert_eq!((c.power, c.toughness), (6, 6), "X/X where X = countered spell's mana value (6)");
 }
+
+/// Borborygmos Enraged: combat trigger partitions top three; discard-a-land burns.
+#[test]
+fn gtc15_borborygmos_partition_and_burn() {
+    let mut g = two_player_game();
+    let borb = g.add_card_to_battlefield(0, catalog::borborygmos_enraged());
+    g.clear_sickness(borb);
+    // Top three (add_card_to_library appends; first-added is on top): land,
+    // nonland, land, then a deeper card that stays put.
+    let l1 = g.add_card_to_library(0, catalog::forest());
+    let nonland = g.add_card_to_library(0, catalog::gutter_skulk());
+    let l2 = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::gutter_skulk()); // deeper, not revealed
+    let hand_before = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: borb, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    // Two lands went to hand; the nonland to the graveyard.
+    assert!(g.players[0].hand.iter().any(|c| c.id == l1) && g.players[0].hand.iter().any(|c| c.id == l2),
+        "both revealed lands in hand");
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "exactly the two lands drawn");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == nonland), "the nonland went to the graveyard");
+    // Discard a land to deal 3.
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: borb, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("discard-land burn");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "dealt 3 to the opponent");
+}

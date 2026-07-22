@@ -498,7 +498,8 @@ impl Effect {
             Effect::RevealTopTakeOnePerType { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
-            Effect::RevealTopTakeMatchingToHand { who, count, .. } => {
+            Effect::RevealTopTakeMatchingToHand { who, count, .. }
+            | Effect::RevealTopTakeMatchingRestToGraveyard { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::ExileLibraryExceptBottom { who, keep } => {
