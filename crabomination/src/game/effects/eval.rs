@@ -2363,6 +2363,7 @@ impl GameState {
                         self.attacking.iter().any(|a| a.attacker == card.id)
                             && !self.blocked_attackers.contains(&card.id)
                     }
+                    R::IsBlocked => self.blocked_attackers.contains(&card.id),
                     R::IsBlocking => self.block_map.contains_key(&card.id),
                     R::AttackedThisTurn => card.attacked_this_turn,
                     R::FaceDown => card.face_down,
@@ -2891,7 +2892,7 @@ impl GameState {
             R::IsSuspected => card.suspected,
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_) | R::WithAnyCounter
-            | R::IsUnblocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
+            | R::IsUnblocked | R::IsBlocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
             | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled

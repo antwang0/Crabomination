@@ -54,6 +54,7 @@ pub use sets::eoe::*;
 pub use sets::fem::*;
 pub use sets::fin::*;
 pub use sets::gpt::*;
+pub use sets::gtc::*;
 pub use sets::ice::*;
 pub use sets::inv::*;
 pub use sets::khm::*;

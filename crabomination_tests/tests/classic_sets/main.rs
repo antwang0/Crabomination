@@ -13,6 +13,7 @@ mod eoe;
 mod fin;
 mod dis;
 mod gpt;
+mod gtc;
 mod innistrad;
 mod ktk;
 mod lci;

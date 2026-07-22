@@ -1421,6 +1421,9 @@ pub enum SelectionRequirement {
     /// An attacking creature that hasn't been blocked (CR 509.1h). Reads live
     /// combat state — Sneak's "return an unblocked creature you control".
     IsUnblocked,
+    /// An attacking creature that has become blocked (CR 509.1h). Reads live
+    /// combat state — Smite's "destroy target blocked creature".
+    IsBlocked,
     IsBlocking,
     /// True when the candidate creature was declared as an attacker at any
     /// point this turn (`CardInstance.attacked_this_turn`). Relentless
