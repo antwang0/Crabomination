@@ -281,10 +281,23 @@ fn req_short(req: &crabomination::card::SelectionRequirement) -> Option<String> 
         // the chip reads "Eva-·White" rather than a bare "Eva-". A plain
         // "Cre" qualifier yields to the informative sibling.
         R::And(a, b) => match (req_short(a), req_short(b)) {
+            // "Creature and X" (the common "X creatures" filter) names X; the
+            // generic "Cre" qualifier yields to its informative sibling.
             (Some(sa), Some(sb)) if sa == "Cre" => sb,
             (Some(sa), Some(sb)) if sb == "Cre" => sa,
-            (Some(sa), _) => sa,
-            (_, Some(sb)) => sb,
+            // Two distinct specific classes (flying AND artifact) can't be
+            // summarized by one half — a blocker needs both — so stay unadorned.
+            (Some(_), Some(_)) => return None,
+            // One nameable half beside an unnameable one still names itself.
+            (Some(sa), None) => sa,
+            (None, Some(sb)) => sb,
+            _ => return None,
+        },
+        // Disjunctive blocker classes (Spire Tracer — "except by creatures with
+        // flying or reach") read as "Fly/Rch" so both required classes show.
+        // Both halves must name themselves, else the chip stays unadorned.
+        R::Or(a, b) => match (req_short(a), req_short(b)) {
+            (Some(sa), Some(sb)) => format!("{sa}/{sb}"),
             _ => return None,
         },
         _ => return None,
@@ -691,6 +704,14 @@ mod tests {
         assert_eq!(
             keyword_strip(&[Keyword::CantBeBlockedExceptBy(Box::new(R::Creature))]),
             "Eva+·Cre",
+        );
+        // Spire Tracer — "except by creatures with flying or reach" names both
+        // required classes ("Eva+·Fly/Rch").
+        assert_eq!(
+            keyword_strip(&[Keyword::CantBeBlockedExceptBy(Box::new(
+                R::HasKeyword(Keyword::Flying).or(R::HasKeyword(Keyword::Reach)),
+            ))]),
+            "Eva+·Fly/Rch",
         );
     }
 
