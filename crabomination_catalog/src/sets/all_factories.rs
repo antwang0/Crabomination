@@ -7837,6 +7837,11 @@ static GTC9: &[Factory] = &[
     super::gtc10::sylvan_primordial,
     super::gtc10::treasury_thrull,
     super::gtc10::hellkite_tyrant,
+    super::gtc11::hindervines,
+    super::gtc11::lord_of_the_void,
+    super::gtc11::duskmantle_seer,
+    super::gtc11::deathpact_angel,
+    super::gtc11::voidwalk,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,

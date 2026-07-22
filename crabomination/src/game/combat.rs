@@ -2915,10 +2915,16 @@ impl GameState {
             // Steel's "destroy up to one artifact") — for those, auto-pick
             // instead of mis-binding slot 0 to the damaged player. A slot-0
             // filter that can't match a player is the precise tell.
-            let slot0_rejects_player = effect
-                .target_filter_for_slot_in_mode_kicked(0, None, false)
-                .is_some_and(|f| !f.can_match_player());
-            let target = if effect.prefers_graveyard_target() || slot0_rejects_player {
+            let slot0_filter = effect.target_filter_for_slot_in_mode_kicked(0, None, false);
+            let slot0_rejects_player = slot0_filter.is_some_and(|f| !f.can_match_player());
+            // A slot 0 that explicitly accepts a player is the damaged player
+            // ("exile the top seven of that player's library" — Lord of the
+            // Void), even when a later clause moves a card (which would
+            // otherwise trip `prefers_graveyard_target`).
+            let slot0_accepts_player = slot0_filter.is_some_and(|f| f.can_match_player());
+            let target = if !slot0_accepts_player
+                && (effect.prefers_graveyard_target() || slot0_rejects_player)
+            {
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(trig_source))
                     .or(Some(default_target.clone()))
             } else {

@@ -584,6 +584,7 @@ impl Effect {
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
+            | Effect::ExileReturnToOwnerNextEndStep { what }
             | Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
             | Effect::ModularCounters { what }
@@ -937,6 +938,7 @@ impl Effect {
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
+            | Effect::ExileReturnToOwnerNextEndStep { what }
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what }
             | Effect::Suspect { what }
@@ -1795,6 +1797,11 @@ impl Effect {
                 Selector::ControlledBy { who: PlayerRef::Target(s2), .. } if *s2 == slot => {
                     Some(&PLAYER)
                 }
+                // A bare `Player(Target(n))` selector declares slot `n` as a
+                // player target — e.g. Lord of the Void's "exile the top seven
+                // of that player's library" (`ExileTopOfLibrary { who:
+                // Player(Target(0)) }`).
+                Selector::Player(PlayerRef::Target(s2)) if *s2 == slot => Some(&PLAYER),
                 Selector::AttachedTo(i)
                 | Selector::AttachedToMe(i)
                 | Selector::RadianceGroup { subject: i }
@@ -2101,6 +2108,7 @@ impl Effect {
                 | Effect::ExileSameNameAsTarget { what }
                 | Effect::ExileTaggedWithSource { what }
                 | Effect::ExileUntilSourceLeaves { what, .. }
+                | Effect::ExileReturnToOwnerNextEndStep { what }
                 | Effect::ExileReturnNextEndStep { what }
                 | Effect::RemoveAllCountersDiscountNextSpell { what }
                 | Effect::Goad { what }

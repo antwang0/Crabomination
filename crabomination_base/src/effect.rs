@@ -3653,6 +3653,11 @@ pub enum Effect {
     /// an extra +1/+1 counter (creatures) or loyalty counter (planeswalkers).
     /// Registers a per-card `DelayedKind::NextEndStep` trigger. Semester's End.
     ExileReturnNextEndStep { what: Selector },
+    /// Exile each resolved permanent, then return it to the battlefield under
+    /// its **owner's** control at the beginning of the next end step, with no
+    /// extra counter. The plain-flicker sibling of `ExileReturnNextEndStep`
+    /// (Voidwalk, Voyager Staff — "return it under its owner's control").
+    ExileReturnToOwnerNextEndStep { what: Selector },
     /// CR 702.55 — Haunt. Exile the source card (the dying creature, or the
     /// resolving instant/sorcery) "haunting" a creature, then register a
     /// `DelayedKind::WhenHauntedCreatureDies` delayed trigger that runs `body`

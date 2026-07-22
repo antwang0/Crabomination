@@ -1427,3 +1427,120 @@ fn gtc10_hellkite_tyrant_artifact_win() {
     assert!(g.players[1].eliminated || g.game_over.is_some(),
         "controller wins with 20 artifacts");
 }
+
+// ── Wave 11 ──────────────────────────────────────────────────────────────────
+
+/// Hindervines fogs an uncountered attacker but not a +1/+1-countered one.
+#[test]
+fn gtc11_hindervines_spares_counter_creatures() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let plain = g.add_card_to_battlefield(0, catalog::ruination_wurm()); // 7/6, no counters
+    let buffed = g.add_card_to_battlefield(0, catalog::ruination_wurm());
+    g.battlefield_find_mut(buffed).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.clear_sickness(plain);
+    g.clear_sickness(buffed);
+    // Cast the fog.
+    let fog = g.add_card_to_hand(0, catalog::hindervines());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.cast_spell(fog, None, vec![], None, None).expect("cast");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: plain, target: AttackTarget::Player(1) },
+        Attack { attacker: buffed, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    let before = g.players[1].life;
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 8, "only the +1/+1 attacker (8 power) got through");
+}
+
+/// Lord of the Void steals a creature from the defending player's top seven.
+#[test]
+fn gtc11_lord_of_the_void_steals_from_library() {
+    let mut g = two_player_game();
+    let lord = g.add_card_to_battlefield(0, catalog::lord_of_the_void());
+    // Stack the opponent's library so a creature is within the top seven.
+    let target = g.add_card_to_library(1, catalog::ruination_wurm());
+    for _ in 0..3 { g.add_card_to_library(1, catalog::forest()); }
+    g.clear_sickness(lord);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: lord, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(target).expect("creature pulled onto battlefield");
+    assert_eq!(c.controller, 0, "under your control");
+}
+
+/// Duskmantle Seer drains each player for their top card's mana value.
+#[test]
+fn gtc11_duskmantle_seer_symmetric_drain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::duskmantle_seer());
+    let mine = g.add_card_to_library(0, catalog::ruination_wurm()); // MV 6
+    let theirs = g.add_card_to_library(1, catalog::duskmantle_seer()); // MV 4
+    let my_life = g.players[0].life;
+    let opp_life = g.players[1].life;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, my_life - 6, "I lost MV of my top card");
+    assert_eq!(g.players[1].life, opp_life - 4, "opponent lost MV of theirs");
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "my card went to hand");
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "their card went to hand");
+}
+
+/// Deathpact Angel leaves a Cleric token that can recur it from the graveyard.
+#[test]
+fn gtc11_deathpact_angel_recurs() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::deathpact_angel());
+    // Kill it; the dies trigger mints the Cleric.
+    g.battlefield_find_mut(angel).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let cleric = g.battlefield.iter().find(|c| c.definition.name == "Cleric" && c.controller == 0)
+        .expect("Cleric token minted").id;
+    g.clear_sickness(cleric);
+    // Angel is in the graveyard; activate the token's recur ability.
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cleric, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("recur");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Deathpact Angel" && c.controller == 0),
+        "Deathpact Angel returned to the battlefield");
+}
+
+/// Voidwalk exiles a creature and returns it at the next end step.
+#[test]
+fn gtc11_voidwalk_blinks() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::ruination_wurm());
+    let spell = g.add_card_to_hand(0, catalog::voidwalk());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.cast_spell(spell, Some(Target::Permanent(foe)), vec![], None, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature exiled");
+    // Resolve the delayed next-end-step return.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Ruination Wurm" && c.controller == 1),
+        "creature returned under its owner's control");
+}
