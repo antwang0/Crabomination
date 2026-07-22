@@ -42,18 +42,21 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   primitive.
 - **Rotisserie Elemental** (skewer-counter impulse), **Sentinel of Lost Lore**
   (exile-Adventure modal) — still deferred (see WOE section).
-- **RTR gap remainder (this run, `rtr::gaps4`/`gaps5`) — deferred, each on one
-  primitive:** Faerie Impostor / Desecration Demon need "sacrifice it unless you
-  return another creature you control" and "each combat any opponent may sac a
-  creature → tap + counter" (an opponent-choice combat trigger). Urban Burgeoning
-  needs an aura that *grants* a static (`UntapSelfEachUntapStep`) to the enchanted
-  land — EquipBonus only confers keywords/PT/abilities, not statics. Security
-  Blockade needs an aura granting a `{T}`-activated damage-prevention ability to a
-  land. Volatile Rig / Tablet of the Guilds / Guild Feud / Grave Betrayal /
-  Conjured Currency need coin-flip-on-damage-and-death, choose-two-colors life
-  gain, top-of-library fight, mass reanimate, and rotate-control respectively.
-  Mercurial Chemister, Jarad (both), Trostani, Isperia, Vraska, Jace AoT, Rakdos
-  LoR remain (legends, each a distinct engine ask).
+- **RTR gap remainder — deferred, each on one primitive:** Faerie Impostor
+  ("sacrifice it unless you return another creature you control"). Slaughter Games
+  (name a card → exile all copies from a target opponent's gy/hand/library +
+  shuffle — a `NameCard` suspend/resume sweep). Angel of Serenity (exile up to
+  three battlefield creatures *and/or* graveyard creature cards, linked to the
+  source, returning to hand on LTB — multi-target ExileUntilLeaves across zones).
+  Righteous Authority (aura whose buff scales with the enchanted creature's
+  controller's hand size — dynamic aura pump). Sphinx of the Chimes
+  (discard-two-same-name activation cost). Nivmagus Elemental (exile-a-spell-you-
+  control-from-the-stack cost). Epic Experiment (exile top X, free-cast only I/S
+  with MV≤X, rest to graveyard — a filtered `ExileTopAndGrantMayPlay`). Tablet of
+  the Guilds (choose-two-colors + cast-of-chosen-color lifegain). Guild Feud
+  (top-of-library fight), Grave Betrayal (mass reanimate replacement), Search the
+  City (extra-turn combo), Azor's Elocutors (filibuster-counter win). Legends:
+  Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
 - **Ravnica guild remainder (recent291 follow-ups):** shipped Simic Guildmage
   (`Effect::MoveCounter` + `Effect::Attach` aura-restitch), Golgari Guildmage,
   Necromantic Thirst (`EquipBonus.triggered_abilities` combat-damage trigger),

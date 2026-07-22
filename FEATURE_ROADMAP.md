@@ -16,7 +16,20 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **RTR gap waves 8–10 (this run, 38 cards):** the guild legends/rares/mythics —
+- **RTR gap wave 11 (this run, 11 cards):** Conjured Currency (upkeep
+  `ExchangeControl`), Jarad, Golgari Lich Lord (gy-count CDA + sac-drain +
+  swamp/forest recursion), Volatile Rig (coin-flip sac + death blast), Mana Bloom
+  (X charge-counter mana), Izzet Staticaster, Jarad's Orders (split search),
+  Racecourse Fury + Security Blockade (land-aura granted abilities), Street
+  Sweeper (`AttachedToMe` aura-destroy), Urban Burgeoning, Oak Street Innkeeper.
+  New engine primitives: **`Effect::SameNameDamage`** (Izzet Staticaster's ping),
+  **`StaticEffect::UntapAttachedEachUntapStep`** (aura untaps its host, CR 502.3 —
+  Urban Burgeoning), **`StaticEffect::WhileNotYourTurn`** (mirror of `WhileYourTurn`,
+  CR 611.2 — Oak Street Innkeeper). CompRules regressions: CR 508.1d (MustAttack),
+  705.1 (coin-flip heads), 514.2 (until-EOT cleanup). Server: connection-saturation
+  gauges (`occupancy_pct`/`global_cap`/`max_per_ip`) in `/metrics`. Client:
+  Creature/Land blocker-class labels on evasion chips.
+- **RTR gap waves 8–10 (prior run, 38 cards):** the guild legends/rares/mythics —
   Collective Blessing anthem, Armada Wurm, Isperia, Trostani + Wayfaring Temple
   (populate + CDA `PumpSelfByControlledPermanents`), Necropolis Regent (combat
   damage → counters via `Value::TriggerEventAmount`, CR 119.3), Hypersonic Dragon,
