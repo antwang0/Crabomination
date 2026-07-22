@@ -1439,3 +1439,20 @@ fn cr_702_45_bushido_pumps_when_blocked() {
     // Becoming blocked triggers Bushido 2 → the 2/2 attacker is a 4/4.
     assert_eq!(g.computed_permanent(atk).unwrap().power, 4, "Bushido 2 on becoming blocked");
 }
+
+/// CR 508.1d — a creature with "attacks each combat if able" (Volatile Rig's
+/// `MustAttack`) must be in the declared batch; an empty declaration is illegal
+/// while it can legally attack.
+#[test]
+fn cr_508_1d_must_attack_creature_is_forced_to_attack() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let rig = g.add_card_to_battlefield(0, catalog::volatile_rig());
+    g.clear_sickness(rig);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![])).is_err(),
+        "declaring no attackers is illegal while the Rig must attack");
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: rig, target: AttackTarget::Player(1),
+    }])).expect("legal once the Rig is declared");
+}

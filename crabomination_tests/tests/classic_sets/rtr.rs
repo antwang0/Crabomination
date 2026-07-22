@@ -1730,3 +1730,40 @@ fn mana_bloom_enters_with_counters_and_taps_for_mana() {
         "spent one counter");
     assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
 }
+
+/// CR 705.1 — Volatile Rig wins its dealt-damage coin flip (heads) and is not
+/// sacrificed.
+#[test]
+fn cr_705_1_volatile_rig_survives_flip_on_heads() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let rig = g.add_card_to_battlefield(0, catalog::volatile_rig());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(rig), 1, None, &mut evs); // non-lethal
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rig).is_some(), "won the flip → not sacrificed");
+}
+
+/// CR 514.2 — the haste Racecourse Fury's land grants ends at cleanup.
+#[test]
+fn cr_514_2_racecourse_haste_expires_at_cleanup() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::mountain());
+    let fury = g.add_card_to_battlefield(0, catalog::racecourse_fury());
+    g.battlefield_find_mut(fury).unwrap().attached_to = Some(land);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("grant haste");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    for card in g.battlefield.iter_mut() { card.clear_end_of_turn_effects(); }
+    g.expire_end_of_turn_effects();
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
+        "haste ended at cleanup");
+}

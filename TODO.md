@@ -4040,6 +4040,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 724 — Monarch-linked exile (`Effect::ExileUntilOpponentMonarch` + `ExileLink.monarch_guard`; Palace Jailer returns the exile when the monarchy leaves, driven by `set_monarch`; `palace_jailer_*`)
 - ✅ CR 602.5b — remove-counters-from-among-creatures activation cost (`ActivatedAbility.remove_counter_among_filter` — Hopeful Initiate; `hopeful_initiate_*`)
 - ✅ CR 702.44 — Sunburst (`enters_with_counters: (PlusOnePlusOne, Value::ConvergedValue)` — Suntouched Myr)
+- ✅ CR 508.1d — "attacks each combat if able" (`Keyword::MustAttack`) is enforced in `declare_attackers`; regression `cr_508_1d_must_attack_creature_is_forced_to_attack` (Volatile Rig)
+- ✅ CR 705.1 — coin-flip win/loss branches (`Effect::FlipCoin`); Volatile Rig's dealt-damage flip, heads-branch regression `cr_705_1_volatile_rig_survives_flip_on_heads`
+- ✅ CR 514.2 — "until end of turn" grants end at cleanup; a land-granted haste (Racecourse Fury) clears via `expire_end_of_turn_effects` — `cr_514_2_racecourse_haste_expires_at_cleanup`
 - ✅ CR 701.x — impulse-exile-until-duplicate-name (`Effect::ExileUntilDuplicateName` — Tainted Pact)
 - ✅ CR 702.96 — Overload via alt-cost `effect_override` (Mizzix's Mastery)
 - ✅ CR 702.85 — Heroic (`shortcut::heroic` + `Predicate::CastSpellTargetsSource`)
