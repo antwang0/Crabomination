@@ -158,6 +158,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("matches_total", "counter", "Matches served.", st.total_matches().to_string());
     m("bot_matches_total", "counter", "Matches against a bot.", st.bot_matches.to_string());
     m("pair_matches_total", "counter", "Human-vs-human matches.", st.pair_matches.to_string());
+    m("bot_match_pct", "gauge", "Percent of served matches that were bot-vs-bot (ladder composition).", st.bot_match_pct().to_string());
     m("avg_turns", "gauge", "Average turns per match.", st.avg_turns().to_string());
     m("avg_decisive_turns", "gauge", "Average final-turn count of matches with a winner.", st.avg_decisive_turns().to_string());
     m("avg_draw_turns", "gauge", "Average final-turn count of drawn matches.", st.avg_draw_turns().to_string());

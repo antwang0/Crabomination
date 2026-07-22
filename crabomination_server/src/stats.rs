@@ -415,6 +415,16 @@ impl MatchStats {
         if total == 0 { return 0; }
         self.draws.saturating_mul(100) / total
     }
+    /// Share of served matches that were bot-vs-bot (as opposed to a paired
+    /// human match), as a percentage. Surfaces ladder composition at a glance:
+    /// a self-play soak run should read ~100, a live human server much lower,
+    /// so a sudden shift flags a routing or matchmaking regression. Returns 0
+    /// before any match completes.
+    pub(crate) fn bot_match_pct(&self) -> u64 {
+        let total = self.total_matches();
+        if total == 0 { return 0; }
+        self.bot_matches.saturating_mul(100) / total
+    }
     /// Share of decisive (non-draw) wins taken by the player on the play
     /// (seat 0), as a percentage. A value far from 50 over a long bot ladder
     /// flags turn-order bias in the active-player heuristic — the
@@ -1393,6 +1403,13 @@ mod tests {
         assert_eq!(s.seat_win_share_pct(1), 25);
         // Out-of-range seat → 0, never a panic.
         assert_eq!(s.seat_win_share_pct(99), 0);
+    }
+
+    #[test]
+    fn bot_match_pct_is_bot_share_of_all_matches() {
+        assert_eq!(MatchStats::default().bot_match_pct(), 0);
+        let s = MatchStats { bot_matches: 3, pair_matches: 1, ..Default::default() };
+        assert_eq!(s.bot_match_pct(), 75);
     }
 
     #[test]

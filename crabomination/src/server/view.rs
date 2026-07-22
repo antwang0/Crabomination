@@ -1924,6 +1924,10 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Surveil { .. } => "Surveil",
         Effect::AddCounter { .. } => "Add counter",
         Effect::RemoveCounter { .. } => "Remove counter",
+        Effect::RemoveAnyCounter { .. } => "Remove a counter",
+        Effect::ExileReturnNextEndStep { .. } | Effect::ExileReturnToOwnerNextEndStep { .. } => {
+            "Flicker until end of turn"
+        }
         Effect::CreateToken { .. } => "Create token",
         Effect::CreateTokenAttachedTo { .. } | Effect::CreateTokenAttachedToEach { .. } => {
             "Create attached token"
