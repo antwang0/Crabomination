@@ -196,6 +196,12 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("connections_refused_pct", "gauge", "Percent of connection attempts refused.", refused_pct.to_string());
     m("distinct_ips", "gauge", "Distinct client IPs seen.", sl.distinct_ips.to_string());
     m("peak_per_ip", "gauge", "Highest simultaneous connection count from a single IP.", sl.peak_per_ip.to_string());
+    // Saturation: unlike refusal rate (which only moves once we're already
+    // turning connections away), occupancy rises smoothly toward 100 as load
+    // approaches the cap — the earlier "provision more headroom" signal.
+    m("connections_global_cap", "gauge", "Configured global connection cap (0 = unlimited).", sl.global_cap.to_string());
+    m("connections_occupancy_pct", "gauge", "Live global-cap occupancy (current/cap %) — the early saturation signal.", sl.occupancy_pct().to_string());
+    m("connections_max_per_ip", "gauge", "Largest live slot count held by a single IP (single-source-abuse signal).", sl.max_per_ip.to_string());
     m("catalog_cards", "gauge", "Distinct cards in the deployed catalog.", catalog_card_count().to_string());
     // Win-kind breakdown (CR 104.3) — how decided games ended, as a labelled
     // `crab_wins_total{kind="…"}` series so operators can watch the
@@ -632,6 +638,10 @@ mod tests {
             1,
             "refusal-by-reason metric must be declared exactly once",
         );
+        // Saturation gauges: a 10-slot cap with 0 current reads 0% occupancy.
+        assert!(body.contains("crab_connections_global_cap 10"));
+        assert!(body.contains("crab_connections_occupancy_pct 0"));
+        assert!(body.contains("crab_connections_max_per_ip 0"));
         assert!(body.contains("# TYPE crab_draws_total counter"));
         // Match-outcome health gauges (stuck-match / decisive / draw shares).
         assert!(body.contains("crab_inconclusive_total 0"));
