@@ -242,8 +242,10 @@ fn drain_stack_targeting(g: &mut GameState, tgt: Target) {
     // Resolve a pending trigger that needs a target by supplying it via the
     // AutoDecider's default; if the top-of-stack trigger has no target set,
     // set it directly on the stack item.
-    if let Some(StackItem::Trigger { target, .. }) = g.stack.last_mut() {
-        if target.is_none() { *target = Some(tgt); }
+    if let Some(StackItem::Trigger { target, .. }) = g.stack.last_mut()
+        && target.is_none()
+    {
+        *target = Some(tgt);
     }
     drain_stack(g);
 }

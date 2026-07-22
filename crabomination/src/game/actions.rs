@@ -11446,18 +11446,17 @@ impl GameState {
         // Exile-a-spell-you-control-as-cost (CR 602.5b): with tap/mana/life
         // paid, pull the cost-picked spell off the stack and exile it — it
         // won't resolve. Nivmagus Elemental.
-        if let Some(spell_id) = exile_spell_pick {
-            if let Some(pos) = self.stack.iter().position(|item| {
+        if let Some(spell_id) = exile_spell_pick
+            && let Some(pos) = self.stack.iter().position(|item| {
                 matches!(item, StackItem::Spell { card, .. } if card.id == spell_id)
-            }) {
-                if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
-                    // The spell leaves the stack without resolving; it isn't
-                    // "countered" (no counter-a-spell payoff should fire).
-                    self.exile.push(*card);
-                    self.players[p].cards_exiled_this_turn =
-                        self.players[p].cards_exiled_this_turn.saturating_add(1);
-                }
-            }
+            })
+            && let StackItem::Spell { card, .. } = self.stack.remove(pos)
+        {
+            // The spell leaves the stack without resolving; it isn't
+            // "countered" (no counter-a-spell payoff should fire).
+            self.exile.push(*card);
+            self.players[p].cards_exiled_this_turn =
+                self.players[p].cards_exiled_this_turn.saturating_add(1);
         }
 
         // Return-another-to-hand-as-cost (CR 602.5b): with tap/mana/life paid,
