@@ -381,3 +381,156 @@ fn deaths_approach_scales_with_graveyard() {
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (5, 4), "7/6 minus 2/2 from two gy creatures");
 }
+
+// ── Wave 3 ───────────────────────────────────────────────────────────────────
+
+fn advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
+/// The guild Keyrunes animate into their printed bodies for {c1}{c2}.
+#[test]
+fn gtc3_keyrunes_animate() {
+    use crabomination::card::CardType;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let gruul = g.add_card_to_battlefield(0, catalog::gruul_keyrune());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gruul, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(gruul).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 2));
+    assert!(c.card_types.contains(&CardType::Creature) && c.keywords.contains(&Keyword::Trample));
+
+    let boros = g.add_card_to_battlefield(0, catalog::boros_keyrune());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: boros, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(boros).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// The three extort creatures carry Extort plus their printed keyword lines.
+#[test]
+fn gtc3_extort_bodies() {
+    let guards = catalog::basilica_guards();
+    assert!(guards.keywords.contains(&Keyword::Defender) && !guards.triggered_abilities.is_empty());
+    let knight = catalog::knight_of_obligation();
+    assert!(knight.keywords.contains(&Keyword::Vigilance) && !knight.triggered_abilities.is_empty());
+    assert!(!catalog::syndicate_enforcer().triggered_abilities.is_empty());
+}
+
+/// Spark Trooper is sacrificed at the beginning of the end step.
+#[test]
+fn gtc3_spark_trooper_end_step_sacrifice() {
+    let mut g = two_player_game();
+    let t = g.add_card_to_battlefield(0, catalog::spark_trooper());
+    advance_to(&mut g, TurnStep::End);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(t).is_none(), "sacrificed at end step");
+}
+
+/// Urbis Protector's ETB mints a 4/4 flying Angel.
+#[test]
+fn gtc3_urbis_protector_makes_angel() {
+    let mut g = two_player_game();
+    let u = g.add_card_to_battlefield(0, catalog::urbis_protector());
+    g.fire_self_etb_triggers(u, 0);
+    drain_stack(&mut g);
+    let angel = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Angel").expect("angel token").id;
+    let c = g.computed_permanent(angel).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4));
+    assert!(c.keywords.contains(&Keyword::Flying));
+}
+
+/// Forced Adaptation adds a +1/+1 counter at its controller's upkeep.
+#[test]
+fn gtc3_forced_adaptation_grows_host() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::ruination_wurm());
+    let aura = g.add_card_to_battlefield(0, catalog::forced_adaptation());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Holy Mantle pumps +2/+2 and grants protection from creatures.
+#[test]
+fn gtc3_holy_mantle_pumps_and_protects() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
+    let aura = g.add_card_to_battlefield(0, catalog::holy_mantle());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4));
+    assert!(c.keywords.contains(&Keyword::ProtectionFromCreatures));
+}
+
+/// Mugging deals 2 damage and stops the creature from blocking.
+#[test]
+fn gtc3_mugging_damages_and_stops_block() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(1, catalog::ruination_wurm()); // 7/6
+    let m = g.add_card_to_hand(0, catalog::mugging());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.cast_spell(m, Some(Target::Permanent(wurm)), vec![], None, None).expect("mugging");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(wurm).unwrap();
+    assert!(c.keywords.contains(&Keyword::CantBlock));
+}
+
+/// Homing Lightning deals 4 to the target and each same-named creature.
+#[test]
+fn gtc3_homing_lightning_hits_same_name() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::gutter_skulk()); // 2/2
+    let b = g.add_card_to_battlefield(1, catalog::gutter_skulk()); // 2/2, same name
+    let bolt = g.add_card_to_hand(0, catalog::homing_lightning());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.cast_spell(bolt, Some(Target::Permanent(a)), vec![], None, None).expect("homing");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both same-named skulks die");
+}
+
+/// Massive Raid deals damage equal to the number of creatures you control.
+#[test]
+fn gtc3_massive_raid_scales_with_creatures() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::gutter_skulk()); }
+    let raid = g.add_card_to_hand(0, catalog::massive_raid());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[1].life;
+    g.cast_spell(raid, Some(Target::Player(1)), vec![], None, None).expect("raid");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "3 creatures → 3 damage");
+}
+
+/// Ground Assault deals damage equal to the number of lands you control.
+#[test]
+fn gtc3_ground_assault_scales_with_lands() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_battlefield(0, catalog::forest()); }
+    let wurm = g.add_card_to_battlefield(1, catalog::ruination_wurm()); // 7/6
+    let ga = g.add_card_to_hand(0, catalog::ground_assault());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.cast_spell(ga, Some(Target::Permanent(wurm)), vec![], None, None).expect("ground assault");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wurm).unwrap().damage, 4, "4 lands → 4 damage");
+}
