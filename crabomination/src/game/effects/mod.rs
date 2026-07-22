@@ -4437,6 +4437,34 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutCardFromHandOnTopOfLibrary { who } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let players: Vec<usize> = self.resolve_selector(who, ctx).into_iter()
+                    .filter_map(|e| match e { EntityRef::Player(p) => Some(p), _ => None })
+                    .collect();
+                let source = ctx.source.unwrap_or(CardId(0));
+                for p in players {
+                    let cands: Vec<(CardId, String)> = self.players[p].hand.iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if cands.is_empty() { continue; }
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Put which card from your hand on top of your library?".to_string(),
+                        candidates: cands,
+                        min: 1,
+                        max: 1,
+                    });
+                    if let DecisionAnswer::Cards(picked) = answer
+                        && let Some(cid) = picked.first()
+                        && let Some(card) = Self::take_card(&mut self.players[p].hand, *cid)
+                    {
+                        self.players[p].library.insert(0, card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SetMaxHandSize { who, size } => {
                 let n = self.evaluate_value(size, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {

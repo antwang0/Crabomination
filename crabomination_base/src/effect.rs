@@ -2888,6 +2888,10 @@ pub enum Effect {
     /// game" cards can flip the flag directly). Skips the cleanup-step CR
     /// 514.1 discard-down step in `do_cleanup`.
     SetNoMaxHandSize { who: Selector },
+    /// `who` chooses a card from their hand and puts it on top of their library
+    /// (CR 701). No-op if the hand is empty. Enter the Infinite's "then put a
+    /// card from your hand on top of your library."
+    PutCardFromHandOnTopOfLibrary { who: Selector },
     /// CR 402.2b — set each resolved player's maximum hand size to a specific
     /// number (`Player.max_hand_size = Some(size)`). Used by "your maximum
     /// hand size is N" cards such as Null Profusion (zero) or Library of Leng

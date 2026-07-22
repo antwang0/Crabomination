@@ -2100,3 +2100,27 @@ fn gtc15_mark_for_death_forces_and_locks() {
     assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::CantBlock),
         "other creatures that player controls can't block");
 }
+
+/// Enter the Infinite draws the library, then tops a hand card and lifts the cap.
+#[test]
+fn gtc15_enter_the_infinite_draws_library() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed a small known library.
+    let a = g.add_card_to_library(0, catalog::forest());
+    let b = g.add_card_to_library(0, catalog::gutter_skulk());
+    let spell = g.add_card_to_hand(0, catalog::enter_the_infinite());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 4);
+    g.players[0].mana_pool.add_colorless(8);
+    // Put card `a` back on top after drawing.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a])]));
+    g.cast_spell(spell, None, vec![], None, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == b), "drew the whole library");
+    assert_eq!(g.players[0].library.len(), 1, "one card put back on top");
+    assert_eq!(g.players[0].library[0].id, a, "the chosen card is on top");
+    assert!(g.players[0].max_hand_size.is_none(), "no maximum hand size");
+}

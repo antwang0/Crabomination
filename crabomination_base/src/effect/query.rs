@@ -484,7 +484,8 @@ impl Effect {
             Effect::ExileFromHand { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::CastUpToNFromOpponentsExile { count } => value_has_target(count),
             Effect::DiscardAnyNumber { who } => sel_has_target(who),
-            Effect::SetNoMaxHandSize { who } => sel_has_target(who),
+            Effect::SetNoMaxHandSize { who }
+            | Effect::PutCardFromHandOnTopOfLibrary { who } => sel_has_target(who),
             Effect::SetMaxHandSize { who, size } => sel_has_target(who) || value_has_target(size),
             Effect::Scry { who, amount }
             | Effect::Surveil { who, amount }

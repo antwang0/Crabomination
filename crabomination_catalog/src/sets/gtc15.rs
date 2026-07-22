@@ -227,6 +227,23 @@ pub fn vizkopa_guildmage() -> CardDefinition {
     }
 }
 
+/// Enter the Infinite — {8}{U}{U}{U}{U} Sorcery. Draw cards equal to your
+/// library size, put a card from your hand on top, and you have no maximum hand
+/// size until your next turn.
+pub fn enter_the_infinite() -> CardDefinition {
+    CardDefinition {
+        name: "Enter the Infinite",
+        cost: cost(&[generic(8), u(), u(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::LibrarySizeOf(PlayerRef::You) },
+            Effect::PutCardFromHandOnTopOfLibrary { who: Selector::You },
+            Effect::SetNoMaxHandSize { who: Selector::You },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Mark for Death — {3}{R} Sorcery. Target creature an opponent controls blocks
 /// this turn if able and is untapped; other creatures that player controls can't
 /// block this turn.
