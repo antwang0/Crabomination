@@ -1995,6 +1995,14 @@ pub struct ActivatedAbility {
     #[serde(default)]
     pub remove_counter_among_filter:
         Option<(Option<crate::card::CounterType>, u32, SelectionRequirement)>,
+    /// Variable sibling of `remove_counter_among_filter`: remove `x_value`
+    /// counters of the named kind from among permanents matching the filter the
+    /// activator controls ("Remove one or more +1/+1 counters from among
+    /// creatures you control:" — Ooze Flux). The body reads the count via
+    /// `Value::XFromCost`. Rejected when fewer than X (or fewer than one) are
+    /// available; the auto-picker drains lowest-value permanents first.
+    #[serde(default)]
+    pub remove_counter_among_x: Option<(crate::card::CounterType, SelectionRequirement)>,
     /// True if activating this ability returns the source permanent to its
     /// owner's hand as part of the cost (CR 602.5b "Return this … to its
     /// owner's hand:" cost lines). The bounce happens after tap/mana/life

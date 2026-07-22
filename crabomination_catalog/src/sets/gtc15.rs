@@ -227,6 +227,40 @@ pub fn vizkopa_guildmage() -> CardDefinition {
     }
 }
 
+/// Ooze Flux — {3}{G} Enchantment. {1}{G}, remove one or more +1/+1 counters
+/// from among creatures you control: create an X/X green Ooze, where X is the
+/// number of counters removed.
+pub fn ooze_flux() -> CardDefinition {
+    CardDefinition {
+        name: "Ooze Flux",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            remove_counter_among_x: Some((
+                CounterType::PlusOnePlusOne,
+                R::Creature.and(R::ControlledByYou),
+            )),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Ooze".into(),
+                    power: 0,
+                    toughness: 0,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: creatures(vec![CreatureType::Ooze]),
+                    dynamic_pt: Some((Value::XFromCost, Value::XFromCost)),
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Obzedat, Ghost Council — {1}{W}{W}{B}{B} 5/5 Legendary Spirit Advisor. ETB:
 /// target opponent loses 2 life, you gain 2. At your end step, you may exile it,
 /// returning it at your next upkeep with haste.

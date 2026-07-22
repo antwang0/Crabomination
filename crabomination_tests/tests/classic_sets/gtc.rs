@@ -2054,3 +2054,27 @@ fn gtc15_obzedat_drains_and_blinks() {
     let back = g.battlefield_find(obz).expect("returned at upkeep");
     assert!(g.computed_permanent(back.id).unwrap().keywords.contains(&Keyword::Haste), "returns with haste");
 }
+
+/// Ooze Flux removes +1/+1 counters to mint an Ooze sized to the number removed.
+#[test]
+fn gtc15_ooze_flux_makes_sized_ooze() {
+    let mut g = two_player_game();
+    let flux = g.add_card_to_battlefield(0, catalog::ooze_flux());
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Remove 2 of the 3 counters → a 2/2 Ooze.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: flux, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(2),
+    }).expect("activate ooze flux");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        1, "two of three counters removed");
+    let ooze = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Ooze").expect("ooze");
+    let c = g.computed_permanent(ooze.id).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 2), "X/X where X = counters removed (2)");
+}

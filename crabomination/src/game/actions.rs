@@ -10879,6 +10879,22 @@ impl GameState {
             }
         }
 
+        // Pre-flight variable remove-counters-from-among gate (Ooze Flux): the
+        // matching permanents must together carry at least X (and X ≥ 1).
+        if let Some((kind, filter)) = ability.remove_counter_among_x.as_ref() {
+            let want = x_value.unwrap_or(0);
+            let have: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, Some(card_id)))
+                .map(|c| c.counter_count(*kind))
+                .sum();
+            if want == 0 || have < want {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+
         // Apply self-counter cost reduction (Strixhaven Book artifacts).
         // Subtracts one generic pip per counter of the specified kind on
         // the source permanent. Clamped at the printed generic total via
@@ -10898,6 +10914,7 @@ impl GameState {
             || ability.sac_other_x
             || ability.exile_other_x
             || ability.remove_counter_x.is_some()
+            || ability.remove_counter_among_x.is_some()
             || ability.energy_x_cost
             || ability.x_life_cost
         {
@@ -11402,6 +11419,29 @@ impl GameState {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // Variable remove-counters-from-among cost (Ooze Flux): drain `x_value`
+        // counters of the named kind across matching permanents, lowest-power
+        // first (validated pre-flight). X is available to the body via XFromCost.
+        if let Some((kind, filter)) = ability.remove_counter_among_x.clone() {
+            let mut picks: Vec<(CardId, i32)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p && c.counter_count(kind) > 0)
+                .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id)))
+                .map(|c| (c.id, c.power()))
+                .collect();
+            picks.sort_by_key(|(_, pw)| *pw);
+            let mut left = x_value.unwrap_or(0);
+            for (cid, _) in picks {
+                if left == 0 { break; }
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                    let take = left.min(c.counter_count(kind));
+                    c.remove_counters(kind, take);
+                    left -= take;
                 }
             }
         }
