@@ -54,17 +54,23 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   (top-of-library fight), Grave Betrayal (mass reanimate replacement), Search the
   City (extra-turn combo), Azor's Elocutors (filibuster-counter win). Legends:
   Mercurial Chemister, Trostani, Isperia, Vraska the Unseen, Jace AoT, Rakdos LoR.
-- **Gatecrash (GTC) — started (modern_decks):** two waves shipped (~42 cards:
-  vanilla/keyword beaters, dies triggers, combat spells, Auras, Battalion,
-  Bloodrush, an Equipment, plus the two host-controller-zone-scaling Auras
-  Righteous Authority / Death's Approach via new `EquipScale`
-  `count_host_controller_hand`/`count_host_controller_graveyard`). ~128 cards
-  remain. Notable primitives still needed:
-  Realmwright (choose-a-basic-land-type-as-enters continuous "lands
-  you control are that type in addition"), Homing Lightning (same-name damage
-  sweep), Gruul Ragebeast (ETB-of-any-creature fight), Merciless Eviction
-  (4-mode exile-all sweep), Extort cards (keyword exists — Syndicate Enforcer et
-  al.), Cipher/Evolve carriers, and the remaining Battalion/Bloodrush commons.
+- **Gatecrash (GTC) — in progress (modern_decks):** five waves shipped (~82
+  cards): beaters, dies/ETB triggers, combat spells, Auras, Battalion,
+  Bloodrush, an Equipment, the two host-controller-zone-scaling Auras (Righteous
+  Authority / Death's Approach), the five guild Keyrunes, Extort creatures,
+  +1/+1-counter evasion lords (Sapphire Drake / Crowned Ceratok), Homing
+  Lightning (`SameNameDamage`), Ogre Slumlord, Dinrova Horror, Grisly Spectacle,
+  Immortal Servitude (X-scaled mass reanimate — drove the `EachMatching`
+  `{X}`-from-cost fix), Biovisionary (win-con), Giant Adephage (self-copy).
+  ~85 cards remain. Notable primitives still needed:
+  Realmwright (choose-a-basic-land-type-as-enters continuous "lands you control
+  are that type in addition" — note: `LandsBecomeChosenBasicType` already ships
+  for Terraformer; Realmwright wants the enters-choice + additive variant),
+  Gruul Ragebeast (ETB-of-any-creature fight), Merciless Eviction (4-mode
+  exile-all sweep — `ChooseMode` + exile-each-of-a-type), Alms Beast (combat-
+  relational "creatures blocking/blocked by this have lifelink" static),
+  Miming Slime (X/X token where X = greatest power you control), Cipher/Evolve
+  carriers, and the remaining Battalion/Bloodrush commons.
 - **Ravnica guild remainder (recent291 follow-ups):** shipped Simic Guildmage
   (`Effect::MoveCounter` + `Effect::Attach` aura-restitch), Golgari Guildmage,
   Necromantic Thirst (`EquipBonus.triggered_abilities` combat-damage trigger),

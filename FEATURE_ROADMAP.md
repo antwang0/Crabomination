@@ -16,6 +16,17 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **GTC waves 3–5 (this run, 40 cards):** guild Keyrunes, Extort creatures,
+  +1/+1-counter evasion lords, team haste/must-attack statics, colour-filtered
+  another-ETB triggers, and a spread of tricks/removal. Engine: **`EachMatching`
+  (zone selector) now runs `resolve_x` on its filter** like `EachPermanent`, so
+  X-scaled graveyard/zone sweeps read the cast's X (Immortal Servitude's
+  mass reanimate by mana value X). CR conformance: 509.1b (block restriction),
+  508.1d (must-attack declaration), 615.6 (prevent-all-damage shields). Client:
+  `req_short` names disjunctive block-restriction classes ("Fly/Rch") and no
+  longer mislabels an And of two specific classes. Server: IP-spread + occupancy
+  on the plaintext operator page.
+
 - **RTR gap wave 11 (this run, 11 cards):** Conjured Currency (upkeep
   `ExchangeControl`), Jarad, Golgari Lich Lord (gy-count CDA + sac-drain +
   swamp/forest recursion), Volatile Rig (coin-flip sac + death blast), Mana Bloom
