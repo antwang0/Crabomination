@@ -1883,3 +1883,26 @@ fn gtc15_tin_street_market_grants_loot() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == discard_fodder), "discarded a card");
     assert_eq!(g.players[0].hand.len(), hand_before, "discard one, draw one nets zero");
 }
+
+/// Armored Transport survives blockers' strike-back but still dies when blocking.
+#[test]
+fn gtc15_armored_transport_prevents_blocker_damage() {
+    let mut g = two_player_game();
+    let transport = g.add_card_to_battlefield(0, catalog::armored_transport()); // 2/1
+    g.clear_sickness(transport);
+    let blocker = g.add_card_to_battlefield(1, catalog::gutter_skulk()); // 2/2
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: transport, target: AttackTarget::Player(1) }]).expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, transport)])).expect("block");
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    // The 2/1 took no damage from its 2/2 blocker (would otherwise die).
+    assert!(g.battlefield_find(transport).is_some(), "blocker's combat damage prevented");
+}

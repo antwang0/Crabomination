@@ -188,6 +188,24 @@ pub fn simic_manipulator() -> CardDefinition {
     }
 }
 
+/// Armored Transport — {3} 2/1 Construct. Prevent all combat damage that would
+/// be dealt to it by creatures blocking it.
+pub fn armored_transport() -> CardDefinition {
+    CardDefinition {
+        name: "Armored Transport",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Construct]),
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Prevent all combat damage that would be dealt to this creature by creatures blocking it.",
+            effect: StaticEffect::PreventAllCombatDamageToThisFromBlockers,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Tin Street Market — {4}{R} Aura. Enchant land; it gains "{T}, Discard a card:
 /// Draw a card."
 pub fn tin_street_market() -> CardDefinition {

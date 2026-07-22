@@ -821,6 +821,13 @@ pub enum StaticEffect {
     /// the permanent) unless combat damage can't be prevented this turn (615.12).
     /// Fog Bank, Guard Gomazoa.
     PreventAllCombatDamageToThis,
+    /// "Prevent all combat damage that would be dealt to this creature by
+    /// creatures blocking it." The narrower sibling of
+    /// `PreventAllCombatDamageToThis` — only strikes-back from this creature's
+    /// blockers are blanked (damage taken while *it* blocks still applies).
+    /// Read in the combat-damage resolver's attacker-takes-from-blocker branch.
+    /// Armored Transport.
+    PreventAllCombatDamageToThisFromBlockers,
     /// CR 614.5 — "If a source would deal damage to an opponent or a
     /// permanent an opponent controls, it deals double that damage instead."
     /// (Gisela, Blade of Goldnight.) Scoped to the static's controller's

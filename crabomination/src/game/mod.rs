@@ -3349,6 +3349,20 @@ impl GameState {
         })
     }
 
+    /// CR 615 — true when `tgt` prevents combat damage from creatures blocking
+    /// it (Armored Transport) and prevention isn't off this turn. The resolver
+    /// consults this only in the attacker-takes-from-blocker branch, where the
+    /// dealer is by construction one of `tgt`'s blockers.
+    pub fn combat_damage_from_blockers_prevented(&self, tgt: crate::card::CardId) -> bool {
+        use crate::effect::StaticEffect;
+        !self.damage_cant_be_prevented_this_turn
+            && self.battlefield_find(tgt).is_some_and(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::PreventAllCombatDamageToThisFromBlockers)
+                })
+            })
+    }
+
     /// CR 615 — true when `tgt` prevents all combat damage to itself and
     /// prevention isn't switched off this turn. Consulted by the combat-damage
     /// resolver to zero damage marked on Fog Bank / Guard Gomazoa.
@@ -13670,6 +13684,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleDamageDealt
             | StaticEffect::HalveDamageDealt
             | StaticEffect::PreventAllCombatDamageToThis
+            | StaticEffect::PreventAllCombatDamageToThisFromBlockers
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn
             | StaticEffect::DoubleDamageFromControlledCreatures

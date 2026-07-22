@@ -2105,9 +2105,16 @@ impl GameState {
                         // Ironscale Hydra replaces the blocker's strike-back
                         // with a +1/+1 counter (blocker's lifelink sees 0).
                         let dmg = self.ironscale_replace(atk.id, dmg as i32, &mut events) as u32;
-                        // CR 615 — an attacker that prevents all damage to itself
-                        // takes none from this blocker (and gives no lifelink).
-                        let dmg = if self.combat_damage_prevented_to_self(atk.id) { 0 } else { dmg };
+                        // CR 615 — an attacker that prevents all damage to itself,
+                        // or specifically damage from its blockers (Armored
+                        // Transport), takes none from this blocker (no lifelink).
+                        let dmg = if self.combat_damage_prevented_to_self(atk.id)
+                            || self.combat_damage_from_blockers_prevented(atk.id)
+                        {
+                            0
+                        } else {
+                            dmg
+                        };
                         if dmg == 0 {
                             continue;
                         }
