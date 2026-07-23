@@ -4338,6 +4338,12 @@ pub enum Effect {
     /// the cap. The library variant of
     /// [`ReturnGraveyardCreaturesUpToTotalManaValue`].
     SearchLibraryCreaturesUpToTotalManaValue { max_total: Value },
+    /// Command the Dreadhorde — choose any number of creature and/or
+    /// planeswalker cards in *any* graveyard, deal damage to the controller
+    /// equal to their total mana value, then put them onto the battlefield
+    /// under the controller's control. The set is chosen at resolution
+    /// (`Decision::ChooseCards`).
+    CommandTheDreadhorde,
     /// Swift Silence — counter every other spell on the stack, then draw a
     /// card for each spell countered this way (CR 701.5).
     CounterAllOtherSpellsDrawPer,

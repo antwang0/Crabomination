@@ -6559,6 +6559,55 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CommandTheDreadhorde => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                // Creature / planeswalker cards across every graveyard.
+                let candidates: Vec<(CardId, String)> = self
+                    .players
+                    .iter()
+                    .flat_map(|pl| pl.graveyard.iter())
+                    .filter(|c| c.definition.is_creature() || c.definition.is_planeswalker())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Choose any number of creature/planeswalker cards in graveyards".to_string(),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: candidates.len() as u32,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => ids,
+                    _ => Vec::new(),
+                };
+                // CR 608 order: total mana value → self-damage → reanimate.
+                let total: i32 = chosen
+                    .iter()
+                    .filter_map(|cid| {
+                        self.players
+                            .iter()
+                            .flat_map(|pl| pl.graveyard.iter())
+                            .find(|c| c.id == *cid)
+                            .map(|c| c.definition.cost.cmc() as i32)
+                    })
+                    .sum();
+                if total > 0 {
+                    self.deal_damage_to_from(EntityRef::Player(p), total as u32, ctx.source, events);
+                }
+                for cid in chosen {
+                    self.move_card_to(
+                        cid,
+                        &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::SearchLibraryCreaturesUpToTotalManaValue { max_total } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::effect::ZoneDest;

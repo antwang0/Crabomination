@@ -1244,3 +1244,26 @@ fn kayas_ghostform_returns_on_exile() {
         "creature returned under your control after exile"
     );
 }
+
+/// Command the Dreadhorde reanimates chosen graveyard creatures and deals you
+/// damage equal to their total mana value.
+#[test]
+fn command_the_dreadhorde_reanimates_for_life() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // A 5-drop in your graveyard, a 2-drop in the opponent's.
+    let mine = g.add_card_to_graveyard(0, catalog::challenger_troll()); // {4}{G} → mv 5
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears()); // {1}{G} → mv 2
+    let cmd = g.add_card_to_hand(0, catalog::command_the_dreadhorde());
+    let life = g.players[0].life;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 6); // {4}{B}{B}
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![mine, theirs])]));
+    g.perform_action(GameAction::CastSpell { card_id: cmd, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Command the Dreadhorde");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == mine && c.controller == 0), "my creature reanimated");
+    assert!(g.battlefield.iter().any(|c| c.id == theirs && c.controller == 0), "opponent's creature stolen");
+    assert_eq!(g.players[0].life, life - 7, "lost life equal to total mana value (5+2)");
+}

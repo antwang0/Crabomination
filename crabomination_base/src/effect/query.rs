@@ -260,6 +260,7 @@ impl Effect {
             Effect::ExileTopUntilNonlandMayPlay { .. } => false,
             Effect::ReturnGraveyardCreaturesUpToTotalPower { .. } => false,
             Effect::ReturnGraveyardCreaturesUpToTotalManaValue { .. } => false,
+            Effect::CommandTheDreadhorde => false,
             Effect::NameCardTargetDiscardsMatching
             | Effect::NameCardExileMatchingAllZones
             | Effect::FertileImagination { .. }

@@ -2020,6 +2020,19 @@ pub fn charmed_stray() -> CardDefinition {
     }
 }
 
+/// Command the Dreadhorde — {4}{B}{B} Sorcery. Choose any number of creature
+/// and/or planeswalker cards in graveyards; take damage equal to their total
+/// mana value, then put them onto the battlefield under your control.
+pub fn command_the_dreadhorde() -> CardDefinition {
+    CardDefinition {
+        name: "Command the Dreadhorde",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CommandTheDreadhorde,
+        ..Default::default()
+    }
+}
+
 /// Kaya's Ghostform — {B} Aura. Enchant creature or planeswalker you control.
 /// When the enchanted permanent dies or is exiled, return that card to the
 /// battlefield under your control.
