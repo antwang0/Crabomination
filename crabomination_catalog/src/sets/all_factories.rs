@@ -7125,6 +7125,8 @@ static DGM: &[Factory] = &[
     super::dgm::deputy_of_acquittals,
     super::dgm::fluxcharger,
     super::dgm::hired_torturer,
+    super::dgm::blood_scrivener,
+    super::dgm::pontiff_of_blight,
     super::dgm::sunspire_gatekeepers,
     super::dgm::opal_lake_gatekeepers,
     super::dgm::ubul_sar_gatekeepers,

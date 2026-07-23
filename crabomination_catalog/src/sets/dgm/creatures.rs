@@ -496,6 +496,47 @@ pub fn hired_torturer() -> CardDefinition {
     }
 }
 
+/// Blood Scrivener — {1}{B} 2/1. If you'd draw a card while your hand is empty,
+/// instead draw two and lose 1 life.
+pub fn blood_scrivener() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Scrivener",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Zombie, CreatureType::Wizard]),
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "If you would draw a card while you have no cards in hand, instead draw two cards and lose 1 life.",
+            effect: StaticEffect::EmptyHandDrawBonus { extra: 1, life_loss: 1 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pontiff of Blight — {4}{B}{B} 2/7. Extort; other creatures you control have
+/// extort (CR 702.99 — each instance triggers separately).
+pub fn pontiff_of_blight() -> CardDefinition {
+    use crate::effect::shortcut::extort;
+    CardDefinition {
+        name: "Pontiff of Blight",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Zombie, CreatureType::Cleric]),
+        power: 2,
+        toughness: 7,
+        triggered_abilities: vec![extort()],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control have extort.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                ability: Box::new(extort()),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Gatekeeper cycle (ETB, intervening 'if' two or more Gates) ───────────────
 
 /// Sunspire Gatekeepers — {3}{W} 2/4. ETB with two+ Gates: make a 2/2 white

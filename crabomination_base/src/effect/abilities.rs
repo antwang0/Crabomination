@@ -613,6 +613,12 @@ pub enum StaticEffect {
     /// source's controller ("Max speed — if you would draw a card, draw two
     /// cards instead" — Vnwxt, Verbose Host).
     ControllerDrawsDoubledIf { condition: Predicate },
+    /// CR 121.2a / 614 — "If you would draw a card while you have no cards in
+    /// hand, instead draw `extra` additional card(s) and lose `life_loss` life"
+    /// (Blood Scrivener). Consulted in `draw_one` only when the source's
+    /// controller's hand is empty at draw time; the replacement draws are not
+    /// re-replaced (guarded by the draw-replacement reentrancy flag).
+    EmptyHandDrawBonus { extra: u32, life_loss: u32 },
     /// CR 701.34 / 614 — "If you would proliferate, proliferate twice
     /// instead" (Tekuthal, Inquiry Dominus). Consulted per `Effect::Proliferate`
     /// resolution for the source's controller; n copies → 2^n proliferations.

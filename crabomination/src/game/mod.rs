@@ -8614,6 +8614,23 @@ impl GameState {
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
         }
+        // CR 121.2a — empty-hand draw replacement (Blood Scrivener). Snapshot
+        // the bonus before the draw (the hand must be empty at draw time) and
+        // apply the extra draws + life loss after, guarded against recursion.
+        let empty_hand_bonus = (!self.in_draw_double && self.players[p].hand.is_empty())
+            .then(|| {
+                self.battlefield.iter().find_map(|c| {
+                    (c.controller == p).then(|| {
+                        c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                            crate::effect::StaticEffect::EmptyHandDrawBonus { extra, life_loss } => {
+                                Some((*extra, *life_loss))
+                            }
+                            _ => None,
+                        })
+                    })?
+                })
+            })
+            .flatten();
         let drew = match self.players[p].draw_top() {
             Some(id) => {
                 events.push(GameEvent::CardDrawn { player: p, card_id: id });
@@ -8622,6 +8639,19 @@ impl GameState {
             }
             None => false,
         };
+        if drew && let Some((extra, life_loss)) = empty_hand_bonus {
+            self.in_draw_double = true;
+            for _ in 0..extra {
+                self.draw_one(p, events);
+            }
+            self.in_draw_double = false;
+            if life_loss > 0 {
+                let applied = self.adjust_life_applied(p, -(life_loss as i32));
+                if applied < 0 {
+                    events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                }
+            }
+        }
         // CR 121.2a / 614 — "If you would draw a card, draw two instead"
         // (Thought Reflection). Each doubler applies once per draw event
         // (n doublers: 1 → 2^n); the replacement draws themselves aren't
@@ -14138,6 +14168,8 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsCantMakeYouDiscard
             | StaticEffect::ControllerDrawsDoubled
             | StaticEffect::ControllerDrawsDoubledIf { .. }
+            // Consulted directly in `draw_one`; no continuous-layer effect.
+            | StaticEffect::EmptyHandDrawBonus { .. }
             // ProliferateTwice / PoisonCappedAtOnePerTurn — consulted at the
             // proliferate resolver / `add_poison` funnel.
             | StaticEffect::ProliferateTwice

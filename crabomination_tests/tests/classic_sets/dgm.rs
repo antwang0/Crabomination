@@ -259,3 +259,51 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
         guard += 1;
     }
 }
+
+/// Blood Scrivener: drawing with an empty hand draws two and loses 1 life;
+/// with a nonempty hand it draws normally.
+#[test]
+fn blood_scrivener_empty_hand_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blood_scrivener());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    g.players[0].hand.clear();
+    let life = g.players[0].life;
+    // Empty hand: draw two, lose 1.
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    assert_eq!(g.players[0].hand.len(), 2, "empty-hand draw becomes two");
+    assert_eq!(g.players[0].life, life - 1, "lose 1 life");
+    // Nonempty hand: a normal single draw, no life loss.
+    let life2 = g.players[0].life;
+    g.draw_one(0, &mut ev);
+    assert_eq!(g.players[0].hand.len(), 3, "normal single draw with cards in hand");
+    assert_eq!(g.players[0].life, life2, "no life loss on a normal draw");
+}
+
+/// Pontiff of Blight grants extort to your other creatures: casting a spell
+/// with one other creature out fires two extort triggers (drain 2 total).
+#[test]
+fn pontiff_of_blight_grants_extort() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pontiff_of_blight());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Mana for the spell ({1}{G}) plus two {W/B} extort payments.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    // Pay both extort triggers.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 2, "two extort drains");
+    assert_eq!(g.players[0].life, life0 + 2, "gained the drained life");
+}
