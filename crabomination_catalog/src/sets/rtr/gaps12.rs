@@ -2,11 +2,12 @@
 //! zones) and Guild Feud (dueling top-three reveal). Tests in `classic_sets/rtr`.
 
 use crate::card::{
-    CardDefinition, CardType, EventKind, EventScope, EventSpec, Keyword, TriggeredAbility,
+    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, ExileReturnZone,
+    Keyword, SelectionRequirement as R, Subtypes, TriggeredAbility,
 };
-use crate::effect::Effect;
+use crate::effect::{Effect, Selector};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, generic, r};
+use crate::mana::{b, cost, generic, r, w};
 
 /// Slaughter Games — {2}{B}{R} Sorcery that can't be countered. Choose a
 /// nonland card name; exile every card with that name from target opponent's
@@ -49,6 +50,35 @@ pub fn grave_betrayal() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
             effect: Effect::GraveBetrayalRegister,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Angel of Serenity — {4}{W}{W}{W} 5/6 Angel. Flying; ETB exile up to three
+/// target creatures until it leaves (returning them to their owners' hands on
+/// leave). (The alternate "creature cards from graveyards" targets are omitted
+/// — the battlefield-removal half is modeled.)
+pub fn angel_of_serenity() -> CardDefinition {
+    CardDefinition {
+        name: "Angel of Serenity",
+        cost: cost(&[generic(4), w(), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 5,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ApplyToTargets {
+                max_targets: 3,
+                min_targets: 0,
+                filter: R::Creature,
+                effect: Box::new(Effect::ExileUntilSourceLeaves {
+                    what: Selector::Target(0),
+                    return_to: ExileReturnZone::Hand,
+                }),
+            },
         }],
         ..Default::default()
     }

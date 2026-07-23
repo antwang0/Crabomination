@@ -9778,6 +9778,7 @@ static RTR: &[Factory] = &[
     super::rtr::slaughter_games,
     super::rtr::guild_feud,
     super::rtr::grave_betrayal,
+    super::rtr::angel_of_serenity,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,

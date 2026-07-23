@@ -1942,3 +1942,30 @@ fn grave_betrayal_steals_the_dead() {
     assert!(reborn.definition.subtypes.creature_types.contains(&CreatureType::Zombie), "now a Zombie");
 }
 
+
+/// Angel of Serenity exiles up to three creatures on ETB; they return to their
+/// owners' hands when it leaves.
+#[test]
+fn angel_of_serenity_exiles_then_returns() {
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let angel = g.add_card_to_hand(0, catalog::angel_of_serenity());
+    g.players[0].mana_pool.add(Color::White, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: angel, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("cast Angel");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == b), "both exiled on ETB");
+    // Angel dies → exiled creatures go to their owner's hand.
+    g.battlefield_find_mut(angel).unwrap().damage = 6;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == a) && g.players[1].hand.iter().any(|c| c.id == b),
+        "returned to owner's hand when Angel left");
+}
