@@ -261,7 +261,9 @@ impl Effect {
             Effect::ReturnGraveyardCreaturesUpToTotalManaValue { .. } => false,
             Effect::NameCardTargetDiscardsMatching
             | Effect::NameCardExileMatchingAllZones
+            | Effect::FertileImagination { .. }
             | Effect::NameCardTargetDiscardsOneOrYouDraw => true,
+            Effect::ChooseTypeRevealTopPartition { .. } => false,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only
             // `otherwise` can demand a cast-time target (Browbeat's drawer).

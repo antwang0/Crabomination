@@ -109,3 +109,29 @@ pub fn slaughter_games() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Vigean Intuition — {3}{G}{U} Instant. Choose a card type, then reveal the
+/// top four cards of your library; put those of the chosen type into your hand
+/// and the rest into your graveyard.
+pub fn vigean_intuition() -> CardDefinition {
+    CardDefinition {
+        name: "Vigean Intuition",
+        cost: cost(&[generic(3), g(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseTypeRevealTopPartition { count: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Fertile Imagination — {2}{G}{G} Sorcery. Choose a card type; target opponent
+/// reveals their hand; create two 1/1 green Saproling tokens for each card of
+/// the chosen type revealed this way.
+pub fn fertile_imagination() -> CardDefinition {
+    CardDefinition {
+        name: "Fertile Imagination",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::FertileImagination { per: Value::Const(2) },
+        ..Default::default()
+    }
+}

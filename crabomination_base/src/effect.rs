@@ -3345,6 +3345,14 @@ pub enum Effect {
         count: Value,
         filter: SelectionRequirement,
     },
+    /// Vigean Intuition: choose a card type, then reveal the top `count` cards
+    /// of your library; put every card of the chosen type into your hand and
+    /// the rest into your graveyard.
+    ChooseTypeRevealTopPartition { count: Value },
+    /// Fertile Imagination: choose a card type; target opponent reveals their
+    /// hand; create `per` 1/1 green Saproling tokens for each card of the
+    /// chosen type revealed this way.
+    FertileImagination { per: Value },
     /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
     /// in hand moves to the graveyard and every card in the graveyard moves to
     /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card

@@ -1733,3 +1733,53 @@ fn slaughter_games_exiles_all_copies() {
     assert!(!g.players[1].library.iter().any(|c| c.id == l), "library copy gone");
     assert!(g.players[1].hand.iter().any(|c| c.id == keep), "the odd card stays");
 }
+
+/// Vigean Intuition (AutoDecider picks Creature) takes creatures from the top
+/// four to hand and buries the rest.
+#[test]
+fn vigean_intuition_partitions_by_type() {
+    let mut g = two_player_game();
+    // Top four: two creatures, two lands (Creature is the auto-picked type).
+    let c1 = g.add_card_to_library(0, catalog::island());
+    let c2 = g.add_card_to_library(0, catalog::island());
+    let cr1 = g.add_card_to_library(0, catalog::grizzly_bears());
+    let cr2 = g.add_card_to_library(0, catalog::phantom_warrior());
+    let _ = (c1, c2);
+    let spell = g.add_card_to_hand(0, catalog::vigean_intuition());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Vigean Intuition");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == cr1) && g.players[0].hand.iter().any(|c| c.id == cr2),
+        "creatures went to hand");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count(), 2,
+        "the non-creatures were buried");
+}
+
+/// Fertile Imagination makes two Saprolings per matching card in the opponent's
+/// hand (AutoDecider picks Creature).
+#[test]
+fn fertile_imagination_tokens_per_match() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::phantom_warrior());
+    g.add_card_to_hand(1, catalog::island()); // non-creature, ignored
+    let spell = g.add_card_to_hand(0, catalog::fertile_imagination());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Fertile Imagination");
+    drain_stack(&mut g);
+    // Two creatures in hand × 2 = four Saprolings.
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count(), 4,
+        "two Saprolings per creature revealed");
+}

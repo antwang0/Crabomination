@@ -7089,6 +7089,8 @@ static DIS: &[Factory] = &[
     super::dis::sphinx_of_the_chimes,
     super::dis::elemental_resonance,
     super::dis::slaughter_games,
+    super::dis::vigean_intuition,
+    super::dis::fertile_imagination,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

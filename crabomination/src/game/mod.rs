@@ -12285,7 +12285,7 @@ impl GameState {
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                let mut events = vec![];
+                let events = vec![];
                 if !name.is_empty() {
                     for zone in ["gy", "hand", "lib"] {
                         let ids: Vec<CardId> = match zone {

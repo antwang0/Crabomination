@@ -837,6 +837,33 @@ impl GameState {
         }
     }
 
+    /// CR 202.3/205.2 — prompt the resolving controller for a card type via a
+    /// `ChooseMode` decision. Shared by "choose a card type" effects
+    /// (Vigean Intuition, Fertile Imagination). AutoDecider defaults to
+    /// Creature (mode 0).
+    pub(crate) fn choose_a_card_type(&mut self, source: CardId) -> crate::card::CardType {
+        use crate::card::CardType;
+        use crate::decision::{Decision, DecisionAnswer};
+        let options = [
+            CardType::Creature,
+            CardType::Instant,
+            CardType::Sorcery,
+            CardType::Artifact,
+            CardType::Enchantment,
+            CardType::Planeswalker,
+            CardType::Land,
+        ];
+        let n = match self.decider.decide(&Decision::ChooseMode {
+            source,
+            num_modes: options.len(),
+            mode_texts: options.iter().map(|t| format!("{t:?}")).collect(),
+        }) {
+            DecisionAnswer::Mode(m) => m.min(options.len() - 1),
+            _ => 0,
+        };
+        options[n].clone()
+    }
+
     pub fn resolve_effect(
         &mut self,
         effect: &Effect,
@@ -11819,6 +11846,60 @@ impl GameState {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.players[p].library.push(card);
                     }
+                }
+                Ok(())
+            }
+
+            Effect::ChooseTypeRevealTopPartition { count } => {
+                let p = ctx.controller;
+                let chosen = self.choose_a_card_type(ctx.source.unwrap_or(CardId(0)));
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                for id in revealed {
+                    let Some(card) = Self::take_card(&mut self.players[p].library, id) else { continue };
+                    if card.definition.card_types.contains(&chosen) {
+                        self.players[p].hand.push(card);
+                    } else {
+                        self.route_to_graveyard(card, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::FertileImagination { per } => {
+                use crate::card::{CardType, CreatureType, Subtypes, TokenDefinition};
+                let Some(opp) = self.resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
+                    .or_else(|| (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller)))
+                else { return Ok(()) };
+                let chosen = self.choose_a_card_type(ctx.source.unwrap_or(CardId(0)));
+                let matches = self.players[opp].hand.iter()
+                    .filter(|c| c.definition.card_types.contains(&chosen)).count();
+                let per = self.evaluate_value(per, ctx).max(0) as usize;
+                let total = (matches * per) as i32;
+                if total > 0 {
+                    let token = TokenDefinition {
+                        name: "Saproling".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![crate::mana::Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Saproling],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    self.resolve_effect(
+                        &Effect::CreateToken {
+                            who: crate::effect::PlayerRef::You,
+                            count: crate::effect::Value::Const(total),
+                            definition: token,
+                        },
+                        ctx,
+                    )
+                    .map(|mut evs| events.append(&mut evs))
+                    .ok();
                 }
                 Ok(())
             }
