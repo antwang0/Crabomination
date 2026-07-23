@@ -2351,3 +2351,54 @@ fn gtc16_vizkopa_confessor_pay_life_exile() {
     assert!(g.exile.iter().any(|c| c.id == cheap_a), "the chosen revealed card was exiled");
     assert!(g.players[1].hand.iter().any(|c| c.id == cheap_b), "the other revealed card stays");
 }
+
+// ── GTC wave 17 gap cards ───────────────────────────────────────────────────
+
+/// Frenzied Tilling destroys a land and ramps a basic tapped.
+#[test]
+fn frenzied_tilling_destroys_and_ramps() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::forest());
+    let mtn = g.add_card_to_library(0, catalog::mountain());
+    let spell = g.add_card_to_hand(0, catalog::frenzied_tilling());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(mtn))]));
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Frenzied Tilling");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "target land destroyed");
+    let mine: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).collect();
+    assert_eq!(mine.len(), lands_before + 1, "fetched a basic");
+    assert!(mine.iter().any(|c| c.definition.name == "Mountain" && c.tapped), "basic entered tapped");
+}
+
+/// Contaminated Ground turns the land into a Swamp and drains 2 on each tap.
+#[test]
+fn contaminated_ground_swamp_and_drain() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let aura = g.add_card_to_hand(0, catalog::contaminated_ground());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(land)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Contaminated Ground");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(land).unwrap().subtypes.land_types.contains(&crabomination::card::LandType::Swamp),
+        "enchanted land is a Swamp",
+    );
+    let life = g.players[1].life;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: land, actor: None }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "land's controller loses 2 on tap");
+}

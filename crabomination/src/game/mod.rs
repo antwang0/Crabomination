@@ -9746,9 +9746,6 @@ impl GameState {
                 .find(|c| c.id == card.id)
                 .map(|c| c.lost_all_abilities)
                 .unwrap_or(false);
-            if stripped {
-                continue;
-            }
             // Walk printed triggered abilities AND any transient
             // granted_triggers_eot for this permanent (Root Manipulation,
             // Rabid Attack-style "creatures gain '…trigger…' EOT"). Printed
@@ -9757,15 +9754,22 @@ impl GameState {
             // triggers are never once-per-turn and use a sentinel index.
             let n_printed = card.definition.triggered_abilities.len();
             let static_granted = self.statics_granted_triggers_for(card);
+            let own_granted = self.granted_triggers(card.id);
+            // Equipment/Aura-granted triggers belong to the *attachment*, not
+            // the host, so they fire even when the host lost all abilities
+            // (Contaminated Ground's tap trigger on a land it turned into a
+            // Swamp — CR 613; the type change strips the land, not the Aura).
             let equip_granted = self.equip_granted_triggers_for(card);
-            let all_triggers = card
-                .definition
-                .triggered_abilities
-                .iter()
-                .enumerate()
-                .chain(self.granted_triggers(card.id).iter().map(|t| (usize::MAX, t)))
-                .chain(static_granted.iter().map(|t| (usize::MAX, t)))
-                .chain(equip_granted.iter().map(|t| (usize::MAX, t)));
+            // A host that lost all abilities (Turn to Frog, "is a Swamp")
+            // contributes none of its *own* triggers, but still carries its
+            // attachments' equip-granted ones.
+            let mut all_triggers: Vec<(usize, &crate::card::TriggeredAbility)> = Vec::new();
+            if !stripped {
+                all_triggers.extend(card.definition.triggered_abilities.iter().enumerate());
+                all_triggers.extend(own_granted.iter().map(|t| (usize::MAX, t)));
+                all_triggers.extend(static_granted.iter().map(|t| (usize::MAX, t)));
+            }
+            all_triggers.extend(equip_granted.iter().map(|t| (usize::MAX, t)));
             for (trig_idx, ta) in all_triggers {
                 // A `FromYourGraveyard`-scoped trigger functions ONLY while
                 // its card is in a graveyard (CR 603.3d zone-scoping —

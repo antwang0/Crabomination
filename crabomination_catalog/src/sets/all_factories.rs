@@ -7998,6 +7998,8 @@ static GTC9: &[Factory] = &[
     super::gtc16::unexpected_results,
     super::gtc16::soul_ransom,
     super::gtc16::vizkopa_confessor,
+    super::gtc17::frenzied_tilling,
+    super::gtc17::contaminated_ground,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,
