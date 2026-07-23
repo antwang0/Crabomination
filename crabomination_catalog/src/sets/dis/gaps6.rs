@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, Color};
+use crate::mana::{cost, g, generic, u, Color};
 
 /// Momir Vig, Simic Visionary — {3}{G}{U} 2/2 Elf Wizard. Casting a green
 /// creature spell tutors a creature to the top of your library; casting a blue
@@ -92,20 +92,6 @@ pub fn elemental_resonance() -> CardDefinition {
                 permanent: Selector::AttachedTo(Box::new(Selector::This)),
             },
         }],
-        ..Default::default()
-    }
-}
-
-/// Slaughter Games — {2}{B}{R} Sorcery that can't be countered. Choose a
-/// nonland card name; exile every card with that name from target opponent's
-/// graveyard, hand, and library, then they shuffle.
-pub fn slaughter_games() -> CardDefinition {
-    CardDefinition {
-        name: "Slaughter Games",
-        cost: cost(&[generic(2), b(), r()]),
-        card_types: vec![CardType::Sorcery],
-        keywords: vec![Keyword::CantBeCountered],
-        effect: Effect::NameCardExileMatchingAllZones,
         ..Default::default()
     }
 }

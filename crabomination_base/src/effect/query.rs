@@ -262,6 +262,7 @@ impl Effect {
             Effect::NameCardTargetDiscardsMatching
             | Effect::NameCardExileMatchingAllZones
             | Effect::FertileImagination { .. }
+            | Effect::GuildFeud
             | Effect::NameCardTargetDiscardsOneOrYouDraw => true,
             Effect::ChooseTypeRevealTopPartition { .. } => false,
             Effect::TemptingOffer { body } => body.requires_target(),

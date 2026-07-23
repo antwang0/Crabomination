@@ -1868,3 +1868,52 @@ fn righteous_authority_scales_with_hand() {
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (5, 5), "2/2 + 3 cards in hand");
 }
+
+/// Slaughter Games names a card and exiles every copy from the opponent's
+/// graveyard, hand, and library.
+#[test]
+fn slaughter_games_exiles_all_copies() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{GameAction, Target};
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let h = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let l = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.players[1].graveyard.push(crabomination::card::CardInstance::new(
+        crabomination::card::CardId(9001), std::sync::Arc::new(catalog::grizzly_bears()), 1));
+    let keep = g.add_card_to_hand(1, catalog::phantom_warrior());
+    let spell = g.add_card_to_hand(0, catalog::slaughter_games());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Grizzly Bears".into())]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Slaughter Games");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 3, "all three copies exiled");
+    assert!(!g.players[1].hand.iter().any(|c| c.id == h), "hand copy gone");
+    assert!(!g.players[1].library.iter().any(|c| c.id == l), "library copy gone");
+    assert!(g.players[1].hand.iter().any(|c| c.id == keep), "the odd card stays");
+}
+
+/// Guild Feud deploys the best creature for each player and, when two enter,
+/// they fight.
+#[test]
+fn guild_feud_deploys_and_fights() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::guild_feud());
+    // Each library's top card is a creature (1/1 so both die in the fight).
+    g.add_card_to_library(0, catalog::merfolk_of_the_pearl_trident());
+    g.add_card_to_library(1, catalog::merfolk_of_the_pearl_trident());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    // Both 1/1s entered and fought to mutual death.
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Merfolk of the Pearl Trident").count(), 0,
+        "the two deployed 1/1s fought and died");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Merfolk of the Pearl Trident"));
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Merfolk of the Pearl Trident"));
+}

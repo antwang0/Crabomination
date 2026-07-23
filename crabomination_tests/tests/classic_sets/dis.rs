@@ -1703,36 +1703,6 @@ fn elemental_resonance_ramps_enchanted_cost() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "green pip from the colored symbol");
 }
 
-/// Slaughter Games names a card and exiles every copy from the opponent's
-/// graveyard, hand, and library.
-#[test]
-fn slaughter_games_exiles_all_copies() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-    use crabomination::game::types::Target;
-    let mut g = two_player_game();
-    // Opponent (player 1) has a Grizzly Bears in each of the three zones.
-    let h = g.add_card_to_hand(1, catalog::grizzly_bears());
-    let l = g.add_card_to_library(1, catalog::grizzly_bears());
-    g.players[1].graveyard.push(crabomination::card::CardInstance::new(
-        crabomination::card::CardId(9001), std::sync::Arc::new(catalog::grizzly_bears()), 1));
-    // A distinct card that must survive.
-    let keep = g.add_card_to_hand(1, catalog::phantom_warrior());
-    let spell = g.add_card_to_hand(0, catalog::slaughter_games());
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add_colorless(2);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Grizzly Bears".into())]));
-    g.perform_action(GameAction::CastSpell {
-        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast Slaughter Games");
-    drain_stack(&mut g);
-    assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 3, "all three copies exiled");
-    assert!(!g.players[1].hand.iter().any(|c| c.id == h), "hand copy gone");
-    assert!(!g.players[1].library.iter().any(|c| c.id == l), "library copy gone");
-    assert!(g.players[1].hand.iter().any(|c| c.id == keep), "the odd card stays");
-}
 
 /// Vigean Intuition (AutoDecider picks Creature) takes creatures from the top
 /// four to hand and buries the rest.

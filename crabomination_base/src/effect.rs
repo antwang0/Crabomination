@@ -3353,6 +3353,11 @@ pub enum Effect {
     /// hand; create `per` 1/1 green Saproling tokens for each card of the
     /// chosen type revealed this way.
     FertileImagination { per: Value },
+    /// Guild Feud: target opponent reveals the top three cards of their
+    /// library, may put a creature from among them onto the battlefield, and
+    /// puts the rest into their graveyard; you do the same with your top three.
+    /// If two creatures are put onto the battlefield this way, they fight.
+    GuildFeud,
     /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
     /// in hand moves to the graveyard and every card in the graveyard moves to
     /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card

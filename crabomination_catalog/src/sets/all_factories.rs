@@ -7088,7 +7088,6 @@ static DIS: &[Factory] = &[
     super::dis::momir_vig_simic_visionary,
     super::dis::sphinx_of_the_chimes,
     super::dis::elemental_resonance,
-    super::dis::slaughter_games,
     super::dis::vigean_intuition,
     super::dis::fertile_imagination,
 ];
@@ -9768,6 +9767,8 @@ static RTR: &[Factory] = &[
     super::rtr::skull_rend,
     super::rtr::dynacharge,
     super::rtr::downsize,
+    super::rtr::slaughter_games,
+    super::rtr::guild_feud,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,

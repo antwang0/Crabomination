@@ -11867,6 +11867,53 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GuildFeud => {
+                // Order: target opponent first, then you. Each reveals top 3,
+                // puts the best creature onto the battlefield, rest to gy.
+                let opp = self
+                    .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
+                    .or_else(|| (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller)));
+                let mut entered: Vec<CardId> = Vec::new();
+                for p in [opp, Some(ctx.controller)].into_iter().flatten() {
+                    let top: Vec<CardId> =
+                        self.players[p].library.iter().take(3).map(|c| c.id).collect();
+                    // Auto-pick the highest-power creature among the three.
+                    let pick = top
+                        .iter()
+                        .copied()
+                        .filter(|id| {
+                            self.players[p].library.iter().find(|c| c.id == *id)
+                                .map(|c| c.definition.is_creature()).unwrap_or(false)
+                        })
+                        .max_by_key(|id| {
+                            self.players[p].library.iter().find(|c| c.id == *id)
+                                .map(|c| c.definition.power).unwrap_or(0)
+                        });
+                    if let Some(pid) = pick {
+                        self.move_card_to(
+                            pid,
+                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                            ctx, events,
+                        );
+                        entered.push(pid);
+                    }
+                    for id in top.into_iter().filter(|id| Some(*id) != pick) {
+                        if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                            self.route_to_graveyard(card, events);
+                        }
+                    }
+                }
+                // If two creatures entered, they fight (CR 701.12).
+                if entered.len() == 2 {
+                    let (a, b) = (entered[0], entered[1]);
+                    let ap = self.computed_permanent(a).map(|cp| cp.power).unwrap_or(0);
+                    let bp = self.computed_permanent(b).map(|cp| cp.power).unwrap_or(0);
+                    if ap > 0 { self.deal_damage_to_from(EntityRef::Permanent(b), ap as u32, Some(a), events); }
+                    if bp > 0 { self.deal_damage_to_from(EntityRef::Permanent(a), bp as u32, Some(b), events); }
+                }
+                Ok(())
+            }
+
             Effect::FertileImagination { per } => {
                 use crate::card::{CardType, CreatureType, Subtypes, TokenDefinition};
                 let Some(opp) = self.resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
