@@ -451,6 +451,13 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — Emmara-Tandris-style "prevent all damage to creature tokens
+        // you control" (both damage paths; combat is gated in combat.rs).
+        if let EntityRef::Permanent(tgt) = ent
+            && self.all_damage_to_creature_token_prevented(tgt)
+        {
+            return;
+        }
         // CR 614.2 / 614.5 — global damage doubling (Furnace of Rath) then
         // halving (Ghosts of the Innocent), applied before prevention so a
         // shield soaks the already-scaled total (CR 616 lets the affected

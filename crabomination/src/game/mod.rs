@@ -7016,6 +7016,29 @@ impl GameState {
         })
     }
 
+    /// CR 615 — Emmara Tandris: "prevent all damage that would be dealt to
+    /// creature tokens you control." True when `target` is a token creature
+    /// whose controller has the static. Consulted on both damage paths.
+    pub(crate) fn all_damage_to_creature_token_prevented(&self, target: CardId) -> bool {
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        let Some(tgt) = self.battlefield_find(target) else { return false };
+        if !tgt.definition.is_creature() || !tgt.is_token {
+            return false;
+        }
+        let controller = tgt.controller;
+        self.battlefield.iter().any(|c| {
+            c.controller == controller
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::PreventAllDamageToYourCreatureTokens
+                    )
+                })
+        })
+    }
+
     /// CR 615 — Light of Sanction: "prevent all damage to creatures you
     /// control by sources you control." True when `source` and `target` share a
     /// controller who has the static and `target` is a creature. Consulted on
@@ -14216,6 +14239,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventDamageToYourAttackers
             | StaticEffect::PreventAllDamageToController
             | StaticEffect::PreventNoncombatDamageToYourCreatures
+            | StaticEffect::PreventAllDamageToYourCreatureTokens
             | StaticEffect::PreventDamageToYourCreaturesFromYourSources
             | StaticEffect::PreventThisDamageToColor(_)
             | StaticEffect::UnspentManaBecomesColorless

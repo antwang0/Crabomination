@@ -172,6 +172,25 @@ pub fn breaking_entering() -> CardDefinition {
     }
 }
 
+/// Emmara Tandris — {5}{G}{W} 5/7 Legendary Elf Shaman. Prevent all damage that
+/// would be dealt to creature tokens you control.
+pub fn emmara_tandris() -> CardDefinition {
+    CardDefinition {
+        name: "Emmara Tandris",
+        cost: cost(&[generic(5), g(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: creatures(vec![CreatureType::Elf, CreatureType::Shaman]),
+        power: 5,
+        toughness: 7,
+        static_abilities: vec![StaticAbility {
+            description: "Prevent all damage that would be dealt to creature tokens you control.",
+            effect: StaticEffect::PreventAllDamageToYourCreatureTokens,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Ral Zarek — {2}{U}{R} Legendary Planeswalker — Ral. 4 loyalty.
 /// **+1**: Tap target permanent, then untap another target permanent.
 /// **−2**: Deals 3 damage to any target.

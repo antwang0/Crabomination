@@ -1943,7 +1943,10 @@ impl GameState {
                         continue;
                     }
                     // CR 614.9 — a Maze-of-Ith'd blocker takes no combat damage.
-                    if self.combat_damage_prevented_creatures.contains(&blocker_id) {
+                    // CR 615 — Emmara shields your creature tokens.
+                    if self.combat_damage_prevented_creatures.contains(&blocker_id)
+                        || self.all_damage_to_creature_token_prevented(blocker_id)
+                    {
                         continue;
                     }
                     // CR 702.16e — protection from the attacker's color prevents
@@ -2077,7 +2080,9 @@ impl GameState {
                     // CR 614.9 — a Maze-of-Ith'd attacker takes no combat damage.
                     !self.combat_damage_prevented_creatures.contains(&atk.id)
                     // CR 615 — Iroas shields attacking creatures you control.
-                    && !self.damage_to_attacker_prevented(atk.id);
+                    && !self.damage_to_attacker_prevented(atk.id)
+                    // CR 615 — Emmara shields your creature tokens.
+                    && !self.all_damage_to_creature_token_prevented(atk.id);
 
                 if attacker_takes_strike_back {
                     // CR 702.90 / 615.6 — each blocker's strike-back is its

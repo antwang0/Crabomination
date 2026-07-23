@@ -1017,3 +1017,27 @@ fn ral_zarek_minus_two_burn() {
     assert_eq!(g.players[1].life, life - 3, "dealt 3");
     assert_eq!(g.battlefield_find(ral).unwrap().counter_count(CounterType::Loyalty), 2, "4→2");
 }
+
+/// Emmara Tandris prevents all damage to your creature tokens (combat and
+/// noncombat), but not to your nontoken creatures.
+#[test]
+fn emmara_tandris_shields_tokens() {
+    use crabomination::card::{CardType, CreatureType, Subtypes, TokenDefinition};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::emmara_tandris());
+    // A token creature under player 0.
+    let token_def = TokenDefinition {
+        name: "Elf Warrior".into(), power: 1, toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Warrior], ..Default::default() },
+        ..Default::default()
+    };
+    let tok = g.add_token_to_battlefield(0, &token_def);
+    let nontoken = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Noncombat damage: prevented on the token, applied to the nontoken.
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(tok), 5, None, &mut evs);
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(nontoken), 1, None, &mut evs);
+    assert_eq!(g.battlefield_find(tok).unwrap().damage, 0, "token damage prevented");
+    assert_eq!(g.battlefield_find(nontoken).unwrap().damage, 1, "nontoken took damage");
+}
