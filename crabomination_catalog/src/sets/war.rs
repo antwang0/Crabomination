@@ -1974,6 +1974,27 @@ pub fn storrev_devkarin_lich() -> CardDefinition {
 
 // ── Batch 8 (2026-07-23): search / discard commons ────────────────────────────
 
+/// Desperate Lunge — {1}{W} Instant. Target creature gets +2/+2 and gains flying
+/// until end of turn. You gain 2 life.
+pub fn desperate_lunge() -> CardDefinition {
+    CardDefinition {
+        name: "Desperate Lunge",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Davriel's Shadowfugue — {3}{B} Sorcery. Target player discards two cards and
 /// loses 2 life.
 pub fn davriels_shadowfugue() -> CardDefinition {

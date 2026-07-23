@@ -1531,3 +1531,24 @@ fn nissas_triumph_fetches_forests() {
     assert!(g.players[0].hand.iter().any(|c| c.id == f1), "forest 1 to hand");
     assert!(g.players[0].hand.iter().any(|c| c.id == f2), "forest 2 to hand");
 }
+
+/// Desperate Lunge pumps a creature, grants flying, and gains 2 life.
+#[test]
+fn desperate_lunge_pumps_and_gains() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::desperate_lunge());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
+    assert_eq!(g.players[0].life, life + 2, "gained 2 life");
+}
