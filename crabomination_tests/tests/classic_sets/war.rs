@@ -1460,3 +1460,74 @@ fn lazotep_plating_amass_and_hexproof() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.counter_count(CounterType::PlusOnePlusOne) == 1), "Army token amassed");
     assert!(g.players[0].hexproof_from_colors_this_turn.len() >= 5, "gained hexproof from all colors");
 }
+
+// ── Batch 8 (2026-07-23): search / discard commons ────────────────────────────
+
+/// Davriel's Shadowfugue makes the target discard two and lose 2 life.
+#[test]
+fn davriels_shadowfugue_discards_and_drains() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::forest());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::davriels_shadowfugue());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let (hand1, life1) = (g.players[1].hand.len(), g.players[1].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand1 - 2, "discarded two");
+    assert_eq!(g.players[1].life, life1 - 2, "lost 2 life");
+}
+
+/// Ignite the Beacon tutors up to two planeswalkers to hand.
+#[test]
+fn ignite_the_beacon_fetches_planeswalkers() {
+    let mut g = two_player_game();
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let pw1 = g.add_card_to_library(0, catalog::the_wanderer());
+    let pw2 = g.add_card_to_library(0, catalog::tibalt_rakish_instigator());
+    g.add_card_to_library(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::ignite_the_beacon());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(pw1)),
+        DecisionAnswer::Search(Some(pw2)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == pw1), "walker 1 fetched");
+    assert!(g.players[0].hand.iter().any(|c| c.id == pw2), "walker 2 fetched");
+}
+
+/// Nissa's Triumph fetches two basic Forests without a Nissa in play.
+#[test]
+fn nissas_triumph_fetches_forests() {
+    let mut g = two_player_game();
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let f2 = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::nissas_triumph());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(f1)),
+        DecisionAnswer::Search(Some(f2)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == f1), "forest 1 to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == f2), "forest 2 to hand");
+}

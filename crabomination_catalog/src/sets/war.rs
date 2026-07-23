@@ -1972,6 +1972,71 @@ pub fn storrev_devkarin_lich() -> CardDefinition {
     }
 }
 
+// ── Batch 8 (2026-07-23): search / discard commons ────────────────────────────
+
+/// Davriel's Shadowfugue — {3}{B} Sorcery. Target player discards two cards and
+/// loses 2 life.
+pub fn davriels_shadowfugue() -> CardDefinition {
+    CardDefinition {
+        name: "Davriel's Shadowfugue",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Discard { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2), random: false },
+            Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ignite the Beacon — {4}{W} Instant. Search your library for up to two
+/// planeswalker cards, reveal them, put them into your hand, then shuffle.
+pub fn ignite_the_beacon() -> CardDefinition {
+    CardDefinition {
+        name: "Ignite the Beacon",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::SearchUpToN {
+            who: PlayerRef::You,
+            filter: R::Planeswalker,
+            to: ZoneDest::Hand(PlayerRef::You),
+            count: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Nissa's Triumph — {G}{G} Sorcery. Search for up to two basic Forests (up to
+/// three lands instead if you control a Nissa planeswalker), reveal, to hand.
+pub fn nissas_triumph() -> CardDefinition {
+    CardDefinition {
+        name: "Nissa's Triumph",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::count(Selector::EachPermanent(
+                    R::HasPlaneswalkerType(PlaneswalkerSubtype::Nissa).and(R::ControlledByYou),
+                )),
+                Value::Const(1),
+            ),
+            then: Box::new(Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::Land,
+                to: ZoneDest::Hand(PlayerRef::You),
+                count: Value::Const(3),
+            }),
+            else_: Box::new(Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand.and(R::HasLandType(crate::card::LandType::Forest)),
+                to: ZoneDest::Hand(PlayerRef::You),
+                count: Value::Const(2),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
 // ── Batch 7 (2026-07-23): simple commons/uncommons on existing primitives ─────
 
 /// Ugin's Conjurant — {X} 0/0 Spirit Monk. Enters with X +1/+1 counters; damage

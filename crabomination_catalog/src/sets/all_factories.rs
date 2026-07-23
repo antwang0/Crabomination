@@ -14799,6 +14799,9 @@ static WAR: &[Factory] = &[
     super::war::eternal_taskmaster,
     super::war::living_twister,
     super::war::lazotep_plating,
+    super::war::davriels_shadowfugue,
+    super::war::ignite_the_beacon,
+    super::war::nissas_triumph,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,
