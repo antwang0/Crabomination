@@ -782,10 +782,10 @@ impl GameState {
         }
         let Some(seat) = self.resolving_spell_caster else { return };
         // The damage must be dealt by the resolving spell itself.
-        if let (Some(src), Some((res_id, _, _))) = (source, &self.resolving_source) {
-            if src != *res_id {
-                return;
-            }
+        if let (Some(src), Some((res_id, _, _))) = (source, &self.resolving_source)
+            && src != *res_id
+        {
+            return;
         }
         let listeners: Vec<(crate::card::CardId, crate::effect::Effect, usize)> = self
             .battlefield

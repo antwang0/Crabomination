@@ -691,6 +691,29 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
+- **Multi-block ("can block any number of creatures", CR 509.1g).** `block_map`
+  is `HashMap<CardId, CardId>` (one attacker per blocker); the declare-blockers
+  `seen_blockers` gate rejects a blocker appearing twice. Supporting Guardian of
+  the Gateless / Valor Made Real / Guardian of the Gateless needs `block_map` to
+  become multi-valued (`HashMap<CardId, Vec<CardId>>`, ~41 read sites) plus
+  combat-damage assignment order for a blocker facing several attackers (CR
+  509.2/510.1c). High-value core mechanic; deferred from the DGM gaps3 run as too
+  large/risky to land safely late in a session. Add `Keyword::CanBlockAnyNumber`
+  when doing it. Also unblocks "blocks two or more" batch counting (509.3e).
+- **Remaining DGM gap cards (need new primitives).** Melek, Izzet Paragon
+  (copy-on-cast-from-*library* trigger — `SpellCast` filtered on cast-zone;
+  `Effect::CopySpell` exists); Varolz (grant Scavenge to every creature card in
+  your graveyard — a static that installs a graveyard-scoped activated ability);
+  Boros Battleshaper (each-combat trigger granting MustAttack+MustBlock to one
+  target and CantAttack+CantBlock to another — needs "up to one target" optional
+  slots on a `BeginCombat` trigger, verified to auto-fill); Legion's Initiative
+  (exile-all-your-creatures then return at next combat with haste); Notion Thief
+  (opponent extra-draw → your draw replacement); Reap Intellect; Goblin Test
+  Pilot (random targeting — `random_target` on abilities/effects, generally
+  useful); Plasm Capture (counter + add mana = spell MV at next main —
+  `AddManaAtNextMainPhase` exists but keyed on `CounteredSpellManaSpent`; extend
+  to spell MV); the remaining Fuse splits (Beck//Call, Catch//Release,
+  Flesh//Blood).
 - **New primitives that would unblock batches of gap cards (recent274–279 run):**
   - **Enlist** (CR 702.148) — no keyword yet; blocks the DMU Enlist commons
     (Barkweave Crusher, Coalition Warbrute, Argivian Cavalier, …). `Effect::Enlist`

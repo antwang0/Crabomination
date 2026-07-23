@@ -16,7 +16,28 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **DGM gap waves + combat-damage-target fix (this run, 26 cards):**
+- **DGM gap wave 3 (this run, 9 cards):** `dgm::gaps3` — Showstopper, Teysa
+  Envoy of Ghosts, Scab-Clan Giant, Breaking // Entering, Council of the
+  Absolute, Blaze Commando, Deadbridge Chant, Ral Zarek, Emmara Tandris. New
+  engine: `ControllerDealtCombatDamage` listeners now bind the *dealing*
+  creature as `Selector::TriggerSource` (Teysa destroys the attacker);
+  `EventKind::YourInstantOrSorceryDealtDamage` fires once per I/S resolution
+  (Blaze Commando, via `resolving_spell_caster` + a one-shot guard);
+  `StaticEffect::NamedSpellCostReduction` (Council's chosen-name discount,
+  generic-only); `Effect::ChooseRandomGraveyardCardCreatureToBattlefieldElseHand`
+  (Deadbridge upkeep); `StaticEffect::PreventAllDamageToYourCreatureTokens`
+  (Emmara, both damage paths). CR conformance (`cr_recent24`): 606.3 (loyalty
+  once/turn), 117.7c (generic-only reduction), 510 (combat-damage dealer).
+  Server+UI: `PermanentView.activated_ability_labels` surfaces "{cost}: effect"
+  in the hover tooltip (activated analogue of the trigger/static label blocks);
+  new event/effect labels wired. **Remaining DGM gaps** (need new primitives):
+  Melek Izzet Paragon (copy-on-cast-from-library), Varolz (grant-scavenge),
+  Boros Battleshaper (must/can't attack-block combat trigger), Legion's
+  Initiative, Notion Thief (draw-steal replacement), Reap Intellect, Goblin
+  Test Pilot / random targeting, Plasm Capture (deferred mana), Guardian of the
+  Gateless / Valor Made Real (multi-block — see TODO.md), the remaining Fuse
+  splits.
+- **DGM gap waves + combat-damage-target fix (prior run, 26 cards):**
   `dgm::gaps`/`gaps2` — the guild legends/mythics and remaining commons (see
   TODO.md for the roster). New engine: `Effect::DoubleAllCountersOn` (Vorel),
   `Value::DistinctlyNamedGatesControlled` (Maze's End win). Correctness: Library
