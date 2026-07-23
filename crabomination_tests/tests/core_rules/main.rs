@@ -47,3 +47,4 @@ mod cr_recent21;
 mod cr_recent22;
 mod cr_recent23;
 mod cr_recent24;
+mod cr_recent25;
