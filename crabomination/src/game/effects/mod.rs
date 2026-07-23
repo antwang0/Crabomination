@@ -11962,6 +11962,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::IgnorantBliss => {
+                let p = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let ids: Vec<CardId> = self.players[p].hand.iter().map(|c| c.id).collect();
+                for id in ids {
+                    if let Some(mut card) = Self::take_card(&mut self.players[p].hand, id) {
+                        // Linked to the source so the delayed return finds them;
+                        // exile hides them (the printed "face down" is that the
+                        // hidden-info exile isn't public).
+                        card.exiled_with = Some(source);
+                        self.exile.push(card);
+                    }
+                }
+                // Return them + draw at the next end step.
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: p,
+                    source,
+                    kind: crate::game::types::DelayedKind::NextEndStep,
+                    effect: Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::CardExiledWithSource,
+                            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                        },
+                        Effect::Draw { who: Selector::You, amount: crate::effect::Value::Const(1) },
+                    ]),
+                    target: None,
+                    bound_token: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
             Effect::InfernalTutor => {
                 use rand::seq::SliceRandom;
                 let p = ctx.controller;

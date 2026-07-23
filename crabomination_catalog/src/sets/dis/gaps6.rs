@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, u, w, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Momir Vig, Simic Visionary — {3}{G}{U} 2/2 Elf Wizard. Casting a green
 /// creature spell tutors a creature to the top of your library; casting a blue
@@ -143,6 +143,18 @@ pub fn infernal_tutor() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::InfernalTutor,
+        ..Default::default()
+    }
+}
+
+/// Ignorant Bliss — {1}{R} Instant. Exile your hand face down; at the next end
+/// step return those cards to your hand, then draw a card.
+pub fn ignorant_bliss() -> CardDefinition {
+    CardDefinition {
+        name: "Ignorant Bliss",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::IgnorantBliss,
         ..Default::default()
     }
 }

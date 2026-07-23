@@ -3366,6 +3366,9 @@ pub enum Effect {
     /// a card with the same name; if you have no cards in hand (Hellbent),
     /// instead search for any card. Put it into your hand, then shuffle.
     InfernalTutor,
+    /// Ignorant Bliss: exile your whole hand face down; at the beginning of the
+    /// next end step return those cards to your hand, then draw a card.
+    IgnorantBliss,
     /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
     /// in hand moves to the graveyard and every card in the graveyard moves to
     /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card

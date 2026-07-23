@@ -1821,3 +1821,31 @@ fn infernal_tutor_hellbent_any_card() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == only), "hellbent tutored any card to hand");
 }
+
+/// Ignorant Bliss exiles the hand and gives it back (plus a card) at end step.
+#[test]
+fn ignorant_bliss_cycles_hand() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let b = g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_library(0, catalog::phantom_warrior()); // the drawn card
+    let spell = g.add_card_to_hand(0, catalog::ignorant_bliss());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ignorant Bliss");
+    drain_stack(&mut g);
+    // Hand is exiled while the spell resolves.
+    assert!(g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == b), "hand exiled");
+    assert!(g.players[0].hand.is_empty(), "hand emptied");
+    // At the next end step: cards come back plus a fresh draw.
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a) && g.players[0].hand.iter().any(|c| c.id == b),
+        "exiled cards returned");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Phantom Warrior"), "drew a card");
+}

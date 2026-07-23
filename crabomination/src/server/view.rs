@@ -2052,6 +2052,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::GuildFeud => "Duel top creatures",
         Effect::AethermagesTouch { .. } => "Flash in a creature",
         Effect::InfernalTutor => "Tutor",
+        Effect::IgnorantBliss => "Blink your hand",
         _ => "Activate",
     }
 }
