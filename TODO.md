@@ -31,22 +31,19 @@ Mirko Vosk, Tajic, Vorel, Zhur-Taa Ancient, Smelt-Ward Gatekeepers, Scion of
 Vitu-Ghazi, Rot Farm Skeleton, Gleam of Battle, Debt to the Deathless,
 Obzedat's Aid, Drown in Filth, Blast of Genius, Pyrewild Shaman, Maze's End,
 Aetherling, Dragonshift, Krasis Incubation, Armed//Dangerous, Protect//Serve,
-Down//Dirty). Still open, each needing one primitive:
-- **Blaze Commando** and **Teysa, Envoy of Ghosts** — a `DamageDealt` event that
-  carries its source `CardId` (Blaze filters on an I/S-spell source; Teysa
-  destroys "that creature" that dealt combat damage to you). The event only
-  carries `from_controller` today.
-- **Deadbridge Chant** — "choose a card at random in your graveyard" primitive.
-- **Notion Thief** — opponent-draw-replacement redirect.
-- **Progenitor Mimic** — enter-as-copy + upkeep token-copy of self.
-- **Council of the Absolute** — name-gated cast lock + own-copy cost reduction.
+Down//Dirty; gaps3 added Blaze Commando, Teysa, Deadbridge Chant, Progenitor
+Mimic, Council of the Absolute; gaps4 added Notion Thief, Varolz, Boros
+Battleshaper). Still open, each needing one primitive:
 - **Legion's Initiative** — the exile-all-your-creatures/return-at-next-combat
-  ability (the two anthems are trivial; the ability is a mass timed flicker).
-- **Varolz** — grant scavenge to all graveyard creatures.
-- **Boros Battleshaper** — per-combat force-attack/block on up to two targets.
+  ability (the two anthems are trivial; the ability is a mass timed flicker —
+  needs a `DelayedTriggerKind::NextCombat` + exile-set return).
 - **Reap Intellect / Plasm Capture** — bespoke (name-strip-all-zones; counter +
   banked mana at next main).
+- **Melek, Izzet Paragon** — copy-on-cast-from-library (needs a cast-from-library
+  provenance flag; `Effect::CopySpell` exists).
 - Goblin Test Pilot / Scab-Clan Giant need a "target chosen at random" primitive.
+- The remaining Fuse splits (Catch // Release — multi-type edict; Flesh // Blood
+  — exile-gy-and-counter-by-power).
 
 **Batched-ETB infrastructure (blocks several OTJ legends):** "whenever one or
 more [creatures/tokens] enter" triggers currently fire per-permanent, not

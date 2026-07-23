@@ -16,7 +16,23 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **DGM gap wave 3 (this run, 10 cards):** `dgm::gaps3` — Showstopper, Teysa
+- **DGM gap wave 4 (this run, 3 cards):** `dgm::gaps4` — Notion Thief, Boros
+  Battleshaper, Varolz. New engine: `StaticEffect::OpponentExtraDrawsRedirected`
+  (Notion Thief — `draw_one` redirects an opponent's non-draw-step draw to the
+  thief, guarded by `in_turn_based_draw` / `in_draw_redirect`);
+  `StaticEffect::GraveyardCreaturesHaveScavenge` (Varolz — `graveyard_granted_
+  abilities` surfaces virtual `from_graveyard` scavenge at index ≥ printed_count,
+  wired into activation + the bot). Correctness: `auto_extra_distinct_slot_
+  targets` now fills same-filter *distinct* trigger slots for `Seq`/
+  `OptionalTargets` (only genuine divide effects skip), so Boros Battleshaper's
+  two "target creature" slots — and Ral Zarek's untap-another — auto-fill.
+  CR conformance (`cr_recent25`): 702.97a (scavenge sorcery-speed), 509.1c
+  (must-block enforced), 121.2a (draw-replacement redirect). **Remaining DGM
+  gaps:** Legion's Initiative (mass timed flicker — needs `NextCombat` delayed
+  trigger), Reap Intellect / Plasm Capture, Melek (cast-from-library copy),
+  Goblin Test Pilot / random targeting, Guardian of the Gateless / Valor Made
+  Real (multi-block — see TODO.md), the remaining Fuse splits.
+- **DGM gap wave 3 (prior run, 10 cards):** `dgm::gaps3` — Showstopper, Teysa
   Envoy of Ghosts, Scab-Clan Giant, Breaking // Entering, Council of the
   Absolute, Blaze Commando, Deadbridge Chant, Ral Zarek, Emmara Tandris,
   Beck // Call. New
@@ -31,13 +47,7 @@ exercising each) was elided in a compaction pass; recover it from
   once/turn), 117.7c (generic-only reduction), 510 (combat-damage dealer).
   Server+UI: `PermanentView.activated_ability_labels` surfaces "{cost}: effect"
   in the hover tooltip (activated analogue of the trigger/static label blocks);
-  new event/effect labels wired. **Remaining DGM gaps** (need new primitives):
-  Melek Izzet Paragon (copy-on-cast-from-library), Varolz (grant-scavenge),
-  Boros Battleshaper (must/can't attack-block combat trigger), Legion's
-  Initiative, Notion Thief (draw-steal replacement), Reap Intellect, Goblin
-  Test Pilot / random targeting, Plasm Capture (deferred mana), Guardian of the
-  Gateless / Valor Made Real (multi-block — see TODO.md), the remaining Fuse
-  splits (Catch//Release, Flesh//Blood).
+  new event/effect labels wired.
 - **DGM gap waves + combat-damage-target fix (prior run, 26 cards):**
   `dgm::gaps`/`gaps2` — the guild legends/mythics and remaining commons (see
   TODO.md for the roster). New engine: `Effect::DoubleAllCountersOn` (Vorel),
