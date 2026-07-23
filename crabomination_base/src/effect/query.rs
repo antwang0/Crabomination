@@ -835,7 +835,7 @@ impl Effect {
             Effect::PreventAllCombatDamageThisTurn => false,
             Effect::PreventCombatDamageExceptDealtBy { .. } => false,
             Effect::PreventAllCombatDamageToPlayerThisTurn { .. } => false,
-            Effect::SacrificeSourceUnlessPayManaValue => false,
+            Effect::SacrificeSourceUnlessPayManaValue | Effect::SacrificeSourceUnlessPay { .. } => false,
             Effect::PreventAllCombatDamageInvolving { target } => sel_has_target(target),
             Effect::PreventCombatDamageToTargetThisTurn { target } => sel_has_target(target),
             Effect::PreventCombatDamageByTargetThisTurn { target } => sel_has_target(target),

@@ -24,12 +24,20 @@ Items are grouped by area and roughly ordered by impact within each group.
   Determined, Odds // Ends, Research // Development), and the block of
   planeswalkers (Jace AoT, Vraska the Unseen, Gideon CoJ, Domri already done).
 
-**Remaining WAR (War of the Spark) gap cards** — `catalog::sets::war` opened
-this run (~50 commons/uncommons + spells). Still open, grouped by missing primitive:
+**Remaining WAR (War of the Spark) gap cards** — `catalog::sets::war` (~100
+commons/uncommons/artifacts/spells + one Gate). Still open, grouped by primitive:
 - **Planeswalkers** (Gideon Champion of Justice, and the WAR walkers generally)
   — need "becomes a creature with P/T = its loyalty" + loyalty-add-per-count.
 - **Devouring Hellion** — "enters with twice that many +1/+1 counters" (sac any
-  number as-enters, ×2). **Charmed Stray** — ETB counter on other same-named.
+  number as-enters, ×2). **Charmed Stray** — ETB counter on other same-named
+  (needs a "your other permanents sharing this name" selector).
+- **Price of Betrayal** — "remove up to five counters" (of any kind, from a
+  permanent OR opponent); need `RemoveCountersUpTo { what, amount }`.
+- **Band Together** — two independent target groups (attackers + a fought
+  creature); `ApplyToTargets` rebinds every target to `Target(0)`.
+- **Vivien's Grizzly** — "look at top; if creature/PW, may reveal to hand, else
+  bottom"; need a `LookTopMayRevealMatchToHandElseBottom { filter }` (also
+  Duskwatch Recruiter et al.).
 - The rest of the set's amass/proliferate/planeswalker-matters uncommons and the
   Amass-payoff rares; sweep `scripts/set_diff.py war` for the live list.
 

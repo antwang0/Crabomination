@@ -15671,6 +15671,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeSourceUnlessPay { cost } => {
+                // Fixed-cost pay-or-sacrifice (Gateway Plaza: "pay {1}").
+                let Some(id) = ctx.source else { return Ok(()) };
+                let Some(card) = self.battlefield_find(id) else { return Ok(()) };
+                let p = card.controller;
+                let paid = match self.try_pay_with_auto_tap(p, cost) {
+                    Ok(receipt) => {
+                        events.extend(receipt.auto_events);
+                        true
+                    }
+                    Err(_) => false,
+                };
+                if !paid {
+                    self.sacrifice_one(id, p, events);
+                }
+                Ok(())
+            }
+
             Effect::PreventAllCombatDamageInvolving { target } => {
                 // CR 614.9 — Maze of Ith: prevent all combat damage to and by
                 // the target creature for the rest of the turn.

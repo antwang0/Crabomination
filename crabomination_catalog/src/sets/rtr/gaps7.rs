@@ -400,7 +400,7 @@ pub fn transguild_promenade() -> CardDefinition {
             description: "This land enters tapped.",
             effect: StaticEffect::EntersTapped { applies_to: Selector::This },
         }],
-        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessPayManaValue)],
+        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessPay { cost: cost(&[generic(1)]) })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },

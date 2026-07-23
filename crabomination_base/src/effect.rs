@@ -5763,6 +5763,13 @@ pub enum Effect {
     /// that much generic mana (auto-tapping), otherwise it is sacrificed.
     SacrificeSourceUnlessPayManaValue,
 
+    /// "When this enters, sacrifice it unless you pay [cost]." The fixed-cost
+    /// sibling of `SacrificeSourceUnlessPayManaValue` — the printed cost is a
+    /// literal `ManaCost`, not the source's mana value (which is 0 for a land).
+    /// The source's controller keeps it by paying (auto-tap), else it is
+    /// sacrificed. Gateway Plaza, Transguild Promenade ("pay {1}").
+    SacrificeSourceUnlessPay { cost: crate::mana::ManaCost },
+
     /// CR 614.9 — "Prevent all combat damage that would be dealt to and dealt
     /// by `target` this turn." Adds the target creature to
     /// `GameState.combat_damage_prevented_creatures`; the combat resolver

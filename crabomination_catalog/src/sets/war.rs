@@ -2,16 +2,23 @@
 //! Tests in `classic_sets/war`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, StaticAbility, Subtypes, TriggeredAbility, Value,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
+    EventKind, EventScope, EventSpec, Keyword, PlaneswalkerSubtype, StaticAbility, Subtypes,
+    Supertype, TriggeredAbility, Value,
 };
 use crate::card::SelectionRequirement as R;
-use crate::effect::shortcut::{cast_is_noncreature, etb, on_dies, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, generic, r, u, w};
+use crate::effect::shortcut::{cast_is_noncreature, deal, draw, etb, on_attack, on_dies, target_any, target_filtered};
+use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, Selector, StaticEffect, ZoneDest};
+use crate::game::types::TurnStep;
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
     Subtypes { creature_types: t, ..Default::default() }
+}
+
+/// "instant or sorcery card" filter.
+fn instant_or_sorcery() -> R {
+    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))
 }
 
 /// A plain creature body (no abilities).
@@ -645,5 +652,793 @@ pub fn vraskas_finisher() -> CardDefinition {
             ),
         })],
         ..vanilla("Vraska's Finisher", cost(&[generic(2), b()]), 3, 2, vec![CreatureType::Gorgon, CreatureType::Assassin])
+    }
+}
+
+// ── Batch 2 (2026-07-23): more commons/uncommons, artifacts, a Gate ───────────
+
+/// Trusted Pegasus — {2}{W} 2/2 Pegasus with flying. Whenever it attacks, target
+/// attacking creature without flying gains flying until end of turn.
+pub fn trusted_pegasus() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_attack(Effect::GrantKeyword {
+            what: target_filtered(R::IsAttacking.and(R::Not(Box::new(R::HasKeyword(Keyword::Flying))))),
+            keyword: Keyword::Flying,
+            duration: Duration::EndOfTurn,
+        })],
+        ..vanilla("Trusted Pegasus", cost(&[generic(2), w()]), 2, 2, vec![CreatureType::Pegasus])
+    }
+}
+
+/// Topple the Statue — {2}{W} Instant. Tap target permanent. If it's an
+/// artifact, destroy it. Draw a card.
+pub fn topple_the_statue() -> CardDefinition {
+    CardDefinition {
+        name: "Topple the Statue",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Permanent) },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Artifact },
+                then: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                else_: Box::new(Effect::Noop),
+            },
+            draw(1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Eternal Skylord — {4}{U} 3/3 Zombie Wizard. ETB amass Zombies 2. Zombie
+/// tokens you control have flying.
+pub fn eternal_skylord() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Zombie) })],
+        static_abilities: vec![StaticAbility {
+            description: "Zombie tokens you control have flying.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Zombie).and(R::IsToken).and(R::ControlledByYou)),
+                keyword: Keyword::Flying,
+            },
+        }],
+        ..vanilla("Eternal Skylord", cost(&[generic(4), u()]), 3, 3, vec![CreatureType::Zombie, CreatureType::Wizard])
+    }
+}
+
+/// Spellkeeper Weird — {2}{U} 1/4 Weird. {2}, {T}, Sacrifice this creature:
+/// Return target instant or sorcery card from your graveyard to your hand.
+pub fn spellkeeper_weird() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(instant_or_sorcery().and(R::InYourGraveyard)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..vanilla("Spellkeeper Weird", cost(&[generic(2), u()]), 1, 4, vec![CreatureType::Weird])
+    }
+}
+
+/// Crush Dissent — {3}{U} Instant. Counter target spell unless its controller
+/// pays {2}. Amass Zombies 2.
+pub fn crush_dissent() -> CardDefinition {
+    CardDefinition {
+        name: "Crush Dissent",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterUnlessPaid {
+                what: target_filtered(R::IsSpellOnStack),
+                mana_cost: cost(&[generic(2)]),
+                exile: false,
+                extra_generic: None,
+            },
+            Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Zombie) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// No Escape — {2}{U} Instant. Counter target creature or planeswalker spell,
+/// exiling it instead. Scry 1.
+pub fn no_escape() -> CardDefinition {
+    CardDefinition {
+        name: "No Escape",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpellToZone {
+                what: target_filtered(R::IsSpellOnStack.and(R::Creature.or(R::Planeswalker))),
+                zone: crate::effect::CounteredSpellZone::Exile,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bond of Insight — {3}{U} Sorcery. Each player mills four cards. Return up to
+/// two instant and/or sorcery cards from your graveyard to your hand. Exile it.
+pub fn bond_of_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Bond of Insight",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(4) },
+            Effect::ReturnGraveyardCardsToHand { filter: instant_or_sorcery(), max: Value::Const(2) },
+            Effect::ExileResolvingSpell,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Jace's Triumph — {2}{U} Sorcery. Draw two cards; three instead if you control
+/// a Jace planeswalker.
+pub fn jaces_triumph() -> CardDefinition {
+    CardDefinition {
+        name: "Jace's Triumph",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(R::HasPlaneswalkerType(PlaneswalkerSubtype::Jace).and(R::ControlledByYou)),
+                n: Value::ONE,
+            },
+            then: Box::new(draw(3)),
+            else_: Box::new(draw(2)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Saheeli's Silverwing — {4} 2/3 Drake artifact with flying. ETB look at the
+/// top card of target opponent's library.
+pub fn saheelis_silverwing() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::LookAtTop { who: PlayerRef::Target(0), amount: Value::ONE })],
+        ..CardDefinition {
+            name: "Saheeli's Silverwing",
+            cost: cost(&[generic(4)]),
+            subtypes: creatures(vec![CreatureType::Drake]),
+            power: 2,
+            toughness: 3,
+            // ETB needs a target opponent; declared via the trigger's target slot.
+            ..Default::default()
+        }
+    }
+}
+
+/// Dreadmalkin — {B} 1/1 Zombie Cat with menace. {2}{B}, Sacrifice another
+/// creature or planeswalker: Put two +1/+1 counters on this creature.
+pub fn dreadmalkin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            sac_other_filter: Some((R::Creature.or(R::Planeswalker), 1)),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..vanilla("Dreadmalkin", cost(&[b()]), 1, 1, vec![CreatureType::Zombie, CreatureType::Cat])
+    }
+}
+
+/// Lazotep Reaver — {1}{B} 1/2 Zombie Beast. ETB amass Zombies 1.
+pub fn lazotep_reaver() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Amass { who: PlayerRef::You, count: Value::ONE, extra_type: Some(CreatureType::Zombie) })],
+        ..vanilla("Lazotep Reaver", cost(&[generic(1), b()]), 1, 2, vec![CreatureType::Zombie, CreatureType::Beast])
+    }
+}
+
+/// Aid the Fallen — {1}{B} Sorcery. Choose one or both — return target creature
+/// card and/or target planeswalker card from your graveyard to your hand.
+pub fn aid_the_fallen() -> CardDefinition {
+    let ret = |filter: R| Effect::Move { what: target_filtered(filter.and(R::InYourGraveyard)), to: ZoneDest::Hand(PlayerRef::You) };
+    CardDefinition {
+        name: "Aid the Fallen",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseModesCast {
+            modes: vec![ret(R::Creature), ret(R::Planeswalker)],
+            min: 1,
+            max: 2,
+            allow_repeats: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Cyclops Electromancer — {4}{R} 4/2 Cyclops Wizard. ETB deal X damage to
+/// target creature an opponent controls, X = instant/sorcery cards in your gy.
+pub fn cyclops_electromancer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            amount: Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: instant_or_sorcery() },
+        })],
+        ..vanilla("Cyclops Electromancer", cost(&[generic(4), r()]), 4, 2, vec![CreatureType::Cyclops, CreatureType::Wizard])
+    }
+}
+
+/// Spellgorger Weird — {2}{R} 2/2 Weird. Whenever you cast a noncreature spell,
+/// put a +1/+1 counter on this creature.
+pub fn spellgorger_weird() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(cast_is_noncreature()),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..vanilla("Spellgorger Weird", cost(&[generic(2), r()]), 2, 2, vec![CreatureType::Weird])
+    }
+}
+
+/// Tibalt's Rager — {1}{R} 1/2 Devil. When it dies, it deals 1 damage to any
+/// target. {1}{R}: This creature gets +2/+0 until end of turn.
+pub fn tibalts_rager() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_dies(deal(1, target_any()))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::Const(2), toughness: Value::ZERO, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..vanilla("Tibalt's Rager", cost(&[generic(1), r()]), 1, 2, vec![CreatureType::Devil])
+    }
+}
+
+/// Turret Ogre — {3}{R} 4/3 Ogre Warrior with reach. ETB — if you control
+/// another creature with power 4 or greater, deal 2 damage to each opponent.
+pub fn turret_ogre() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource).and(R::PowerAtLeast(4))),
+                n: Value::ONE,
+            },
+            then: Box::new(deal(2, Selector::Player(PlayerRef::EachOpponent))),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..vanilla("Turret Ogre", cost(&[generic(3), r()]), 4, 3, vec![CreatureType::Ogre, CreatureType::Warrior])
+    }
+}
+
+/// Heartfire — {1}{R} Instant. As an additional cost, sacrifice a creature or
+/// planeswalker. Deals 4 damage to any target.
+pub fn heartfire() -> CardDefinition {
+    CardDefinition {
+        name: "Heartfire",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: (R::Creature.or(R::Planeswalker)).and(R::ControlledByYou),
+            count: 1,
+        }],
+        effect: deal(4, target_any()),
+        ..Default::default()
+    }
+}
+
+/// Chandra's Triumph — {1}{R} Instant. Deals 3 damage to target creature or
+/// planeswalker an opponent controls; 5 instead if you control a Chandra.
+pub fn chandras_triumph() -> CardDefinition {
+    CardDefinition {
+        name: "Chandra's Triumph",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered((R::Creature.or(R::Planeswalker)).and(R::ControlledByOpponent)),
+            amount: Value::IfAtLeast {
+                value: Box::new(Value::count(Selector::EachPermanent(
+                    R::HasPlaneswalkerType(PlaneswalkerSubtype::Chandra).and(R::ControlledByYou),
+                ))),
+                threshold: 1,
+                then: Box::new(Value::Const(5)),
+                else_: Box::new(Value::Const(3)),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Samut's Sprint — {R} Instant. Target creature gets +2/+1 and gains haste
+/// until end of turn. Scry 1.
+pub fn samuts_sprint() -> CardDefinition {
+    CardDefinition {
+        name: "Samut's Sprint",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(2), toughness: Value::ONE, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Nahiri's Stoneblades — {1}{R} Instant. Up to two target creatures each get
+/// +2/+0 until end of turn.
+pub fn nahiris_stoneblades() -> CardDefinition {
+    CardDefinition {
+        name: "Nahiri's Stoneblades",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::PumpPT { what: Selector::Target(0), power: Value::Const(2), toughness: Value::ZERO, duration: Duration::EndOfTurn }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Sarkhan's Catharsis — {4}{R} Instant. Deals 5 damage to target player or
+/// planeswalker.
+pub fn sarkhans_catharsis() -> CardDefinition {
+    CardDefinition {
+        name: "Sarkhan's Catharsis",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        effect: deal(5, target_filtered(R::Player.or(R::Planeswalker))),
+        ..Default::default()
+    }
+}
+
+/// Arboreal Grazer — {G} 0/3 Sloth Beast with reach. ETB you may put a land card
+/// from your hand onto the battlefield tapped.
+pub fn arboreal_grazer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::PutFromHandOntoBattlefield {
+            who: PlayerRef::You,
+            filter: R::Land,
+            count: Value::ONE,
+            tapped: true,
+            haste: false,
+            sacrifice_eot: false,
+        })],
+        ..vanilla("Arboreal Grazer", cost(&[g()]), 0, 3, vec![CreatureType::Sloth, CreatureType::Beast])
+    }
+}
+
+/// Bloom Hulk — {3}{G} 4/4 Plant Elemental. ETB proliferate.
+pub fn bloom_hulk() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Proliferate)],
+        ..vanilla("Bloom Hulk", cost(&[generic(3), g()]), 4, 4, vec![CreatureType::Plant, CreatureType::Elemental])
+    }
+}
+
+/// Centaur Nurturer — {3}{G} 2/4 Centaur Druid. ETB gain 3 life. {T}: Add one
+/// mana of any color.
+pub fn centaur_nurturer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(3) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..vanilla("Centaur Nurturer", cost(&[generic(3), g()]), 2, 4, vec![CreatureType::Centaur, CreatureType::Druid])
+    }
+}
+
+/// Challenger Troll — {4}{G} 6/5 Troll. Each creature you control with power 4
+/// or greater can't be blocked by more than one creature.
+pub fn challenger_troll() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Your power-4+ creatures can't be blocked by more than one creature.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::PowerAtLeast(4))),
+                keyword: Keyword::CantBeBlockedByMoreThanOne,
+            },
+        }],
+        ..vanilla("Challenger Troll", cost(&[generic(4), g()]), 6, 5, vec![CreatureType::Troll])
+    }
+}
+
+/// Evolution Sage — {2}{G} 3/2 Elf Druid. Landfall — whenever a land you control
+/// enters, proliferate.
+pub fn evolution_sage() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Land,
+            }),
+            effect: Effect::Proliferate,
+        }],
+        ..vanilla("Evolution Sage", cost(&[generic(2), g()]), 3, 2, vec![CreatureType::Elf, CreatureType::Druid])
+    }
+}
+
+/// Pollenbright Druid — {1}{G} 1/1 Elf Druid. ETB choose one — put a +1/+1
+/// counter on target creature; or proliferate.
+pub fn pollenbright_druid() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseModesCast {
+            modes: vec![
+                Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::Proliferate,
+            ],
+            min: 1,
+            max: 1,
+            allow_repeats: false,
+        })],
+        ..vanilla("Pollenbright Druid", cost(&[generic(1), g()]), 1, 1, vec![CreatureType::Elf, CreatureType::Druid])
+    }
+}
+
+/// Primordial Wurm — {4}{G}{G} 7/6 Wurm.
+pub fn primordial_wurm() -> CardDefinition {
+    vanilla("Primordial Wurm", cost(&[generic(4), g(), g()]), 7, 6, vec![CreatureType::Wurm])
+}
+
+/// Thundering Ceratok — {4}{G} 4/5 Rhino with trample. ETB other creatures you
+/// control gain trample until end of turn.
+pub fn thundering_ceratok() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: Selector::OtherCreaturesControlledByControllerOf(Box::new(Selector::This)),
+            keyword: Keyword::Trample,
+            duration: Duration::EndOfTurn,
+        })],
+        ..vanilla("Thundering Ceratok", cost(&[generic(4), g()]), 4, 5, vec![CreatureType::Rhino])
+    }
+}
+
+/// Wardscale Crocodile — {4}{G} 5/3 Crocodile with hexproof.
+pub fn wardscale_crocodile() -> CardDefinition {
+    keyworded("Wardscale Crocodile", cost(&[generic(4), g()]), 5, 3, vec![CreatureType::Crocodile], vec![Keyword::Hexproof])
+}
+
+/// Kraul Stinger — {2}{G} 2/2 Insect Assassin with deathtouch.
+pub fn kraul_stinger() -> CardDefinition {
+    keyworded("Kraul Stinger", cost(&[generic(2), g()]), 2, 2, vec![CreatureType::Insect, CreatureType::Assassin], vec![Keyword::Deathtouch])
+}
+
+/// Kronch Wrangler — {1}{G} 2/1 Human Warrior with trample. Whenever a creature
+/// you control with power 4 or greater enters, put a +1/+1 counter on this.
+pub fn kronch_wrangler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::PowerAtLeast(4)),
+            }),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..vanilla("Kronch Wrangler", cost(&[generic(1), g()]), 2, 1, vec![CreatureType::Human, CreatureType::Warrior])
+    }
+}
+
+/// Steady Aim — {1}{G} Instant. Untap target creature. It gets +1/+4 and gains
+/// reach until end of turn.
+pub fn steady_aim() -> CardDefinition {
+    CardDefinition {
+        name: "Steady Aim",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+            Effect::PumpPT { what: Selector::Target(0), power: Value::ONE, toughness: Value::Const(4), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Reach, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Forced Landing — {1}{G} Instant. Put target creature with flying on the
+/// bottom of its owner's library.
+pub fn forced_landing() -> CardDefinition {
+    CardDefinition {
+        name: "Forced Landing",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))),
+            to: ZoneDest::Library { who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))), pos: LibraryPosition::Bottom },
+        },
+        ..Default::default()
+    }
+}
+
+// ── Artifacts ─────────────────────────────────────────────────────────────────
+
+/// Guild Globe — {2} Artifact. ETB draw a card. {2}, {T}, Sacrifice: Add two
+/// mana of different colors.
+pub fn guild_globe() -> CardDefinition {
+    CardDefinition {
+        name: "Guild Globe",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(draw(1))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyColors(Value::Const(2)) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Iron Bully — {3} 1/1 Golem artifact with menace. ETB put a +1/+1 counter on
+/// target creature.
+pub fn iron_bully() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::ONE })],
+        ..CardDefinition {
+            name: "Iron Bully",
+            cost: cost(&[generic(3)]),
+            subtypes: creatures(vec![CreatureType::Golem]),
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }
+    }
+}
+
+/// Mana Geode — {3} Artifact. ETB scry 1. {T}: Add one mana of any color.
+pub fn mana_geode() -> CardDefinition {
+    CardDefinition {
+        name: "Mana Geode",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::ONE })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Prismite — {2} 2/1 Golem artifact. {2}: Add one mana of any color.
+pub fn prismite() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..CardDefinition {
+            name: "Prismite",
+            cost: cost(&[generic(2)]),
+            subtypes: creatures(vec![CreatureType::Golem]),
+            power: 2,
+            toughness: 1,
+            ..Default::default()
+        }
+    }
+}
+
+/// God-Pharaoh's Statue — {6} Legendary Artifact. Opponents' spells cost {2}
+/// more. At your end step, each opponent loses 1 life.
+pub fn god_pharaohs_statue() -> CardDefinition {
+    CardDefinition {
+        name: "God-Pharaoh's Statue",
+        cost: cost(&[generic(6)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Spells your opponents cast cost {2} more.",
+            effect: StaticEffect::OpponentSpellsCostMore { filter: R::Any, amount: 2 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gateway Plaza — Gate land. Enters tapped; sacrifice it unless you pay {1}.
+/// {T}: Add one mana of any color.
+pub fn gateway_plaza() -> CardDefinition {
+    CardDefinition {
+        name: "Gateway Plaza",
+        cost: cost(&[]),
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![crate::card::LandType::Gate], ..Default::default() },
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessPay { cost: cost(&[generic(1)]) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Multicolor ────────────────────────────────────────────────────────────────
+
+/// Huatli's Raptor — {G}{W} 2/3 Dinosaur with vigilance. ETB proliferate.
+pub fn huatlis_raptor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::Proliferate)],
+        ..vanilla("Huatli's Raptor", cost(&[g(), w()]), 2, 3, vec![CreatureType::Dinosaur])
+    }
+}
+
+/// Elite Guardmage — {2}{W}{U} 2/3 Human Wizard with flying. ETB gain 3 life and
+/// draw a card.
+pub fn elite_guardmage() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![Effect::GainLife { who: Selector::You, amount: Value::Const(3) }, draw(1)]))],
+        ..vanilla("Elite Guardmage", cost(&[generic(2), w(), u()]), 2, 3, vec![CreatureType::Human, CreatureType::Wizard])
+    }
+}
+
+/// Pledge of Unity — {1}{G}{W} Instant. Put a +1/+1 counter on each creature you
+/// control. Gain 1 life for each creature you control.
+pub fn pledge_of_unity() -> CardDefinition {
+    CardDefinition {
+        name: "Pledge of Unity",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::count(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Leyline Prowler — {1}{B}{G} 2/3 Nightmare Beast with deathtouch and lifelink.
+/// {T}: Add one mana of any color.
+pub fn leyline_prowler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..vanilla("Leyline Prowler", cost(&[generic(1), b(), g()]), 2, 3, vec![CreatureType::Nightmare, CreatureType::Beast])
+    }
+}
+
+/// Dreadhorde Butcher — {B}{R} 1/1 Zombie Warrior with haste. Combat damage to a
+/// player or planeswalker → +1/+1 counter. Dies → deals its power to any target.
+pub fn dreadhorde_butcher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+            on_dies(Effect::DealDamage { to: target_any(), amount: Value::PowerOf(Box::new(Selector::This)) }),
+        ],
+        ..vanilla("Dreadhorde Butcher", cost(&[b(), r()]), 1, 1, vec![CreatureType::Zombie, CreatureType::Warrior])
+    }
+}
+
+/// Rubblebelt Rioters — {1}{R}{G} 0/4 Human Berserker with haste. Whenever it
+/// attacks, it gets +X/+0, X = greatest power among creatures you control.
+pub fn rubblebelt_rioters() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)),
+            toughness: Value::ZERO,
+            duration: Duration::EndOfTurn,
+        })],
+        ..vanilla("Rubblebelt Rioters", cost(&[generic(1), r(), g()]), 0, 4, vec![CreatureType::Human, CreatureType::Berserker])
+    }
+}
+
+/// Tenth District Legionnaire — {R}{W} 2/2 Human Soldier with haste. Whenever you
+/// cast a spell that targets it, put a +1/+1 counter on it, then scry 1.
+pub fn tenth_district_legionnaire() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastSpellTargetsSource),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            ]),
+        }],
+        ..vanilla("Tenth District Legionnaire", cost(&[r(), w()]), 2, 2, vec![CreatureType::Human, CreatureType::Soldier])
+    }
+}
+
+/// Angrath's Rampage — {B}{R} Sorcery. Choose one — target player sacrifices an
+/// artifact, a creature, or a planeswalker of their choice.
+pub fn angraths_rampage() -> CardDefinition {
+    let edict = |filter: R| Effect::Sacrifice { who: target_filtered(R::Player), count: Value::ONE, filter };
+    CardDefinition {
+        name: "Angrath's Rampage",
+        cost: cost(&[b(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseModesCast {
+            modes: vec![edict(R::Artifact), edict(R::Creature), edict(R::Planeswalker)],
+            min: 1,
+            max: 1,
+            allow_repeats: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Ral's Outburst — {2}{U}{R} Instant. Deals 3 damage to any target. Look at the
+/// top two cards of your library; one to hand, the other to your graveyard.
+pub fn rals_outburst() -> CardDefinition {
+    CardDefinition {
+        name: "Ral's Outburst",
+        cost: cost(&[generic(2), u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            deal(3, target_any()),
+            Effect::LookTopKeepOneRestToGraveyard { count: Value::Const(2), who: Some(PlayerRef::You), exile_rest: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Invade the City — {1}{U}{R} Sorcery. Amass Zombies X, X = instant and sorcery
+/// cards in your graveyard.
+pub fn invade_the_city() -> CardDefinition {
+    CardDefinition {
+        name: "Invade the City",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Amass {
+            who: PlayerRef::You,
+            count: Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: instant_or_sorcery() },
+            extra_type: Some(CreatureType::Zombie),
+        },
+        ..Default::default()
+    }
+}
+
+/// Soul Diviner — {U}{B} 2/3 Zombie Wizard. {T}, Remove a counter from an
+/// artifact, creature, land, or planeswalker you control: Draw a card.
+pub fn soul_diviner() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            remove_counter_among_filter: Some((
+                None,
+                1,
+                (R::Artifact.or(R::Creature).or(R::Land).or(R::Planeswalker)).and(R::ControlledByYou),
+            )),
+            effect: draw(1),
+            ..Default::default()
+        }],
+        ..vanilla("Soul Diviner", cost(&[u(), b()]), 2, 3, vec![CreatureType::Zombie, CreatureType::Wizard])
     }
 }

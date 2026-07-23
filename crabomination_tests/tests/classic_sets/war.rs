@@ -2,7 +2,7 @@
 
 use crabomination::card::{CounterType, CreatureType, Keyword};
 use crabomination::catalog;
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -375,4 +375,444 @@ fn goblin_assault_team_counter_on_death() {
 fn duskmantle_operative_evasion() {
     let op = catalog::duskmantle_operative();
     assert!(op.keywords.contains(&Keyword::CantBeBlockedByPowerAtLeast(4)));
+}
+
+// ── Batch 2 (2026-07-23) ──────────────────────────────────────────────────────
+
+/// Topple the Statue taps a permanent, destroys it if an artifact, and draws.
+#[test]
+fn topple_the_statue_taps_destroys_artifact_draws() {
+    let mut g = two_player_game();
+    let sol = g.add_card_to_battlefield(1, catalog::sol_ring()); // artifact
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    cast_at_target(&mut g, catalog::topple_the_statue(), Target::Permanent(sol), &[(Color::White, 1)], 2);
+    assert!(g.battlefield_find(sol).is_none(), "artifact destroyed");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Eternal Skylord amasses Zombies 2 and grants flying to Zombie tokens.
+#[test]
+fn eternal_skylord_amasses_and_grants_flying() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::eternal_skylord());
+    drain_stack(&mut g);
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army").id;
+    assert_eq!(g.battlefield_find(army).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(g.computed_permanent(army).unwrap().keywords.contains(&Keyword::Flying), "Zombie token flies");
+}
+
+/// Spellkeeper Weird returns an instant/sorcery from the graveyard.
+#[test]
+fn spellkeeper_weird_returns_instant() {
+    let mut g = two_player_game();
+    let weird = g.add_card_to_battlefield(0, catalog::spellkeeper_weird());
+    g.battlefield_find_mut(weird).unwrap().summoning_sick = false;
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: weird, ability_index: 0, target: Some(Target::Permanent(bolt)), additional_targets: vec![], x_value: None,
+    }).expect("return");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "Bolt back in hand");
+}
+
+/// No Escape counters a creature spell and exiles it.
+#[test]
+fn no_escape_counters_to_exile() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast bear");
+    let esc = g.add_card_to_hand(0, catalog::no_escape());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: esc, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast No Escape");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "countered spell exiled");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear), "not in graveyard");
+}
+
+/// Jace's Triumph draws two with no Jace out.
+#[test]
+fn jaces_triumph_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let jt = g.add_card_to_hand(0, catalog::jaces_triumph());
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: jt, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "cast one, drew two");
+}
+
+/// Dreadmalkin sacrifices a creature for two +1/+1 counters.
+#[test]
+fn dreadmalkin_sacrifices_for_counters() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::dreadmalkin());
+    g.battlefield_find_mut(cat).unwrap().summoning_sick = false;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility { card_id: cat, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("sac");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(cat).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Aid the Fallen returns a creature card from the graveyard.
+#[test]
+fn aid_the_fallen_returns_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let aid = g.add_card_to_hand(0, catalog::aid_the_fallen());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: aid, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature back in hand");
+}
+
+/// Cyclops Electromancer deals damage equal to instants/sorceries in gy.
+#[test]
+fn cyclops_electromancer_scales_with_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.move_card_to_battlefield_for_test(0, catalog::cyclops_electromancer());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "2 damage from two I/S killed the 2/2");
+}
+
+/// Spellgorger Weird grows on a noncreature spell.
+#[test]
+fn spellgorger_weird_grows_on_noncreature() {
+    let mut g = two_player_game();
+    let weird = g.add_card_to_battlefield(0, catalog::spellgorger_weird());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(weird).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Tibalt's Rager deals 1 damage when it dies.
+#[test]
+fn tibalts_rager_pings_on_death() {
+    let mut g = two_player_game();
+    let rager = g.add_card_to_battlefield(0, catalog::tibalts_rager());
+    let life = g.players[1].life;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(rager), 2, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "death ping hit the opponent");
+}
+
+/// Turret Ogre pings each opponent when it enters beside a power-4 creature.
+#[test]
+fn turret_ogre_pings_with_big_ally() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::primordial_wurm()); // 7/6
+    let life = g.players[1].life;
+    g.move_card_to_battlefield_for_test(0, catalog::turret_ogre());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "2 damage to the opponent");
+}
+
+/// Heartfire sacrifices a creature and deals 4 to any target.
+#[test]
+fn heartfire_sacrifices_and_burns() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hf = g.add_card_to_hand(0, catalog::heartfire());
+    let life = g.players[1].life;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: hf, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
+    assert_eq!(g.players[1].life, life - 4, "4 damage");
+}
+
+/// Chandra's Triumph deals 3 to an opponent's creature with no Chandra out.
+#[test]
+fn chandras_triumph_deals_three() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    cast_at_target(&mut g, catalog::chandras_triumph(), Target::Permanent(bear), &[(Color::Red, 1)], 1);
+    assert!(g.battlefield_find(bear).is_none(), "3 damage killed the 2/2");
+}
+
+/// Nahiri's Stoneblades pumps two creatures.
+#[test]
+fn nahiris_stoneblades_pumps_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sb = g.add_card_to_hand(0, catalog::nahiris_stoneblades());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: sb, target: Some(Target::Permanent(a)), additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(a).unwrap().power, 4, "+2/+0");
+    assert_eq!(g.computed_permanent(b).unwrap().power, 4, "+2/+0");
+}
+
+/// Arboreal Grazer puts a land from hand onto the battlefield tapped.
+#[test]
+fn arboreal_grazer_ramps_a_land() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![forest])]));
+    g.move_card_to_battlefield_for_test(0, catalog::arboreal_grazer());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest).map(|c| c.tapped).unwrap_or(false), "land entered tapped");
+}
+
+/// Bloom Hulk proliferates on entry.
+#[test]
+fn bloom_hulk_proliferates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.move_card_to_battlefield_for_test(0, catalog::bloom_hulk());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Centaur Nurturer gains 3 life on entry.
+#[test]
+fn centaur_nurturer_gains_life() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::centaur_nurturer());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3);
+}
+
+/// Challenger Troll grants power-4+ creatures can't-be-blocked-by-more-than-one.
+#[test]
+fn challenger_troll_grants_evasion() {
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(0, catalog::primordial_wurm()); // 7/6
+    g.add_card_to_battlefield(0, catalog::challenger_troll());
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(wurm).unwrap().keywords.contains(&Keyword::CantBeBlockedByMoreThanOne));
+}
+
+/// Evolution Sage proliferates whenever a land you control enters.
+#[test]
+fn evolution_sage_landfall_proliferates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.add_card_to_battlefield(0, catalog::evolution_sage());
+    let f = g.add_card_to_battlefield(0, catalog::forest());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: f }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Thundering Ceratok grants trample to your other creatures.
+#[test]
+fn thundering_ceratok_grants_trample() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::thundering_ceratok());
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+}
+
+/// Kronch Wrangler grows when a big creature enters.
+#[test]
+fn kronch_wrangler_grows_on_big_entry() {
+    let mut g = two_player_game();
+    let kronch = g.add_card_to_battlefield(0, catalog::kronch_wrangler());
+    let wurm = g.add_card_to_battlefield(0, catalog::primordial_wurm()); // 7/6
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: wurm }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(kronch).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Steady Aim untaps a creature and grants +1/+4 and reach.
+#[test]
+fn steady_aim_untaps_and_pumps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    cast_at_target(&mut g, catalog::steady_aim(), Target::Permanent(bear), &[(Color::Green, 1)], 1);
+    let c = g.computed_permanent(bear).unwrap();
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
+    assert_eq!((c.power, c.toughness), (3, 6), "+1/+4");
+    assert!(c.keywords.contains(&Keyword::Reach));
+}
+
+/// Forced Landing puts a flyer on the bottom of its owner's library.
+#[test]
+fn forced_landing_bottoms_a_flyer() {
+    let mut g = two_player_game();
+    let griffin = g.add_card_to_battlefield(1, catalog::enforcer_griffin()); // flying
+    cast_at_target(&mut g, catalog::forced_landing(), Target::Permanent(griffin), &[(Color::Green, 1)], 1);
+    assert!(g.battlefield_find(griffin).is_none(), "left the battlefield");
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(griffin), "on the bottom of the library");
+}
+
+/// Guild Globe draws on entry.
+#[test]
+fn guild_globe_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::guild_globe());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Iron Bully puts a +1/+1 counter on a creature when it enters.
+#[test]
+fn iron_bully_counters_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::iron_bully());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// God-Pharaoh's Statue drains each opponent at your end step.
+#[test]
+fn god_pharaohs_statue_end_step_drain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::god_pharaohs_statue());
+    g.active_player_idx = 0;
+    let life = g.players[1].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+}
+
+/// Gateway Plaza sacrifices itself when its {1} isn't paid, and survives when
+/// mana is available (SacrificeSourceUnlessPay).
+#[test]
+fn gateway_plaza_sacrifice_unless_pay() {
+    // No mana: the pay-{1}-or-sacrifice trigger sacrifices it.
+    let mut g = two_player_game();
+    let plaza = g.move_card_to_battlefield_for_test(0, catalog::gateway_plaza());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(plaza).is_none(), "unpaid → sacrificed");
+
+    // With {1} floating, it stays.
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add_colorless(1);
+    let plaza = g.move_card_to_battlefield_for_test(0, catalog::gateway_plaza());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(plaza).is_some(), "paid one → kept");
+}
+
+/// Pledge of Unity counters each creature and gains life per creature.
+#[test]
+fn pledge_of_unity_counters_and_gains() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pledge = g.add_card_to_hand(0, catalog::pledge_of_unity());
+    let life = g.players[0].life;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: pledge, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].life, life + 2, "gained 1 per creature");
+}
+
+/// Rubblebelt Rioters gets +X/+0 (greatest power) when it attacks.
+#[test]
+fn rubblebelt_rioters_pumps_on_attack() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::primordial_wurm()); // power 7
+    let riot = g.add_card_to_battlefield(0, catalog::rubblebelt_rioters()); // 0/4
+    g.battlefield_find_mut(riot).unwrap().summoning_sick = false;
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: riot, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(riot).unwrap().power, 7, "+X where X = greatest power (7)");
+}
+
+/// Invade the City amasses X = instants/sorceries in your graveyard.
+#[test]
+fn invade_the_city_amasses_x() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let inv = g.add_card_to_hand(0, catalog::invade_the_city());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: inv, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army");
+    assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Soul Diviner draws by removing a counter from your permanent.
+#[test]
+fn soul_diviner_removes_counter_to_draw() {
+    let mut g = two_player_game();
+    let sd = g.add_card_to_battlefield(0, catalog::soul_diviner());
+    g.battlefield_find_mut(sd).unwrap().summoning_sick = false;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: sd, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "counter removed");
+}
+
+/// Dreadhorde Butcher deals its power to any target when it dies.
+#[test]
+fn dreadhorde_butcher_death_burst() {
+    let mut g = two_player_game();
+    let butcher = g.add_card_to_battlefield(0, catalog::dreadhorde_butcher()); // 1/1
+    let life = g.players[1].life;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(butcher), 1, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "dealt its power (1) on death");
 }
