@@ -7085,6 +7085,8 @@ static DIS: &[Factory] = &[
     super::dis::azorius_ploy,
     super::dis::carom,
     super::dis::trial_error,
+    super::dis::momir_vig_simic_visionary,
+    super::dis::sphinx_of_the_chimes,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

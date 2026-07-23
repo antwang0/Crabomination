@@ -1623,3 +1623,66 @@ fn error_counters_only_multicolored() {
     assert!(g.battlefield_find(multi).is_none(), "multicolored spell countered — never resolved");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == multi), "countered spell in graveyard");
 }
+
+/// Momir Vig's blue trigger reveals the top card on a blue creature cast and
+/// takes it if it's a creature.
+#[test]
+fn momir_vig_blue_cast_reveals_top_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::momir_vig_simic_visionary());
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::merfolk_of_the_pearl_trident()); // {U} blue creature
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast blue creature");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == top), "revealed top creature went to hand");
+}
+
+/// Momir Vig's green trigger tutors a creature to the top of the library.
+#[test]
+fn momir_vig_green_cast_tutors_to_top() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::momir_vig_simic_visionary());
+    let tutored = g.add_card_to_library(0, catalog::phantom_warrior());
+    let spell = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G} green creature
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(tutored))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast green creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(tutored),
+        "tutored creature sits on top of the library");
+}
+
+/// Sphinx of the Chimes discards two same-named cards to draw four.
+#[test]
+fn sphinx_of_the_chimes_discard_pair_draws_four() {
+    let sphinx = catalog::sphinx_of_the_chimes();
+    assert_eq!((sphinx.power, sphinx.toughness), (5, 6));
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::sphinx_of_the_chimes());
+    // Two copies of the same nonland card + a distinct card that must stay.
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let keep = g.add_card_to_hand(0, catalog::phantom_warrior());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Sphinx");
+    drain_stack(&mut g);
+    // Drew 4, discarded 2 Bears; the distinct card is untouched.
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 2);
+    assert!(g.players[0].hand.iter().any(|c| c.id == keep), "the odd card stays in hand");
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Island").count(), 4, "drew four");
+}

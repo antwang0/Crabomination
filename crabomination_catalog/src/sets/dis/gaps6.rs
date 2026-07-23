@@ -1,0 +1,70 @@
+//! Dissension (DIS) gap wave 6. Tests in `classic_sets/dis`.
+
+use crate::card::{
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
+    Keyword, Predicate, SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility, Value,
+};
+use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
+use crate::mana::{cost, g, generic, u, Color};
+
+/// Momir Vig, Simic Visionary — {3}{G}{U} 2/2 Elf Wizard. Casting a green
+/// creature spell tutors a creature to the top of your library; casting a blue
+/// creature spell reveals the top card and takes it if it's a creature.
+pub fn momir_vig_simic_visionary() -> CardDefinition {
+    CardDefinition {
+        name: "Momir Vig, Simic Visionary",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::CastSpellMatches(R::Creature.and(R::HasColor(Color::Green))),
+                ),
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Creature,
+                    to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::CastSpellMatches(R::Creature.and(R::HasColor(Color::Blue))),
+                ),
+                effect: Effect::RevealTopTakeMatchingToHand {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    filter: R::Creature,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sphinx of the Chimes — {4}{U}{U} 5/6 Sphinx. Flying; discard two nonland
+/// cards with the same name to draw four cards.
+pub fn sphinx_of_the_chimes() -> CardDefinition {
+    CardDefinition {
+        name: "Sphinx of the Chimes",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        power: 5,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Nonland, 2)),
+            discard_cost_same_name: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

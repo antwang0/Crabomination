@@ -10812,18 +10812,34 @@ impl GameState {
             ability.discard_cost.as_ref()
         {
             let count = *count as usize;
-            let mut picks: Vec<(CardId, i32)> = self.players[p]
-                .hand
-                .iter()
-                .filter(|c| c.id != card_id)
-                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                .map(|c| (c.id, c.definition.cost.cmc() as i32))
-                .collect();
-            if picks.len() < count {
-                return Err(GameError::SelectionRequirementViolated);
+            if ability.discard_cost_same_name {
+                // CR 601 — "Discard N cards with the same name." Find any name
+                // in hand with `count`+ matching copies; discard that many.
+                let mut by_name: std::collections::HashMap<&str, Vec<CardId>> =
+                    std::collections::HashMap::new();
+                for c in self.players[p].hand.iter().filter(|c| c.id != card_id) {
+                    if self.evaluate_requirement_on_card(filter, c, p) {
+                        by_name.entry(c.definition.name).or_default().push(c.id);
+                    }
+                }
+                match by_name.values().find(|ids| ids.len() >= count) {
+                    Some(ids) => ids.iter().take(count).copied().collect(),
+                    None => return Err(GameError::SelectionRequirementViolated),
+                }
+            } else {
+                let mut picks: Vec<(CardId, i32)> = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| c.id != card_id)
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| (c.id, c.definition.cost.cmc() as i32))
+                    .collect();
+                if picks.len() < count {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                picks.sort_by_key(|(_, cmc)| *cmc);
+                picks.into_iter().take(count).map(|(cid, _)| cid).collect()
             }
-            picks.sort_by_key(|(_, cmc)| *cmc);
-            picks.into_iter().take(count).map(|(cid, _)| cid).collect()
         } else {
             Vec::new()
         };
