@@ -3249,10 +3249,14 @@ fn pick_loyalty_ability(state: &GameState, seat: usize) -> Option<GameAction> {
         }
         // Walk abilities in order; prefer non-suicidal positive-loyalty
         // abilities first, then negative-loyalty ones the walker can afford.
+        // Use the *effective* list (printed + statically-granted, e.g. Kasmina
+        // Enigma Sage / Ichormoon Gauntlet) so the bot can activate granted
+        // loyalty abilities too — the engine indexes the same list.
         let current_loyalty =
             card.counter_count(crate::card::CounterType::Loyalty) as i32;
-        let mut indexed: Vec<(usize, &crate::card::LoyaltyAbility)> =
-            card.definition.loyalty_abilities.iter().enumerate().collect();
+        let effective = crate::game::effective_loyalty_abilities(card, &state.battlefield);
+        let mut indexed: Vec<(usize, &crate::effect::LoyaltyAbility)> =
+            effective.iter().enumerate().collect();
         indexed.sort_by_key(|(_, a)| -a.loyalty_cost);
         for (idx, ability) in indexed {
             if current_loyalty + ability.loyalty_cost < 0 {
@@ -4262,6 +4266,49 @@ mod tests {
             GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
                 assert_eq!(card_id, id);
                 assert_eq!(ability_index, 1, "picked the targetless draw, not the dead burn");
+            }
+            _ => panic!("expected a loyalty activation"),
+        }
+    }
+
+    /// The bot can activate a *statically-granted* loyalty ability (one the
+    /// walker doesn't print itself), matching the engine's effective-list
+    /// activation path.
+    #[test]
+    fn bot_activates_granted_loyalty_ability() {
+        use crate::card::{CardType, LoyaltyAbility, StaticAbility};
+        use crate::effect::{Selector, StaticEffect, Value};
+        let mut g = two_player_game();
+        // A walker with NO printed loyalty abilities.
+        let pw = CardDefinition {
+            name: "Blank Walker",
+            card_types: vec![CardType::Planeswalker],
+            base_loyalty: 3,
+            ..Default::default()
+        };
+        let id = g.add_card_to_battlefield(0, pw);
+        // A permanent that grants every planeswalker you control a +1 draw.
+        let granter = CardDefinition {
+            name: "Loyalty Font",
+            card_types: vec![CardType::Artifact],
+            static_abilities: vec![StaticAbility {
+                description: "Planeswalkers you control have +1: draw a card.",
+                effect: StaticEffect::PlaneswalkersHaveLoyaltyAbilities {
+                    abilities: vec![LoyaltyAbility {
+                        x_cost: false,
+                        loyalty_cost: 1,
+                        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    }],
+                },
+            }],
+            ..Default::default()
+        };
+        g.add_card_to_battlefield(0, granter);
+        g.add_card_to_library(0, catalog::island());
+        match pick_loyalty_ability(&g, 0).expect("bot finds the granted ability") {
+            GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
+                assert_eq!(card_id, id, "activated on the blank walker");
+                assert_eq!(ability_index, 0, "the granted +1 is index 0");
             }
             _ => panic!("expected a loyalty activation"),
         }

@@ -1975,6 +1975,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::AddCounter { .. } => "Add counter",
         Effect::RemoveCounter { .. } => "Remove counter",
         Effect::RemoveAnyCounter { .. } => "Remove a counter",
+        Effect::RemoveCountersUpTo { .. } => "Remove counters",
         Effect::ExileReturnNextEndStep { .. } | Effect::ExileReturnToOwnerNextEndStep { .. } => {
             "Flicker until end of turn"
         }
@@ -3356,6 +3357,23 @@ mod tests {
         // +2 Scry, -X Fractal, -8 tutor.
         assert!(!perm.loyalty_abilities[0].x_cost, "+2 is a fixed-cost ability");
         assert!(perm.loyalty_abilities[1].x_cost, "the Fractal ability is -X");
+    }
+
+    /// WAR planeswalkers surface their loyalty abilities with the right
+    /// targeting flags: The Wanderer's −2 exile and Ob Nixilis's −2 destroy
+    /// arm the cursor; Tibalt's token-making −2 does not.
+    #[test]
+    fn war_planeswalker_loyalty_targeting_flags() {
+        let mut state = two_player_game();
+        let wanderer = state.add_card_to_battlefield(0, catalog::the_wanderer());
+        let tibalt = state.add_card_to_battlefield(0, catalog::tibalt_rakish_instigator());
+        let view = project(&state, 0);
+        let w = view.battlefield.iter().find(|p| p.id == wanderer).unwrap();
+        assert_eq!(w.loyalty_abilities[0].effect_label, "Exile permanent");
+        assert!(w.loyalty_abilities[0].needs_target, "−2 exile targets a creature");
+        let t = view.battlefield.iter().find(|p| p.id == tibalt).unwrap();
+        assert_eq!(t.loyalty_abilities[0].effect_label, "Create token");
+        assert!(!t.loyalty_abilities[0].needs_target, "the Devil-making −2 is untargeted");
     }
 
     /// The command zone is a public zone — every viewer sees every
