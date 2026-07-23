@@ -5356,6 +5356,14 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// Signal the Clans — "Search your library for three creature cards and
+    /// reveal them. If you reveal three cards with different names, choose one
+    /// of them at random and put that card into your hand. Shuffle the rest
+    /// into your library." Auto-search picks the three highest-mana-value
+    /// distinct-named creature cards (there's never a reason to reveal a
+    /// duplicate name or fewer than three); if three distinct names are found
+    /// one is taken uniformly at random. The library is always shuffled.
+    SignalTheClans,
     /// Ecological Appreciation: search your library and graveyard for up to
     /// `count` creature cards with different names and mana value ≤ X
     /// (`Value::XFromCost`); an opponent chooses two to shuffle into your

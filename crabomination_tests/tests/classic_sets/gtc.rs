@@ -2227,3 +2227,25 @@ fn gtc16_bane_alley_broker_stash_and_return() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == card), "card returned to owner's hand");
 }
+
+/// Signal the Clans reveals three distinct-named creatures and puts one into
+/// hand at random, shuffling the rest back.
+#[test]
+fn gtc16_signal_the_clans_random_one_to_hand() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::gutter_skulk());
+    let b = g.add_card_to_library(0, catalog::ruination_wurm());
+    let c = g.add_card_to_library(0, catalog::assault_griffin());
+    let spell = g.add_card_to_hand(0, catalog::signal_the_clans());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.cast_spell(spell, None, vec![], None, None).expect("cast Signal the Clans");
+    drain_stack(&mut g);
+    let in_hand: Vec<_> = [a, b, c].into_iter().filter(|id| g.players[0].hand.iter().any(|c| c.id == *id)).collect();
+    assert_eq!(in_hand.len(), 1, "exactly one revealed creature went to hand at random");
+    let in_lib = [a, b, c].into_iter().filter(|id| g.players[0].library.iter().any(|c| c.id == *id)).count();
+    assert_eq!(in_lib, 2, "the other two shuffled back into the library");
+}

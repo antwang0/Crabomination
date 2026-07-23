@@ -159,6 +159,7 @@ impl Effect {
         match self {
             Effect::Noop
             | Effect::AdvanceClassLevel
+            | Effect::SignalTheClans
             | Effect::ChannelLifeForMana
             | Effect::CantLoseThisTurn { .. }
             | Effect::Venture

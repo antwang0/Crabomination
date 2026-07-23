@@ -7869,6 +7869,7 @@ static GTC9: &[Factory] = &[
     super::gtc16::nightveil_specter,
     super::gtc16::glaring_spotlight,
     super::gtc16::bane_alley_broker,
+    super::gtc16::signal_the_clans,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,

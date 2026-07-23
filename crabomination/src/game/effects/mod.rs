@@ -1377,6 +1377,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SignalTheClans => {
+                use rand::seq::IndexedRandom;
+                use rand::seq::SliceRandom;
+                let p = ctx.controller;
+                // Reveal the three best distinct-named creature cards. Group by
+                // name, keep the highest-MV representative of each, then take
+                // the top three names by that MV.
+                let mut best_by_name: std::collections::HashMap<String, (CardId, u32)> =
+                    std::collections::HashMap::new();
+                for c in &self.players[p].library {
+                    if !c.definition.is_creature() {
+                        continue;
+                    }
+                    let mv = c.definition.cost.cmc();
+                    let e = best_by_name
+                        .entry(c.definition.name.to_string())
+                        .or_insert((c.id, mv));
+                    if mv > e.1 {
+                        *e = (c.id, mv);
+                    }
+                }
+                let mut picks: Vec<(CardId, u32)> = best_by_name.into_values().collect();
+                picks.sort_by(|a, b| b.1.cmp(&a.1));
+                picks.truncate(3);
+                // Only "three cards with different names" hands a card to you.
+                if picks.len() == 3
+                    && let Some(&(chosen, _)) = picks.choose(&mut rand::rng())
+                    && let Some(pos) = self.players[p].library.iter().position(|c| c.id == chosen)
+                {
+                    let card = self.players[p].library.remove(pos);
+                    self.players[p].hand.push(card);
+                    events.push(GameEvent::CardDrawn { player: p, card_id: chosen });
+                }
+                self.players[p].library.shuffle(&mut rand::rng());
+                Ok(())
+            }
+
             Effect::ChefsKiss => {
                 use rand::seq::IndexedRandom;
                 // Steal target single-target spell, copy it, retarget both at

@@ -7,7 +7,7 @@ use crate::card::{
     Value,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, generic, hybrid, r, u, w, x, Color};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
 
 /// Aurelia's Fury — {X}{R}{W} Instant. Deals X damage divided among any number
 /// of targets; each creature dealt damage this way is tapped, and each player
@@ -60,6 +60,18 @@ pub fn nightveil_specter() -> CardDefinition {
                 uncast_penalty: None,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Signal the Clans — {R}{G} Instant. Search for three creature cards; if
+/// three have different names, one is put into your hand at random. Shuffle.
+pub fn signal_the_clans() -> CardDefinition {
+    CardDefinition {
+        name: "Signal the Clans",
+        cost: cost(&[r(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::SignalTheClans,
         ..Default::default()
     }
 }
