@@ -1853,6 +1853,11 @@ pub enum EventKind {
     /// `EventScope::YourSourceDamagedOpponent` for "whenever a source you
     /// control deals damage to an opponent" (Quest for Pure Flame).
     PlayerDamaged,
+    /// An instant or sorcery spell its controller controls dealt damage (to
+    /// any object or player). Pair with `EventScope::YourControl`. Fires once
+    /// per spell resolution regardless of how many things it hit. Blaze
+    /// Commando. The amount rides in via `Value::TriggerEventAmount`.
+    YourInstantOrSorceryDealtDamage,
     /// A player gained life.
     LifeGained,
     /// CR 701.22/701.42 — a player scried or surveiled (a nonzero peek that

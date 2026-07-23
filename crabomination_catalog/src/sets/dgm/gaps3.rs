@@ -11,6 +11,46 @@ use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, generic, r, u, w, Color};
 
+/// A 1/1 red-and-white Soldier with haste (Blaze Commando's token).
+fn boros_soldier() -> TokenDefinition {
+    TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        subtypes: creatures(vec![CreatureType::Soldier]),
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Blaze Commando — {3}{R}{W} 5/3 Minotaur Soldier. Whenever an instant or
+/// sorcery spell you control deals damage, create two 1/1 red-and-white Soldier
+/// tokens with haste.
+pub fn blaze_commando() -> CardDefinition {
+    CardDefinition {
+        name: "Blaze Commando",
+        cost: cost(&[generic(3), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Minotaur, CreatureType::Soldier]),
+        power: 5,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::YourInstantOrSorceryDealtDamage,
+                EventScope::YourControl,
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: boros_soldier(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
     Subtypes { creature_types: t, ..Default::default() }
 }

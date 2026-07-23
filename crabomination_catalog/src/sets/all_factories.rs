@@ -7202,6 +7202,7 @@ static DGM: &[Factory] = &[
     super::dgm::scab_clan_giant,
     super::dgm::breaking_entering,
     super::dgm::council_of_the_absolute,
+    super::dgm::blaze_commando,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

@@ -1091,6 +1091,15 @@ pub struct GameState {
     /// spell's resolution and cleared after; transient, not serialized.
     #[serde(skip)]
     pub(crate) resolving_spell_lifelink_seat: Option<usize>,
+    /// The caster of the instant/sorcery spell currently resolving, if any.
+    /// Set around the spell's resolution and cleared after; used to fire
+    /// `EventKind::YourInstantOrSorceryDealtDamage` (Blaze Commando). Transient.
+    #[serde(skip)]
+    pub(crate) resolving_spell_caster: Option<usize>,
+    /// One-shot guard so a spell dealing damage to several objects at once
+    /// fires the "your instant or sorcery deals damage" trigger a single time.
+    #[serde(skip)]
+    pub(crate) spell_damage_trigger_fired: bool,
     /// Reentrancy guard for the CR 121.2a draw-doubling replacement — the
     /// extra draws aren't themselves re-doubled (CR 614.5). Transient.
     #[serde(skip)]
@@ -1361,6 +1370,8 @@ impl Clone for GameState {
             granted_triggers_eot: self.granted_triggers_eot.clone(),
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
             resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
+            resolving_spell_caster: self.resolving_spell_caster,
+            spell_damage_trigger_fired: self.spell_damage_trigger_fired,
             in_draw_double: self.in_draw_double,
             in_damage_redirect: self.in_damage_redirect,
             in_token_replacement: self.in_token_replacement,
@@ -1545,6 +1556,8 @@ impl GameState {
             granted_triggers_eot: std::collections::HashMap::new(),
             dies_to_exile_eot: std::collections::HashSet::new(),
             resolving_spell_lifelink_seat: None,
+            resolving_spell_caster: None,
+            spell_damage_trigger_fired: false,
             in_draw_double: false,
             in_damage_redirect: false,
             in_token_replacement: false,

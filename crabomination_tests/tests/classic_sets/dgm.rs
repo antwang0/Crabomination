@@ -944,3 +944,19 @@ fn council_named_spell_cost_reduction() {
     assert_eq!(cost_reduction_for_spell(&g, 0, &named, None), 2, "chosen name costs {{2}} less");
     assert_eq!(cost_reduction_for_spell(&g, 0, &other, None), 0, "other spells unaffected");
 }
+
+/// Blaze Commando mints two Soldiers when your instant/sorcery deals damage,
+/// once per resolution.
+#[test]
+fn blaze_commando_spell_damage_tokens() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blaze_commando());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.cast_spell(bolt, Some(Target::Player(1)), vec![], None, None).expect("cast Bolt");
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter().filter(|c| c.definition.name == "Soldier" && c.controller == 0).count();
+    assert_eq!(soldiers, 2, "two Soldier tokens from the spell's damage");
+}

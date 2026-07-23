@@ -758,6 +758,56 @@ impl GameState {
         if let Some(src) = source {
             self.fire_source_dealt_damage_watchers(src, amount);
         }
+        // "Whenever an instant or sorcery spell you control deals damage"
+        // (Blaze Commando). Fires once per resolution across a multi-hit spell.
+        self.fire_your_spell_dealt_damage(source, amount);
+    }
+
+    /// Fire `EventKind::YourInstantOrSorceryDealtDamage` for the caster of the
+    /// instant/sorcery currently resolving, once per resolution (Blaze Commando).
+    /// `source` is the damage source (the spell); we only fire when it is the
+    /// resolving spell so combat/ability damage during the same window is
+    /// ignored.
+    fn fire_your_spell_dealt_damage(&mut self, source: Option<crate::card::CardId>, amount: u32) {
+        use crate::effect::{EventKind, EventScope};
+        if self.spell_damage_trigger_fired || amount == 0 {
+            return;
+        }
+        let Some(seat) = self.resolving_spell_caster else { return };
+        // The damage must be dealt by the resolving spell itself.
+        if let (Some(src), Some((res_id, _, _))) = (source, &self.resolving_source) {
+            if src != *res_id {
+                return;
+            }
+        }
+        let listeners: Vec<(crate::card::CardId, crate::effect::Effect, usize)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| {
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .filter(|ta| {
+                        ta.event.kind == EventKind::YourInstantOrSorceryDealtDamage
+                            && ta.event.scope == EventScope::YourControl
+                    })
+                    .map(move |ta| (c.id, ta.effect.clone(), c.controller))
+            })
+            .collect();
+        if listeners.is_empty() {
+            return;
+        }
+        self.spell_damage_trigger_fired = true;
+        for (listener, effect, controller) in listeners {
+            let auto_target = self.auto_target_for_effect_avoiding(&effect, controller, Some(listener));
+            self.stack.push(
+                TriggerPush::new(listener, controller, effect)
+                    .target(auto_target)
+                    .event_amount(amount)
+                    .build(),
+            );
+        }
     }
 
     /// Seat that gains life from lifelink on a *non-combat* damage event from

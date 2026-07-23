@@ -1516,6 +1516,11 @@ impl GameState {
                     });
                     self.resolving_spell_lifelink_seat =
                         (is_is && self.controller_grants_spell_lifelink(caster)).then_some(caster);
+                    // Track the I/S caster so damage the spell deals can fire
+                    // "whenever an instant or sorcery you control deals damage"
+                    // (Blaze Commando), once per resolution.
+                    self.resolving_spell_caster = is_is.then_some(caster);
+                    self.spell_damage_trigger_fired = false;
                     let mut spell_events = self.continue_spell_resolution(
                         card,
                         caster,
@@ -1528,6 +1533,7 @@ impl GameState {
                         None,
                     )?;
                     self.resolving_spell_lifelink_seat = None;
+                    self.resolving_spell_caster = None;
                     events.append(&mut spell_events);
                     if self.pending_decision.is_some() {
                         return Ok(events);
