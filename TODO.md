@@ -61,27 +61,23 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   player/creature combat-damage split), Simic Manipulator, Tin Street Market,
   Armored Transport, Vizkopa/Duskmantle Guildmage, Mystic Genesis, Borborygmos,
   Obzedat, Ooze Flux, Mark for Death; see FEATURE_ROADMAP "Already shipped".
+  **Wave 16 (this run) shipped 4:** Aurelia's Fury (new
+  `damaged_this_resolution` scratch + `Selector::DamagedThisResolution`),
+  Glaring Spotlight (`StaticEffect::IgnoreOpponentsCreatureHexproof`), Nightveil
+  Specter (`ExileTopAndGrantMayPlay` + `WhileExiled`), Bane Alley Broker
+  (`ExileChosenFromHand` link/face-down flags + `OwnerOfMoved`).
   **Still open (each needs a real new primitive):**
   - **Guardian of the Gateless** — "can block any number of creatures" keyword
     (a real block-declaration / multi-block change; `block_map` is 1:1 today).
-  - **Aurelia's Fury** — `DealDamageDivided` + tap each creature damaged *this
-    way* + those players can't cast noncreature spells (a bound-recipient rider).
-    Cleanest path: a `damaged_this_resolution: Vec<Target>` scratch on GameState
-    (reset in the resolution-scratch block, appended in `deal_damage_to_from`
-    only where damage actually lands) + a `Selector::DamagedThisResolution(filter)`,
-    then `Seq[DealDamageDivided, Tap(damaged creatures), CantCastNoncreatureThisTurn(damaged players)]`.
   - **Vizkopa Confessor** — Extort ships; the ETB "pay any amount of life →
     target opponent reveals that many → you exile one" needs a pay-X-life +
     reveal-N-from-hand + choose-exile primitive.
-  - **Glaring Spotlight** — an "ignore opponents' hexproof" targeting static
-    (touches every hexproof check) + the easy sac ability.
   - **Gideon, Champion of Justice** — planeswalker that animates to a
     loyalty-sized indestructible creature (self-animate + damage prevention).
-  - **Lazav** (become-copy on opp-gy creature), **Nightveil Specter / Bane Alley
-    Broker** (play from a personal exile stash), **Soul Ransom** (control-steal
-    Aura + opponent-activated sac), **Illusionist's Bracers** (copy an activated
-    ability), **Signal the Clans / Unexpected Results** (random pick / shuffled
-    top).
+  - **Lazav** (become-copy on opp-gy creature — needs copy-with-name/ability
+    overrides), **Soul Ransom** (control-steal Aura + opponent-activated sac),
+    **Illusionist's Bracers** (copy an activated ability), **Signal the Clans /
+    Unexpected Results** (random pick / shuffled top).
   Note: `Effect::ExileReturnNextEndStep` always returns under You **with a
   +1/+1 counter** (Semester's End shape); the plain flickers that reuse it
   (Cloudshift-likes) shouldn't add a counter — audit and split them onto the

@@ -273,6 +273,9 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     out.push_str("# HELP crab_avg_concede_turn Average final turn of wins via concession.\n");
     out.push_str("# TYPE crab_avg_concede_turn gauge\n");
     out.push_str(&format!("crab_avg_concede_turn {}\n", st.avg_concede_turn()));
+    out.push_str("# HELP crab_concede_earliness_pct Avg concede turn as pct of a decisive game's length.\n");
+    out.push_str("# TYPE crab_concede_earliness_pct gauge\n");
+    out.push_str(&format!("crab_concede_earliness_pct {}\n", st.concede_earliness_pct()));
     // Match-duration histogram (see `MatchStats.duration_buckets`) as a labelled
     // series so operators can watch the distribution shift (e.g. a spike in the
     // "<30s" bucket flags bots conceding turn 1).

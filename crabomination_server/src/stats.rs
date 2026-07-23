@@ -761,6 +761,18 @@ impl MatchStats {
     pub(crate) fn avg_concede_turn(&self) -> u64 {
         self.concede_turn_sum.checked_div(self.concede_wins).unwrap_or(0)
     }
+    /// Average concede turn as a percentage of a decisive game's length —
+    /// *when* players give up relative to how long a won game normally runs.
+    /// Below 100 means concessions land early (games feel decided before they
+    /// end — a balance/agency signal); near/above 100 means seats fight to the
+    /// bitter end before conceding. 0 when either sample is empty. Complements
+    /// `concede_pct` (how often) with *how early*.
+    pub(crate) fn concede_earliness_pct(&self) -> u64 {
+        let concede = self.avg_concede_turn();
+        let decisive = self.avg_decisive_turns();
+        if concede == 0 || decisive == 0 { return 0; }
+        concede.saturating_mul(100) / decisive
+    }
     /// Percent of wins via 21+ commander damage (CR 903.10a).
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.
     pub(crate) fn commander_damage_pct(&self) -> u64 {
@@ -1552,6 +1564,23 @@ mod tests {
         let only_wins = MatchStats { wins: 1, decisive_turn_sum: 8, ..Default::default() };
         assert_eq!(only_wins.stalemate_grind_pct(), 0);
         assert_eq!(MatchStats::default().stalemate_grind_pct(), 0);
+    }
+
+    #[test]
+    fn concede_earliness_is_concede_over_decisive_length() {
+        // Decisive games average 20 turns; concessions land at turn 12 → 60%.
+        let s = MatchStats {
+            wins: 4, decisive_turn_sum: 80,
+            concede_wins: 2, concede_turn_sum: 24,
+            ..Default::default()
+        };
+        assert_eq!(s.avg_decisive_turns(), 20);
+        assert_eq!(s.avg_concede_turn(), 12);
+        assert_eq!(s.concede_earliness_pct(), 60);
+        // No concessions (or no wins) → 0, never a divide-by-zero.
+        let no_concede = MatchStats { wins: 1, decisive_turn_sum: 10, ..Default::default() };
+        assert_eq!(no_concede.concede_earliness_pct(), 0);
+        assert_eq!(MatchStats::default().concede_earliness_pct(), 0);
     }
 
     #[test]

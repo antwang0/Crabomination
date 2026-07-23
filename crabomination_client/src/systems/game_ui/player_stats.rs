@@ -874,6 +874,10 @@ pub fn update_player_stats_chips(
         if p.cannot_gain_life {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::NoLifegain, "🚫 no lifegain".to_string());
         }
+        // "Can't cast noncreature spells this turn" (Aurelia's Fury, Ranger-Captain).
+        if p.cant_cast_noncreature {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ no noncreature".to_string());
+        }
         // CR 731 day/night — a global designation; show it whenever set.
         match cv.day_night {
             Some(true) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Day, "☀ day".to_string()),
@@ -1174,6 +1178,10 @@ pub fn update_opponent_stats_rows(
                 // CR 119.7 — an opponent who can't gain life.
                 if p.cannot_gain_life {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::NoLifegain, "🚫 no lifegain".to_string());
+                }
+                // An opponent locked out of noncreature spells (Aurelia's Fury).
+                if p.cant_cast_noncreature {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ no noncreature".to_string());
                 }
                 // CR 615 — an opponent with blanket damage immunity (Glacial Chasm).
                 if p.damage_fully_prevented {

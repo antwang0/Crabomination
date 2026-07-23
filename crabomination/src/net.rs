@@ -732,6 +732,11 @@ pub struct PlayerView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub cannot_gain_life: bool,
+    /// True when this player can't cast noncreature spells for the rest of the
+    /// turn (Aurelia's Fury, Ranger-Captain of Eos). Surfaced so UIs can grey
+    /// out noncreature cards in hand. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub cant_cast_noncreature: bool,
     /// True when this player's life total can't change this turn (Flare of
     /// Fortitude) — both gain and loss are dropped. Surfaced so UIs can show
     /// the life total is frozen. `#[serde(default)]` for snapshot back-compat.

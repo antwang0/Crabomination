@@ -666,6 +666,7 @@ fn project_player(
         is_monarch,
         has_city_blessing: player.city_blessing,
         cannot_gain_life,
+        cant_cast_noncreature: player.cant_cast_noncreature_this_turn,
         life_locked: player.life_locked_this_turn,
         has_hexproof,
         commander_damage_taken,
