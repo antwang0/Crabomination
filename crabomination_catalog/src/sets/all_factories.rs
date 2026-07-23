@@ -7204,6 +7204,7 @@ static DGM: &[Factory] = &[
     super::dgm::council_of_the_absolute,
     super::dgm::blaze_commando,
     super::dgm::deadbridge_chant,
+    super::dgm::ral_zarek,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

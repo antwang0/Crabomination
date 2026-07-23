@@ -172,6 +172,57 @@ pub fn breaking_entering() -> CardDefinition {
     }
 }
 
+/// Ral Zarek — {2}{U}{R} Legendary Planeswalker — Ral. 4 loyalty.
+/// **+1**: Tap target permanent, then untap another target permanent.
+/// **−2**: Deals 3 damage to any target.
+/// **−7**: Flip five coins; take an extra turn for each that comes up heads.
+pub fn ral_zarek() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Ral Zarek",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Ral],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: R::Permanent } },
+                    Effect::Untap {
+                        what: Selector::TargetFiltered { slot: 1, filter: R::Permanent },
+                        up_to: None,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::FlipCoin {
+                    count: Value::Const(5),
+                    on_heads: Box::new(Effect::TakeExtraTurn {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                    }),
+                    on_tails: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Deadbridge Chant — {4}{B}{G} Enchantment. When it enters, mill ten cards. At
 /// the beginning of your upkeep, choose a card at random in your graveyard; a
 /// creature card enters the battlefield, otherwise it goes to your hand.

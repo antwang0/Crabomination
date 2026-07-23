@@ -979,3 +979,41 @@ fn deadbridge_chant_mill_and_upkeep() {
     assert_eq!(bf_after, bf_before + 1, "a creature was reanimated");
     assert_eq!(g.players[0].graveyard.len(), 9, "one left the graveyard");
 }
+
+/// Ral Zarek's +1 taps its target and bumps loyalty to 5.
+#[test]
+fn ral_zarek_plus_taps() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let ral = g.add_card_to_battlefield(0, catalog::ral_zarek());
+    let untapped = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tapped = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: ral, ability_index: 0, target: Some(Target::Permanent(untapped)), x_value: None,
+    }).expect("Ral +1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(untapped).unwrap().tapped, "target got tapped");
+    assert_eq!(g.battlefield_find(ral).unwrap().counter_count(CounterType::Loyalty), 5, "4→5");
+}
+
+/// Ral Zarek's −2 deals 3 damage to any target.
+#[test]
+fn ral_zarek_minus_two_burn() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let ral = g.add_card_to_battlefield(0, catalog::ral_zarek());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: ral, ability_index: 1, target: Some(Target::Player(1)), x_value: None,
+    }).expect("Ral -2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "dealt 3");
+    assert_eq!(g.battlefield_find(ral).unwrap().counter_count(CounterType::Loyalty), 2, "4→2");
+}
