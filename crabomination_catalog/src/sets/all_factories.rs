@@ -7197,6 +7197,11 @@ static DGM: &[Factory] = &[
     super::dgm::protect_serve,
     super::dgm::down_dirty,
     super::dgm::progenitor_mimic,
+    super::dgm::showstopper,
+    super::dgm::teysa_envoy_of_ghosts,
+    super::dgm::scab_clan_giant,
+    super::dgm::breaking_entering,
+    super::dgm::council_of_the_absolute,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

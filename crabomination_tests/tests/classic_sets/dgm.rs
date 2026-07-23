@@ -835,3 +835,112 @@ fn progenitor_mimic_copies_and_spawns() {
         3, "upkeep minted a token copy",
     );
 }
+
+/// Showstopper grants your creatures a death-ping; a dying creature deals 2 to
+/// an opponent's creature.
+#[test]
+fn showstopper_death_ping() {
+    use crabomination::card::CardType;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::showstopper());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.cast_spell(spell, None, vec![], None, None).expect("cast Showstopper");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).unwrap().definition.card_types.contains(&CardType::Creature));
+    // Kill my creature; its death ping deals 2 to the opponent's bear (dies).
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(mine), 2, None, &mut evs);
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "opponent's bear destroyed by the death ping");
+}
+
+/// Teysa destroys a creature that deals combat damage to her controller and
+/// makes a Spirit.
+#[test]
+fn teysa_destroys_attacker_and_makes_spirit() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teysa_envoy_of_ghosts());
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    }])).expect("attack player 0");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(attacker).is_none(), "attacker destroyed");
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Spirit" && c.controller == 0),
+        "a Spirit token was created",
+    );
+}
+
+/// Scab-Clan Giant fights an opponent's creature on entry.
+#[test]
+fn scab_clan_giant_fights_on_etb() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.move_card_to_battlefield_for_test(0, catalog::scab_clan_giant());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 bear died to the 4/5 giant");
+    assert_eq!(g.battlefield_find(giant).unwrap().damage, 2, "giant took 2 back");
+}
+
+/// Breaking mills eight; Entering reanimates a creature with haste.
+#[test]
+fn breaking_entering_halves() {
+    let mut g = two_player_game();
+    for _ in 0..10 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    let breaking = g.add_card_to_hand(0, catalog::breaking_entering());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.cast_spell(breaking, Some(Target::Player(1)), vec![], None, None).expect("cast Breaking");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 8, "milled eight");
+
+    // Entering: reanimate a creature from a graveyard with haste.
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let entering = g.add_card_to_hand(0, catalog::breaking_entering());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: entering,
+        target: Some(Target::Permanent(corpse)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("cast Entering");
+    drain_stack(&mut g);
+    let reanimated = g.battlefield_find(corpse).expect("creature on battlefield");
+    assert_eq!(reanimated.controller, 0, "under my control");
+    assert!(g.computed_permanent(corpse).unwrap().keywords.contains(&Keyword::Haste), "has haste");
+}
+
+/// Council of the Absolute's chosen-name cost reduction shaves {2} off matching
+/// spells and nothing off others.
+#[test]
+fn council_named_spell_cost_reduction() {
+    use crabomination::card::CardInstance;
+    use crabomination::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let council = g.add_card_to_battlefield(0, catalog::council_of_the_absolute());
+    g.battlefield_find_mut(council).unwrap().named_card = Some("Punish the Enemy".into());
+    let named = CardInstance::new(g.next_id(), catalog::punish_the_enemy(), 0);
+    let other = CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &named, None), 2, "chosen name costs {{2}} less");
+    assert_eq!(cost_reduction_for_spell(&g, 0, &other, None), 0, "other spells unaffected");
+}

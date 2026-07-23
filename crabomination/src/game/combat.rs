@@ -2637,9 +2637,13 @@ impl GameState {
             .collect();
         for (listener, effect, controller) in listeners {
             let auto_target = self.auto_target_for_effect_avoiding(&effect, controller, Some(listener));
+            // Bind the creature that dealt the damage as `Selector::TriggerSource`
+            // so "whenever a creature deals combat damage to you, destroy it"
+            // clauses can reference the dealer (Teysa, Envoy of Ghosts).
             self.stack.push(
                 TriggerPush::new(listener, controller, effect)
                     .target(auto_target)
+                    .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
                     .event_amount(damage_amount)
                     .build(),
             );

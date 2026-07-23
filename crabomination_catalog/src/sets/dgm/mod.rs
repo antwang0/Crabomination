@@ -6,10 +6,12 @@ mod cluestones;
 mod creatures;
 mod gaps;
 mod gaps2;
+mod gaps3;
 mod spells;
 
 pub use cluestones::*;
 pub use creatures::*;
 pub use gaps::*;
 pub use gaps2::*;
+pub use gaps3::*;
 pub use spells::*;

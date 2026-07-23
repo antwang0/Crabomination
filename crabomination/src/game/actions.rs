@@ -434,6 +434,12 @@ pub fn cost_reduction_for_spell_full(
                 {
                     reduction += amount;
                 }
+                StaticEffect::NamedSpellCostReduction { amount }
+                    if src.controller == caster
+                        && src.named_card.as_deref() == Some(card.definition.name) =>
+                {
+                    reduction += amount;
+                }
                 StaticEffect::CostReductionPerControllerExperience { filter }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
