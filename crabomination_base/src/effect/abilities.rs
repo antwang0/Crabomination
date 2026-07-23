@@ -810,6 +810,11 @@ pub enum StaticEffect {
     /// Each active copy adds one to a +1/+1 placement onto the controller's
     /// creatures; applied before any `DoubleCounters` multiplier.
     ExtraPlusOneCounters,
+    /// CR 614.16 self-scoped additive variant — "If one or more +1/+1 counters
+    /// would be put on THIS, that many plus one are put on it instead." Mowu,
+    /// Loyal Companion. Like `ExtraPlusOneCounters` but only for placements onto
+    /// the static's own source permanent; applied before any doubler.
+    ExtraPlusOneCounterOnSelf,
     /// CR 614.16 multiplicative variant scoped to +1/+1 counters — "If one or
     /// more +1/+1 counters would be put on a creature you control, twice that
     /// many are put on it instead." Branching Evolution / Kami of Whispered

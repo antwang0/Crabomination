@@ -2020,6 +2020,21 @@ pub fn charmed_stray() -> CardDefinition {
     }
 }
 
+/// Mowu, Loyal Companion — {3}{G} 3/3 Legendary Dog with vigilance and trample.
+/// If one or more +1/+1 counters would be put on it, that many plus one are put
+/// on it instead.
+pub fn mowu_loyal_companion() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Vigilance, Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "If one or more +1/+1 counters would be put on this, that many plus one are put on it instead.",
+            effect: StaticEffect::ExtraPlusOneCounterOnSelf,
+        }],
+        ..vanilla("Mowu, Loyal Companion", cost(&[generic(3), g()]), 3, 3, vec![CreatureType::Dog])
+    }
+}
+
 /// Vivien's Grizzly — {2}{G} 2/3 Bear Spirit. {3}{G}: Look at the top card of
 /// your library; if it's a creature or planeswalker card you may reveal it and
 /// put it into your hand, otherwise it goes to the bottom.

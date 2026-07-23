@@ -1307,3 +1307,22 @@ fn viviens_grizzly_bottoms_noncreature() {
     assert_eq!(g.players[0].library.last().map(|c| c.id), Some(land), "land bottomed");
     assert!(!g.players[0].hand.iter().any(|c| c.id == land), "land not drawn");
 }
+
+/// Mowu turns each +1/+1 placement into that many plus one — via a direct
+/// counter effect and via proliferate.
+#[test]
+fn mowu_adds_one_extra_counter() {
+    let mut g = two_player_game();
+    let mowu = g.add_card_to_battlefield(0, catalog::mowu_loyal_companion());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(mowu, 0, None);
+    // Put two +1/+1 counters on Mowu → 2 + 1 = 3.
+    g.resolve_effect(&crabomination::effect::Effect::AddCounter {
+        what: crabomination::effect::Selector::This,
+        kind: CounterType::PlusOnePlusOne,
+        amount: crabomination::card::Value::Const(2),
+    }, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(mowu).unwrap().counter_count(CounterType::PlusOnePlusOne), 3, "2 → 3");
+    // Proliferate adds another (1 + 1 = 2 more) → 5 total.
+    g.resolve_effect(&crabomination::effect::Effect::Proliferate, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(mowu).unwrap().counter_count(CounterType::PlusOnePlusOne), 5, "proliferate 1 → 2");
+}

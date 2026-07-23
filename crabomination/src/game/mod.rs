@@ -2514,6 +2514,34 @@ impl GameState {
         n
     }
 
+    /// Target-aware wrapper for [`scaled_counter_count`] that also applies a
+    /// permanent's *self-scoped* counter replacement (Mowu's
+    /// `ExtraPlusOneCounterOnSelf` — "+1/+1 counters put on THIS get +1"),
+    /// added before the controller-wide adders and doublers. Every site that
+    /// places counters on a specific known permanent should use this.
+    pub fn scaled_counter_count_on(
+        &self,
+        cid: CardId,
+        kind: crate::card::CounterType,
+        base: u32,
+    ) -> u32 {
+        use crate::card::CounterType;
+        use crate::effect::StaticEffect;
+        let Some(c) = self.battlefield_find(cid) else { return base };
+        let ctrl = c.controller;
+        let is_creature = c.definition.is_creature();
+        let mut base = base;
+        if base > 0 && kind == CounterType::PlusOnePlusOne {
+            base += c
+                .definition
+                .static_abilities
+                .iter()
+                .filter(|sa| matches!(sa.effect, StaticEffect::ExtraPlusOneCounterOnSelf))
+                .count() as u32;
+        }
+        self.scaled_counter_count(ctrl, kind, base, is_creature)
+    }
+
     /// CR 614.16 scaling for player-bound counters (poison): Winding
     /// Constrictor's "+1 to any counters you'd get" adder, then any all-kinds
     /// counter doublers. Players aren't creatures, so the `+1/+1`-only and
@@ -13926,6 +13954,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleCounters
             | StaticEffect::DoublePlusOneCounters
             | StaticEffect::ExtraPlusOneCounters
+            | StaticEffect::ExtraPlusOneCounterOnSelf
             | StaticEffect::ExtraCounterAllKinds
             // Energy-gain bonus — read at AddEnergy time via
             // `GameState::energy_gain_bonus_for`; no layer effect.

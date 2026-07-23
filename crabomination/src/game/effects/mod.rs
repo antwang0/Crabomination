@@ -8234,12 +8234,8 @@ impl GameState {
                             // of active doublers). Looked up per-target
                             // since a fan-out (`ForEach`) could span
                             // controllers.
-                            let target_ctrl = self.battlefield_find(cid).map(|c| c.controller);
-                            let n = if let Some(ctrl) = target_ctrl {
-                                let is_creature = self
-                                    .battlefield_find(cid)
-                                    .is_some_and(|c| c.definition.is_creature());
-                                self.scaled_counter_count(ctrl, *kind, base, is_creature)
+                            let n = if self.battlefield_find(cid).is_some() {
+                                self.scaled_counter_count_on(cid, *kind, base)
                             } else {
                                 base
                             };
@@ -18810,10 +18806,14 @@ impl GameState {
             .filter(|(_, kinds)| !kinds.is_empty())
             .collect();
         for (cid, kinds) in updates {
-            if let Some(c) = self.battlefield_find_mut(cid) {
-                for k in kinds {
-                    c.add_counters(k, 1);
-                    events.push(GameEvent::CounterAdded { card_id: cid, counter_type: k, count: 1 });
+            for k in kinds {
+                // CR 614.16 — counter-placement replacements (Hardened Scales,
+                // Mowu's self-bonus, doublers) apply to the proliferated counter.
+                let n = self.scaled_counter_count_on(cid, k, 1);
+                if n == 0 { continue; }
+                if let Some(c) = self.battlefield_find_mut(cid) {
+                    c.add_counters(k, n);
+                    events.push(GameEvent::CounterAdded { card_id: cid, counter_type: k, count: n });
                 }
             }
         }
