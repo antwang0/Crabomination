@@ -4219,6 +4219,9 @@ pub struct CardInstance {
     /// ChosenColorOfSource` so a `{T}: Add the chosen color` ability taps for
     /// it. `None` until an `Effect::ChooseColorForSelf` stamps it.
     pub chosen_color: Option<crate::mana::Color>,
+    /// Two colors chosen as this permanent entered (Tablet of the Guilds).
+    /// Empty until an `Effect::ChooseTwoColorsForSource` stamps them.
+    pub chosen_colors: Vec<crate::mana::Color>,
     /// CR 701.38 — players who have goaded this creature. A goaded creature
     /// attacks each combat if able and attacks a player other than a goader
     /// if able, until that goader's next turn. Each goader's entry is
@@ -4457,6 +4460,7 @@ impl CardInstance {
             granted_alt_cast_cost_eot: None,
             named_card: None,
             chosen_color: None,
+            chosen_colors: Vec::new(),
             goaded_by: Vec::new(),
             monstrous: false,
             renowned: false,
@@ -5062,6 +5066,8 @@ struct CardInstanceWire {
     /// so older snapshots load as `None`.
     #[serde(default)]
     chosen_color: Option<crate::mana::Color>,
+    #[serde(default)]
+    chosen_colors: Vec<crate::mana::Color>,
     /// CR 701.38 goad — players who have goaded this creature.
     /// `#[serde(default)]` so older snapshots load as empty.
     #[serde(default)]
@@ -5246,6 +5252,7 @@ impl serde::Serialize for CardInstance {
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
             named_card: self.named_card.clone(),
             chosen_color: self.chosen_color,
+            chosen_colors: self.chosen_colors.clone(),
             goaded_by: self.goaded_by.clone(),
             monstrous: self.monstrous,
             renowned: self.renowned,
@@ -5394,6 +5401,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
         c.named_card = wire.named_card;
         c.chosen_color = wire.chosen_color;
+        c.chosen_colors = wire.chosen_colors;
         c.goaded_by = wire.goaded_by;
         c.monstrous = wire.monstrous;
         c.renowned = wire.renowned;

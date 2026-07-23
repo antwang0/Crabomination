@@ -3920,6 +3920,12 @@ pub enum Effect {
     /// source's `chosen_color` (CR 614 — Coldsteel Heart, choose-a-color mana
     /// rocks). Read later by `ManaPayload::ChosenColorOfSource`.
     ChooseColorForSelf,
+    /// Tablet of the Guilds: as this enters, choose two colors (stamped on
+    /// `CardInstance.chosen_colors`).
+    ChooseTwoColorsForSource,
+    /// Tablet of the Guilds: whenever you cast a spell that is at least one of
+    /// the source's chosen colors, gain 1 life for each chosen color it is.
+    GainLifePerChosenColorOfCast,
     /// Each permanent picked by `what` gains protection from a color of the
     /// controller's choice for `duration` (`Decision::ChooseColor` →
     /// `Keyword::Protection(color)`). Mother of Runes, Giver of Runes, Gods

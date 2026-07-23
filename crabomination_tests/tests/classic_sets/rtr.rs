@@ -1986,3 +1986,30 @@ fn azors_elocutors_filibuster_win() {
     drain_stack(&mut g);
     assert!(g.is_game_over(), "reached five filibuster counters → win");
 }
+
+/// Tablet of the Guilds gains life when you cast a spell in a chosen color.
+#[test]
+fn tablet_of_the_guilds_gains_life_on_chosen_color() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    // Choosing White then Green as it enters.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Color(Color::White), DecisionAnswer::Color(Color::Green),
+    ]));
+    let tablet = g.move_card_to_battlefield_for_test(0, catalog::tablet_of_the_guilds());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tablet).unwrap().chosen_colors, vec![Color::White, Color::Green]);
+    // Cast a green creature ({1}{G}) → gain 1 life (one chosen color matches).
+    let life = g.players[0].life;
+    let spell = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast green spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "gained 1 life for the one matching chosen color");
+}

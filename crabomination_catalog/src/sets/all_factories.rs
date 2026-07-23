@@ -9781,6 +9781,7 @@ static RTR: &[Factory] = &[
     super::rtr::grave_betrayal,
     super::rtr::angel_of_serenity,
     super::rtr::azors_elocutors,
+    super::rtr::tablet_of_the_guilds,
 ];
 static SHM: &[Factory] = &[
     super::shm::burn_trail,

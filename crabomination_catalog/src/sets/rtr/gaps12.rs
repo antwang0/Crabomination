@@ -131,3 +131,25 @@ pub fn azors_elocutors() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Tablet of the Guilds — {2} Artifact. As it enters, choose two colors;
+/// whenever you cast a spell that is at least one of them, gain 1 life for each
+/// of the chosen colors it is.
+pub fn tablet_of_the_guilds() -> CardDefinition {
+    CardDefinition {
+        name: "Tablet of the Guilds",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::ChooseTwoColorsForSource,
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+                effect: Effect::GainLifePerChosenColorOfCast,
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -271,6 +271,7 @@ impl Effect {
             Effect::Dovescape => false,
             Effect::IsperiaReveal => false,
             Effect::KindleTheCarnage => false,
+            Effect::ChooseTwoColorsForSource | Effect::GainLifePerChosenColorOfCast => false,
             Effect::GraveBetrayalRegister | Effect::GraveBetrayalReanimate => false,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only
@@ -1633,6 +1634,10 @@ impl Effect {
             Effect::GraveBetrayalReanimate => "reanimate the fallen creature".into(),
             Effect::KindleTheCarnage => {
                 "discard at random → deal its mana value to each creature, repeatable".into()
+            }
+            Effect::ChooseTwoColorsForSource => "choose two colors".into(),
+            Effect::GainLifePerChosenColorOfCast => {
+                "gain 1 life per chosen color the cast spell is".into()
             }
             Effect::AethermagesTouch { count } => match count {
                 Value::Const(n) => format!(

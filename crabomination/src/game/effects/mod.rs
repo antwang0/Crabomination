@@ -7883,6 +7883,54 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseTwoColorsForSource => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::mana::Color;
+                let Some(source) = ctx.source else { return Ok(()); };
+                let all = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+                let mut picked: Vec<Color> = Vec::new();
+                for _ in 0..2 {
+                    let legal: Vec<Color> = all.iter().copied().filter(|c| !picked.contains(c)).collect();
+                    let color = match self.decider.decide(&Decision::ChooseColor { source, legal: legal.clone() }) {
+                        DecisionAnswer::Color(c) if legal.contains(&c) => c,
+                        _ => legal[0],
+                    };
+                    picked.push(color);
+                }
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.chosen_colors = picked;
+                }
+                Ok(())
+            }
+
+            Effect::GainLifePerChosenColorOfCast => {
+                let Some(source) = ctx.source else { return Ok(()) };
+                let chosen = self.battlefield_find(source)
+                    .map(|c| c.chosen_colors.clone()).unwrap_or_default();
+                if chosen.is_empty() { return Ok(()) }
+                // The cast spell rides in as `trigger_source`.
+                let spell_colors: Vec<crate::mana::Color> = match ctx.trigger_source {
+                    Some(EntityRef::Card(id)) | Some(EntityRef::Permanent(id)) => self
+                        .stack.iter().find_map(|si| match si {
+                            StackItem::Spell { card, .. } if card.id == id => {
+                                Some(card.definition.cost.colors())
+                            }
+                            _ => None,
+                        })
+                        .or_else(|| self.find_card_anywhere(id).map(|c| c.definition.cost.colors()))
+                        .unwrap_or_default(),
+                    _ => Vec::new(),
+                };
+                let n = chosen.iter().filter(|c| spell_colors.contains(c)).count() as i32;
+                if n > 0 {
+                    let applied = self.adjust_life_applied(ctx.controller, n);
+                    if applied > 0 {
+                        events.push(GameEvent::LifeGained { player: ctx.controller, amount: applied as u32 });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantProtectionFromChosenColor { what, duration } => {
                 // The controller picks a color; each target gains
                 // protection from it for `duration` (EOT today). Mother of

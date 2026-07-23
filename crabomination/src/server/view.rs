@@ -2057,6 +2057,8 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::IsperiaReveal => "Name → tutor flyer",
         Effect::GraveBetrayalRegister | Effect::GraveBetrayalReanimate => "Steal the dead",
         Effect::KindleTheCarnage => "Discard → board burn",
+        Effect::ChooseTwoColorsForSource => "Choose two colors",
+        Effect::GainLifePerChosenColorOfCast => "Guild lifegain",
         _ => "Activate",
     }
 }
