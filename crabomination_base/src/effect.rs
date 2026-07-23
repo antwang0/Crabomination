@@ -3369,6 +3369,10 @@ pub enum Effect {
     /// Ignorant Bliss: exile your whole hand face down; at the beginning of the
     /// next end step return those cards to your hand, then draw a card.
     IgnorantBliss,
+    /// Dovescape: counter the triggering noncreature spell; its caster creates
+    /// X 1/1 white-and-blue Bird tokens with flying, where X is that spell's
+    /// mana value.
+    Dovescape,
     /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
     /// in hand moves to the graveyard and every card in the graveyard moves to
     /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card

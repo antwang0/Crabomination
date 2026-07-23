@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 
 /// Momir Vig, Simic Visionary — {3}{G}{U} 2/2 Elf Wizard. Casting a green
 /// creature spell tutors a creature to the top of your library; casting a blue
@@ -155,6 +155,24 @@ pub fn ignorant_bliss() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::IgnorantBliss,
+        ..Default::default()
+    }
+}
+
+/// Dovescape — {3}{W/U}{W/U}{W/U} Enchantment. Whenever a player casts a
+/// noncreature spell, counter it; that player makes a 1/1 white-and-blue flying
+/// Bird per point of the spell's mana value.
+pub fn dovescape() -> CardDefinition {
+    let wu = || hybrid(Color::White, Color::Blue);
+    CardDefinition {
+        name: "Dovescape",
+        cost: cost(&[generic(3), wu(), wu(), wu()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::CastSpellMatches(R::Noncreature)),
+            effect: Effect::Dovescape,
+        }],
         ..Default::default()
     }
 }

@@ -268,6 +268,7 @@ impl Effect {
             Effect::AethermagesTouch { .. } => false,
             Effect::InfernalTutor => false,
             Effect::IgnorantBliss => false,
+            Effect::Dovescape => false,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only
             // `otherwise` can demand a cast-time target (Browbeat's drawer).
@@ -1616,6 +1617,9 @@ impl Effect {
             }
             Effect::IgnorantBliss => {
                 "exile your hand face down; return it and draw at the next end step".into()
+            }
+            Effect::Dovescape => {
+                "counter that noncreature spell; its caster makes a Bird per mana value".into()
             }
             Effect::AethermagesTouch { count } => match count {
                 Value::Const(n) => format!(

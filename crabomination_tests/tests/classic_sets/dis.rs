@@ -1849,3 +1849,25 @@ fn ignorant_bliss_cycles_hand() {
         "exiled cards returned");
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Phantom Warrior"), "drew a card");
 }
+
+/// Dovescape counters a noncreature spell and gives its caster Birds equal to
+/// the spell's mana value.
+#[test]
+fn dovescape_counters_and_makes_birds() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dovescape());
+    // Player 1 casts Shock ({R}, mana value 1) at player 0.
+    let shock = g.add_card_to_hand(1, catalog::shock());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: shock, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Shock");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == shock), "Shock was countered");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Bird" && c.controller == 1).count(), 1,
+        "caster got one Bird for the MV-1 spell");
+}

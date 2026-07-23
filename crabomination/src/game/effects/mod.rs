@@ -11962,6 +11962,51 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Dovescape => {
+                use crate::card::{CardType, CreatureType, Keyword, Subtypes, TokenDefinition};
+                // The triggering spell is bound as `trigger_source`.
+                let spell_id = match ctx.trigger_source {
+                    Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => Some(c),
+                    _ => None,
+                };
+                let Some(spell_id) = spell_id else { return Ok(()) };
+                let info = self.stack.iter().find_map(|si| match si {
+                    StackItem::Spell { card, caster, uncounterable: false, .. } if card.id == spell_id => {
+                        Some((*caster, card.definition.cost.cmc()))
+                    }
+                    _ => None,
+                });
+                let Some((caster, mv)) = info else { return Ok(()) };
+                // Counter it, then the caster mints MV flying Birds.
+                let mut evs = self.resolve_effect(
+                    &Effect::CounterSpell { what: Selector::TriggerSource },
+                    ctx,
+                )?;
+                events.append(&mut evs);
+                if mv > 0 {
+                    let token = TokenDefinition {
+                        name: "Bird".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![crate::mana::Color::White, crate::mana::Color::Blue],
+                        keywords: vec![Keyword::Flying],
+                        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+                        ..Default::default()
+                    };
+                    let mut evs = self.resolve_effect(
+                        &Effect::CreateToken {
+                            who: PlayerRef::Seat(caster),
+                            count: crate::effect::Value::Const(mv as i32),
+                            definition: token,
+                        },
+                        ctx,
+                    )?;
+                    events.append(&mut evs);
+                }
+                Ok(())
+            }
+
             Effect::IgnorantBliss => {
                 let p = ctx.controller;
                 let source = ctx.source.unwrap_or(CardId(0));
