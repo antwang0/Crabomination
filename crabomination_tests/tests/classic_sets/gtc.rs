@@ -2124,3 +2124,28 @@ fn gtc15_enter_the_infinite_draws_library() {
     assert_eq!(g.players[0].library[0].id, a, "the chosen card is on top");
     assert!(g.players[0].max_hand_size.is_none(), "no maximum hand size");
 }
+
+/// Aurelia's Fury divides X damage, taps each damaged creature, and locks each
+/// damaged player out of noncreature spells for the turn.
+#[test]
+fn gtc16_aurelias_fury_taps_and_locks() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::gutter_skulk()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::aurelias_fury());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2); // X=2
+    let life_before = g.players[1].life;
+    // X=2 split 1/1 across the creature (slot 0) and the player (slot 1).
+    g.cast_spell(spell, Some(Target::Permanent(creature)), vec![Target::Player(1)], None, Some(2))
+        .expect("cast Aurelia's Fury");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(creature).unwrap().damage, 1, "creature took 1 damage");
+    assert!(g.battlefield_find(creature).unwrap().tapped, "damaged creature is tapped");
+    assert_eq!(g.players[1].life, life_before - 1, "player took 1 damage");
+    assert!(g.players[1].cant_cast_noncreature_this_turn,
+        "damaged player can't cast noncreature spells");
+}

@@ -283,6 +283,14 @@ pub enum Selector {
     /// Dracosaur).
     ExiledThisResolution { filter: SelectionRequirement },
 
+    /// Entities damaged earlier in this same resolution: players (always) plus
+    /// permanents matching `filter`. Backed by
+    /// `GameState.damaged_this_resolution`. "Tap each creature damaged this
+    /// way / those players can't cast noncreature spells" (Aurelia's Fury) —
+    /// `Effect::Tap` reads the creatures, `CantCastNoncreatureThisTurn` reads
+    /// the players.
+    DamagedThisResolution { filter: SelectionRequirement },
+
     /// A single player, lifted to selector form.
     Player(PlayerRef),
 

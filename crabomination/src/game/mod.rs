@@ -640,6 +640,14 @@ pub struct GameState {
     /// was dealt this way" riders (Orbital Plunge). Reset between resolutions.
     #[serde(skip)]
     pub excess_damage_this_resolution: u32,
+    /// Transient: entities (creatures + players) that actually took damage
+    /// during the current resolution. Powers `Selector::DamagedThisResolution`
+    /// — "tap each creature damaged this way / those players can't cast
+    /// noncreature spells" (Aurelia's Fury). Recorded in `deal_damage_to_from`
+    /// only where damage lands (prevented/shield-countered hits don't count);
+    /// reset between resolutions.
+    #[serde(skip)]
+    pub damaged_this_resolution: Vec<crate::game::effects::EntityRef>,
     /// Total mana spent to cast the spell most recently countered during
     /// the current resolution (Mana Sculpt's "amount of mana spent to cast
     /// that spell"). Reset at each resolution start; stamped by
@@ -1280,6 +1288,7 @@ impl Clone for GameState {
             exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             excess_damage_this_resolution: self.excess_damage_this_resolution,
+            damaged_this_resolution: self.damaged_this_resolution.clone(),
             countered_spell_mana_spent: self.countered_spell_mana_spent,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
@@ -1464,6 +1473,7 @@ impl GameState {
             exiled_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             excess_damage_this_resolution: 0,
+            damaged_this_resolution: Vec::new(),
             countered_spell_mana_spent: 0,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             named_card_this_resolution: None,

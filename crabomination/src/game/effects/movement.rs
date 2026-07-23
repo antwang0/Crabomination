@@ -726,6 +726,22 @@ impl GameState {
             }
             EntityRef::Card(_) => {}
         }
+        // Record "damaged this way" for `Selector::DamagedThisResolution`
+        // (Aurelia's Fury). Reached only after every prevention / shield /
+        // replacement early-return, so it captures creatures and players that
+        // truly took damage. Planeswalkers/battles are excluded (only combat-
+        // relevant creatures + players are ever queried).
+        match ent {
+            EntityRef::Player(_) => self.damaged_this_resolution.push(ent),
+            EntityRef::Permanent(cid)
+                if self
+                    .battlefield_find(cid)
+                    .is_some_and(|c| c.definition.is_creature()) =>
+            {
+                self.damaged_this_resolution.push(ent)
+            }
+            _ => {}
+        }
         // CR 702.15 — lifelink on the non-combat damage path: if the source is
         // a lifelink permanent (a ping ability) or an instant/sorcery spell
         // whose controller has "your spells have lifelink" (Radiant

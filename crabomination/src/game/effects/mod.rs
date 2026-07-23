@@ -872,6 +872,7 @@ impl GameState {
         self.exiled_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;
         self.excess_damage_this_resolution = 0;
+        self.damaged_this_resolution.clear();
         self.countered_spell_mana_spent = 0;
         self.players_sacrificed_this_resolution.clear();
         self.named_card_this_resolution = None;
@@ -17496,6 +17497,35 @@ impl GameState {
                         && self.evaluate_requirement_on_card(filter, c, ctx.controller)
                     {
                         out.push(EntityRef::Card(cid));
+                    }
+                }
+                out
+            }
+
+            Selector::DamagedThisResolution { filter } => {
+                // Players always pass through (the caller filters to players
+                // for the "can't cast noncreature" rider); permanents are
+                // gated by `filter` (creatures for the tap rider). Dedup so a
+                // target damaged twice isn't tapped/flagged redundantly.
+                let mut out: Vec<EntityRef> = Vec::new();
+                for ent in self.damaged_this_resolution.clone() {
+                    if out.contains(&ent) {
+                        continue;
+                    }
+                    match ent {
+                        EntityRef::Player(_) => out.push(ent),
+                        EntityRef::Permanent(cid)
+                            if self.battlefield_find(cid).is_some()
+                                && self.evaluate_requirement_static(
+                                    filter,
+                                    &Target::Permanent(cid),
+                                    ctx.controller,
+                                    ctx.source,
+                                ) =>
+                        {
+                            out.push(ent)
+                        }
+                        _ => {}
                     }
                 }
                 out
