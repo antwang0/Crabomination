@@ -2136,6 +2136,12 @@ pub struct CardDefinition {
     /// SBA pruning step.
     #[serde(default)]
     pub max_counters_of_kind: Option<(CounterType, u32)>,
+    /// CR 603.8 state trigger — "When a player other than this permanent's
+    /// owner controls it, that player sacrifices it. If they do, it deals N
+    /// damage to that player." (Bronze Bombshell: `Some(7)`.) Checked in the
+    /// SBA pass; latched per-instance so it fires once per control change.
+    #[serde(default)]
+    pub sacrifice_and_burn_when_stolen: Option<u32>,
     /// CR 604.3 — characteristic-defining dynamic P/T formula (Tarmogoyf,
     /// Death's Shadow). When `Some`, `compute_battlefield` injects a
     /// layer-7a SetPT effect from the formula on every recompute.

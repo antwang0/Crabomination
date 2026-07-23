@@ -2010,3 +2010,31 @@ fn kindle_the_carnage_repeats_board_burn() {
     assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both 2/2s burned down");
     assert_eq!(g.players[0].hand.len(), 0, "both hand cards discarded across two rounds");
 }
+
+/// Bronze Bombshell's CR 603.8 state trigger: when an opponent steals it, they
+/// sacrifice it and take 7 damage.
+#[test]
+fn bronze_bombshell_punishes_theft() {
+    use crabomination::effect::{Duration, Effect, PlayerRef, Selector};
+    let mut g = two_player_game();
+    let bomb = g.add_card_to_battlefield(0, catalog::bronze_bombshell());
+    // No penalty while its owner controls it.
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bomb).is_some(), "no trigger while owner controls it");
+    // Player 1 gains control of it.
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bomb)];
+    g.resolve_effect(&Effect::GainControl {
+        what: Selector::TargetFiltered { slot: 0, filter: crabomination::card::SelectionRequirement::Permanent },
+        to: Some(PlayerRef::You), duration: Duration::Permanent,
+    }, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bomb).unwrap().controller, 1, "stolen");
+    let life = g.players[1].life;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bomb).is_none(), "thief sacrifices it");
+    assert_eq!(g.players[1].life, life - 7, "thief takes 7 damage");
+}

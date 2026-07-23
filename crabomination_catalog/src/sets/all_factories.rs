@@ -7099,6 +7099,7 @@ static DIS: &[Factory] = &[
     super::dis::simic_basilisk,
     super::dis::evolution_vat,
     super::dis::kindle_the_carnage,
+    super::dis::bronze_bombshell,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

@@ -1129,6 +1129,12 @@ pub struct GameState {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub plotted_cards: std::collections::HashSet<CardId>,
+    /// CR 603.8 latch for `sacrifice_and_burn_when_stolen` (Bronze Bombshell):
+    /// permanents whose steal penalty has already been put on the stack, so the
+    /// state trigger fires once per control change rather than every SBA pass.
+    /// Cleared for a card when control returns to its owner. `#[serde(default)]`.
+    #[serde(default)]
+    pub steal_penalty_armed: std::collections::HashSet<CardId>,
     /// CR 702.170d — cards plotted *this* turn can't be cast until a later
     /// turn. Cleared at cleanup. `#[serde(default)]` for back-compat.
     #[serde(default)]
@@ -1362,6 +1368,7 @@ impl Clone for GameState {
             temporary_copies: self.temporary_copies.clone(),
             foretold_this_turn: self.foretold_this_turn.clone(),
             plotted_cards: self.plotted_cards.clone(),
+            steal_penalty_armed: self.steal_penalty_armed.clone(),
             plotted_this_turn: self.plotted_this_turn.clone(),
             triggered_once_per_turn_used: self.triggered_once_per_turn_used.clone(),
             per_subject_trigger_uses: self.per_subject_trigger_uses.clone(),
@@ -1545,6 +1552,7 @@ impl GameState {
             temporary_copies: Vec::new(),
             foretold_this_turn: std::collections::HashSet::new(),
             plotted_cards: std::collections::HashSet::new(),
+            steal_penalty_armed: std::collections::HashSet::new(),
             plotted_this_turn: std::collections::HashSet::new(),
             triggered_once_per_turn_used: std::collections::HashSet::new(),
             per_subject_trigger_uses: std::collections::HashMap::new(),

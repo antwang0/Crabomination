@@ -2674,6 +2674,48 @@ impl GameState {
             }
         }
 
+        // CR 603.8 — "when a player other than its owner controls it" state
+        // trigger (Bronze Bombshell): that player sacrifices it, then it deals
+        // N damage to them. Latched in `steal_penalty_armed` so it fires once
+        // per control change; the latch clears when control returns to owner.
+        let steal_penalties: Vec<(CardId, usize, u32)> = self
+            .battlefield
+            .iter()
+            .filter_map(|c| {
+                let dmg = c.definition.sacrifice_and_burn_when_stolen?;
+                (c.controller != c.owner).then_some((c.id, c.controller, dmg))
+            })
+            .collect();
+        for id in self.battlefield.iter().map(|c| c.id).collect::<Vec<_>>() {
+            if let Some(c) = self.battlefield_find(id)
+                && c.controller == c.owner
+            {
+                self.steal_penalty_armed.remove(&id);
+            }
+        }
+        for (id, thief, dmg) in steal_penalties {
+            if self.steal_penalty_armed.insert(id) {
+                self.push_pending_trigger(
+                    crate::game::types::PendingTriggerPush {
+                        source: id,
+                        controller: thief,
+                        effect: Effect::Seq(vec![
+                            Effect::SacrificeSource,
+                            Effect::DealDamage {
+                                to: crate::effect::Selector::Player(crate::effect::PlayerRef::You),
+                                amount: crate::card::Value::Const(dmg as i32),
+                            },
+                        ]),
+                        subject: None,
+                        event_amount: 0,
+                        mode: None,
+                        intervening_if: None,
+                    },
+                    None,
+                );
+            }
+        }
+
         // +1/+1 and -1/-1 counters cancel each other out (CR 122.3 — the
         // SBA removes `N` of each kind, where `N` is the smaller count).
         for card in &mut self.battlefield {

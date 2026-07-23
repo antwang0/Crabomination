@@ -12,16 +12,6 @@ Items are grouped by area and roughly ordered by impact within each group.
 - **Player-enchanting Auras** ("enchant player") — Psychic Possession (DIS),
   and the Curse cycle generally. No attach-to-player support today; modeling as
   a plain enchantment would drift the type line.
-- **Control-change state trigger** — Bronze Bombshell (DIS): "when a player
-  other than its owner controls it, they sacrifice it, then it deals 7 to them."
-  No gain-control event / CR 603.8 state trigger yet.
-- **Discard-at-random** — Kindle the Carnage (DIS): discard a card at random,
-  deal its MV to each creature, repeat. Needs a random-discard primitive plus a
-  bounded "may repeat" loop.
-- **Filibuster counter + damaged-you trigger** — Azor's Elocutors (RTR): a new
-  `CounterType` and a "whenever a source deals damage to you" trigger.
-- **Choose-two-colors as-enters** — Tablet of the Guilds (RTR): stamp two
-  colours, gain life per chosen colour a cast spell is.
 - **Filtered exile-free-cast** — Epic Experiment (RTR): exile top X, free-cast
   I/S with MV ≤ X, rest to graveyard (a filtered `ExileTopAndGrantMayPlay` that
   bins non-cast cards).
@@ -29,9 +19,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   Zombie subtype is added but the added black colour is unmodeled (`CardDefinition`
   has no `colors` field; colour derives from cost).
 - Others needing bespoke work: Experiment Kraj (dynamic "has all activated
-  abilities of counter-bearing creatures"), Simic Basilisk (Graft), Evolution
-  Vat (grant a double-counters ability), Rakdos Riteknife (blood counters),
-  Angel of Serenity (up-to-3 exile-until-leaves spanning battlefield + graveyard),
+  abilities of counter-bearing creatures"), Rakdos Riteknife (blood counters),
   Search the City (name-replay → extra turn), the DIS split cards (Bound //
   Determined, Odds // Ends, Research // Development), and the block of
   planeswalkers (Jace AoT, Vraska the Unseen, Gideon CoJ, Domri already done).

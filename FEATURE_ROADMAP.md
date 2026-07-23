@@ -40,9 +40,11 @@ exercising each) was elided in a compaction pass; recover it from
   power-snapshot, 106.6 hybrid mana, 205.1 chosen card type. UI/server: readable
   labels for every new effect. Deferred (each blocked on one primitive — see
   TODO.md): Valor Made Real / Guardian of the Gateless (multi-block), Psychic
-  Possession (player-Auras), Bronze Bombshell (control-change trigger), Rakdos
+  Possession (player-Auras), Rakdos
   Lord of Riots (dynamic cost-reduction static), Epic Experiment (filtered
   exile-free-cast), Search the City, Experiment Kraj, the DIS split cards.
+  Bronze Bombshell shipped: `CardDefinition::sacrifice_and_burn_when_stolen`
+  (CR 603.8 state trigger, latched in `steal_penalty_armed`).
 - **GTC wave 16 (prior run, 8 cards):** Aurelia's Fury, Nightveil Specter,
   Glaring Spotlight, Bane Alley Broker, Signal the Clans, Unexpected Results,
   Soul Ransom, Vizkopa Confessor. New engine work: `GameState.damaged_this_
