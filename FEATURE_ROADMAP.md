@@ -16,11 +16,12 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **WAR gap waves 6–7 (this run, 16 cards):** Bioessence Hydra, Charmed Stray,
+- **WAR gap waves 6–8 (this run, 21 cards):** Bioessence Hydra, Charmed Stray,
   Jaya Venerated Firemage, Kaya's Ghostform, Command the Dreadhorde, Vivien's
   Grizzly, Mowu, Band Together, Ugin's Conjurant, Arlinn's Wolf, Domri's Ambush,
   Spark Harvest, Toll of the Invasion, Eternal Taskmaster, Living Twister,
-  Lazotep Plating. New engine: `StaticEffect::YourColorSourcesDealExtraDamage`
+  Lazotep Plating, Davriel's Shadowfugue, Ignite the Beacon, Nissa's Triumph,
+  Desperate Lunge, Gideon's Battle Cry. New engine: `StaticEffect::YourColorSourcesDealExtraDamage`
   (Jaya — another color-source you control deals +N to any permanent/player);
   `EnchantedBySource` triggers now fire on the host being **exiled** as well as
   dying (Kaya's Ghostform — `CardExiled` trigger + `PermanentExiled`

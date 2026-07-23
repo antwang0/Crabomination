@@ -25,11 +25,12 @@ Items are grouped by area and roughly ordered by impact within each group.
   planeswalkers (Jace AoT, Vraska the Unseen, Gideon CoJ, Domri already done).
 
 **Remaining WAR (War of the Spark) gap cards** — `catalog::sets::war`.
-Batches 6–7 (this run) shipped 16 cards: Bioessence Hydra, Charmed Stray, Jaya
+Batches 6–8 (this run) shipped 21 cards: Bioessence Hydra, Charmed Stray, Jaya
 Venerated Firemage, Kaya's Ghostform, Command the Dreadhorde, Vivien's Grizzly,
 Mowu, Band Together, Ugin's Conjurant, Arlinn's Wolf, Domri's Ambush, Spark
 Harvest, Toll of the Invasion, Eternal Taskmaster, Living Twister, Lazotep
-Plating. Still open, grouped by primitive:
+Plating, Davriel's Shadowfugue, Ignite the Beacon, Nissa's Triumph, Desperate
+Lunge, Gideon's Battle Cry. Still open, grouped by primitive:
 - **"Becomes a creature with P/T = loyalty" planeswalkers** (Gideon Blackblade,
   Gideon the Oathsworn, Sarkhan the Masterless) — need loyalty-as-P/T animation
   + loyalty-add-per-count.
