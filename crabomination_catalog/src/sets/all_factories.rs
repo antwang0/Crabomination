@@ -7096,6 +7096,7 @@ static DIS: &[Factory] = &[
     super::dis::dovescape,
     super::dis::muse_vessel,
     super::dis::isperia_the_inscrutable,
+    super::dis::simic_basilisk,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

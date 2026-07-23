@@ -1926,3 +1926,28 @@ fn isperia_names_and_tutors_flyer() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == flyer), "tutored the flying creature to hand");
 }
+
+/// Simic Basilisk enters as a 3/3 via Graft, then grants deathtouch to a
+/// counter-bearing creature.
+#[test]
+fn simic_basilisk_graft_and_grant_deathtouch() {
+    use crabomination::game::types::{GameAction, Target};
+    let mut g = two_player_game();
+    let basilisk = g.move_card_to_battlefield_for_test(0, catalog::simic_basilisk());
+    drain_stack(&mut g);
+    // Graft 3 → enters as a 0/0 with three +1/+1 counters (3/3).
+    let cp = g.computed_permanent(basilisk).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "3 graft counters make it a 3/3");
+    // {1}{G}: grant deathtouch to a creature with a +1/+1 counter (itself).
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: basilisk, ability_index: 0, target: Some(Target::Permanent(basilisk)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate grant");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(basilisk).unwrap().keywords.contains(&Keyword::Deathtouch),
+        "gained deathtouch");
+}

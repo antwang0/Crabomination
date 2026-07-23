@@ -236,3 +236,35 @@ pub fn isperia_the_inscrutable() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Simic Basilisk — {4}{G}{G} 0/0 Basilisk Mutant. Graft 3; {1}{G}: until end
+/// of turn, target creature with a +1/+1 counter gains deathtouch (modeling
+/// "destroy the creature it damages at end of combat").
+pub fn simic_basilisk() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Simic Basilisk",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Basilisk, CreatureType::Mutant],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        triggered_abilities: vec![crate::effect::shortcut::graft()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::WithCounter(CounterType::PlusOnePlusOne))),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
