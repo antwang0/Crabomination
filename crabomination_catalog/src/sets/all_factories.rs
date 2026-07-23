@@ -7190,6 +7190,12 @@ static DGM: &[Factory] = &[
     super::dgm::blast_of_genius,
     super::dgm::pyrewild_shaman,
     super::dgm::mazes_end,
+    super::dgm::aetherling,
+    super::dgm::dragonshift,
+    super::dgm::krasis_incubation,
+    super::dgm::armed_dangerous,
+    super::dgm::protect_serve,
+    super::dgm::down_dirty,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

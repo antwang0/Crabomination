@@ -694,3 +694,115 @@ fn mazes_end_fetches_gate() {
 }
 
 
+
+// ── DGM gap wave 2 (Aetherling, Dragonshift, Krasis, Fuse splits) ───────────
+
+/// Aetherling's {1}: +1/-1 pump adjusts its stats.
+#[test]
+fn aetherling_pump_ability() {
+    let mut g = two_player_game();
+    let ae = g.add_card_to_battlefield(0, catalog::aetherling());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ae, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate +1/-1");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ae).map(|c| (c.power, c.toughness)), Some((5, 4)), "+1/-1");
+}
+
+/// Dragonshift turns your creature into a 4/4 flying Dragon with no abilities.
+#[test]
+fn dragonshift_animates_dragon() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::dragonshift());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.cast_spell(spell, Some(Target::Permanent(bear)), vec![], None, None).expect("cast Dragonshift");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "becomes 4/4");
+    assert!(cp.keywords.contains(&Keyword::Flying), "gains flying");
+}
+
+/// Krasis Incubation locks the creature down, then bounces itself for two
+/// counters.
+#[test]
+fn krasis_incubation_lock_and_bounce() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::krasis_incubation());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.cast_spell(aura, Some(Target::Permanent(bear)), vec![], None, None).expect("cast Krasis");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::CantAttack), "creature locked");
+    // Activate the release ability.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Krasis release");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "two counters");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Krasis Incubation"), "aura returned to hand");
+}
+
+/// Armed (left half) pumps +1/+1 and grants double strike.
+#[test]
+fn armed_left_half() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::armed_dangerous());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.cast_spell(spell, Some(Target::Permanent(bear)), vec![], None, None).expect("cast Armed");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::DoubleStrike), "gains double strike");
+}
+
+/// Serve (right half) gives -6/-0.
+#[test]
+fn serve_right_half() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::protect_serve());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Serve");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, -4, "2 - 6 = -4 power");
+}
+
+/// Down (left half) makes a player discard two.
+#[test]
+fn down_left_half() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    let spell = g.add_card_to_hand(0, catalog::down_dirty());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let before = g.players[1].hand.len();
+    g.cast_spell(spell, Some(Target::Player(1)), vec![], None, None).expect("cast Down");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), before - 2, "discarded two");
+}
