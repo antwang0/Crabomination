@@ -2287,3 +2287,37 @@ fn gtc16_unexpected_results_land_returns_spell() {
     assert!(g.battlefield_find(land).is_some(), "the revealed land entered the battlefield");
     assert!(g.players[0].hand.iter().any(|c| c.id == spell), "Unexpected Results returned to hand");
 }
+
+/// Soul Ransom steals a creature; only the opponent can discard two to reclaim
+/// it, sacrificing the Aura and letting its controller draw two.
+#[test]
+fn gtc16_soul_ransom_steals_and_ransoms() {
+    use crabomination::game::types::GameAction;
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::gutter_skulk());
+    let aura = g.add_card_to_hand(0, catalog::soul_ransom());
+    // Fuel: p0 library to draw from; p1 hand to discard.
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_hand(1, catalog::forest());
+    g.add_card_to_hand(1, catalog::forest());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.cast_spell(aura, Some(Target::Permanent(creature)), vec![], None, None).expect("cast Soul Ransom");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(creature).unwrap().controller, 0, "Soul Ransom steals control");
+    let p0_hand_before = g.players[0].hand.len();
+    // Only the opponent may activate; player 1 discards two to reclaim it.
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("opponent activates ransom");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "the Aura was sacrificed");
+    assert_eq!(g.computed_permanent(creature).unwrap().controller, 1, "control reverts to the owner");
+    assert_eq!(g.players[0].hand.len(), p0_hand_before + 2, "the Aura's controller drew two");
+}

@@ -2,9 +2,9 @@
 //! `classic_sets/gtc`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, MayPlayDuration, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
-    Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind,
+    EventScope, EventSpec, Keyword, MayPlayDuration, SelectionRequirement as R, StaticAbility,
+    Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
@@ -59,6 +59,47 @@ pub fn nightveil_specter() -> CardDefinition {
                 pay_own_cost: true,
                 uncast_penalty: None,
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Soul Ransom — {2}{U}{B} Aura. Enchant creature; you control it. Only an
+/// opponent may pay "Discard two cards" to make its controller sacrifice it
+/// (returning the creature) and draw two cards.
+pub fn soul_ransom() -> CardDefinition {
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        name: "Soul Ransom",
+        cost: cost(&[generic(2), u(), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainControlWhileSourceRemains {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 2)),
+            opponents_only: true,
+            // Draw for the Aura's controller before it's sacrificed (control of
+            // the creature reverts as the Aura leaves).
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::This))),
+                    amount: Value::Const(2),
+                },
+                Effect::SacrificeSource,
+            ]),
+            ..Default::default()
         }],
         ..Default::default()
     }
