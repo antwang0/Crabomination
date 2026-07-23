@@ -11962,6 +11962,34 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::IsperiaReveal => {
+                use rand::seq::SliceRandom;
+                let Some(opp) = self.resolve_player(&PlayerRef::DefendingPlayer, ctx)
+                    .or_else(|| (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller)))
+                else { return Ok(()) };
+                // The namer picks (heuristic: the defender's densest nonland name,
+                // guaranteeing a hit when a nonland card is present).
+                let named = rank_names_by_frequency(
+                    self.players[opp].hand.iter()
+                        .filter(|c| !c.definition.is_land()).map(|c| c.definition.name),
+                ).into_iter().next();
+                let hit = named
+                    .as_ref()
+                    .is_some_and(|n| self.players[opp].hand.iter().any(|c| c.definition.name == *n));
+                if hit {
+                    // Search your library for a creature card with flying → hand.
+                    let flyer = self.players[ctx.controller].library.iter()
+                        .find(|c| c.definition.is_creature() && c.definition.keywords.contains(&crate::card::Keyword::Flying))
+                        .map(|c| c.id);
+                    if let Some(id) = flyer
+                        && let Some(card) = Self::take_card(&mut self.players[ctx.controller].library, id) {
+                        self.players[ctx.controller].hand.push(card);
+                    }
+                    self.players[ctx.controller].library.shuffle(&mut rand::rng());
+                }
+                Ok(())
+            }
+
             Effect::Dovescape => {
                 use crate::card::{CardType, CreatureType, Keyword, Subtypes, TokenDefinition};
                 // The triggering spell is bound as `trigger_source`.

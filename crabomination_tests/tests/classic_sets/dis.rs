@@ -6,6 +6,12 @@ use crabomination::game::types::{Attack, AttackTarget};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
+fn advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
 /// Assault Zeppelid is a 3/3 with flying and trample.
 #[test]
 fn assault_zeppelid_flying_trample() {
@@ -1898,4 +1904,25 @@ fn muse_vessel_exiles_then_grants_play() {
     drain_stack(&mut g);
     assert!(g.exile.iter().find(|c| c.id == stolen).unwrap().may_play_until.is_some(),
         "you may play the exiled card this turn");
+}
+
+/// Isperia tutors a flyer when the defender's hand reveals the named card.
+#[test]
+fn isperia_names_and_tutors_flyer() {
+    let mut g = two_player_game();
+    let isperia = g.add_card_to_battlefield(0, catalog::isperia_the_inscrutable());
+    // Defender has a nonland card (guarantees the heuristic name hits).
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    // A flying creature buried in your library to be tutored.
+    let flyer = g.add_card_to_library(0, catalog::snapping_drake());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // non-flyer decoy
+    g.clear_sickness(isperia);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: isperia, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == flyer), "tutored the flying creature to hand");
 }

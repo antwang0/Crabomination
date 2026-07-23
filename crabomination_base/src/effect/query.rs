@@ -269,6 +269,7 @@ impl Effect {
             Effect::InfernalTutor => false,
             Effect::IgnorantBliss => false,
             Effect::Dovescape => false,
+            Effect::IsperiaReveal => false,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only
             // `otherwise` can demand a cast-time target (Browbeat's drawer).
@@ -1620,6 +1621,9 @@ impl Effect {
             }
             Effect::Dovescape => {
                 "counter that noncreature spell; its caster makes a Bird per mana value".into()
+            }
+            Effect::IsperiaReveal => {
+                "name a card; if the defender reveals it, tutor a flying creature".into()
             }
             Effect::AethermagesTouch { count } => match count {
                 Value::Const(n) => format!(

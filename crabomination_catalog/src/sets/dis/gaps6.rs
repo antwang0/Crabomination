@@ -216,3 +216,23 @@ pub fn muse_vessel() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Isperia the Inscrutable — {1}{W}{W}{U}{U} 3/6 Sphinx. Flying; combat damage
+/// to a player lets you name a card — if they reveal it, tutor a flyer.
+pub fn isperia_the_inscrutable() -> CardDefinition {
+    CardDefinition {
+        name: "Isperia the Inscrutable",
+        cost: cost(&[generic(1), w(), w(), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        power: 3,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::IsperiaReveal,
+        }],
+        ..Default::default()
+    }
+}

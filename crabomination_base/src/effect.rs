@@ -3373,6 +3373,10 @@ pub enum Effect {
     /// X 1/1 white-and-blue Bird tokens with flying, where X is that spell's
     /// mana value.
     Dovescape,
+    /// Isperia the Inscrutable: choose a card name; the defending player reveals
+    /// their hand; if a card with that name is revealed, search your library for
+    /// a creature card with flying, put it into your hand, then shuffle.
+    IsperiaReveal,
     /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
     /// in hand moves to the graveyard and every card in the graveyard moves to
     /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card

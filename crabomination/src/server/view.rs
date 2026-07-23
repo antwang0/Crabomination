@@ -2054,6 +2054,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::InfernalTutor => "Tutor",
         Effect::IgnorantBliss => "Blink your hand",
         Effect::Dovescape => "Counter → Birds",
+        Effect::IsperiaReveal => "Name → tutor flyer",
         _ => "Activate",
     }
 }
