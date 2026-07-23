@@ -2774,8 +2774,8 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(1) },
-                Effect::Mill { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::Const(1) },
+                Effect::Mill { who: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::Const(1) },
                 Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
                 Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
             ]),

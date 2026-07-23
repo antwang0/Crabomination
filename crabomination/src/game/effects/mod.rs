@@ -8295,6 +8295,41 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DoubleAllCountersOn { what } => {
+                // CR 122.1 — Solemnity locks counter placement entirely.
+                if self.counters_locked() { return Ok(()); }
+                // Snapshot each permanent's full counter map so additions don't
+                // compound across kinds or the fan-out.
+                let targets: Vec<(CardId, Vec<(CounterType, u32)>)> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter_map(|cid| {
+                        let c = self.battlefield_find(cid)?;
+                        let kinds: Vec<_> =
+                            c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, n)| (*k, *n)).collect();
+                        (!kinds.is_empty()).then_some((cid, kinds))
+                    })
+                    .collect();
+                for (cid, kinds) in targets {
+                    for (kind, cur) in kinds {
+                        let add = self
+                            .battlefield_find(cid)
+                            .map(|c| (c.controller, c.definition.is_creature()))
+                            .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, kind, cur, cre))
+                            .unwrap_or(cur);
+                        if let Some(c) = self.battlefield_find_mut(cid) {
+                            c.add_counters(kind, add);
+                            events.push(GameEvent::CounterAdded { card_id: cid, counter_type: kind, count: add });
+                        }
+                    }
+                    self.permanents_gained_counter_this_turn.insert(cid);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::RemoveCounter { what, kind, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n == 0 { return Ok(()); }

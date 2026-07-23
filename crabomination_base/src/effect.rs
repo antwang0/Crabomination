@@ -688,6 +688,9 @@ pub enum Value {
     /// Scroll's "draw X cards, where X is the number of differently named
     /// lands you control").
     DifferentlyNamedLandsControlled,
+    /// Number of Gates you control with different names (Maze's End's
+    /// ten-different-Gates win condition, CR 704).
+    DistinctlyNamedGatesControlled,
     /// Number of differently-named creature *tokens* the controller controls
     /// (Audience with Trostani's "draw cards equal to the number of differently
     /// named creature tokens you control").
@@ -3812,6 +3815,11 @@ pub enum Effect {
     /// (Doubling Season) on the added counters. Kalonian Hydra's on-attack
     /// trigger over the controller's creatures.
     DoubleCountersOnEach { what: Selector, kind: crate::card::CounterType },
+    /// CR 701.10 — "double the number of each kind of counter on the resolved
+    /// permanent(s)." For every counter kind present, add that many more (N →
+    /// 2N per kind). Honors counter-doubling replacements. Vorel of the Hull
+    /// Clade, Gilder Bairn.
+    DoubleAllCountersOn { what: Selector },
     /// Override the resolved permanent's base power and toughness via a
     /// layer-7b continuous effect. Unlike `PumpPT` (which adds to the
     /// existing P/T via direct bonus fields), `SetBasePT` installs a

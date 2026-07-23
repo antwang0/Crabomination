@@ -870,6 +870,7 @@ impl Effect {
             Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::ExileTopMayPayEnergyToCast { .. } => false,
             Effect::DoubleCountersOnEach { what, .. } => sel_has_target(what),
+            Effect::DoubleAllCountersOn { what } => sel_has_target(what),
             Effect::SacrificePermanent { what } => sel_has_target(what),
             Effect::ExileLastCreatedTokensAtNextEndStep
             | Effect::SacrificeLastCreatedTokensAtNextEndStep => false,
@@ -1140,6 +1141,7 @@ impl Effect {
             | Effect::AddCreatureTypes { what, .. }
             | Effect::GrantMayPlay { what, .. }
             | Effect::DoubleCountersOnEach { what, .. }
+            | Effect::DoubleAllCountersOn { what }
             | Effect::NameCreatureType { what }
             | Effect::NameCard { what }
             | Effect::LockTargetNameUntilYourNextTurn { what }
@@ -2205,6 +2207,7 @@ impl Effect {
                 | Effect::GrantMayPlay { what, .. }
                 | Effect::CastWithoutPayingImmediate { what, .. }
                 | Effect::DoubleCountersOnEach { what, .. }
+                | Effect::DoubleAllCountersOn { what }
                 | Effect::NameCreatureType { what }
                 | Effect::NameCard { what }
                 | Effect::LockTargetNameUntilYourNextTurn { what }

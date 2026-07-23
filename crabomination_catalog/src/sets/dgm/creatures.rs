@@ -16,7 +16,7 @@ fn creatures(t: Vec<CreatureType>) -> Subtypes {
 }
 
 /// Two-or-more-Gates intervening 'if' for the Gatekeeper cycle.
-fn two_gates() -> Predicate {
+pub(super) fn two_gates() -> Predicate {
     Predicate::SelectorCountAtLeast {
         sel: Selector::EachPermanent(R::HasLandType(LandType::Gate).and(R::ControlledByYou)),
         n: Value::Const(2),

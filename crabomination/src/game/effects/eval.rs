@@ -324,6 +324,20 @@ impl GameState {
                 names.dedup();
                 names.len() as i32
             }
+            Value::DistinctlyNamedGatesControlled => {
+                let mut names: Vec<String> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == ctx.controller
+                            && c.definition.has_land_type(crate::card::LandType::Gate)
+                    })
+                    .map(|c| c.definition.name.to_string())
+                    .collect();
+                names.sort_unstable();
+                names.dedup();
+                names.len() as i32
+            }
             Value::DifferentlyNamedCreatureTokensControlled => {
                 let mut names: Vec<String> = self
                     .battlefield

@@ -2117,12 +2117,10 @@ pub fn cunning_rhetoric() -> CardDefinition {
 /// (synthesised STX Witherbloom flavor). "Whenever this creature deals
 /// combat damage to a player, that player mills two cards."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A combat-damage mill body
-/// — pairs with Witherbloom Apprentice / Sedgemoor Witch's gy-build
-/// engines. Wired via `EventKind::DealsCombatDamageToPlayer /
-/// SelfSource` trigger + `Effect::Mill { who: Triggerer, amount: 2 }`.
-/// Tests: `library_larcenist_mills_on_combat_damage`,
-/// `library_larcenist_is_a_three_mana_two_three_pest_rogue`.
+/// A combat-damage mill body — pairs with Witherbloom Apprentice /
+/// Sedgemoor Witch's gy-build engines. `DealsCombatDamageToPlayer /
+/// SelfSource` trigger + `Effect::Mill { who: DefendingPlayer }` (mills
+/// the damaged player, not the controller).
 pub fn library_larcenist() -> CardDefinition {
     CardDefinition {
         name: "Library Larcenist",
@@ -2140,7 +2138,7 @@ pub fn library_larcenist() -> CardDefinition {
                 EventScope::SelfSource,
             ),
             effect: Effect::Mill {
-                who: Selector::Player(PlayerRef::Triggerer),
+                who: Selector::Player(PlayerRef::DefendingPlayer),
                 amount: Value::Const(2),
             },
         }],

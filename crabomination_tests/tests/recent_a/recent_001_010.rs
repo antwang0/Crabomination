@@ -357,21 +357,34 @@ mod recent {
         assert!(g.evaluate_predicate(&pred, &ctx), "digs after gaining life");
     }
 
-    /// Krydle's combat-damage trigger drains the player and self-scrys.
+    /// Krydle's combat-damage trigger drains the *defending* player and
+    /// self-gains (CR — "that player" is the damaged player, not Krydle's
+    /// controller). Regression for the old `Triggerer` misuse.
     #[test]
     fn krydle_combat_damage_drains_and_gains() {
         let mut g = two_player_game();
         let krydle = g.add_card_to_battlefield(0, catalog::krydle_of_baldurs_gate());
+        g.clear_sickness(krydle);
         g.add_card_to_library(1, catalog::island()); // something to mill
         g.players[0].life = 20;
         g.players[1].life = 20;
-        let trig = catalog::krydle_of_baldurs_gate().triggered_abilities[0].effect.clone();
-        let mut ctx = crabomination::game::effects::EffectContext::for_trigger(krydle, 0, None, 0);
-        ctx.trigger_source = Some(crabomination::game::effects::EntityRef::Player(1));
-        g.resolve_effect(&trig, &ctx).unwrap();
-        assert_eq!(g.players[1].life, 19, "damaged player lost 1");
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: krydle, target: AttackTarget::Player(1),
+        }])).expect("attack");
+        drain_stack(&mut g);
+        let mut guard = 0;
+        while g.step != TurnStep::PostCombatMain && guard < 40 {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+            guard += 1;
+        }
+        drain_stack(&mut g);
+        // Player 1 loses 1 (combat) + 1 (trigger) = 2; controller gains 1.
+        assert_eq!(g.players[1].life, 18, "defending player took combat + drain");
         assert_eq!(g.players[0].life, 21, "Krydle's controller gained 1");
-        assert_eq!(g.players[1].graveyard.len(), 1, "milled a card");
+        assert_eq!(g.players[1].graveyard.len(), 1, "milled the defending player's card");
     }
 
     /// Dour Port-Mage's activated ability returns another of your creatures.
