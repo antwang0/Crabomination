@@ -1974,6 +1974,29 @@ pub fn storrev_devkarin_lich() -> CardDefinition {
 
 // ── Batch 8 (2026-07-23): search / discard commons ────────────────────────────
 
+/// Gideon's Battle Cry — {2}{W}{W} Sorcery. Put a +1/+1 counter on each creature
+/// you control; you may tutor a card named Gideon, the Oathsworn to hand.
+pub fn gideons_battle_cry() -> CardDefinition {
+    CardDefinition {
+        name: "Gideon's Battle Cry",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            Effect::SearchLibraryOrGraveyard {
+                who: PlayerRef::You,
+                filter: R::HasName("Gideon, the Oathsworn".into()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Desperate Lunge — {1}{W} Instant. Target creature gets +2/+2 and gains flying
 /// until end of turn. You gain 2 life.
 pub fn desperate_lunge() -> CardDefinition {

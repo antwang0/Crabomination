@@ -1552,3 +1552,24 @@ fn desperate_lunge_pumps_and_gains() {
     assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
     assert_eq!(g.players[0].life, life + 2, "gained 2 life");
 }
+
+/// Gideon's Battle Cry counters up every creature you control.
+#[test]
+fn gideons_battle_cry_counters_your_team() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::gideons_battle_cry());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "not opponents' creatures");
+}

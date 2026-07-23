@@ -14803,6 +14803,7 @@ static WAR: &[Factory] = &[
     super::war::ignite_the_beacon,
     super::war::nissas_triumph,
     super::war::desperate_lunge,
+    super::war::gideons_battle_cry,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,
