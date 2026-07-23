@@ -11962,6 +11962,31 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::InfernalTutor => {
+                use rand::seq::SliceRandom;
+                let p = ctx.controller;
+                // Hellbent (empty hand) → tutor any card; else tutor a copy of
+                // a revealed hand card (auto-pick one that has a library match).
+                let wanted: Option<&'static str> = if self.players[p].hand.is_empty() {
+                    None
+                } else {
+                    let lib_names: std::collections::HashSet<&str> =
+                        self.players[p].library.iter().map(|c| c.definition.name).collect();
+                    self.players[p].hand.iter().map(|c| c.definition.name)
+                        .find(|n| lib_names.contains(n))
+                        .or_else(|| self.players[p].hand.first().map(|c| c.definition.name))
+                };
+                let pick = self.players[p].library.iter()
+                    .find(|c| wanted.is_none_or(|n| c.definition.name == n))
+                    .map(|c| c.id);
+                if let Some(id) = pick
+                    && let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                    self.players[p].hand.push(card);
+                }
+                self.players[p].library.shuffle(&mut rand::rng());
+                Ok(())
+            }
+
             Effect::FertileImagination { per } => {
                 use crate::card::{CardType, CreatureType, Subtypes, TokenDefinition};
                 let Some(opp) = self.resolve_player(&crate::effect::PlayerRef::Target(0), ctx)

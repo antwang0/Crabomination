@@ -7091,6 +7091,7 @@ static DIS: &[Factory] = &[
     super::dis::vigean_intuition,
     super::dis::fertile_imagination,
     super::dis::aethermages_touch,
+    super::dis::infernal_tutor,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

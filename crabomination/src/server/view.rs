@@ -2051,6 +2051,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::FertileImagination { .. } => "Saprolings per type",
         Effect::GuildFeud => "Duel top creatures",
         Effect::AethermagesTouch { .. } => "Flash in a creature",
+        Effect::InfernalTutor => "Tutor",
         _ => "Activate",
     }
 }

@@ -266,6 +266,7 @@ impl Effect {
             | Effect::NameCardTargetDiscardsOneOrYouDraw => true,
             Effect::ChooseTypeRevealTopPartition { .. } => false,
             Effect::AethermagesTouch { .. } => false,
+            Effect::InfernalTutor => false,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only
             // `otherwise` can demand a cast-time target (Browbeat's drawer).
@@ -1608,6 +1609,9 @@ impl Effect {
             },
             Effect::GuildFeud => {
                 "each side reveals three, deploys a creature; the two deployed creatures fight".into()
+            }
+            Effect::InfernalTutor => {
+                "reveal a hand card and tutor its twin (Hellbent: tutor any card)".into()
             }
             Effect::AethermagesTouch { count } => match count {
                 Value::Const(n) => format!(

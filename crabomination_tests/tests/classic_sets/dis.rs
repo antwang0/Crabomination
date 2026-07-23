@@ -1783,3 +1783,41 @@ fn aethermages_touch_deploys_then_bounces() {
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Snapping Drake"), "returned to hand at end step");
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Snapping Drake"), "no longer on the battlefield");
 }
+
+/// Infernal Tutor fetches a same-named copy when you have a card in hand.
+#[test]
+fn infernal_tutor_same_name_with_hand() {
+    let mut g = two_player_game();
+    // A Grizzly Bears in hand + a Grizzly Bears in library (plus a decoy).
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let target = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::infernal_tutor());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Infernal Tutor");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == target), "tutored the same-named copy to hand");
+}
+
+/// Hellbent Infernal Tutor (empty hand) fetches any card.
+#[test]
+fn infernal_tutor_hellbent_any_card() {
+    let mut g = two_player_game();
+    let only = g.add_card_to_library(0, catalog::phantom_warrior());
+    // Cast from a state where the only hand card is the tutor itself (removed on cast → hellbent).
+    let spell = g.add_card_to_hand(0, catalog::infernal_tutor());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Infernal Tutor");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == only), "hellbent tutored any card to hand");
+}

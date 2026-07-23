@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{cost, g, generic, u, w, Color};
+use crate::mana::{b, cost, g, generic, u, w, Color};
 
 /// Momir Vig, Simic Visionary — {3}{G}{U} 2/2 Elf Wizard. Casting a green
 /// creature spell tutors a creature to the top of your library; casting a blue
@@ -131,6 +131,18 @@ pub fn aethermages_touch() -> CardDefinition {
         cost: cost(&[generic(2), w(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::AethermagesTouch { count: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Infernal Tutor — {1}{B} Sorcery. Reveal a card from your hand and search for
+/// a card with the same name; Hellbent (empty hand) instead tutors any card.
+pub fn infernal_tutor() -> CardDefinition {
+    CardDefinition {
+        name: "Infernal Tutor",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::InfernalTutor,
         ..Default::default()
     }
 }

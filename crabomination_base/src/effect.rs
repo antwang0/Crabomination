@@ -3362,6 +3362,10 @@ pub enum Effect {
     /// creature card from among them onto the battlefield with a delayed
     /// "return to owner's hand at your end step" rider, then bottom the rest.
     AethermagesTouch { count: Value },
+    /// Infernal Tutor: reveal a card from your hand and search your library for
+    /// a card with the same name; if you have no cards in hand (Hellbent),
+    /// instead search for any card. Put it into your hand, then shuffle.
+    InfernalTutor,
     /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
     /// in hand moves to the graveyard and every card in the graveyard moves to
     /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card
