@@ -94,6 +94,7 @@ pub use sets::rav::*;
 pub use sets::rtr::*;
 pub use sets::shm::*;
 pub use sets::tmp::*;
+pub use sets::war::*;
 pub use sets::zen::*;
 pub use sets::thb::*;
 pub use sets::ths::*;

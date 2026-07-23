@@ -329,6 +329,7 @@ pub mod shm;
 pub mod thb;
 pub mod ths;
 pub mod tmp;
+pub mod war;
 pub mod zen;
 pub mod decks;
 pub mod mod_set;
