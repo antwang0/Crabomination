@@ -14788,6 +14788,7 @@ static WAR: &[Factory] = &[
     super::war::charmed_stray,
     super::war::kayas_ghostform,
     super::war::command_the_dreadhorde,
+    super::war::viviens_grizzly,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

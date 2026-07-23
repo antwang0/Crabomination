@@ -2020,6 +2020,20 @@ pub fn charmed_stray() -> CardDefinition {
     }
 }
 
+/// Vivien's Grizzly — {2}{G} 2/3 Bear Spirit. {3}{G}: Look at the top card of
+/// your library; if it's a creature or planeswalker card you may reveal it and
+/// put it into your hand, otherwise it goes to the bottom.
+pub fn viviens_grizzly() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::LookTopMayRevealMatchToHandElseBottom { filter: R::Creature.or(R::Planeswalker) },
+            ..Default::default()
+        }],
+        ..vanilla("Vivien's Grizzly", cost(&[generic(2), g()]), 2, 3, vec![CreatureType::Bear, CreatureType::Spirit])
+    }
+}
+
 /// Command the Dreadhorde — {4}{B}{B} Sorcery. Choose any number of creature
 /// and/or planeswalker cards in graveyards; take damage equal to their total
 /// mana value, then put them onto the battlefield under your control.

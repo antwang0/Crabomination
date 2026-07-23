@@ -261,6 +261,7 @@ impl Effect {
             Effect::ReturnGraveyardCreaturesUpToTotalPower { .. } => false,
             Effect::ReturnGraveyardCreaturesUpToTotalManaValue { .. } => false,
             Effect::CommandTheDreadhorde => false,
+            Effect::LookTopMayRevealMatchToHandElseBottom { .. } => false,
             Effect::NameCardTargetDiscardsMatching
             | Effect::NameCardExileMatchingAllZones
             | Effect::FertileImagination { .. }

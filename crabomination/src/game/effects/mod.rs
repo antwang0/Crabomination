@@ -12581,6 +12581,45 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LookTopMayRevealMatchToHandElseBottom { filter } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let Some(top) = self.players[p].library.first() else { return Ok(()); };
+                let top_id = top.id;
+                let matches = self.evaluate_requirement_on_card(filter, top, p);
+                let mut to_hand = false;
+                if matches {
+                    let source = ctx.source.unwrap_or(CardId(0));
+                    let decision = Decision::OptionalTrigger {
+                        source,
+                        description: "Reveal the top card and put it into your hand?".to_string(),
+                    };
+                    let answer = match self.stashed_resolution_answer.take() {
+                        Some(a) => a,
+                        None if self.players[p].wants_ui => {
+                            self.suspend_signal = Some((
+                                decision,
+                                PendingEffectState::MayDoAnswerPending,
+                                effect.clone(),
+                            ));
+                            return Ok(());
+                        }
+                        None => self.decider.decide(&decision),
+                    };
+                    if matches!(answer, DecisionAnswer::Bool(true)) {
+                        self.move_card_to(top_id, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                        to_hand = true;
+                    }
+                }
+                // Not put into hand → bottom of library (CR: reveal optional).
+                if !to_hand
+                    && let Some(card) = Self::take_card(&mut self.players[p].library, top_id)
+                {
+                    self.players[p].library.push(card);
+                }
+                Ok(())
+            }
+
             Effect::LookTopMayDeployLand { tapped } => {
                 let p = ctx.controller;
                 let Some(top) = self.players[p].library.first() else { return Ok(()); };

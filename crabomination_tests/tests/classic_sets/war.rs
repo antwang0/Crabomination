@@ -1267,3 +1267,43 @@ fn command_the_dreadhorde_reanimates_for_life() {
     assert!(g.battlefield.iter().any(|c| c.id == theirs && c.controller == 0), "opponent's creature stolen");
     assert_eq!(g.players[0].life, life - 7, "lost life equal to total mana value (5+2)");
 }
+
+/// Vivien's Grizzly draws a revealed creature off the top of the library.
+#[test]
+fn viviens_grizzly_reveals_creature_to_hand() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let grizzly = g.add_card_to_battlefield(0, catalog::viviens_grizzly());
+    g.battlefield_find_mut(grizzly).unwrap().summoning_sick = false;
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: grizzly, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == top), "creature drawn to hand");
+}
+
+/// A non-creature top card goes to the bottom of the library instead.
+#[test]
+fn viviens_grizzly_bottoms_noncreature() {
+    let mut g = two_player_game();
+    let grizzly = g.add_card_to_battlefield(0, catalog::viviens_grizzly());
+    g.battlefield_find_mut(grizzly).unwrap().summoning_sick = false;
+    let land = g.add_card_to_library(0, catalog::forest()); // on top
+    g.add_card_to_library(0, catalog::grizzly_bears()); // below the land
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: grizzly, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(land), "land bottomed");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == land), "land not drawn");
+}

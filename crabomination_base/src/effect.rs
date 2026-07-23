@@ -3243,6 +3243,12 @@ pub enum Effect {
     /// it onto the battlefield (tapped if `tapped`)." A non-land — or a decline —
     /// stays on top (unlike the bottoming look-top variants). Mobile Homestead.
     LookTopMayDeployLand { tapped: bool },
+    /// "Look at the top card of your library. If it matches `filter`, you may
+    /// reveal it and put it into your hand. If you don't put it into your hand,
+    /// put it on the bottom of your library." Vivien's Grizzly, Duskwatch
+    /// Recruiter. The yes/no is a `Decision::OptionalTrigger` (UI players
+    /// suspend/resume like `Effect::MayDo`).
+    LookTopMayRevealMatchToHandElseBottom { filter: SelectionRequirement },
     /// Cabal Therapy: choose a nonland card name; target player discards
     /// every card with that name from their hand.
     NameCardTargetDiscardsMatching,
