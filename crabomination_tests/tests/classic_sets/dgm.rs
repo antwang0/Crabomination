@@ -307,3 +307,79 @@ fn pontiff_of_blight_grants_extort() {
     assert_eq!(g.players[1].life, life1 - 2, "two extort drains");
     assert_eq!(g.players[0].life, life0 + 2, "gained the drained life");
 }
+
+/// A Cluestone taps for one of its two colors and sacrifices for a card.
+#[test]
+fn cluestone_mana_and_sac_draw() {
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(0, catalog::izzet_cluestone());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Mana ability adds one blue-or-red.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
+    // Sac ability ({U}{R}, {T}, Sacrifice: draw). Provide the two colored mana.
+    let stone2 = g.add_card_to_battlefield(0, catalog::izzet_cluestone());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone2, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for card");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(stone2).is_none(), "sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Maze Behemoth grants trample to your multicolored creatures (not mono ones).
+#[test]
+fn maze_behemoth_grants_trample_to_multicolored() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::maze_behemoth());
+    // A gold creature gets trample; a mono creature doesn't.
+    let gold = g.add_card_to_battlefield(0, catalog::spike_jester()); // {B}{R}
+    let mono = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // {1}{G}
+    assert!(g.computed_permanent(gold).unwrap().keywords.contains(&Keyword::Trample), "gold gains trample");
+    assert!(!g.computed_permanent(mono).unwrap().keywords.contains(&Keyword::Trample), "mono unaffected");
+}
+
+/// Advent of the Wurm makes a 5/5 trampling Wurm.
+#[test]
+fn advent_of_the_wurm_token() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::advent_of_the_wurm());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Advent");
+    drain_stack(&mut g);
+    let wurm = g.battlefield.iter().find(|c| c.definition.name == "Wurm").expect("Wurm made");
+    assert_eq!((wurm.definition.power, wurm.definition.toughness), (5, 5));
+}
+
+/// Renounce the Guilds makes each player sacrifice a multicolored permanent.
+#[test]
+fn renounce_the_guilds_sacs_gold() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::spike_jester()); // gold
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // mono, spared
+    let theirs = g.add_card_to_battlefield(1, catalog::spike_jester()); // gold
+    let spell = g.add_card_to_hand(0, catalog::renounce_the_guilds());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Renounce");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(), "both gold creatures sacrificed");
+}

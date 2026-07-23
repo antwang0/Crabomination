@@ -662,3 +662,111 @@ pub fn trostanis_summoner() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Maze Elemental cycle: {5}{C} big body granting its keyword to your
+// multicolored creatures ─────────────────────────────────────────────────────
+
+fn maze_elemental(
+    name: &'static str,
+    mono: crate::mana::ManaCost,
+    power: i32,
+    toughness: i32,
+    keyword: Keyword,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mono,
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Elemental]),
+        power,
+        toughness,
+        keywords: vec![keyword.clone()],
+        static_abilities: vec![StaticAbility {
+            description: "Multicolored creatures you control have this creature's keyword.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::Creature.and(R::ControlledByYou).and(R::Multicolored),
+                power: 0,
+                toughness: 0,
+                keywords: vec![keyword],
+                opponents: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Maze Sentinel — {5}{W} 3/6. Vigilance; your multicolored creatures have it.
+pub fn maze_sentinel() -> CardDefinition {
+    maze_elemental("Maze Sentinel", cost(&[generic(5), w()]), 3, 6, Keyword::Vigilance)
+}
+/// Maze Glider — {5}{U} 3/5. Flying; your multicolored creatures have it.
+pub fn maze_glider() -> CardDefinition {
+    maze_elemental("Maze Glider", cost(&[generic(5), u()]), 3, 5, Keyword::Flying)
+}
+/// Maze Abomination — {5}{B} 4/5. Deathtouch; your multicolored creatures have it.
+pub fn maze_abomination() -> CardDefinition {
+    maze_elemental("Maze Abomination", cost(&[generic(5), b()]), 4, 5, Keyword::Deathtouch)
+}
+/// Maze Rusher — {5}{R} 6/3. Haste; your multicolored creatures have it.
+pub fn maze_rusher() -> CardDefinition {
+    maze_elemental("Maze Rusher", cost(&[generic(5), r()]), 6, 3, Keyword::Haste)
+}
+/// Maze Behemoth — {5}{G} 5/4. Trample; your multicolored creatures have it.
+pub fn maze_behemoth() -> CardDefinition {
+    maze_elemental("Maze Behemoth", cost(&[generic(5), g()]), 5, 4, Keyword::Trample)
+}
+
+/// Korozda Gorgon — {3}{B}{G} 2/5 with deathtouch. {2}, Remove a +1/+1 counter
+/// from a creature you control: target creature gets -1/-1 until end of turn.
+pub fn korozda_gorgon() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Korozda Gorgon",
+        cost: cost(&[generic(3), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Gorgon]),
+        power: 2,
+        toughness: 5,
+        keywords: vec![Keyword::Deathtouch],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            remove_counter_among_filter: Some((
+                Some(CounterType::PlusOnePlusOne),
+                1,
+                R::Creature.and(R::ControlledByYou),
+            )),
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Haazda Snare Squad — {2}{W} 1/4. Whenever it attacks, you may pay {W}: tap
+/// target creature an opponent controls.
+pub fn haazda_snare_squad() -> CardDefinition {
+    CardDefinition {
+        name: "Haazda Snare Squad",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Human, CreatureType::Soldier]),
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::MayPay {
+            description: "pay {W}: tap target creature an opponent controls".into(),
+            mana_cost: cost(&[w()]),
+            body: Box::new(Effect::Tap {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}

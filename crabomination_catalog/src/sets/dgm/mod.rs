@@ -2,8 +2,10 @@
 
 pub use super::no_abilities;
 
+mod cluestones;
 mod creatures;
 mod spells;
 
+pub use cluestones::*;
 pub use creatures::*;
 pub use spells::*;

@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 fn aura(name: &'static str, mc: crate::mana::ManaCost, enchant: R) -> CardDefinition {
     CardDefinition {
@@ -354,4 +354,43 @@ pub fn runners_bane() -> CardDefinition {
         effect: StaticEffect::PreventUntap { applies_to: Selector::AttachedTo(Box::new(Selector::This)) },
     }];
     c
+}
+
+/// Advent of the Wurm — {1}{G}{G}{W} Instant. Create a 5/5 green Wurm with
+/// trample.
+pub fn advent_of_the_wurm() -> CardDefinition {
+    use crate::card::{CreatureType, TokenDefinition};
+    let wurm = TokenDefinition {
+        name: "Wurm".into(),
+        power: 5,
+        toughness: 5,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Advent of the Wurm",
+        cost: cost(&[generic(1), g(), g(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: wurm },
+        ..Default::default()
+    }
+}
+
+/// Renounce the Guilds — {1}{W} Instant. Each player sacrifices a multicolored
+/// permanent of their choice.
+pub fn renounce_the_guilds() -> CardDefinition {
+    CardDefinition {
+        name: "Renounce the Guilds",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            count: Value::ONE,
+            filter: R::Multicolored,
+        },
+        ..Default::default()
+    }
 }
