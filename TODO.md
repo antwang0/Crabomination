@@ -24,6 +24,19 @@ Items are grouped by area and roughly ordered by impact within each group.
   Determined, Odds // Ends, Research // Development), and the block of
   planeswalkers (Jace AoT, Vraska the Unseen, Gideon CoJ, Domri already done).
 
+**Remaining DGM (Dragon's Maze) gap cards** — the set was opened this run
+(`catalog::sets::dgm`, ~46 cards). Still open:
+- **Blaze Commando** — "whenever an instant or sorcery you control deals
+  damage, make two Soldiers." Needs a `DealtDamage` trigger that filters on the
+  damage source being an I/S spell (the event carries `from_controller` but not
+  the source's card type).
+- Gate-count spells beyond the Gatekeeper cycle, the `Cluestone` mana-rock cycle
+  (bulk), the `Maze` guildmage-Elemental cycle, and the guild legends/mythics
+  (Lavinia, Melek, Ral Zarek, Progenitor Mimic, Deadbridge Chant, Emmara,
+  Exava, Ruric Thar, Savageborn Hydra, Council of the Absolute, Notion Thief,
+  Sire of Insanity, Aetherling, …) and the DGM split cards.
+- Goblin Test Pilot / Scab-Clan Giant need a "target chosen at random" primitive.
+
 **Batched-ETB infrastructure (blocks several OTJ legends):** "whenever one or
 more [creatures/tokens] enter" triggers currently fire per-permanent, not
 once per simultaneous batch. A real batch-ETB dispatch (dedup at trigger
@@ -4061,6 +4074,16 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `DealsCombatDamageToPlayer`; CR 510.2/119.3).
 - ✅ CR 114 — Emblems
 - ✅ CR 702.179 — Freerunning. Alt cost gated on `Predicate::DealtCombatDamageToPlayerThisTurn` (`Player.dealt_combat_damage_to_player_this_turn`, set in `fire_combat_damage_to_player_triggers`). ACR batch in `decks::freerunning` (Brotherhood Ambushers, Merciless Harlequin, Achilles Davenport, Eagle Vision, Distract the Guards, Chain Assassination, Restart Sequence, Viewpoint Synchronization, Escape Detection, Overpowering Attack). The "with an Assassin or commander" sub-clause is approximated as "with any creature." ⏳ remaining cards: Petty Larceny (exile-and-play-from-exile + any-color), Monastery Raid (Freerunning {X} + was-freerun provenance rider).
+- ✅ CR 603.8 — state trigger "a player other than the owner controls it": the
+  SBA pass pushes a latched sacrifice-and-burn trigger controlled by the thief
+  (`CardDefinition::sacrifice_and_burn_when_stolen` — Bronze Bombshell;
+  `bronze_bombshell_punishes_theft`).
+- ✅ CR 121.2a — empty-hand draw replacement (`StaticEffect::EmptyHandDrawBonus`,
+  consulted in `draw_one` only when the hand is empty at draw time — Blood
+  Scrivener; `blood_scrivener_empty_hand_draw`).
+- ✅ CR 702.99 — Extort granted to other creatures via
+  `StaticEffect::GrantTriggeredAbility` (each instance triggers separately —
+  Pontiff of Blight; `pontiff_of_blight_grants_extort`).
 - ✅ CR 712 — Transforming Permanents
 - 🟡 CR 708 — Face-Down Permanents
 - ✅ CR 702.146 — Daybound/Nightbound

@@ -16,6 +16,20 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **DGM (Dragon's Maze) opened + DIS Bronze Bombshell (this run, ~46 cards):**
+  new `catalog::sets::dgm` module (keyword vanillas, the Gatekeeper cycle,
+  Battalion/Unleash/Scavenge creatures, Zhur-Taa Druid, Maw of the Obzedat, Sin
+  Collector, Trostani's Summoner, Pontiff of Blight, Blood Scrivener; plus
+  Phytoburst, Weapon Surge, Riot Control, Punish the Enemy, Lyev Decree, Restore
+  the Peace, Mindstatic, Uncovered Clues, Warped Physique, Morgue Burst, Gruul
+  War Chant, Bred for the Hunt, the Sinister Possession / Runner's Bane Auras).
+  New engine work: `CardDefinition::sacrifice_and_burn_when_stolen` (CR 603.8
+  steal-penalty state trigger — Bronze Bombshell); `StaticEffect::
+  EmptyHandDrawBonus` (CR 121.2a empty-hand draw replacement — Blood Scrivener);
+  Pontiff rides `StaticEffect::GrantTriggeredAbility` for team extort (CR
+  702.99). UI: Bronze Bombshell's steal-penalty is surfaced in the client
+  tooltip. Server: `crab_catalog_cards` now counts distinct card *names*.
+
 - **DIS/RTR gap wave (this run, 20 cards):** Momir Vig, Sphinx of the Chimes,
   Elemental Resonance, Vigean Intuition, Fertile Imagination, Aethermage's
   Touch, Infernal Tutor, Ignorant Bliss, Dovescape, Muse Vessel, Isperia the

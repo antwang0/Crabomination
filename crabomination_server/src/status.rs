@@ -16,10 +16,20 @@ use crate::stats::{format_duration, format_match_stats, match_stats};
 /// Distinct card count of the deployed catalog, computed once. Lets operators
 /// confirm which content build is live (`crab_catalog_cards`) without shelling
 /// into the container. Building the registry is non-trivial, so it's memoized.
+///
+/// Counts distinct card *names*, not factory pointers: the registry can hold
+/// several factories that mint the same-named card (fabricated real-name
+/// collisions), so a pointer count overstates how many distinct cards ship.
 fn catalog_card_count() -> usize {
     use std::sync::OnceLock;
     static COUNT: OnceLock<usize> = OnceLock::new();
-    *COUNT.get_or_init(|| crabomination::catalog::all_known_factories().len())
+    *COUNT.get_or_init(|| {
+        crabomination::catalog::all_known_factories()
+            .into_iter()
+            .map(|f| f().name)
+            .collect::<std::collections::HashSet<_>>()
+            .len()
+    })
 }
 
 /// Render the full status body. Split from the serving loop for testing.
@@ -623,6 +633,16 @@ mod tests {
     #[test]
     fn html_escape_neutralizes_markup() {
         assert_eq!(html_escape("<b>&</b>"), "&lt;b&gt;&amp;&lt;/b&gt;");
+    }
+
+    #[test]
+    fn catalog_card_count_is_distinct_names() {
+        // Deduping by name must never exceed the raw factory count, and a
+        // populated catalog reports a positive count.
+        let names = catalog_card_count();
+        let factories = crabomination::catalog::all_known_factories().len();
+        assert!(names > 0, "catalog is non-empty");
+        assert!(names <= factories, "distinct names can't exceed factory count");
     }
 
     #[test]

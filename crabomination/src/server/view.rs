@@ -1329,6 +1329,13 @@ fn project_static_ability_labels(card: &CardInstance) -> Vec<String> {
             ));
         }
     }
+    // CR 603.8 steal-penalty (Bronze Bombshell) lives on a top-level field, not
+    // a static ability, so surface it explicitly for the tooltip.
+    if let Some(dmg) = card.definition.sacrifice_and_burn_when_stolen {
+        out.push(format!(
+            "If a player other than its owner controls this, they sacrifice it and it deals {dmg} damage to them"
+        ));
+    }
     out
 }
 
