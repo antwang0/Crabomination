@@ -712,8 +712,8 @@ factory doc comment:
   Pilot (random targeting — `random_target` on abilities/effects, generally
   useful); Plasm Capture (counter + add mana = spell MV at next main —
   `AddManaAtNextMainPhase` exists but keyed on `CounteredSpellManaSpent`; extend
-  to spell MV); the remaining Fuse splits (Beck//Call, Catch//Release,
-  Flesh//Blood).
+  to spell MV); the remaining Fuse splits (Catch//Release — multi-type edict;
+  Flesh//Blood — exile-gy-and-counter-by-power).
 - **New primitives that would unblock batches of gap cards (recent274–279 run):**
   - **Enlist** (CR 702.148) — no keyword yet; blocks the DMU Enlist commons
     (Barkweave Crusher, Coalition Warbrute, Argivian Cavalier, …). `Effect::Enlist`

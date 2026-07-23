@@ -16,9 +16,10 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **DGM gap wave 3 (this run, 9 cards):** `dgm::gaps3` — Showstopper, Teysa
+- **DGM gap wave 3 (this run, 10 cards):** `dgm::gaps3` — Showstopper, Teysa
   Envoy of Ghosts, Scab-Clan Giant, Breaking // Entering, Council of the
-  Absolute, Blaze Commando, Deadbridge Chant, Ral Zarek, Emmara Tandris. New
+  Absolute, Blaze Commando, Deadbridge Chant, Ral Zarek, Emmara Tandris,
+  Beck // Call. New
   engine: `ControllerDealtCombatDamage` listeners now bind the *dealing*
   creature as `Selector::TriggerSource` (Teysa destroys the attacker);
   `EventKind::YourInstantOrSorceryDealtDamage` fires once per I/S resolution
@@ -36,7 +37,7 @@ exercising each) was elided in a compaction pass; recover it from
   Initiative, Notion Thief (draw-steal replacement), Reap Intellect, Goblin
   Test Pilot / random targeting, Plasm Capture (deferred mana), Guardian of the
   Gateless / Valor Made Real (multi-block — see TODO.md), the remaining Fuse
-  splits.
+  splits (Catch//Release, Flesh//Blood).
 - **DGM gap waves + combat-damage-target fix (prior run, 26 cards):**
   `dgm::gaps`/`gaps2` — the guild legends/mythics and remaining commons (see
   TODO.md for the roster). New engine: `Effect::DoubleAllCountersOn` (Vorel),
