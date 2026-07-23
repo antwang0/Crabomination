@@ -1,5 +1,5 @@
 //! Floating power/toughness overlay for modified battlefield creatures,
-//! and a loyalty badge for planeswalkers.
+//! a loyalty badge for planeswalkers, and a defense badge for Battles.
 //!
 //! Whenever a creature's *computed* power/toughness (after counters,
 //! auras, and other layer effects) differs from its *printed* base, we
@@ -109,6 +109,19 @@ pub fn sync_pt_labels(
                 .map(|(_, n)| *n)
                 .unwrap_or(0);
             desired.insert(p.id, (format!("\u{25c6}{loyalty}"), NEUTRAL));
+            continue;
+        }
+        // Battle cards (Sieges) carry a defense count that otherwise only
+        // reads off the 3-D counter coins — surface it as a `\u{25c7}N` badge
+        // in the same corner, the white-diamond sibling of the loyalty badge.
+        if p.card_types.contains(&crabomination::card::CardType::Battle) {
+            let defense = p
+                .counters
+                .iter()
+                .find(|(k, _)| *k == crabomination::card::CounterType::Defense)
+                .map(|(_, n)| *n)
+                .unwrap_or(0);
+            desired.insert(p.id, (format!("\u{25c7}{defense}"), NEUTRAL));
         }
     }
 

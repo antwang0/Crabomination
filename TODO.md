@@ -24,33 +24,24 @@ Items are grouped by area and roughly ordered by impact within each group.
   Determined, Odds // Ends, Research // Development), and the block of
   planeswalkers (Jace AoT, Vraska the Unseen, Gideon CoJ, Domri already done).
 
-**Remaining WAR (War of the Spark) gap cards** — `catalog::sets::war` (~110
-cards incl. 5 planeswalkers: Tibalt, Teyo, Kasmina, The Wanderer, Ob Nixilis).
-Still open, grouped by primitive:
+**Remaining WAR (War of the Spark) gap cards** — `catalog::sets::war`.
+Batches 6–7 (this run) shipped 16 cards: Bioessence Hydra, Charmed Stray, Jaya
+Venerated Firemage, Kaya's Ghostform, Command the Dreadhorde, Vivien's Grizzly,
+Mowu, Band Together, Ugin's Conjurant, Arlinn's Wolf, Domri's Ambush, Spark
+Harvest, Toll of the Invasion, Eternal Taskmaster, Living Twister, Lazotep
+Plating. Still open, grouped by primitive:
 - **"Becomes a creature with P/T = loyalty" planeswalkers** (Gideon Blackblade,
   Gideon the Oathsworn, Sarkhan the Masterless) — need loyalty-as-P/T animation
   + loyalty-add-per-count.
-- **Devouring Hellion** — "enters with twice that many +1/+1 counters" (sac any
-  number as-enters, ×2). **Charmed Stray** — ETB counter on other same-named
-  (needs a "your other permanents sharing this name" selector).
-- **Band Together** — two independent target groups (attackers + a fought
-  creature); `ApplyToTargets` rebinds every target to `Target(0)`.
-- **Vivien's Grizzly** — "look at top; if creature/PW, may reveal to hand, else
-  bottom"; need a `LookTopMayRevealMatchToHandElseBottom { filter }` (also
-  Duskwatch Recruiter et al.).
-- **Jaya, Venerated Firemage** — "another red source deals +1 damage" static
-  (source-color-scoped noncombat/combat damage bonus).
-- **Mowu, Loyal Companion** — "+1/+1 counters put on it → that many plus one"
-  (a counter-count replacement; distinct from Doubling Season's ×2).
-- **Bioessence Hydra** — enters with a +1/+1 per loyalty counter on your
-  planeswalkers + a "loyalty added → +1/+1" watcher (needs a `LoyaltyAdded`
-  event/count).
-- **Kaya's Ghostform** — Aura on your creature/PW that returns the host when it
-  dies OR is exiled (replacement-style aura-death-return).
-- **Command the Dreadhorde** — mass reanimation of any number of gy
-  creature/PW cards + self-damage = their total mana value.
-- The rest of the set's amass/proliferate/planeswalker-matters uncommons and the
-  Amass-payoff rares; sweep `scripts/set_diff.py war` for the live list.
+- **Devouring Hellion** — "enters with twice that many +1/+1 counters" (may sac
+  any number of creatures/PWs as-enters, ×2); needs an as-enters reflexive-sac
+  replacement feeding `enters_with_counters`. **Rescuer Sphinx** shares the
+  as-enters-reflexive shape (may bounce a nonland permanent → +1/+1 counter).
+- The many WAR planeswalkers (Liliana Dreadhorde General, Nissa Who Shakes the
+  World, Nicol Bolas Dragon-God, the uncommon 3-ability walkers, the hybrid
+  "Angrath/Ashiok/…" cycle) and remaining legends (God-Eternals Kefnet/Rhonas,
+  Ilharg, Neheb, Massacre Girl). Sweep `scripts/set_diff.py war` for the live
+  list (~65 remain).
 
 **Remaining DGM (Dragon's Maze) gap cards** — `catalog::sets::dgm`. The
 `dgm::gaps`/`gaps2` waves shipped the guild legends/mythics and easy commons

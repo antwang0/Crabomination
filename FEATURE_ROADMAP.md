@@ -16,7 +16,25 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **WAR opened + GTC gaps + aura-trigger fix (this run, 27 cards):** new
+- **WAR gap waves 6–7 (this run, 16 cards):** Bioessence Hydra, Charmed Stray,
+  Jaya Venerated Firemage, Kaya's Ghostform, Command the Dreadhorde, Vivien's
+  Grizzly, Mowu, Band Together, Ugin's Conjurant, Arlinn's Wolf, Domri's Ambush,
+  Spark Harvest, Toll of the Invasion, Eternal Taskmaster, Living Twister,
+  Lazotep Plating. New engine: `StaticEffect::YourColorSourcesDealExtraDamage`
+  (Jaya — another color-source you control deals +N to any permanent/player);
+  `EnchantedBySource` triggers now fire on the host being **exiled** as well as
+  dying (Kaya's Ghostform — `CardExiled` trigger + `PermanentExiled`
+  event_subject + LKI snapshot walk); `Effect::CommandTheDreadhorde` (mass
+  graveyard reanimation + self-damage = total MV);
+  `Effect::LookTopMayRevealMatchToHandElseBottom` (Vivien's Grizzly, Duskwatch
+  Recruiter); `StaticEffect::ExtraPlusOneCounterOnSelf` (Mowu) via
+  `scaled_counter_count_on`. Correctness: **proliferate now honors CR 614.16
+  counter-placement replacements** (Hardened Scales / Doubling Season / Mowu
+  scale a proliferated counter; previously it added exactly one). UI/server:
+  effect labels for the two new effects; a Battle **defense-counter badge** in
+  the client (`pt_label`, the white-diamond sibling of the loyalty badge). CR
+  conformance (`cr_recent26`): 614.16, 603.6d/603.10a, 122.1c.
+- **WAR opened + GTC gaps + aura-trigger fix (prior run, 27 cards):** new
   `catalog::sets::war` (25 WAR commons/uncommons — vanillas, ETB/death
   proliferate + amass, Flurry, loot, drain, turn-gated first strike, self-
   unblockable) and `gtc17` (Frenzied Tilling, Contaminated Ground). Correctness:
@@ -1070,7 +1088,11 @@ Each unblocks a large swath of cards.
    steal (Gather Specimens), as-enters choice-of-P/T-and-keyword
    (`enters_as_choice`, CR 614 — Corrupted Shapeshifter, applied before the
    first SBA so a printed `*/*` never dies as a 0/0), skip-step and skip-turn.
-   Still to generalize: as-a-copy ETB, draw replacement breadth.
+   Counter-placement replacements (Hardened Scales, Doubling Season, Mowu's
+   self-scoped `ExtraPlusOneCounterOnSelf`) now also apply on the **proliferate**
+   path (CR 614.16), via `scaled_counter_count_on`. Still to generalize:
+   as-a-copy ETB, draw replacement breadth, an as-enters reflexive-sacrifice
+   replacement (Devouring Hellion, Rescuer Sphinx).
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes`;
    pick-from-revealed via `Effect::LookPickToHand` (Impulse, Strategic Planning).
 3. ✅ **Player-chosen combat damage assignment order.**
