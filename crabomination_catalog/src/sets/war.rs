@@ -1607,3 +1607,242 @@ pub fn ob_nixilis_the_hate_twisted() -> CardDefinition {
         ..walker("Ob Nixilis, the Hate-Twisted", cost(&[generic(3), b(), b()]), PlaneswalkerSubtype::Nixilis, 5)
     }
 }
+
+// ── Batch 3 (2026-07-23): legends, Bonds, and modal spells ────────────────────
+
+/// "When this dies, you may put it into its owner's library third from the top."
+/// (The God-Eternal recursion clause; the "or is exiled from the battlefield"
+/// half is approximated as death-only.)
+fn god_eternal_recur() -> TriggeredAbility {
+    on_dies(Effect::MayDo {
+        description: "Put it into its owner's library third from the top.".into(),
+        body: Box::new(Effect::Move {
+            what: Selector::TriggerSource,
+            to: ZoneDest::Library { who: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)), pos: LibraryPosition::FromTop(2) },
+        }),
+    })
+}
+
+/// God-Eternal Bontu — {3}{B}{B} 5/6 Zombie God with menace. ETB sacrifice any
+/// number of other permanents, then draw that many. Death → library third.
+pub fn god_eternal_bontu() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![
+            etb(Effect::SacrificeAnyNumber {
+                who: PlayerRef::You,
+                filter: R::OtherThanSource.and(R::ControlledByYou),
+                per_each: Box::new(draw(1)),
+            }),
+            god_eternal_recur(),
+        ],
+        ..vanilla("God-Eternal Bontu", cost(&[generic(3), b(), b()]), 5, 6, vec![CreatureType::Zombie, CreatureType::God])
+    }
+}
+
+/// God-Eternal Oketra — {3}{W}{W} 3/6 Zombie God with double strike. Whenever
+/// you cast a creature spell, make a 4/4 black Zombie Warrior with vigilance.
+/// Death → library third.
+pub fn god_eternal_oketra() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCardType(CardType::Creature),
+                }),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Zombie Warrior".into(),
+                        power: 4,
+                        toughness: 4,
+                        keywords: vec![Keyword::Vigilance],
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Black],
+                        subtypes: creatures(vec![CreatureType::Zombie, CreatureType::Warrior]),
+                        ..Default::default()
+                    },
+                },
+            },
+            god_eternal_recur(),
+        ],
+        ..vanilla("God-Eternal Oketra", cost(&[generic(3), w(), w()]), 3, 6, vec![CreatureType::Zombie, CreatureType::God])
+    }
+}
+
+/// Fblthp, the Lost — {1}{U} 1/1 Homunculus. ETB draw a card. When it becomes
+/// the target of a spell, shuffle it into its owner's library. (The "entered
+/// from library → draw two" rider is approximated as one.)
+pub fn fblthp_the_lost() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            etb(draw(1)),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                effect: Effect::ShuffleSelfIntoLibrary,
+            },
+        ],
+        ..vanilla("Fblthp, the Lost", cost(&[generic(1), u()]), 1, 1, vec![CreatureType::Homunculus])
+    }
+}
+
+/// Bond of Revival — {4}{B} Sorcery. Return target creature card from your
+/// graveyard to the battlefield. It gains haste until your next turn.
+pub fn bond_of_revival() -> CardDefinition {
+    CardDefinition {
+        name: "Bond of Revival",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::GrantKeyword { what: Selector::LastMoved, keyword: Keyword::Haste, duration: Duration::UntilNextTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bond of Passion — {4}{R}{R} Sorcery. Gain control of target creature until
+/// end of turn; untap it; it gains haste. Deals 2 damage to any other target.
+pub fn bond_of_passion() -> CardDefinition {
+    CardDefinition {
+        name: "Bond of Passion",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl { what: target_filtered(R::Creature), to: None, duration: Duration::EndOfTurn },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Deathsprout — {1}{B}{B}{G} Instant. Destroy target creature. Search your
+/// library for a basic land, put it onto the battlefield tapped, then shuffle.
+pub fn deathsprout() -> CardDefinition {
+    CardDefinition {
+        name: "Deathsprout",
+        cost: cost(&[generic(1), b(), b(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Creature) },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Land.and(R::HasSupertype(Supertype::Basic)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ravnica at War — {3}{W} Sorcery. Exile all multicolored permanents.
+pub fn ravnica_at_war() -> CardDefinition {
+    CardDefinition {
+        name: "Ravnica at War",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Exile { what: Selector::EachPermanent(R::Multicolored) },
+        ..Default::default()
+    }
+}
+
+/// Wanderer's Strike — {4}{W} Sorcery. Exile target creature, then proliferate.
+pub fn wanderers_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Wanderer's Strike",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Exile { what: target_filtered(R::Creature) },
+            Effect::Proliferate,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Courage in Crisis — {2}{G} Sorcery. Put a +1/+1 counter on target creature,
+/// then proliferate.
+pub fn courage_in_crisis() -> CardDefinition {
+    CardDefinition {
+        name: "Courage in Crisis",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            Effect::Proliferate,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Casualties of War — {2}{B}{B}{G}{G} Sorcery. Choose one or more — destroy
+/// target artifact / creature / enchantment / land / planeswalker.
+pub fn casualties_of_war() -> CardDefinition {
+    let destroy = |filter: R| Effect::Destroy { what: target_filtered(filter) };
+    CardDefinition {
+        name: "Casualties of War",
+        cost: cost(&[generic(2), b(), b(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseModesCast {
+            modes: vec![
+                destroy(R::Artifact),
+                destroy(R::Creature),
+                destroy(R::Enchantment),
+                destroy(R::Land),
+                destroy(R::Planeswalker),
+            ],
+            min: 1,
+            max: 5,
+            allow_repeats: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Finale of Glory — {X}{W}{W} Sorcery. Create X 2/2 white Soldiers with
+/// vigilance. If X ≥ 10, also create X 4/4 white Angels with flying, vigilance.
+pub fn finale_of_glory() -> CardDefinition {
+    let soldier = TokenDefinition {
+        name: "Soldier".into(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: creatures(vec![CreatureType::Soldier]),
+        ..Default::default()
+    };
+    let angel = TokenDefinition {
+        name: "Angel".into(),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: creatures(vec![CreatureType::Angel]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Finale of Glory",
+        cost: cost(&[crate::mana::x(), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::XFromCost, definition: soldier },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(10)),
+                then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::XFromCost, definition: angel }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}

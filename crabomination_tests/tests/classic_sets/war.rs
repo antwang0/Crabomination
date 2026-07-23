@@ -932,3 +932,132 @@ fn planeswalker_dies_at_zero_loyalty() {
     assert!(g.battlefield_find(tibalt).is_none(), "0-loyalty walker left the battlefield");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == tibalt), "in its owner's graveyard");
 }
+
+// ── Batch 3 (2026-07-23) ──────────────────────────────────────────────────────
+
+/// God-Eternal Bontu sacrifices other permanents and draws that many.
+#[test]
+fn god_eternal_bontu_sacs_and_draws() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    g.move_card_to_battlefield_for_test(0, catalog::god_eternal_bontu());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "sacrificed both");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew two");
+}
+
+/// God-Eternal Oketra makes a 4/4 Zombie when you cast a creature spell.
+#[test]
+fn god_eternal_oketra_makes_zombie_on_creature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::god_eternal_oketra());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Zombie Warrior" && c.definition.power == 4));
+}
+
+/// Fblthp draws on entry.
+#[test]
+fn fblthp_draws_on_entry() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::fblthp_the_lost());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Bond of Revival reanimates a creature with haste.
+#[test]
+fn bond_of_revival_reanimates_with_haste() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    cast_at_target(&mut g, catalog::bond_of_revival(), Target::Permanent(bear), &[(Color::Black, 1)], 4);
+    let c = g.computed_permanent(bear).expect("on battlefield");
+    assert!(c.keywords.contains(&Keyword::Haste), "gained haste");
+}
+
+/// Deathsprout destroys a creature and ramps a basic land tapped.
+#[test]
+fn deathsprout_kills_and_ramps() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let lands = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.card_types.contains(&crabomination::card::CardType::Land)).count();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    cast_at_target(&mut g, catalog::deathsprout(), Target::Permanent(bear), &[(Color::Black, 2), (Color::Green, 1)], 1);
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.card_types.contains(&crabomination::card::CardType::Land)).count();
+    assert_eq!(lands_after, lands + 1, "fetched a basic land");
+}
+
+/// Ravnica at War exiles all multicolored permanents.
+#[test]
+fn ravnica_at_war_exiles_multicolored() {
+    let mut g = two_player_game();
+    let gold = g.add_card_to_battlefield(1, catalog::dreadhorde_butcher()); // {B}{R} multicolored
+    let mono = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green mono
+    let rw = g.add_card_to_hand(0, catalog::ravnica_at_war());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: rw, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gold).is_none(), "multicolored exiled");
+    assert!(g.battlefield_find(mono).is_some(), "monocolored survives");
+}
+
+/// Courage in Crisis counters a creature then proliferates.
+#[test]
+fn courage_in_crisis_counters_and_proliferates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_at_target(&mut g, catalog::courage_in_crisis(), Target::Permanent(bear), &[(Color::Green, 1)], 2);
+    // +1/+1 from the counter, then proliferate adds another → 2.
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Casualties of War destroys across chosen types.
+#[test]
+fn casualties_of_war_destroys_chosen() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bond = g.add_card_to_hand(0, catalog::casualties_of_war());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    // Choose just the "destroy creature" mode (index 1).
+    g.perform_action(GameAction::CastSpell { card_id: bond, target: Some(Target::Permanent(creature)), additional_targets: vec![], mode: Some(1), x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(creature).is_none(), "creature destroyed");
+}
+
+/// Finale of Glory makes X Soldiers (and Angels too at X ≥ 10).
+#[test]
+fn finale_of_glory_makes_soldiers() {
+    let mut g = two_player_game();
+    let fin = g.add_card_to_hand(0, catalog::finale_of_glory());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: fin, target: None, additional_targets: vec![], mode: None, x_value: Some(3) }).expect("cast X=3");
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Soldier").count();
+    assert_eq!(soldiers, 3, "X=3 Soldiers");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Angel"), "no Angels below X=10");
+}

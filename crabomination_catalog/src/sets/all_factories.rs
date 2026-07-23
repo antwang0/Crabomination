@@ -14766,6 +14766,17 @@ static WAR: &[Factory] = &[
     super::war::kasmina_enigmatic_mentor,
     super::war::the_wanderer,
     super::war::ob_nixilis_the_hate_twisted,
+    super::war::god_eternal_bontu,
+    super::war::god_eternal_oketra,
+    super::war::fblthp_the_lost,
+    super::war::bond_of_revival,
+    super::war::bond_of_passion,
+    super::war::deathsprout,
+    super::war::ravnica_at_war,
+    super::war::wanderers_strike,
+    super::war::courage_in_crisis,
+    super::war::casualties_of_war,
+    super::war::finale_of_glory,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,
