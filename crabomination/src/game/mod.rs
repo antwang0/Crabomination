@@ -7029,6 +7029,30 @@ impl GameState {
         })
     }
 
+    /// CR 615 — The Wanderer: "prevent all noncombat damage to you and other
+    /// permanents you control." True when `victim` (a player, or a permanent)
+    /// is shielded by a `PreventNoncombatDamageToYouAndYourPermanents` static
+    /// its controller/owner controls. Consulted only at the noncombat funnel.
+    pub(crate) fn noncombat_damage_to_you_and_permanents_prevented(&self, victim: crate::game::effects::EntityRef) -> bool {
+        use crate::game::effects::EntityRef;
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        let seat = match victim {
+            EntityRef::Player(p) => p,
+            EntityRef::Permanent(id) | EntityRef::Card(id) => {
+                let Some(c) = self.battlefield_find(id) else { return false };
+                c.controller
+            }
+        };
+        self.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::PreventNoncombatDamageToYouAndYourPermanents)
+                })
+        })
+    }
+
     /// CR 615 — Emmara Tandris: "prevent all damage that would be dealt to
     /// creature tokens you control." True when `target` is a token creature
     /// whose controller has the static. Consulted on both damage paths.
@@ -14293,6 +14317,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventDamageToYourAttackers
             | StaticEffect::PreventAllDamageToController
             | StaticEffect::PreventNoncombatDamageToYourCreatures
+            | StaticEffect::PreventNoncombatDamageToYouAndYourPermanents
             | StaticEffect::PreventAllDamageToYourCreatureTokens
             | StaticEffect::PreventDamageToYourCreaturesFromYourSources
             | StaticEffect::PreventThisDamageToColor(_)

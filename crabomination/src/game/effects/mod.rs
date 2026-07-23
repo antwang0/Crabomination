@@ -8371,6 +8371,42 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RemoveCountersUpTo { what, amount } => {
+                // CR 122.6 — remove up to N counters (any kinds) from a
+                // permanent, or up to N poison counters from a player.
+                let budget = self.evaluate_value(amount, ctx).max(0) as u32;
+                if budget == 0 { return Ok(()); }
+                for ent in self.resolve_selector(what, ctx) {
+                    match ent {
+                        EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                            let Some(c) = self.battlefield_find_mut(cid) else { continue };
+                            let ctrl = c.controller;
+                            let mut left = budget;
+                            let mut oil_removed = false;
+                            let kinds: Vec<CounterType> =
+                                c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect();
+                            for kind in kinds {
+                                if left == 0 { break; }
+                                let removed = c.remove_counters(kind, left);
+                                if removed > 0 {
+                                    left -= removed;
+                                    oil_removed |= kind == CounterType::Oil;
+                                    events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count: removed });
+                                }
+                            }
+                            if oil_removed {
+                                self.players[ctrl].oil_activity_this_turn = true;
+                            }
+                        }
+                        EntityRef::Player(p) => {
+                            let take = budget.min(self.players[p].poison_counters);
+                            self.players[p].poison_counters -= take;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             // CR 603.7e — register a one-shot "your next creature spell this
             // turn enters with N counters" rider on the controller.
             Effect::GrantNextCreatureSpellCounters { kind, amount } => {

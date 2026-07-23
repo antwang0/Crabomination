@@ -451,6 +451,12 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — The Wanderer: "prevent all noncombat damage to you and other
+        // permanents you control" (shields the player and any permanent, not
+        // just creatures).
+        if self.noncombat_damage_to_you_and_permanents_prevented(ent) {
+            return;
+        }
         // CR 615 — Emmara-Tandris-style "prevent all damage to creature tokens
         // you control" (both damage paths; combat is gated in combat.rs).
         if let EntityRef::Permanent(tgt) = ent

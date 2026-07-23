@@ -4016,6 +4016,12 @@ pub enum Effect {
     /// choice; auto-picks the first present kind). Thrull Parasite's "remove a
     /// counter from target nonland permanent".
     RemoveAnyCounter { what: Selector },
+    /// Remove up to `amount` counters (any kinds, controller's choice; the
+    /// auto-picker drains present kinds greedily) from `what`. A permanent
+    /// target drains its counters; a player target drains poison counters
+    /// (CR 122.6 — Price of Betrayal's "artifact, creature, planeswalker, or
+    /// opponent"). Fewer than `amount` present removes all of them.
+    RemoveCountersUpTo { what: Selector, amount: Value },
     /// Set the loyalty (CR 606) of `what` to `value` — a loyalty-set effect
     /// ("its loyalty becomes …" / "reset to its starting loyalty"). Overwrites
     /// the `Loyalty` counter count outright rather than adding/removing.

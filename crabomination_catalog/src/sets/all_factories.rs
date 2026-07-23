@@ -14721,6 +14721,7 @@ static WAR: &[Factory] = &[
     super::war::dreadmalkin,
     super::war::lazotep_reaver,
     super::war::aid_the_fallen,
+    super::war::price_of_betrayal,
     super::war::cyclops_electromancer,
     super::war::spellgorger_weird,
     super::war::tibalts_rager,
@@ -14760,6 +14761,11 @@ static WAR: &[Factory] = &[
     super::war::rals_outburst,
     super::war::invade_the_city,
     super::war::soul_diviner,
+    super::war::tibalt_rakish_instigator,
+    super::war::teyo_the_shieldmage,
+    super::war::kasmina_enigmatic_mentor,
+    super::war::the_wanderer,
+    super::war::ob_nixilis_the_hate_twisted,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

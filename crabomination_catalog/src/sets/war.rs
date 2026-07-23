@@ -4,13 +4,13 @@
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
     EventKind, EventScope, EventSpec, Keyword, PlaneswalkerSubtype, StaticAbility, Subtypes,
-    Supertype, TriggeredAbility, Value,
+    Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::SelectionRequirement as R;
 use crate::effect::shortcut::{cast_is_noncreature, deal, draw, etb, on_attack, on_dies, target_any, target_filtered};
-use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, Selector, StaticEffect, ZoneDest};
+use crate::effect::{Duration, Effect, LibraryPosition, LoyaltyAbility, ManaPayload, PlayerRef, PlayerStaticTarget, Predicate, Selector, StaticEffect, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
     Subtypes { creature_types: t, ..Default::default() }
@@ -858,6 +858,21 @@ pub fn aid_the_fallen() -> CardDefinition {
     }
 }
 
+/// Price of Betrayal — {B} Sorcery. Remove up to five counters from target
+/// artifact, creature, planeswalker, or opponent.
+pub fn price_of_betrayal() -> CardDefinition {
+    CardDefinition {
+        name: "Price of Betrayal",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RemoveCountersUpTo {
+            what: target_filtered(R::Artifact.or(R::Creature).or(R::Planeswalker).or(R::OpponentPlayer)),
+            amount: Value::Const(5),
+        },
+        ..Default::default()
+    }
+}
+
 /// Cyclops Electromancer — {4}{R} 4/2 Cyclops Wizard. ETB deal X damage to
 /// target creature an opponent controls, X = instant/sorcery cards in your gy.
 pub fn cyclops_electromancer() -> CardDefinition {
@@ -1440,5 +1455,155 @@ pub fn soul_diviner() -> CardDefinition {
             ..Default::default()
         }],
         ..vanilla("Soul Diviner", cost(&[u(), b()]), 2, 3, vec![CreatureType::Zombie, CreatureType::Wizard])
+    }
+}
+
+// ── Planeswalkers (2026-07-23) ────────────────────────────────────────────────
+
+fn walker(name: &'static str, mana: crate::mana::ManaCost, sub: PlaneswalkerSubtype, loyalty: u32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![sub], ..Default::default() },
+        base_loyalty: loyalty,
+        ..Default::default()
+    }
+}
+
+/// 1/1 red Devil token with "When this token dies, it deals 1 damage to any
+/// target."
+fn devil_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Devil".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        triggered_abilities: vec![on_dies(Effect::DealDamage { to: target_any(), amount: Value::ONE })],
+        ..Default::default()
+    }
+}
+
+/// Tibalt, Rakish Instigator — {2}{R} loyalty 5. Static: your opponents can't
+/// gain life. −2: make a 1/1 red Devil (death-ping).
+pub fn tibalt_rakish_instigator() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Your opponents can't gain life.",
+            effect: StaticEffect::PlayerCannotGainLife { target: PlayerStaticTarget::EachOpponent },
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: devil_token() },
+            ..Default::default()
+        }],
+        ..walker("Tibalt, Rakish Instigator", cost(&[generic(2), r()]), PlaneswalkerSubtype::Tibalt, 5)
+    }
+}
+
+/// Teyo, the Shieldmage — {2}{W} loyalty 5. Static: you have hexproof. −2: make
+/// a 0/3 white Wall with defender.
+pub fn teyo_the_shieldmage() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "You have hexproof.",
+            effect: StaticEffect::ControllerHasHexproof,
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Wall".into(),
+                    power: 0,
+                    toughness: 3,
+                    keywords: vec![Keyword::Defender],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..walker("Teyo, the Shieldmage", cost(&[generic(2), w()]), PlaneswalkerSubtype::Teyo, 5)
+    }
+}
+
+/// Kasmina, Enigmatic Mentor — {3}{U} loyalty 5. Static: opponents' spells that
+/// target your creature/planeswalker cost {2} more. −2: make a 2/2 Wizard, loot.
+pub fn kasmina_enigmatic_mentor() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Spells your opponents cast that target a creature or planeswalker you control cost {2} more.",
+            effect: StaticEffect::TaxOpponentSpellsTargeting {
+                target_filter: (R::Creature.or(R::Planeswalker)).and(R::ControlledByYou),
+                amount: 2,
+            },
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Wizard".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Blue],
+                        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard], ..Default::default() },
+                        ..Default::default()
+                    },
+                },
+                draw(1),
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+            ..Default::default()
+        }],
+        ..walker("Kasmina, Enigmatic Mentor", cost(&[generic(3), u()]), PlaneswalkerSubtype::Kasmina, 5)
+    }
+}
+
+/// The Wanderer — {3}{W} loyalty 5. Static: prevent all noncombat damage to you
+/// and your permanents. −2: exile target creature with power 4 or greater.
+pub fn the_wanderer() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Prevent all noncombat damage that would be dealt to you and other permanents you control.",
+            effect: StaticEffect::PreventNoncombatDamageToYouAndYourPermanents,
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: Effect::Exile { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
+            ..Default::default()
+        }],
+        ..walker("The Wanderer", cost(&[generic(3), w()]), PlaneswalkerSubtype::Wanderer, 5)
+    }
+}
+
+/// Ob Nixilis, the Hate-Twisted — {3}{B}{B} loyalty 5. Whenever an opponent
+/// draws a card, deal 1 to them. −2: destroy target creature; its controller
+/// draws two cards.
+pub fn ob_nixilis_the_hate_twisted() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::Triggerer), amount: Value::ONE },
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(R::Creature) },
+                Effect::Draw { who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))), amount: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
+        ..walker("Ob Nixilis, the Hate-Twisted", cost(&[generic(3), b(), b()]), PlaneswalkerSubtype::Nixilis, 5)
     }
 }

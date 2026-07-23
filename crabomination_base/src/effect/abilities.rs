@@ -1478,6 +1478,12 @@ pub enum StaticEffect {
     /// funnel for creature targets; combat damage is marked on a separate path
     /// and is unaffected.
     PreventNoncombatDamageToYourCreatures,
+    /// CR 615 — "Prevent all noncombat damage that would be dealt to you and
+    /// [other] permanents you control." Broader than
+    /// `PreventNoncombatDamageToYourCreatures`: it also shields the controller
+    /// (player) and their noncreature permanents. The Wanderer. Consulted at
+    /// the noncombat funnel for both player and permanent targets.
+    PreventNoncombatDamageToYouAndYourPermanents,
     /// CR 615 — "Prevent all damage that would be dealt to creature tokens you
     /// control" (Emmara Tandris). Consulted on both the combat and noncombat
     /// damage paths for token creatures controlled by this static's controller.

@@ -816,3 +816,119 @@ fn dreadhorde_butcher_death_burst() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 1, "dealt its power (1) on death");
 }
+
+/// Price of Betrayal removes up to five counters from a permanent (CR 122.6).
+#[test]
+fn price_of_betrayal_strips_permanent_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    cast_at_target(&mut g, catalog::price_of_betrayal(), Target::Permanent(bear), &[(Color::Black, 1)], 0);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "all 3 removed (up to 5)");
+}
+
+/// Price of Betrayal removes up to five poison counters from an opponent.
+#[test]
+fn price_of_betrayal_strips_player_poison() {
+    let mut g = two_player_game();
+    g.players[1].poison_counters = 7;
+    cast_at_target(&mut g, catalog::price_of_betrayal(), Target::Player(1), &[(Color::Black, 1)], 0);
+    assert_eq!(g.players[1].poison_counters, 2, "5 poison removed");
+}
+
+// ── Planeswalkers (2026-07-23) ────────────────────────────────────────────────
+
+/// Tibalt's static stops opponents gaining life; his −2 makes a Devil.
+#[test]
+fn tibalt_locks_opponent_lifegain_and_makes_devil() {
+    let mut g = two_player_game();
+    let tibalt = g.add_card_to_battlefield(0, catalog::tibalt_rakish_instigator());
+    // Opponent can't gain life.
+    let before = g.players[1].life;
+    g.adjust_life(1, 5);
+    assert_eq!(g.players[1].life, before, "opponent's life-gain is locked");
+    // −2 makes a 1/1 Devil.
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: tibalt, ability_index: 0, target: None, x_value: None }).expect("-2");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Devil)));
+}
+
+/// Teyo grants his controller hexproof and makes a 0/3 Wall.
+#[test]
+fn teyo_grants_hexproof_and_makes_wall() {
+    let mut g = two_player_game();
+    let teyo = g.add_card_to_battlefield(0, catalog::teyo_the_shieldmage());
+    assert!(g.player_has_static_hexproof(0), "controller has hexproof");
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: teyo, ability_index: 0, target: None, x_value: None }).expect("-2");
+    drain_stack(&mut g);
+    let wall = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Wall)).expect("Wall");
+    assert!(wall.definition.keywords.contains(&Keyword::Defender));
+}
+
+/// The Wanderer prevents noncombat damage to its controller (CR 615).
+#[test]
+fn the_wanderer_prevents_noncombat_damage_to_you() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_wanderer());
+    let life = g.players[0].life;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Player(0), 3, None, &mut evs);
+    assert_eq!(g.players[0].life, life, "noncombat damage to you is prevented");
+    // −2 exiles a big creature.
+    let wanderer = g.battlefield.iter().find(|c| c.definition.name == "The Wanderer").unwrap().id;
+    let wurm = g.add_card_to_battlefield(1, catalog::primordial_wurm()); // 7/6, power ≥ 4
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: wanderer, ability_index: 0, target: Some(Target::Permanent(wurm)), x_value: None }).expect("-2");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == wurm), "big creature exiled");
+}
+
+/// Kasmina taxes opponents' spells targeting your permanents.
+#[test]
+fn kasmina_taxes_targeted_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kasmina_enigmatic_mentor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Opponent's Lightning Bolt targeting your bear costs {2} more → {2}{R}.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    // Only {R} available — the tax makes it unaffordable.
+    let res = g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None });
+    assert!(res.is_err(), "the {{2}} tax makes the targeted bolt unaffordable");
+}
+
+/// Ob Nixilis pings an opponent when they draw; his −2 destroys and refills.
+#[test]
+fn ob_nixilis_pings_on_opponent_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ob_nixilis_the_hate_twisted());
+    g.add_card_to_library(1, catalog::forest());
+    let life = g.players[1].life;
+    let mut drawn = Vec::new();
+    g.draw_one(1, &mut drawn);
+    g.dispatch_triggers_for_events(&drawn);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "opponent took 1 for drawing");
+}
+
+/// A planeswalker at 0 loyalty is put into its owner's graveyard (CR 704.5i).
+#[test]
+fn planeswalker_dies_at_zero_loyalty() {
+    let mut g = two_player_game();
+    let tibalt = g.add_card_to_battlefield(0, catalog::tibalt_rakish_instigator());
+    g.battlefield_find_mut(tibalt).unwrap().counters.insert(CounterType::Loyalty, 0);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(tibalt).is_none(), "0-loyalty walker left the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == tibalt), "in its owner's graveyard");
+}
