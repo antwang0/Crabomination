@@ -466,3 +466,184 @@ pub fn ob_nixiliss_cruelty() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── More creatures ──────────────────────────────────────────────────────────
+
+/// Invading Manticore — {5}{R} 4/5 Zombie Manticore. When it enters, amass Zombies 2.
+pub fn invading_manticore() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Zombie) })],
+        ..vanilla("Invading Manticore", cost(&[generic(5), r()]), 4, 5, vec![CreatureType::Zombie, CreatureType::Manticore])
+    }
+}
+
+/// A "Zombie tokens you control have `kw`" static grant.
+fn zombie_tokens_have(kw: Keyword, descr: &'static str) -> StaticAbility {
+    StaticAbility {
+        description: descr,
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(
+                R::HasCreatureType(CreatureType::Zombie).and(R::IsToken).and(R::ControlledByYou),
+            ),
+            keyword: kw,
+        },
+    }
+}
+
+/// Vizier of the Scorpion — {2}{B} 1/1 Zombie Wizard. ETB amass Zombies 1;
+/// Zombie tokens you control have deathtouch.
+pub fn vizier_of_the_scorpion() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Amass { who: PlayerRef::You, count: Value::ONE, extra_type: Some(CreatureType::Zombie) })],
+        static_abilities: vec![zombie_tokens_have(Keyword::Deathtouch, "Zombie tokens you control have deathtouch.")],
+        ..vanilla("Vizier of the Scorpion", cost(&[generic(2), b()]), 1, 1, vec![CreatureType::Zombie, CreatureType::Wizard])
+    }
+}
+
+/// Dreadhorde Twins — {3}{R} 2/2 Zombie Jackal Warrior. ETB amass Zombies 2;
+/// Zombie tokens you control have trample.
+pub fn dreadhorde_twins() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Zombie) })],
+        static_abilities: vec![zombie_tokens_have(Keyword::Trample, "Zombie tokens you control have trample.")],
+        ..vanilla("Dreadhorde Twins", cost(&[generic(3), r()]), 2, 2, vec![CreatureType::Zombie, CreatureType::Jackal, CreatureType::Warrior])
+    }
+}
+
+/// Tithebearer Giant — {5}{B} 4/5 Giant Warrior. When it enters, draw a card and lose 1 life.
+pub fn tithebearer_giant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+        ]))],
+        ..vanilla("Tithebearer Giant", cost(&[generic(5), b()]), 4, 5, vec![CreatureType::Giant, CreatureType::Warrior])
+    }
+}
+
+/// Goblin Assault Team — {3}{R} 4/1 Goblin Warrior with haste. When it dies, put
+/// a +1/+1 counter on target creature you control.
+pub fn goblin_assault_team() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![on_dies(Effect::AddCounter {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..vanilla("Goblin Assault Team", cost(&[generic(3), r()]), 4, 1, vec![CreatureType::Goblin, CreatureType::Warrior])
+    }
+}
+
+/// Shriekdiver — {2}{B} 2/1 Zombie Bird Warrior with flying. {1}: This creature
+/// gains haste until end of turn.
+pub fn shriekdiver() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..vanilla("Shriekdiver", cost(&[generic(2), b()]), 2, 1, vec![CreatureType::Zombie, CreatureType::Bird, CreatureType::Warrior])
+    }
+}
+
+/// Chainwhip Cyclops — {4}{R} 4/4 Cyclops Warrior. {3}{R}: Target creature can't
+/// block this turn.
+pub fn chainwhip_cyclops() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r()]),
+            effect: Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..vanilla("Chainwhip Cyclops", cost(&[generic(4), r()]), 4, 4, vec![CreatureType::Cyclops, CreatureType::Warrior])
+    }
+}
+
+/// Law-Rune Enforcer — {W} 1/2 Human Soldier. {1}, {T}: Tap target creature with
+/// mana value 2 or greater.
+pub fn law_rune_enforcer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::Tap { what: target_filtered(R::Creature.and(R::ManaValueAtLeast(2))) },
+            ..Default::default()
+        }],
+        ..vanilla("Law-Rune Enforcer", cost(&[w()]), 1, 2, vec![CreatureType::Human, CreatureType::Soldier])
+    }
+}
+
+/// Ahn-Crop Invader — {2}{R} 2/2 Zombie Minotaur Warrior. During your turn it has
+/// first strike. {1}, Sacrifice another creature: It gets +2/+0 until end of turn.
+pub fn ahn_crop_invader() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, this creature has first strike.",
+            effect: StaticEffect::WhileYourTurn {
+                inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: Keyword::FirstStrike }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::Const(2), toughness: Value::Const(0), duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..vanilla("Ahn-Crop Invader", cost(&[generic(2), r()]), 2, 2, vec![CreatureType::Zombie, CreatureType::Minotaur, CreatureType::Warrior])
+    }
+}
+
+/// Makeshift Battalion — {2}{W} 3/2 Human Soldier. Battalion — whenever it and at
+/// least two other creatures attack, put a +1/+1 counter on it.
+pub fn makeshift_battalion() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::battalion(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..vanilla("Makeshift Battalion", cost(&[generic(2), w()]), 3, 2, vec![CreatureType::Human, CreatureType::Soldier])
+    }
+}
+
+/// Spark Reaper — {2}{B} 2/3 Zombie. {3}, Sacrifice a creature or planeswalker:
+/// You gain 1 life and draw a card.
+pub fn spark_reaper() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            sac_other_filter: Some((R::Creature.or(R::HasCardType(CardType::Planeswalker)), 1)),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..vanilla("Spark Reaper", cost(&[generic(2), b()]), 2, 3, vec![CreatureType::Zombie])
+    }
+}
+
+/// Duskmantle Operative — {1}{B} 2/2 Human Rogue. Can't be blocked by creatures
+/// with power 4 or greater.
+pub fn duskmantle_operative() -> CardDefinition {
+    keyworded("Duskmantle Operative", cost(&[generic(1), b()]), 2, 2,
+        vec![CreatureType::Human, CreatureType::Rogue], vec![Keyword::CantBeBlockedByPowerAtLeast(4)])
+}
+
+/// Vraska's Finisher — {2}{B} 3/2 Gorgon Assassin. When it enters, destroy target
+/// creature or planeswalker an opponent controls that was dealt damage this turn.
+pub fn vraskas_finisher() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: target_filtered(
+                R::ControlledByOpponent
+                    .and(R::DealtDamageThisTurn)
+                    .and(R::Creature.or(R::HasCardType(CardType::Planeswalker))),
+            ),
+        })],
+        ..vanilla("Vraska's Finisher", cost(&[generic(2), b()]), 3, 2, vec![CreatureType::Gorgon, CreatureType::Assassin])
+    }
+}

@@ -303,3 +303,76 @@ fn relentless_advance_amasses_three() {
     let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army");
     assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 3, "amass 3");
 }
+
+// ── More creatures ──────────────────────────────────────────────────────────
+
+/// Invading Manticore amasses Zombies 2 on entry.
+#[test]
+fn invading_manticore_amasses_two() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::invading_manticore());
+    drain_stack(&mut g);
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army");
+    assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Vizier of the Scorpion amasses and grants deathtouch to Zombie tokens.
+#[test]
+fn vizier_grants_deathtouch_to_zombie_tokens() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::vizier_of_the_scorpion());
+    drain_stack(&mut g);
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army").id;
+    assert!(g.computed_permanent(army).unwrap().keywords.contains(&Keyword::Deathtouch), "Army (Zombie token) has deathtouch");
+}
+
+/// Tithebearer Giant draws a card and loses 1 life on entry.
+#[test]
+fn tithebearer_giant_draws_and_loses() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let (hand, life) = (g.players[0].hand.len(), g.players[0].life);
+    g.move_card_to_battlefield_for_test(0, catalog::tithebearer_giant());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.players[0].life, life - 1);
+}
+
+/// Law-Rune Enforcer taps a mana-value-2-or-greater creature.
+#[test]
+fn law_rune_enforcer_taps_expensive_creature() {
+    let mut g = two_player_game();
+    let enf = g.add_card_to_battlefield(0, catalog::law_rune_enforcer());
+    g.battlefield_find_mut(enf).unwrap().summoning_sick = false;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: enf, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+    }).expect("tap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "MV-2 creature tapped");
+}
+
+/// Goblin Assault Team puts a counter on a creature when it dies.
+#[test]
+fn goblin_assault_team_counter_on_death() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let team = g.add_card_to_battlefield(0, catalog::goblin_assault_team()); // 4/1
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(team), 1, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ally).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Duskmantle Operative can't be blocked by power-4+ creatures.
+#[test]
+fn duskmantle_operative_evasion() {
+    let op = catalog::duskmantle_operative();
+    assert!(op.keywords.contains(&Keyword::CantBeBlockedByPowerAtLeast(4)));
+}
