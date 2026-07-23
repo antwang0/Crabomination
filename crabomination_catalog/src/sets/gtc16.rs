@@ -64,6 +64,18 @@ pub fn nightveil_specter() -> CardDefinition {
     }
 }
 
+/// Unexpected Results — {2}{G}{U} Sorcery. Shuffle, reveal top: a nonland is
+/// cast for free; a land enters the battlefield and this spell returns to hand.
+pub fn unexpected_results() -> CardDefinition {
+    CardDefinition {
+        name: "Unexpected Results",
+        cost: cost(&[generic(2), g(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::UnexpectedResults,
+        ..Default::default()
+    }
+}
+
 /// Signal the Clans — {R}{G} Instant. Search for three creature cards; if
 /// three have different names, one is put into your hand at random. Shuffle.
 pub fn signal_the_clans() -> CardDefinition {

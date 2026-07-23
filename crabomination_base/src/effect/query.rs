@@ -160,6 +160,7 @@ impl Effect {
             Effect::Noop
             | Effect::AdvanceClassLevel
             | Effect::SignalTheClans
+            | Effect::UnexpectedResults
             | Effect::ChannelLifeForMana
             | Effect::CantLoseThisTurn { .. }
             | Effect::Venture

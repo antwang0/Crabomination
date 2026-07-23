@@ -2249,3 +2249,41 @@ fn gtc16_signal_the_clans_random_one_to_hand() {
     let in_lib = [a, b, c].into_iter().filter(|id| g.players[0].library.iter().any(|c| c.id == *id)).count();
     assert_eq!(in_lib, 2, "the other two shuffled back into the library");
 }
+
+/// Unexpected Results, nonland on top: the revealed nonland is cast for free.
+#[test]
+fn gtc16_unexpected_results_free_casts_nonland() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let creature = g.add_card_to_library(0, catalog::gutter_skulk()); // sole library card
+    let spell = g.add_card_to_hand(0, catalog::unexpected_results());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // Accept the free cast.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.cast_spell(spell, None, vec![], None, None).expect("cast Unexpected Results");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(creature).is_some(), "the revealed nonland was cast for free");
+}
+
+/// Unexpected Results, land on top: the land enters and the spell returns to hand.
+#[test]
+fn gtc16_unexpected_results_land_returns_spell() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_library(0, catalog::forest()); // sole library card
+    let spell = g.add_card_to_hand(0, catalog::unexpected_results());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.cast_spell(spell, None, vec![], None, None).expect("cast Unexpected Results");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some(), "the revealed land entered the battlefield");
+    assert!(g.players[0].hand.iter().any(|c| c.id == spell), "Unexpected Results returned to hand");
+}

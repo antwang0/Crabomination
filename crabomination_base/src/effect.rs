@@ -5364,6 +5364,14 @@ pub enum Effect {
     /// duplicate name or fewer than three); if three distinct names are found
     /// one is taken uniformly at random. The library is always shuffled.
     SignalTheClans,
+    /// Unexpected Results — "Shuffle your library, then reveal the top card. If
+    /// it's a nonland card, you may cast it without paying its mana cost. If
+    /// it's a land card, you may put it onto the battlefield and return
+    /// Unexpected Results to its owner's hand." The nonland free-cast goes
+    /// through `cast_card_for_free` from the library (declining leaves it on
+    /// top); the land branch puts it onto the battlefield and returns this
+    /// spell to hand via `return_resolving_spell_to_hand`.
+    UnexpectedResults,
     /// Ecological Appreciation: search your library and graveyard for up to
     /// `count` creature cards with different names and mana value ≤ X
     /// (`Value::XFromCost`); an opponent chooses two to shuffle into your

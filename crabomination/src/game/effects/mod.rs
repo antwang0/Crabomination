@@ -1414,6 +1414,41 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::UnexpectedResults => {
+                use rand::seq::SliceRandom;
+                let p = ctx.controller;
+                self.players[p].library.shuffle(&mut rand::rng());
+                let Some(top) = self.players[p].library.first() else { return Ok(()); };
+                let is_land = top.definition.card_types.contains(&crate::card::CardType::Land);
+                let top_sel = Selector::TopOfLibrary {
+                    who: crate::effect::PlayerRef::You,
+                    count: crate::effect::Value::Const(1),
+                };
+                if is_land {
+                    // Put the land onto the battlefield, then return this spell to hand.
+                    let mv = Effect::Move {
+                        what: top_sel,
+                        to: ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::You,
+                            tapped: false,
+                        },
+                    };
+                    self.run_effect(&mv, ctx, events)?;
+                    self.return_resolving_spell_to_hand = true;
+                } else {
+                    // "You may cast it without paying" — from the library, so
+                    // declining leaves it on top.
+                    let cast = Effect::CastWithoutPayingImmediate {
+                        what: top_sel,
+                        source_zone: crate::card::Zone::Library,
+                        exile_after: false,
+                        copy: false,
+                    };
+                    self.run_effect(&cast, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::ChefsKiss => {
                 use rand::seq::IndexedRandom;
                 // Steal target single-target spell, copy it, retarget both at
