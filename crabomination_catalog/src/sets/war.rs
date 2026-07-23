@@ -10,7 +10,7 @@ use crate::card::SelectionRequirement as R;
 use crate::effect::shortcut::{cast_is_noncreature, deal, draw, etb, on_attack, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, LoyaltyAbility, ManaPayload, PlayerRef, PlayerStaticTarget, Predicate, Selector, StaticEffect, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
     Subtypes { creature_types: t, ..Default::default() }
@@ -1969,6 +1969,150 @@ pub fn storrev_devkarin_lich() -> CardDefinition {
             },
         }],
         ..vanilla("Storrev, Devkarin Lich", cost(&[generic(1), b(), b(), g()]), 5, 4, vec![CreatureType::Zombie, CreatureType::Elf, CreatureType::Wizard])
+    }
+}
+
+// ── Batch 7 (2026-07-23): simple commons/uncommons on existing primitives ─────
+
+/// Ugin's Conjurant — {X} 0/0 Spirit Monk. Enters with X +1/+1 counters; damage
+/// to it while it has a +1/+1 counter is prevented by removing that many.
+pub fn ugins_conjurant() -> CardDefinition {
+    CardDefinition {
+        name: "Ugin's Conjurant",
+        cost: cost(&[x()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Spirit, CreatureType::Monk]),
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        static_abilities: vec![StaticAbility {
+            description: "If damage would be dealt to this while it has a +1/+1 counter, prevent it and remove that many +1/+1 counters.",
+            effect: StaticEffect::PreventDamageByRemovingCounters { kind: CounterType::PlusOnePlusOne },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Arlinn's Wolf — {2}{G} 3/2 Wolf. Can't be blocked by power-2-or-less creatures.
+pub fn arlinns_wolf() -> CardDefinition {
+    keyworded("Arlinn's Wolf", cost(&[generic(2), g()]), 3, 2, vec![CreatureType::Wolf], vec![Keyword::CantBeBlockedByPowerAtMost(2)])
+}
+
+/// Domri's Ambush — {R}{G} Sorcery. Put a +1/+1 counter on target creature you
+/// control, then it deals damage equal to its power to a creature or
+/// planeswalker you don't control.
+pub fn domris_ambush() -> CardDefinition {
+    CardDefinition {
+        name: "Domri's Ambush",
+        cost: cost(&[r(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            Effect::DealDamageEqualToPower {
+                source: Selector::Target(0),
+                target: Selector::TargetFiltered { slot: 1, filter: (R::Creature.or(R::Planeswalker)).and(R::ControlledByOpponent) },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Spark Harvest — {B} Sorcery. Additional cost: sacrifice a creature or pay
+/// {3}{B}. Destroy target creature or planeswalker. (The colored half of the
+/// alt-cost is approximated as {4} generic.)
+pub fn spark_harvest() -> CardDefinition {
+    CardDefinition {
+        name: "Spark Harvest",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay { filter: R::Creature, pay: 4 }],
+        effect: Effect::Destroy { what: target_filtered(R::Creature.or(R::Planeswalker)) },
+        ..Default::default()
+    }
+}
+
+/// Toll of the Invasion — {2}{B} Sorcery. Target opponent reveals their hand;
+/// you choose a nonland card, they discard it. Then amass Zombies 1.
+pub fn toll_of_the_invasion() -> CardDefinition {
+    CardDefinition {
+        name: "Toll of the Invasion",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: R::Nonland,
+            },
+            Effect::Amass { who: PlayerRef::You, count: Value::ONE, extra_type: Some(CreatureType::Zombie) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Eternal Taskmaster — {1}{B} 2/3 Zombie. Enters tapped. When it attacks, you
+/// may pay {2}{B}; if you do, return target creature card from your graveyard.
+pub fn eternal_taskmaster() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![on_attack(Effect::MayPay {
+            description: "Pay {2}{B} to return a creature card from your graveyard to your hand?".into(),
+            mana_cost: cost(&[generic(2), b()]),
+            body: Box::new(Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            else_: None,
+        })],
+        ..vanilla("Eternal Taskmaster", cost(&[generic(1), b()]), 2, 3, vec![CreatureType::Zombie])
+    }
+}
+
+/// Living Twister — {R}{R}{G} 2/5 Elemental. {1}{R}, discard a land card: deal
+/// 2 damage to any target. {G}: return a tapped land you control to hand.
+pub fn living_twister() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                discard_cost: Some((R::Land, 1)),
+                effect: deal(2, target_any()),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                effect: Effect::Move {
+                    what: target_filtered(R::Land.and(R::ControlledByYou).and(R::Tapped)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..vanilla("Living Twister", cost(&[r(), r(), g()]), 2, 5, vec![CreatureType::Elemental])
+    }
+}
+
+/// Lazotep Plating — {1}{U} Instant. Amass Zombies 1, then you and permanents
+/// you control gain hexproof until end of turn. (Modeled as hexproof from all
+/// five colors; colorless sources are an approximation.)
+pub fn lazotep_plating() -> CardDefinition {
+    CardDefinition {
+        name: "Lazotep Plating",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Amass { who: PlayerRef::You, count: Value::ONE, extra_type: Some(CreatureType::Zombie) },
+            Effect::GrantHexproofFromColorThisTurn {
+                who: Selector::You,
+                colors: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+            },
+        ]),
+        ..Default::default()
     }
 }
 

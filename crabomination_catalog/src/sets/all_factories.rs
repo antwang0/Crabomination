@@ -14791,6 +14791,14 @@ static WAR: &[Factory] = &[
     super::war::viviens_grizzly,
     super::war::mowu_loyal_companion,
     super::war::band_together,
+    super::war::ugins_conjurant,
+    super::war::arlinns_wolf,
+    super::war::domris_ambush,
+    super::war::spark_harvest,
+    super::war::toll_of_the_invasion,
+    super::war::eternal_taskmaster,
+    super::war::living_twister,
+    super::war::lazotep_plating,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

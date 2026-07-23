@@ -1349,3 +1349,114 @@ fn band_together_two_creatures_pile_on() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "victim took 2+3=5 and died");
 }
+
+// ── Batch 7 (2026-07-23): simple commons/uncommons ────────────────────────────
+
+/// Ugin's Conjurant prevents damage by shedding +1/+1 counters, and is defined
+/// to enter with X counters.
+#[test]
+fn ugins_conjurant_prevents_damage_with_counters() {
+    assert!(matches!(
+        catalog::ugins_conjurant().enters_with_counters,
+        Some((CounterType::PlusOnePlusOne, crabomination::card::Value::XFromCost))
+    ), "enters with X +1/+1 counters");
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::ugins_conjurant());
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    let mut d = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(id), 2, None, &mut d);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "prevented by removing 2 counters");
+}
+
+/// Domri's Ambush pumps your creature then fights an enemy with its power.
+#[test]
+fn domris_ambush_pumps_and_bites() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/3 after counter
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let spell = g.add_card_to_hand(0, catalog::domris_ambush());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(foe)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.battlefield_find(foe).is_none(), "3 damage killed the 3/3");
+}
+
+/// Spark Harvest can pay the alt-cost with mana and destroy a planeswalker.
+#[test]
+fn spark_harvest_destroys_with_alt_cost() {
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(1, catalog::the_wanderer());
+    let spell = g.add_card_to_hand(0, catalog::spark_harvest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 5); // {B} + {4} alt-cost
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(pw)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pw).is_none(), "planeswalker destroyed");
+}
+
+/// Eternal Taskmaster enters tapped and recurs on attack for {2}{B}.
+#[test]
+fn eternal_taskmaster_enters_tapped_and_recurs() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let tm = g.move_card_to_battlefield_for_test(0, catalog::eternal_taskmaster());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tm).unwrap().tapped, "enters tapped");
+    g.battlefield_find_mut(tm).unwrap().tapped = false;
+    g.battlefield_find_mut(tm).unwrap().summoning_sick = false;
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: tm, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature returned to hand");
+}
+
+/// Living Twister pings for 2 by discarding a land.
+#[test]
+fn living_twister_pings_by_discarding_land() {
+    let mut g = two_player_game();
+    let lt = g.add_card_to_battlefield(0, catalog::living_twister());
+    g.battlefield_find_mut(lt).unwrap().summoning_sick = false;
+    g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lt, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 2, "dealt 2");
+}
+
+/// Lazotep Plating amasses and grants hexproof.
+#[test]
+fn lazotep_plating_amass_and_hexproof() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::lazotep_plating());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.counter_count(CounterType::PlusOnePlusOne) == 1), "Army token amassed");
+    assert!(g.players[0].hexproof_from_colors_this_turn.len() >= 5, "gained hexproof from all colors");
+}
