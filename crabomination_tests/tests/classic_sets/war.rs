@@ -1326,3 +1326,26 @@ fn mowu_adds_one_extra_counter() {
     g.resolve_effect(&crabomination::effect::Effect::Proliferate, &ctx).unwrap();
     assert_eq!(g.battlefield_find(mowu).unwrap().counter_count(CounterType::PlusOnePlusOne), 5, "proliferate 1 → 2");
 }
+
+/// Band Together: two of your creatures each ping a target for their power.
+#[test]
+fn band_together_two_creatures_pile_on() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let b = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let bt = g.add_card_to_hand(0, catalog::band_together());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bt,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![Target::Permanent(a), Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    }).expect("cast Band Together");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim took 2+3=5 and died");
+}

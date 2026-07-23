@@ -2020,6 +2020,32 @@ pub fn charmed_stray() -> CardDefinition {
     }
 }
 
+/// Band Together — {2}{G} Instant. Up to two target creatures you control each
+/// deal damage equal to their power to another target creature. (The "another"
+/// exclusion is approximated as a plain creature slot.)
+pub fn band_together() -> CardDefinition {
+    let mine = R::Creature.and(R::ControlledByYou);
+    CardDefinition {
+        name: "Band Together",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::DealDamageEqualToPower {
+                    source: Selector::TargetFiltered { slot: 1, filter: mine.clone() },
+                    target: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                },
+                Effect::DealDamageEqualToPower {
+                    source: Selector::TargetFiltered { slot: 2, filter: mine },
+                    target: Selector::Target(0),
+                },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
 /// Mowu, Loyal Companion — {3}{G} 3/3 Legendary Dog with vigilance and trample.
 /// If one or more +1/+1 counters would be put on it, that many plus one are put
 /// on it instead.

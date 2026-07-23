@@ -14790,6 +14790,7 @@ static WAR: &[Factory] = &[
     super::war::command_the_dreadhorde,
     super::war::viviens_grizzly,
     super::war::mowu_loyal_companion,
+    super::war::band_together,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,
