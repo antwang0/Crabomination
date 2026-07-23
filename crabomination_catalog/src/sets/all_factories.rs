@@ -7090,6 +7090,7 @@ static DIS: &[Factory] = &[
     super::dis::elemental_resonance,
     super::dis::vigean_intuition,
     super::dis::fertile_imagination,
+    super::dis::aethermages_touch,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

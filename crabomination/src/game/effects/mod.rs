@@ -11914,6 +11914,54 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AethermagesTouch { count } => {
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let top: Vec<CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                // Auto-pick the highest-power creature among the revealed cards.
+                let pick = top
+                    .iter()
+                    .copied()
+                    .filter(|id| {
+                        self.players[p].library.iter().find(|c| c.id == *id)
+                            .map(|c| c.definition.is_creature()).unwrap_or(false)
+                    })
+                    .max_by_key(|id| {
+                        self.players[p].library.iter().find(|c| c.id == *id)
+                            .map(|c| c.definition.power).unwrap_or(0)
+                    });
+                if let Some(pid) = pick {
+                    self.move_card_to(
+                        pid,
+                        &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                        ctx, events,
+                    );
+                    // "It gains 'at your end step, return this to its owner's hand.'"
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: p,
+                        source: ctx.source.unwrap_or(pid),
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                        },
+                        target: Some(Target::Permanent(pid)),
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                }
+                // Rest go to the bottom of the library (order not modeled).
+                for id in top.into_iter().filter(|id| Some(*id) != pick) {
+                    self.move_card_to(
+                        id,
+                        &ZoneDest::Library { who: PlayerRef::Seat(p), pos: crate::effect::LibraryPosition::Bottom },
+                        ctx, events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::FertileImagination { per } => {
                 use crate::card::{CardType, CreatureType, Subtypes, TokenDefinition};
                 let Some(opp) = self.resolve_player(&crate::effect::PlayerRef::Target(0), ctx)

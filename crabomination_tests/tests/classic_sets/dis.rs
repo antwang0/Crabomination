@@ -1753,3 +1753,33 @@ fn fertile_imagination_tokens_per_match() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count(), 4,
         "two Saprolings per creature revealed");
 }
+
+/// Aethermage's Touch flashes a creature onto the battlefield; it returns to
+/// hand at the caster's end step.
+#[test]
+fn aethermages_touch_deploys_then_bounces() {
+    let mut g = two_player_game();
+    // Top of library: a land then a creature (creature is auto-picked).
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::phantom_warrior());
+    let creature = g.add_card_to_library(0, catalog::snapping_drake());
+    let _ = creature;
+    let spell = g.add_card_to_hand(0, catalog::aethermages_touch());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Aethermage's Touch");
+    drain_stack(&mut g);
+    // Highest-power creature (Snapping Drake, 3/2) hit the battlefield.
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Snapping Drake"), "creature deployed");
+    // At the end step it returns to hand.
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Snapping Drake"), "returned to hand at end step");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Snapping Drake"), "no longer on the battlefield");
+}

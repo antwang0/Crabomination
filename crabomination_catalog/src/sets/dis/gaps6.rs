@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{cost, g, generic, u, Color};
+use crate::mana::{cost, g, generic, u, w, Color};
 
 /// Momir Vig, Simic Visionary — {3}{G}{U} 2/2 Elf Wizard. Casting a green
 /// creature spell tutors a creature to the top of your library; casting a blue
@@ -118,6 +118,19 @@ pub fn fertile_imagination() -> CardDefinition {
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::FertileImagination { per: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Aethermage's Touch — {2}{W}{U} Instant. Reveal the top four cards of your
+/// library; put a creature from among them onto the battlefield with "return
+/// it to your hand at your end step," then bottom the rest.
+pub fn aethermages_touch() -> CardDefinition {
+    CardDefinition {
+        name: "Aethermage's Touch",
+        cost: cost(&[generic(2), w(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::AethermagesTouch { count: Value::Const(4) },
         ..Default::default()
     }
 }

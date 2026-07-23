@@ -3358,6 +3358,10 @@ pub enum Effect {
     /// puts the rest into their graveyard; you do the same with your top three.
     /// If two creatures are put onto the battlefield this way, they fight.
     GuildFeud,
+    /// Aethermage's Touch: reveal the top `count` cards of your library; put a
+    /// creature card from among them onto the battlefield with a delayed
+    /// "return to owner's hand at your end step" rider, then bottom the rest.
+    AethermagesTouch { count: Value },
     /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
     /// in hand moves to the graveyard and every card in the graveyard moves to
     /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card

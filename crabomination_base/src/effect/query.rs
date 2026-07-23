@@ -265,6 +265,7 @@ impl Effect {
             | Effect::GuildFeud
             | Effect::NameCardTargetDiscardsOneOrYouDraw => true,
             Effect::ChooseTypeRevealTopPartition { .. } => false,
+            Effect::AethermagesTouch { .. } => false,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only
             // `otherwise` can demand a cast-time target (Browbeat's drawer).
@@ -1608,6 +1609,11 @@ impl Effect {
             Effect::GuildFeud => {
                 "each side reveals three, deploys a creature; the two deployed creatures fight".into()
             }
+            Effect::AethermagesTouch { count } => match count {
+                Value::Const(n) => format!(
+                    "reveal the top {n}; put a creature onto the battlefield until your end step, bottom the rest"),
+                _ => "reveal cards; deploy a creature until your end step, bottom the rest".into(),
+            },
             _ => String::new(),
         }
     }
