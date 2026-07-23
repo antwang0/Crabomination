@@ -192,3 +192,114 @@ fn pouncing_lynx_first_strike_your_turn() {
     g.active_player_idx = 1;
     assert!(!g.computed_permanent(lynx).unwrap().keywords.contains(&Keyword::FirstStrike), "not on opponent's turn");
 }
+
+// ── Spells ──────────────────────────────────────────────────────────────────
+
+/// Cast a WAR instant/sorcery at a single target and drain.
+fn cast_at_target(g: &mut GameState, def: crabomination::card::CardDefinition, target: Target, mana: &[(Color, u32)], colorless: u32) {
+    let id = g.add_card_to_hand(0, def);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for (c, n) in mana { g.players[0].mana_pool.add(*c, *n); }
+    g.players[0].mana_pool.add_colorless(colorless);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(target), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(g);
+}
+
+/// Battlefield Promotion: counter, first strike, and 2 life.
+#[test]
+fn battlefield_promotion_pumps_and_gains() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    cast_at_target(&mut g, catalog::battlefield_promotion(), Target::Permanent(bear), &[(Color::White, 1)], 1);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Sorin's Thirst: 2 damage to a creature and 2 life.
+#[test]
+fn sorins_thirst_burns_and_gains() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    cast_at_target(&mut g, catalog::sorins_thirst(), Target::Permanent(bear), &[(Color::Black, 2)], 0);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 died to 2 damage");
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Callous Dismissal bounces a permanent and amasses 1.
+#[test]
+fn callous_dismissal_bounces_and_amasses() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast_at_target(&mut g, catalog::callous_dismissal(), Target::Permanent(bear), &[(Color::Blue, 1)], 1);
+    assert!(g.battlefield_find(bear).is_none() && g.players[1].hand.iter().any(|c| c.id == bear), "bounced");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)),
+        "amassed an Army",
+    );
+}
+
+/// Contentious Plan proliferates and draws.
+#[test]
+fn contentious_plan_proliferates_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.add_card_to_library(0, catalog::forest());
+    let plan = g.add_card_to_hand(0, catalog::contentious_plan());
+    let hand = g.players[0].hand.len(); // includes the plan
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: plan, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "proliferated");
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one → net zero");
+}
+
+/// Ob Nixilis's Cruelty shrinks a creature and exiles it as it dies.
+#[test]
+fn ob_nixiliss_cruelty_shrinks_and_exiles() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast_at_target(&mut g, catalog::ob_nixiliss_cruelty(), Target::Permanent(bear), &[(Color::Black, 1)], 2);
+    assert!(g.battlefield_find(bear).is_none(), "died to -5/-5");
+    assert!(g.exile.iter().any(|c| c.id == bear), "exiled instead of the graveyard");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear), "not in graveyard");
+}
+
+/// Unlikely Aid grants +2/+0 and indestructible.
+#[test]
+fn unlikely_aid_grants_indestructible() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_at_target(&mut g, catalog::unlikely_aid(), Target::Permanent(bear), &[(Color::Black, 1)], 1);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.power, 4, "+2/+0");
+    assert!(c.keywords.contains(&Keyword::Indestructible));
+}
+
+/// Relentless Advance amasses Zombies 3.
+#[test]
+fn relentless_advance_amasses_three() {
+    let mut g = two_player_game();
+    let adv = g.add_card_to_hand(0, catalog::relentless_advance());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: adv, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army");
+    assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 3, "amass 3");
+}

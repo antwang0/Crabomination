@@ -5,8 +5,9 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
     EventSpec, Keyword, StaticAbility, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{cast_is_noncreature, etb, on_dies};
-use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect};
+use crate::card::SelectionRequirement as R;
+use crate::effect::shortcut::{cast_is_noncreature, etb, on_dies, target_filtered};
+use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, generic, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
@@ -309,5 +310,159 @@ pub fn herald_of_the_dreadhorde() -> CardDefinition {
             extra_type: Some(CreatureType::Zombie),
         })],
         ..vanilla("Herald of the Dreadhorde", cost(&[generic(3), b()]), 3, 2, vec![CreatureType::Zombie, CreatureType::Warrior])
+    }
+}
+
+// ── Spells ──────────────────────────────────────────────────────────────────
+
+/// Battlefield Promotion — {1}{W} Instant. Put a +1/+1 counter on target
+/// creature. It gains first strike until end of turn. You gain 2 life.
+pub fn battlefield_promotion() -> CardDefinition {
+    CardDefinition {
+        name: "Battlefield Promotion",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rally of Wings — {1}{W} Instant. Untap all creatures you control. Creatures
+/// you control with flying get +2/+2 until end of turn.
+pub fn rally_of_wings() -> CardDefinition {
+    CardDefinition {
+        name: "Rally of Wings",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Untap { what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature }, up_to: None },
+            Effect::PumpPT {
+                what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature.and(R::HasKeyword(Keyword::Flying)) },
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Callous Dismissal — {1}{U} Sorcery. Return target nonland permanent to its
+/// owner's hand. Amass Zombies 1.
+pub fn callous_dismissal() -> CardDefinition {
+    CardDefinition {
+        name: "Callous Dismissal",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move { what: target_filtered(R::Nonland), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            Effect::Amass { who: PlayerRef::You, count: Value::ONE, extra_type: Some(CreatureType::Zombie) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Contentious Plan — {1}{U} Sorcery. Proliferate. Draw a card.
+pub fn contentious_plan() -> CardDefinition {
+    CardDefinition {
+        name: "Contentious Plan",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Proliferate,
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Relentless Advance — {3}{U} Sorcery. Amass Zombies 3.
+pub fn relentless_advance() -> CardDefinition {
+    CardDefinition {
+        name: "Relentless Advance",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Amass { who: PlayerRef::You, count: Value::Const(3), extra_type: Some(CreatureType::Zombie) },
+        ..Default::default()
+    }
+}
+
+/// Sorin's Thirst — {B}{B} Instant. Deal 2 damage to target creature and you
+/// gain 2 life.
+pub fn sorins_thirst() -> CardDefinition {
+    CardDefinition {
+        name: "Sorin's Thirst",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(2) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Unlikely Aid — {1}{B} Instant. Target creature gets +2/+0 and gains
+/// indestructible until end of turn.
+pub fn unlikely_aid() -> CardDefinition {
+    CardDefinition {
+        name: "Unlikely Aid",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(2), toughness: Value::Const(0), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Blindblast — {2}{R} Instant. Deal 1 damage to target creature. That creature
+/// can't block this turn. Draw a card.
+pub fn blindblast() -> CardDefinition {
+    CardDefinition {
+        name: "Blindblast",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::ONE },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Stealth Mission — {2}{U} Sorcery. Put two +1/+1 counters on target creature
+/// you control. That creature can't be blocked this turn.
+pub fn stealth_mission() -> CardDefinition {
+    CardDefinition {
+        name: "Stealth Mission",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: target_filtered(R::Creature.and(R::ControlledByYou)), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Unblockable, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ob Nixilis's Cruelty — {2}{B} Instant. Target creature gets -5/-5 until end
+/// of turn. If that creature would die this turn, exile it instead.
+pub fn ob_nixiliss_cruelty() -> CardDefinition {
+    CardDefinition {
+        name: "Ob Nixilis's Cruelty",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(-5), toughness: Value::Const(-5), duration: Duration::EndOfTurn },
+            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+        ]),
+        ..Default::default()
     }
 }

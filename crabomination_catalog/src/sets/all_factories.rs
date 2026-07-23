@@ -14686,6 +14686,16 @@ static WAR: &[Factory] = &[
     super::war::ashioks_skulker,
     super::war::grim_initiate,
     super::war::herald_of_the_dreadhorde,
+    super::war::battlefield_promotion,
+    super::war::rally_of_wings,
+    super::war::callous_dismissal,
+    super::war::contentious_plan,
+    super::war::relentless_advance,
+    super::war::sorins_thirst,
+    super::war::unlikely_aid,
+    super::war::blindblast,
+    super::war::stealth_mission,
+    super::war::ob_nixiliss_cruelty,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,
