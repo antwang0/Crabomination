@@ -12280,6 +12280,39 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::NameExileAllZonesPending { who } => {
+                use rand::seq::SliceRandom;
+                let DecisionAnswer::NamedCard(name) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = vec![];
+                if !name.is_empty() {
+                    for zone in ["gy", "hand", "lib"] {
+                        let ids: Vec<CardId> = match zone {
+                            "gy" => &self.players[who].graveyard,
+                            "hand" => &self.players[who].hand,
+                            _ => &self.players[who].library,
+                        }
+                        .iter()
+                        .filter(|c| c.definition.name == name)
+                        .map(|c| c.id)
+                        .collect();
+                        for id in ids {
+                            let taken = match zone {
+                                "gy" => Self::take_card(&mut self.players[who].graveyard, id),
+                                "hand" => Self::take_card(&mut self.players[who].hand, id),
+                                _ => Self::take_card(&mut self.players[who].library, id),
+                            };
+                            if let Some(card) = taken {
+                                self.exile.push(card);
+                            }
+                        }
+                    }
+                }
+                // That player shuffles (searched their library — CR 701.19).
+                self.players[who].library.shuffle(&mut rand::rng());
+                Ok(events)
+            }
             PendingEffectState::NameDiscardOneOrDrawPending { who, namer } => {
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

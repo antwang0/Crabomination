@@ -260,6 +260,7 @@ impl Effect {
             Effect::ReturnGraveyardCreaturesUpToTotalPower { .. } => false,
             Effect::ReturnGraveyardCreaturesUpToTotalManaValue { .. } => false,
             Effect::NameCardTargetDiscardsMatching
+            | Effect::NameCardExileMatchingAllZones
             | Effect::NameCardTargetDiscardsOneOrYouDraw => true,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only

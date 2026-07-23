@@ -1252,6 +1252,9 @@ pub enum PendingEffectState {
     /// Cabal Therapy: the named-card answer makes `who` discard every
     /// matching hand card.
     NameDiscardMatchingPending { who: usize },
+    /// Slaughter Games — exile every card named by the chooser from `who`'s
+    /// hand, graveyard, and library, then shuffle.
+    NameExileAllZonesPending { who: usize },
     /// Brain Pry: `who` discards one card with the named name; if they have
     /// none, `namer` draws a card.
     NameDiscardOneOrDrawPending { who: usize, namer: usize },

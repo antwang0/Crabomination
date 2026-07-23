@@ -3238,6 +3238,10 @@ pub enum Effect {
     /// Cabal Therapy: choose a nonland card name; target player discards
     /// every card with that name from their hand.
     NameCardTargetDiscardsMatching,
+    /// Slaughter Games: choose a nonland card name, then exile every card with
+    /// that name from target opponent's graveyard, hand, and library; that
+    /// player then shuffles.
+    NameCardExileMatchingAllZones,
     /// Brain Pry: choose a nonland card name; target player reveals their hand
     /// and discards one card with that name. If they can't, you draw a card.
     NameCardTargetDiscardsOneOrYouDraw,

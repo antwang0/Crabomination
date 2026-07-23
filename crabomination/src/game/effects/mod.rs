@@ -11569,6 +11569,40 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NameCardExileMatchingAllZones => {
+                use crate::decision::Decision;
+                let who = self
+                    .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
+                    .or_else(|| {
+                        (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
+                    });
+                let Some(who) = who else { return Ok(()) };
+                // Feed the namer the target's densest nonland name across the
+                // library + graveyard (the zones this actually hits).
+                let suggestions = rank_names_by_frequency(
+                    self.players[who]
+                        .library
+                        .iter()
+                        .chain(self.players[who].graveyard.iter())
+                        .filter(|c| !c.definition.is_land())
+                        .map(|c| c.definition.name),
+                );
+                let decision = Decision::NameCard {
+                    source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                    source_name: ctx.source_name.unwrap_or_default().to_string(),
+                    suggestions,
+                };
+                let pending = PendingEffectState::NameExileAllZonesPending { who };
+                if self.players[ctx.controller].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
             Effect::NameCardTargetDiscardsOneOrYouDraw => {
                 use crate::decision::Decision;
                 let who = self
