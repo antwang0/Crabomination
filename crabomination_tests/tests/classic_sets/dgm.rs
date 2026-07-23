@@ -1102,6 +1102,38 @@ fn notion_thief_redirects_extra_draw() {
     assert_eq!(g.players[1].hand.len(), h1 + 1, "thief draws instead");
 }
 
+/// Boros Battleshaper's each-combat trigger grants "attacks/blocks if able" to
+/// one target and "can't attack or block" to another distinct creature (both
+/// same-filter "target creature" slots are auto-filled).
+#[test]
+fn boros_battleshaper_forces_and_forbids() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::boros_battleshaper());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    advance_to(&mut g, TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    // One creature is forced to attack/block, a distinct one is forbidden.
+    let forced: Vec<_> = g.battlefield.iter()
+        .filter(|c| g.computed_permanent(c.id).unwrap().keywords.contains(&Keyword::MustAttack))
+        .map(|c| c.id).collect();
+    let forbidden: Vec<_> = g.battlefield.iter()
+        .filter(|c| g.computed_permanent(c.id).unwrap().keywords.contains(&Keyword::CantAttack))
+        .map(|c| c.id).collect();
+    assert_eq!(forced.len(), 1, "exactly one creature must attack/block");
+    assert_eq!(forbidden.len(), 1, "exactly one creature can't attack/block");
+    assert_ne!(forced[0], forbidden[0], "the two slots pick distinct creatures");
+    assert!(
+        g.computed_permanent(forced[0]).unwrap().keywords.contains(&Keyword::MustBlock),
+        "forced creature also gains MustBlock",
+    );
+    assert!(
+        g.computed_permanent(forbidden[0]).unwrap().keywords.contains(&Keyword::CantBlock),
+        "forbidden creature also gains CantBlock",
+    );
+}
+
 /// The turn-based first draw of the opponent's draw step is exempt.
 #[test]
 fn notion_thief_exempts_draw_step() {

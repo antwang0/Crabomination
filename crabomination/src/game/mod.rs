@@ -10838,12 +10838,16 @@ impl GameState {
             Some(f) => f,
             None => return vec![],
         };
-        // Only fill here when slot 1 carries a *distinct* filter from slot 0
-        // (Kor Outfitter's Equipment→creature Attach). Same-filter "up to N"
-        // effects (DealDamageDivided, DistributeCounters, ApplyToTargets) keep
-        // their dedicated single-target auto behavior / resolution-time divide
-        // pickers — fanning them out here would wrongly split the effect.
-        if eff.target_filter_for_slot_in_mode_kicked(0, None, false) == Some(slot1) {
+        // Same-filter slot 1: fanning out a *divide* effect (DealDamageDivided,
+        // DistributeCounters, SupportCounters — `distinct_target_count` is Some)
+        // would wrongly split its single multi-target across slots, so those
+        // keep their dedicated auto/divide pickers. But a `Seq`/`OptionalTargets`
+        // of independent single-target clauses (Ral Zarek's tap-one/untap-
+        // another, Boros Battleshaper's two "target creature" slots) genuinely
+        // needs each same-filter slot filled with a distinct object.
+        if eff.target_filter_for_slot_in_mode_kicked(0, None, false) == Some(slot1)
+            && eff.distinct_target_count(None).is_some()
+        {
             return vec![];
         }
         let opp = self
