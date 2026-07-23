@@ -3509,6 +3509,18 @@ impl GameState {
                                 amount = amount.saturating_add(*bonus);
                             }
                         }
+                        StaticEffect::YourColorSourcesDealExtraDamage { color, amount: bonus } => {
+                            // "Another [color] source you control" → +bonus to
+                            // any permanent or player (Jaya). Controller-scoped
+                            // and excludes the static's own source permanent.
+                            if let Some((src_ctrl, src_colors)) = &source_info
+                                && *src_ctrl == c.controller
+                                && source != Some(c.id)
+                                && src_colors.contains(color)
+                            {
+                                amount = amount.saturating_add(*bonus);
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -9977,11 +9989,14 @@ impl GameState {
                         | crate::effect::EventKind::PermanentSacrificed
                         | crate::effect::EventKind::CreatureSacrificed
                 ) && ta.event.scope == crate::effect::EventScope::SelfSource;
-                // "When enchanted creature dies" on a leaving Aura (Minion's
-                // Return) — the snapshot is the orphaned Aura, scope keys on
-                // the dead host being recorded in `auras_at_death`.
-                let lki_enchanted = ta.event.kind == crate::effect::EventKind::CreatureDied
-                    && ta.event.scope == crate::effect::EventScope::EnchantedBySource;
+                // "When enchanted permanent dies or is exiled" on a leaving Aura
+                // (Minion's Return, Kaya's Ghostform) — the snapshot is the
+                // orphaned Aura, scope keys on the departed host recorded in
+                // `auras_at_death`.
+                let lki_enchanted = matches!(
+                    ta.event.kind,
+                    crate::effect::EventKind::CreatureDied | crate::effect::EventKind::CardExiled
+                ) && ta.event.scope == crate::effect::EventScope::EnchantedBySource;
                 if !(lki_self || lki_enchanted) {
                     continue;
                 }
@@ -13932,6 +13947,7 @@ fn static_effect_to_effects(
             | StaticEffect::AddDamageToOpponents { .. }
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }
+            | StaticEffect::YourColorSourcesDealExtraDamage { .. }
             | StaticEffect::ControlledCreatureTypesDealExtraDamage { .. }
             | StaticEffect::OpponentMillDoubled
             // GrantAffinityToISSpells — read at cast time by

@@ -1142,3 +1142,105 @@ fn storrev_recurs_on_hit() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature returned to hand");
 }
+
+// ── Batch 6 (2026-07-23): planeswalker-matters + counter payoffs ──────────────
+
+/// Bioessence Hydra enters with a +1/+1 counter per loyalty counter on your PWs.
+#[test]
+fn bioessence_hydra_enters_scaling_with_loyalty() {
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(0, catalog::the_wanderer());
+    let loy = g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty);
+    assert!(loy > 0, "planeswalker entered with loyalty");
+    let hydra = g.move_card_to_battlefield_for_test(0, catalog::bioessence_hydra());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(hydra).unwrap().counter_count(CounterType::PlusOnePlusOne), loy);
+}
+
+/// Bioessence Hydra grows when loyalty counters are put on your planeswalkers.
+#[test]
+fn bioessence_hydra_grows_on_loyalty_added() {
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(0, catalog::the_wanderer());
+    let hydra = g.add_card_to_battlefield(0, catalog::bioessence_hydra());
+    g.battlefield_find_mut(pw).unwrap().add_counters(CounterType::Loyalty, 2);
+    g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
+        card_id: pw,
+        counter_type: CounterType::Loyalty,
+        count: 2,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(hydra).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Charmed Stray's ETB counters each other Charmed Stray you control.
+#[test]
+fn charmed_stray_counters_others() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::charmed_stray());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.move_card_to_battlefield_for_test(0, catalog::charmed_stray());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "other Stray grew");
+    assert_eq!(g.battlefield_find(c).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "source excluded");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "non-Stray untouched");
+}
+
+/// Jaya's static adds 1 damage to another red source you control.
+#[test]
+fn jaya_boosts_red_source_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::jaya_venerated_firemage());
+    // A red source you control (a Mountain-agnostic red creature) pings for 1 → 2.
+    let goblin = g.add_card_to_battlefield(0, catalog::goblin_assailant());
+    let l1 = g.players[1].life;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(1),
+        1,
+        Some(goblin),
+        &mut evs,
+    );
+    assert_eq!(g.players[1].life, l1 - 2, "1 damage boosted to 2");
+}
+
+/// Kaya's Ghostform returns the enchanted creature when it dies.
+#[test]
+fn kayas_ghostform_returns_on_death() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::kayas_ghostform());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(bear), 2, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0),
+        "creature returned under your control"
+    );
+}
+
+/// Kaya's Ghostform returns the enchanted creature when it's exiled.
+#[test]
+fn kayas_ghostform_returns_on_exile() {
+    use crabomination::effect::{Effect, ZoneDest};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::kayas_ghostform());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    let evs = g
+        .resolve_effect(&Effect::Move { what: crabomination::effect::Selector::Target(0), to: ZoneDest::Exile }, &ctx)
+        .unwrap();
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    g.dispatch_triggers_for_events(&sba);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0),
+        "creature returned under your control after exile"
+    );
+}

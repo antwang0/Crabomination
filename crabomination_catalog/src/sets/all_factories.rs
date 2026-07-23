@@ -14783,6 +14783,10 @@ static WAR: &[Factory] = &[
     super::war::jaces_projection,
     super::war::silent_submersible,
     super::war::storrev_devkarin_lich,
+    super::war::jaya_venerated_firemage,
+    super::war::bioessence_hydra,
+    super::war::charmed_stray,
+    super::war::kayas_ghostform,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

@@ -918,6 +918,12 @@ pub enum StaticEffect {
         types: Vec<crate::card::CreatureType>,
         amount: u32,
     },
+    /// CR 614.x — "If another [color] source you control would deal damage to a
+    /// permanent or player, it deals that much damage plus `amount` instead."
+    /// (Jaya, Venerated Firemage.) Unlike `AddDamageToOpponents`, it hits *any*
+    /// permanent or player (not only opponents') and excludes the static's own
+    /// source permanent. Applied in `scale_damage_to` before the doublers.
+    YourColorSourcesDealExtraDamage { color: crate::mana::Color, amount: u32 },
     /// CR 614.x — "Permanents entering the battlefield don't cause
     /// abilities of permanents your opponents control to trigger. If a
     /// permanent entering the battlefield causes a triggered ability of

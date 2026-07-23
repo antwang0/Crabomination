@@ -1608,6 +1608,23 @@ pub fn ob_nixilis_the_hate_twisted() -> CardDefinition {
     }
 }
 
+/// Jaya, Venerated Firemage — {4}{R} loyalty 5. Static: another red source you
+/// control deals +1 damage. −2: deal 2 to any target.
+pub fn jaya_venerated_firemage() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If another red source you control would deal damage to a permanent or player, it deals that much damage plus 1 instead.",
+            effect: StaticEffect::YourColorSourcesDealExtraDamage { color: Color::Red, amount: 1 },
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: deal(2, target_any()),
+            ..Default::default()
+        }],
+        ..walker("Jaya, Venerated Firemage", cost(&[generic(4), r()]), PlaneswalkerSubtype::Jaya, 5)
+    }
+}
+
 // ── Batch 3 (2026-07-23): legends, Bonds, and modal spells ────────────────────
 
 /// "When this dies, you may put it into its owner's library third from the top."
@@ -1952,5 +1969,87 @@ pub fn storrev_devkarin_lich() -> CardDefinition {
             },
         }],
         ..vanilla("Storrev, Devkarin Lich", cost(&[generic(1), b(), b(), g()]), 5, 4, vec![CreatureType::Zombie, CreatureType::Elf, CreatureType::Wizard])
+    }
+}
+
+// ── Batch 6 (2026-07-23): planeswalker-matters + counter payoffs ──────────────
+
+/// Bioessence Hydra — {3}{G}{U} 4/4 Hydra Mutant with trample. Enters with a
+/// +1/+1 counter per loyalty counter on your planeswalkers; whenever loyalty
+/// counters are put on planeswalkers you control, grows by that many.
+pub fn bioessence_hydra() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CountersOn {
+                what: Box::new(Selector::EachPermanent(R::Planeswalker.and(R::ControlledByYou))),
+                kind: CounterType::Loyalty,
+            },
+        )),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterAdded(CounterType::Loyalty), EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Planeswalker,
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        ..vanilla("Bioessence Hydra", cost(&[generic(3), g(), u()]), 4, 4, vec![CreatureType::Hydra, CreatureType::Mutant])
+    }
+}
+
+/// Charmed Stray — {W} 1/1 Cat with lifelink. ETB puts a +1/+1 counter on each
+/// other creature you control named Charmed Stray.
+pub fn charmed_stray() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                R::Creature.and(R::ControlledByYou).and(R::HasName("Charmed Stray".into())).and(R::OtherThanSource),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..vanilla("Charmed Stray", cost(&[w()]), 1, 1, vec![CreatureType::Cat])
+    }
+}
+
+/// Kaya's Ghostform — {B} Aura. Enchant creature or planeswalker you control.
+/// When the enchanted permanent dies or is exiled, return that card to the
+/// battlefield under your control.
+pub fn kayas_ghostform() -> CardDefinition {
+    let recur = || Effect::Move {
+        what: Selector::TriggerSource,
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+    };
+    CardDefinition {
+        name: "Kaya's Ghostform",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered((R::Creature.or(R::Planeswalker)).and(R::ControlledByYou)),
+        },
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+                effect: recur(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardExiled, EventScope::EnchantedBySource),
+                effect: recur(),
+            },
+        ],
+        ..Default::default()
     }
 }
