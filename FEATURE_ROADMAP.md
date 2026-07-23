@@ -16,6 +16,22 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **GTC wave 16 (this run, 8 cards):** Aurelia's Fury, Nightveil Specter,
+  Glaring Spotlight, Bane Alley Broker, Signal the Clans, Unexpected Results,
+  Soul Ransom, Vizkopa Confessor. New engine work: `GameState.damaged_this_
+  resolution` scratch + `Selector::DamagedThisResolution` (tap/lock the entities
+  a resolution damaged — Aurelia's Fury); `StaticEffect::IgnoreOpponentsCreature
+  Hexproof` in the target-legality check (Glaring Spotlight); `ExileChosenFrom
+  Hand` gains `link_to_source`/`face_down` flags (Bane Alley Broker's stash);
+  `Effect::SignalTheClans` (search-three-random-one); `Effect::UnexpectedResults`
+  (+ `return_resolving_spell_to_hand`); `Effect::PayLifeRevealExileFromHand`
+  (two-decision pay-life → reveal-N → exile-one, Vizkopa Confessor). Soul Ransom
+  reuses `GainControlWhileSourceRemains` + `opponents_only`/`SacrificeSource`.
+  CR conformance (`cr_recent21`): 601.3e noncreature-cast lock, 508.1a attack
+  summoning-sickness, 601.3a play-a-card-from-exile grant. UI: `⊘ no noncreature`
+  player chip (`PlayerView.cant_cast_noncreature`). Server: `concede_earliness_pct`
+  gauge. Still open (hard): Guardian of the Gateless (multi-block), Gideon CoJ
+  (self-animate PW), Lazav (copy-with-overrides), Illusionist's Bracers.
 - **GTC wave 15 (this run, 15 cards):** Alms Beast (combat-partner lifelink via
   live block-map resolution of `CreaturesInCombatWith` in the `PumpTeamIf`
   gather), Hold the Gates, Way of the Thief, Diluvian Primordial (free-cast I/S
