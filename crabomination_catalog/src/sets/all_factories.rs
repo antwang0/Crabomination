@@ -7206,6 +7206,7 @@ static DGM: &[Factory] = &[
     super::dgm::deadbridge_chant,
     super::dgm::ral_zarek,
     super::dgm::emmara_tandris,
+    super::dgm::beck_call,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

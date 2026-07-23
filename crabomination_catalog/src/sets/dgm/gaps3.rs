@@ -172,6 +172,51 @@ pub fn breaking_entering() -> CardDefinition {
     }
 }
 
+/// Beck // Call — {G}{U} // {4}{W}{U} Sorcery // Sorcery, Fuse. Beck: whenever a
+/// creature enters this turn, you may draw a card. Call: create four 1/1 white
+/// Bird tokens with flying. (Beck's watcher is scoped to your creatures — a
+/// documented approximation of "a creature".)
+pub fn beck_call() -> CardDefinition {
+    let bird = TokenDefinition {
+        name: "Bird".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: creatures(vec![CreatureType::Bird]),
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Beck // Call",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreaturesYouControlEnteringThisTurn {
+            body: Box::new(Effect::MayDo {
+                description: "Draw a card".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::ONE,
+                }),
+            }),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(4), w(), u()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                    definition: bird,
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
 /// Emmara Tandris — {5}{G}{W} 5/7 Legendary Elf Shaman. Prevent all damage that
 /// would be dealt to creature tokens you control.
 pub fn emmara_tandris() -> CardDefinition {

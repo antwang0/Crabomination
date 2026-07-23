@@ -1041,3 +1041,47 @@ fn emmara_tandris_shields_tokens() {
     assert_eq!(g.battlefield_find(tok).unwrap().damage, 0, "token damage prevented");
     assert_eq!(g.battlefield_find(nontoken).unwrap().damage, 1, "nontoken took damage");
 }
+
+/// Beck draws when a creature enters this turn; Call makes four Birds.
+#[test]
+fn beck_call_halves() {
+    // Beck: install the watcher, then a creature entering draws a card.
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let beck = g.add_card_to_hand(0, catalog::beck_call());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.cast_spell(beck, None, vec![], None, None).expect("cast Beck");
+    drain_stack(&mut g);
+    // Opt into Beck's "you may draw".
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    // Cast a creature through the real entry path so the watcher fires.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len() - 1; // the bear leaves hand on cast
+    g.cast_spell(bear, None, vec![], None, None).expect("cast Grizzly Bears");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew when a creature entered");
+
+    // Call: four 1/1 white Bird tokens with flying.
+    let mut g = two_player_game();
+    let call = g.add_card_to_hand(0, catalog::beck_call());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: call, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Call");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Bird" && c.controller == 0).count(),
+        4, "four Bird tokens",
+    );
+}
