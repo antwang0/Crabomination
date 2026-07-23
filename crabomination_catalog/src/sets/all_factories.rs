@@ -7866,6 +7866,8 @@ static GTC9: &[Factory] = &[
     super::gtc15::mark_for_death,
     super::gtc15::enter_the_infinite,
     super::gtc16::aurelias_fury,
+    super::gtc16::nightveil_specter,
+    super::gtc16::glaring_spotlight,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,

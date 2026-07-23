@@ -558,6 +558,11 @@ pub enum StaticEffect {
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.
     ControllerHasHexproof,
+    /// Glaring Spotlight — "creatures your opponents control with hexproof can
+    /// be the targets of spells and abilities you control as though they didn't
+    /// have hexproof." The source's controller ignores plain `Hexproof` on
+    /// opponents' creatures when checking target legality.
+    IgnoreOpponentsCreatureHexproof,
     /// CR 119.7 — Targeted players can't gain life while this static is
     /// active. The `applies_to` selector resolves to one or more
     /// `PlayerView`-style entries; each matching player has their

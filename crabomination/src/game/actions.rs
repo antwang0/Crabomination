@@ -8197,7 +8197,10 @@ impl GameState {
         if self.permanent_has_keyword(*cid, &Keyword::Shroud) {
             return Err(GameError::TargetHasShroud(*cid));
         }
-        if self.permanent_has_keyword(*cid, &Keyword::Hexproof) && controller != caster {
+        if self.permanent_has_keyword(*cid, &Keyword::Hexproof)
+            && controller != caster
+            && !self.player_ignores_creature_hexproof(caster)
+        {
             return Err(GameError::TargetHasHexproof(*cid));
         }
         // Ward is enforced via triggered abilities on the stack (CR 702.21a),
@@ -8381,6 +8384,20 @@ impl GameState {
                         .iter()
                         .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasHexproof))
             })
+    }
+
+    /// True if `player` controls a permanent granting "ignore opponents'
+    /// creature hexproof" (Glaring Spotlight) — plain `Hexproof` on opponents'
+    /// creatures no longer shields them from `player`'s spells and abilities.
+    pub(crate) fn player_ignores_creature_hexproof(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::IgnoreOpponentsCreatureHexproof))
+        })
     }
 
     /// True when `player` controls a permanent with the "opponents can't make

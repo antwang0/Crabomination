@@ -2149,3 +2149,52 @@ fn gtc16_aurelias_fury_taps_and_locks() {
     assert!(g.players[1].cant_cast_noncreature_this_turn,
         "damaged player can't cast noncreature spells");
 }
+
+/// Nightveil Specter's combat damage exiles the defender's top card and lets
+/// its controller play it while it stays exiled.
+#[test]
+fn gtc16_nightveil_specter_exiles_and_grants_play() {
+    let mut g = two_player_game();
+    let specter = g.add_card_to_battlefield(0, catalog::nightveil_specter());
+    let top = g.add_card_to_library(1, catalog::gutter_skulk());
+    g.clear_sickness(specter);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: specter, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == top).expect("defender's top card exiled");
+    let perm = exiled.may_play_until.expect("controller may play the exiled card");
+    assert_eq!(perm.player, 0, "Nightveil's controller may play it");
+}
+
+/// Glaring Spotlight lets you target opponents' hexproof creatures, and its sac
+/// ability shields your own team.
+#[test]
+fn gtc16_glaring_spotlight_ignores_and_shields() {
+    use crabomination::game::types::GameAction;
+    let mut g = two_player_game();
+    let spotlight = g.add_card_to_battlefield(0, catalog::glaring_spotlight());
+    let rhino = g.add_card_to_battlefield(1, catalog::rubbleback_rhino()); // hexproof
+    // With the Spotlight out, player 0 may target the opponent's hexproof creature.
+    assert!(g.check_target_legality(&Target::Permanent(rhino), 0).is_ok(),
+        "hexproof ignored while Spotlight is in play");
+    // Sac ability: player 0's creatures gain hexproof + can't be blocked.
+    let mine = g.add_card_to_battlefield(0, catalog::gutter_skulk());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spotlight, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate spotlight sac");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spotlight).is_none(), "Spotlight was sacrificed");
+    let kws = g.computed_permanent(mine).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Hexproof) && kws.contains(&Keyword::Unblockable),
+        "own creatures gained hexproof + unblockable");
+    // With the Spotlight gone, the opponent's hexproof creature is untargetable again.
+    assert!(g.check_target_legality(&Target::Permanent(rhino), 0).is_err(),
+        "hexproof restored once Spotlight leaves");
+}

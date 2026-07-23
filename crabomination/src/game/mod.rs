@@ -13681,6 +13681,10 @@ fn static_effect_to_effects(
             | StaticEffect::AdditionalCost { .. }
             | StaticEffect::OpponentSpellsCostMore { .. }
             | StaticEffect::ControllerHasHexproof
+            // IgnoreOpponentsCreatureHexproof — consulted in
+            // `check_target_legality_with_source` (Glaring Spotlight); no
+            // layer effect.
+            | StaticEffect::IgnoreOpponentsCreatureHexproof
             | StaticEffect::LandsTapColorlessOnly
             // ArtifactActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Collector Ouphe); no layer effect.
