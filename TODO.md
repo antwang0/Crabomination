@@ -25,7 +25,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   planeswalkers (Jace AoT, Vraska the Unseen, Gideon CoJ, Domri already done).
 
 **Remaining WAR (War of the Spark) gap cards** — `catalog::sets::war` opened
-with 25 commons/uncommons this run. Still open, grouped by missing primitive:
+this run (~50 commons/uncommons + spells). Still open, grouped by missing primitive:
 - **Planeswalkers** (Gideon Champion of Justice, and the WAR walkers generally)
   — need "becomes a creature with P/T = its loyalty" + loyalty-add-per-count.
 - **Devouring Hellion** — "enters with twice that many +1/+1 counters" (sac any
