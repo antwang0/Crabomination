@@ -1323,6 +1323,13 @@ pub enum PendingEffectState {
         player: usize,
         revealed: Vec<CardId>,
     },
+    /// Suspended on the exile pick of `Effect::PayLifeRevealExileFromHand`
+    /// (Vizkopa Confessor): the controller chose one of `opp`'s revealed hand
+    /// cards to exile.
+    PayLifeExileFromHandPending {
+        opp: usize,
+        revealed: Vec<CardId>,
+    },
     /// Suspended on a `ChooseCards` pick for `Effect::RevealTopTakeOnePerType`
     /// (Atraxa, Grand Unifier — "up to one card of each card type"). Picks
     /// are validated one-per-type at apply time; the rest go to the bottom.

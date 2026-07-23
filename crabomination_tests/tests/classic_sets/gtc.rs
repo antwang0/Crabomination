@@ -2321,3 +2321,33 @@ fn gtc16_soul_ransom_steals_and_ransoms() {
     assert_eq!(g.computed_permanent(creature).unwrap().controller, 1, "control reverts to the owner");
     assert_eq!(g.players[0].hand.len(), p0_hand_before + 2, "the Aura's controller drew two");
 }
+
+/// Vizkopa Confessor's ETB pays life; the opponent reveals that many cheapest
+/// cards and you exile one.
+#[test]
+fn gtc16_vizkopa_confessor_pay_life_exile() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Opponent hand: two cheap (revealed) + one expensive (hidden at N=2).
+    let cheap_a = g.add_card_to_hand(1, catalog::forest());
+    let cheap_b = g.add_card_to_hand(1, catalog::forest());
+    let _pricey = g.add_card_to_hand(1, catalog::ruination_wurm());
+    let confessor = g.add_card_to_hand(0, catalog::vizkopa_confessor());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+    // Pay 2 life, then exile one of the two revealed cheap cards.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(2),
+        DecisionAnswer::Discard(vec![cheap_a]),
+    ]));
+    g.cast_spell(confessor, None, vec![], None, None).expect("cast Vizkopa Confessor");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before - 2, "paid 2 life");
+    assert!(g.exile.iter().any(|c| c.id == cheap_a), "the chosen revealed card was exiled");
+    assert!(g.players[1].hand.iter().any(|c| c.id == cheap_b), "the other revealed card stays");
+}

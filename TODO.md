@@ -61,23 +61,23 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
   player/creature combat-damage split), Simic Manipulator, Tin Street Market,
   Armored Transport, Vizkopa/Duskmantle Guildmage, Mystic Genesis, Borborygmos,
   Obzedat, Ooze Flux, Mark for Death; see FEATURE_ROADMAP "Already shipped".
-  **Wave 16 (this run) shipped 4:** Aurelia's Fury (new
+  **Wave 16 (this run) shipped 8:** Aurelia's Fury (new
   `damaged_this_resolution` scratch + `Selector::DamagedThisResolution`),
   Glaring Spotlight (`StaticEffect::IgnoreOpponentsCreatureHexproof`), Nightveil
   Specter (`ExileTopAndGrantMayPlay` + `WhileExiled`), Bane Alley Broker
-  (`ExileChosenFromHand` link/face-down flags + `OwnerOfMoved`).
+  (`ExileChosenFromHand` link/face-down flags + `OwnerOfMoved`), Signal the
+  Clans (`Effect::SignalTheClans`), Unexpected Results (`Effect::UnexpectedResults`
+  + `return_resolving_spell_to_hand`), Soul Ransom (`GainControlWhileSourceRemains`
+  + `opponents_only`/`discard_cost`/`SacrificeSource`), Vizkopa Confessor
+  (`Effect::PayLifeRevealExileFromHand` — pay-any-life → reveal-N → exile one;
+  `EachOpponent` is exact in 1v1).
   **Still open (each needs a real new primitive):**
   - **Guardian of the Gateless** — "can block any number of creatures" keyword
     (a real block-declaration / multi-block change; `block_map` is 1:1 today).
-  - **Vizkopa Confessor** — Extort ships; the ETB "pay any amount of life →
-    target opponent reveals that many → you exile one" needs a pay-X-life +
-    reveal-N-from-hand + choose-exile primitive.
   - **Gideon, Champion of Justice** — planeswalker that animates to a
     loyalty-sized indestructible creature (self-animate + damage prevention).
   - **Lazav** (become-copy on opp-gy creature — needs copy-with-name/ability
-    overrides), **Soul Ransom** (control-steal Aura + opponent-activated sac),
-    **Illusionist's Bracers** (copy an activated ability), **Signal the Clans /
-    Unexpected Results** (random pick / shuffled top).
+    overrides), **Illusionist's Bracers** (copy an activated ability).
   Note: `Effect::ExileReturnNextEndStep` always returns under You **with a
   +1/+1 counter** (Semester's End shape); the plain flickers that reuse it
   (Cloudshift-likes) shouldn't add a counter — audit and split them onto the

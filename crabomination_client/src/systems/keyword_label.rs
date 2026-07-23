@@ -238,13 +238,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Morph / Megamorph (CR 702.37) — the face-down 2/2 sibling of Disguise
         // (no ward), turnable face up for its unmorph cost; flag the hidden card.
         Morph(_) | Megamorph(_) => "Mph",
-        // Older combat keywords that change how this creature fights — surfaced
-        // so the board read isn't silent on them (CR 702.22/.23/.32/.33/.35).
-        Rampage(_) => "Rmp",
-        Bushido(_) => "Bsd",
-        Annihilator(_) => "Anh",
-        Absorb(_) => "Abs",
-        Frenzy(_) => "Frz",
+        // (Rampage/Bushido/Annihilator/Absorb/Frenzy are labelled above.)
         // Unleash (CR 702.98, Rakdos/GTC) — the marker flags an unleashed
         // creature; once it carries a +1/+1 counter the injected `CantBlock`
         // adds the "NoBlk" read, but the tag identifies the mechanic up front.

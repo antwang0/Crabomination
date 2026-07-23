@@ -11971,6 +11971,24 @@ impl GameState {
                 }
                 Ok(vec![])
             }
+            PendingEffectState::PayLifeExileFromHandPending { opp, revealed } => {
+                let DecisionAnswer::Discard(ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // Exile the chosen revealed card (AutoDecider / stray → first).
+                let pick = ids
+                    .iter()
+                    .copied()
+                    .find(|id| revealed.contains(id))
+                    .or_else(|| revealed.first().copied());
+                if let Some(pick) = pick
+                    && let Some(card) = Self::take_card(&mut self.players[opp].hand, pick)
+                {
+                    self.exile.push(card);
+                    return Ok(vec![GameEvent::PermanentExiled { card_id: pick }]);
+                }
+                Ok(vec![])
+            }
             PendingEffectState::TakeOnePerTypePending { player, revealed } => {
                 let DecisionAnswer::Cards(chosen) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

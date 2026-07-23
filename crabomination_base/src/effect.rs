@@ -4811,6 +4811,13 @@ pub enum Effect {
     /// chooses the amount via `Decision::ChooseAmount` (capped at current
     /// life; AutoDecider pays 0). Plunge into Darkness mode 1.
     PayLifeLookTake { who: PlayerRef },
+    /// Vizkopa Confessor — "Pay any amount of life. Target opponent reveals
+    /// that many cards from their hand. You choose one of them and exile it."
+    /// The controller pays N via `Decision::ChooseAmount` (AutoDecider pays 0),
+    /// then `opp` reveals their cheapest N cards (modeling their free choice of
+    /// which to reveal) and the controller exiles one. `opp` is `EachOpponent`
+    /// (exact in 1v1; the "target" nuance is dropped in multiplayer).
+    PayLifeRevealExileFromHand { opp: PlayerRef },
     /// "You may pay any amount of life. If you do, draw that many cards."
     /// Amount via `Decision::ChooseAmount`, capped at current life
     /// (AutoDecider pays 0). Necrodominance's end step.

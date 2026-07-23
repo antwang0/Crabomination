@@ -13451,6 +13451,81 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PayLifeRevealExileFromHand { opp } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let payer = ctx.controller;
+                let Some(opp_seat) = self.resolve_player(opp, ctx) else { return Ok(()); };
+                let life = self.players[payer].life.max(0) as u32;
+                let source = ctx.source.unwrap_or(CardId(0));
+                // Decision 1 — pay how much life (mirrors PayLifeLookTake).
+                let decision = Decision::ChooseAmount {
+                    source,
+                    prompt: "Pay how much life?".to_string(),
+                    max: life,
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[payer].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::AmountAnswerPending { max: life },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
+                let n = match answer {
+                    DecisionAnswer::Amount(v) => v.min(life),
+                    _ => 0,
+                };
+                if n > 0 {
+                    let applied = self.adjust_life_applied(payer, -(n as i32));
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: payer, amount: (-applied) as u32 });
+                    }
+                }
+                if n == 0 {
+                    return Ok(());
+                }
+                // The opponent reveals their cheapest N cards (their free choice
+                // of which to reveal, modeled by mana value); you exile one.
+                let mut hand: Vec<(CardId, u32)> = self.players[opp_seat]
+                    .hand
+                    .iter()
+                    .map(|c| (c.id, c.definition.cost.cmc()))
+                    .collect();
+                hand.sort_by_key(|(_, mv)| *mv);
+                hand.truncate(n as usize);
+                if hand.is_empty() {
+                    return Ok(());
+                }
+                let candidates: Vec<(CardId, String)> = hand
+                    .iter()
+                    .filter_map(|(id, _)| {
+                        self.players[opp_seat]
+                            .hand
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| (*id, c.definition.name.to_string()))
+                    })
+                    .collect();
+                let revealed: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                let decision = Decision::Discard { player: payer, count: 1, hand: candidates };
+                let pending = PendingEffectState::PayLifeExileFromHandPending {
+                    opp: opp_seat,
+                    revealed,
+                };
+                if self.players[payer].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
             Effect::DelayUntil { kind, body } => {
                 // Capture the current target slot so the delayed body can
                 // reference it via `Selector::Target(0)` later (e.g. Goryo's

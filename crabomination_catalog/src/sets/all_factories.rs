@@ -7872,6 +7872,7 @@ static GTC9: &[Factory] = &[
     super::gtc16::signal_the_clans,
     super::gtc16::unexpected_results,
     super::gtc16::soul_ransom,
+    super::gtc16::vizkopa_confessor,
 ];
 static GTC8: &[Factory] = &[
     super::gtc8::mental_vapors,

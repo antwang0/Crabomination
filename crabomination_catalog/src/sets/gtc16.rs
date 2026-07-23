@@ -64,6 +64,31 @@ pub fn nightveil_specter() -> CardDefinition {
     }
 }
 
+/// Vizkopa Confessor — {3}{W}{B} 1/3 Human Cleric. Extort; ETB: pay any amount
+/// of life, an opponent reveals that many cards, you exile one.
+pub fn vizkopa_confessor() -> CardDefinition {
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        name: "Vizkopa Confessor",
+        cost: cost(&[generic(3), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![
+            crate::effect::shortcut::extort(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::PayLifeRevealExileFromHand { opp: PlayerRef::EachOpponent },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Soul Ransom — {2}{U}{B} Aura. Enchant creature; you control it. Only an
 /// opponent may pay "Discard two cards" to make its controller sacrifice it
 /// (returning the creature) and draw two cards.
