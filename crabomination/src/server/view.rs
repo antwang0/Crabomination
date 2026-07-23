@@ -2056,6 +2056,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Dovescape => "Counter → Birds",
         Effect::IsperiaReveal => "Name → tutor flyer",
         Effect::GraveBetrayalRegister | Effect::GraveBetrayalReanimate => "Steal the dead",
+        Effect::KindleTheCarnage => "Discard → board burn",
         _ => "Activate",
     }
 }

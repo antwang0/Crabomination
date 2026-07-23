@@ -3377,6 +3377,10 @@ pub enum Effect {
     /// their hand; if a card with that name is revealed, search your library for
     /// a creature card with flying, put it into your hand, then shuffle.
     IsperiaReveal,
+    /// Kindle the Carnage: discard a card at random; if you do, deal damage
+    /// equal to its mana value to each creature. You may repeat this any number
+    /// of times (asked each round via `Decision::OptionalTrigger`).
+    KindleTheCarnage,
     /// Grave Betrayal: on the death of a creature you don't control, schedule a
     /// next-end-step delayed reanimation of that creature under your control.
     GraveBetrayalRegister,

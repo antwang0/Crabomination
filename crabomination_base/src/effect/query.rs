@@ -270,6 +270,7 @@ impl Effect {
             Effect::IgnorantBliss => false,
             Effect::Dovescape => false,
             Effect::IsperiaReveal => false,
+            Effect::KindleTheCarnage => false,
             Effect::GraveBetrayalRegister | Effect::GraveBetrayalReanimate => false,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only
@@ -1630,6 +1631,9 @@ impl Effect {
                 "reanimate that creature under your control at the next end step".into()
             }
             Effect::GraveBetrayalReanimate => "reanimate the fallen creature".into(),
+            Effect::KindleTheCarnage => {
+                "discard at random → deal its mana value to each creature, repeatable".into()
+            }
             Effect::AethermagesTouch { count } => match count {
                 Value::Const(n) => format!(
                     "reveal the top {n}; put a creature onto the battlefield until your end step, bottom the rest"),

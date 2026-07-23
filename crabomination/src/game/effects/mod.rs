@@ -11962,6 +11962,41 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::KindleTheCarnage => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let src = ctx.source.unwrap_or(CardId(0));
+                for _ in 0..1000 {
+                    if self.players[p].hand.is_empty() { break; }
+                    // Discard a card at random.
+                    use rand::seq::SliceRandom;
+                    let mut ids: Vec<CardId> = self.players[p].hand.iter().map(|c| c.id).collect();
+                    ids.shuffle(&mut rand::rng());
+                    let cid = ids[0];
+                    let mv = self.players[p].hand.iter().find(|c| c.id == cid)
+                        .map(|c| c.definition.cost.cmc()).unwrap_or(0);
+                    self.discard_card(p, cid, events);
+                    // Deal that mana value to each creature.
+                    if mv > 0 {
+                        let creatures: Vec<CardId> = self.battlefield.iter()
+                            .filter(|c| c.definition.is_creature()).map(|c| c.id).collect();
+                        for tgt in creatures {
+                            self.deal_damage_to_from(EntityRef::Permanent(tgt), mv, ctx.source, events);
+                        }
+                    }
+                    // "You may repeat this process any number of times."
+                    let again = matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source: src,
+                            description: "Repeat Kindle the Carnage?".into(),
+                        }),
+                        DecisionAnswer::Bool(true)
+                    );
+                    if !again { break; }
+                }
+                Ok(())
+            }
+
             Effect::GraveBetrayalRegister => {
                 // The dead creature is bound as `trigger_source` (CardId).
                 let dead = match ctx.trigger_source {

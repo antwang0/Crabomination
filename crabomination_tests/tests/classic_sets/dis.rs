@@ -1981,3 +1981,32 @@ fn evolution_vat_taps_counters_and_grants_doubler() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "counters doubled");
 }
+
+/// Kindle the Carnage discards at random and burns each creature; a scripted
+/// "repeat" runs it twice.
+#[test]
+fn kindle_the_carnage_repeats_board_burn() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Two 2/2s on the board; two MV-2 cards to discard.
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // MV 2
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // MV 2
+    let spell = g.add_card_to_hand(0, catalog::kindle_the_carnage());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    // Repeat once (true), then stop (false).
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), DecisionAnswer::Bool(false),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Kindle the Carnage");
+    drain_stack(&mut g);
+    // Two rounds of 2 damage = 4 to each 2/2 → both dead.
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both 2/2s burned down");
+    assert_eq!(g.players[0].hand.len(), 0, "both hand cards discarded across two rounds");
+}

@@ -307,3 +307,16 @@ pub fn evolution_vat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kindle the Carnage — {1}{R}{R} Sorcery. Discard a card at random; if you do,
+/// deal damage equal to its mana value to each creature. You may repeat any
+/// number of times.
+pub fn kindle_the_carnage() -> CardDefinition {
+    CardDefinition {
+        name: "Kindle the Carnage",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::KindleTheCarnage,
+        ..Default::default()
+    }
+}
