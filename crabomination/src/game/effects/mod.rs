@@ -11962,6 +11962,49 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GraveBetrayalRegister => {
+                // The dead creature is bound as `trigger_source` (CardId).
+                let dead = match ctx.trigger_source {
+                    Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => Some(c),
+                    _ => None,
+                };
+                if let Some(dead) = dead {
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: ctx.controller,
+                        source: ctx.source.unwrap_or(dead),
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::GraveBetrayalReanimate,
+                        target: Some(Target::Permanent(dead)),
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::GraveBetrayalReanimate => {
+                let Some(Target::Permanent(id)) = ctx.targets.first().cloned() else { return Ok(()) };
+                // Only reanimate if the card is still in a graveyard.
+                let in_gy = self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == id));
+                if !in_gy { return Ok(()) }
+                self.move_card_to(
+                    id,
+                    &ZoneDest::Battlefield { controller: PlayerRef::Seat(ctx.controller), tapped: false },
+                    ctx, events,
+                );
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                    *c.counters.entry(crate::card::CounterType::PlusOnePlusOne).or_insert(0) += 1;
+                    // "…a black Zombie in addition to its other types" — the added
+                    // Zombie subtype; the added black colour derives from the
+                    // reanimated card's own cost (colour-add layer unmodeled).
+                    let def = std::sync::Arc::make_mut(&mut c.definition);
+                    if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie) {
+                        def.subtypes.creature_types.push(crate::card::CreatureType::Zombie);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::IsperiaReveal => {
                 use rand::seq::SliceRandom;
                 let Some(opp) = self.resolve_player(&PlayerRef::DefendingPlayer, ctx)

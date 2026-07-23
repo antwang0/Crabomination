@@ -270,6 +270,7 @@ impl Effect {
             Effect::IgnorantBliss => false,
             Effect::Dovescape => false,
             Effect::IsperiaReveal => false,
+            Effect::GraveBetrayalRegister | Effect::GraveBetrayalReanimate => false,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only
             // `otherwise` can demand a cast-time target (Browbeat's drawer).
@@ -1625,6 +1626,10 @@ impl Effect {
             Effect::IsperiaReveal => {
                 "name a card; if the defender reveals it, tutor a flying creature".into()
             }
+            Effect::GraveBetrayalRegister => {
+                "reanimate that creature under your control at the next end step".into()
+            }
+            Effect::GraveBetrayalReanimate => "reanimate the fallen creature".into(),
             Effect::AethermagesTouch { count } => match count {
                 Value::Const(n) => format!(
                     "reveal the top {n}; put a creature onto the battlefield until your end step, bottom the rest"),

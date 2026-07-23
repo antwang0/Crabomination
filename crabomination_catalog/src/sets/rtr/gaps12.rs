@@ -37,3 +37,19 @@ pub fn guild_feud() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Grave Betrayal — {5}{B}{B} Enchantment. Whenever a creature you don't control
+/// dies, return it under your control at the next end step with an extra +1/+1
+/// counter, as a black Zombie in addition to its other types.
+pub fn grave_betrayal() -> CardDefinition {
+    CardDefinition {
+        name: "Grave Betrayal",
+        cost: cost(&[generic(5), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
+            effect: Effect::GraveBetrayalRegister,
+        }],
+        ..Default::default()
+    }
+}

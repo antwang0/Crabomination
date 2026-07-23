@@ -3377,6 +3377,13 @@ pub enum Effect {
     /// their hand; if a card with that name is revealed, search your library for
     /// a creature card with flying, put it into your hand, then shuffle.
     IsperiaReveal,
+    /// Grave Betrayal: on the death of a creature you don't control, schedule a
+    /// next-end-step delayed reanimation of that creature under your control.
+    GraveBetrayalRegister,
+    /// The scheduled reanimation body: return the bound creature card (slot 0)
+    /// from its graveyard to the battlefield under your control with an extra
+    /// +1/+1 counter, as a black Zombie in addition to its other types.
+    GraveBetrayalReanimate,
     /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
     /// in hand moves to the graveyard and every card in the graveyard moves to
     /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card

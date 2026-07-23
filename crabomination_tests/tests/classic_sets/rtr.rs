@@ -1917,3 +1917,28 @@ fn guild_feud_deploys_and_fights() {
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Merfolk of the Pearl Trident"));
     assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Merfolk of the Pearl Trident"));
 }
+
+/// Grave Betrayal steals a creature you don't control that dies, returning it
+/// under your control at the next end step with a +1/+1 counter as a Zombie.
+#[test]
+fn grave_betrayal_steals_the_dead() {
+    use crabomination::card::{CounterType, CreatureType};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grave_betrayal());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // opponent's 2/2
+    // Kill it with lethal damage so the SBA death dispatches to death-watchers.
+    g.battlefield_find_mut(victim).unwrap().damage = 2;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    // The delayed reanimation fires at the next end step.
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let reborn = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears")
+        .expect("reanimated under Grave Betrayal's controller");
+    assert_eq!(reborn.controller, 0, "now controlled by Grave Betrayal's owner");
+    assert_eq!(*reborn.counters.get(&CounterType::PlusOnePlusOne).unwrap_or(&0), 1, "entered with a +1/+1 counter");
+    assert!(reborn.definition.subtypes.creature_types.contains(&CreatureType::Zombie), "now a Zombie");
+}
+
