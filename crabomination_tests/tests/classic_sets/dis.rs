@@ -1951,3 +1951,33 @@ fn simic_basilisk_graft_and_grant_deathtouch() {
     assert!(g.computed_permanent(basilisk).unwrap().keywords.contains(&Keyword::Deathtouch),
         "gained deathtouch");
 }
+
+/// Evolution Vat taps a creature, adds a +1/+1 counter, and grants a
+/// counter-doubling ability which then doubles the counters.
+#[test]
+fn evolution_vat_taps_counters_and_grants_doubler() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::{GameAction, Target};
+    let mut g = two_player_game();
+    let vat = g.add_card_to_battlefield(0, catalog::evolution_vat());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vat, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Evolution Vat");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target tapped");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "got a counter");
+    // Activate the granted doubler ({2}{G}{U}) on the bear (its first ability).
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate granted doubler");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "counters doubled");
+}
