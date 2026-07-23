@@ -1871,3 +1871,31 @@ fn dovescape_counters_and_makes_birds() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Bird" && c.controller == 1).count(), 1,
         "caster got one Bird for the MV-1 spell");
 }
+
+/// Muse Vessel exiles a card from the target's hand, then grants a play window
+/// for it.
+#[test]
+fn muse_vessel_exiles_then_grants_play() {
+    use crabomination::game::types::{GameAction, Target};
+    let mut g = two_player_game();
+    let vessel = g.add_card_to_battlefield(0, catalog::muse_vessel());
+    let stolen = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vessel, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate exile ability");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == stolen).expect("card exiled under the vessel");
+    assert_eq!(exiled.exiled_with, Some(vessel), "linked to Muse Vessel");
+    // {1}: grant a play window for the exiled card.
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vessel, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate play-grant ability");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().find(|c| c.id == stolen).unwrap().may_play_until.is_some(),
+        "you may play the exiled card this turn");
+}

@@ -176,3 +176,43 @@ pub fn dovescape() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Muse Vessel — {4} Artifact. {3}, {T} (sorcery speed): target player exiles a
+/// card from their hand under this. {1}: choose a card exiled with Muse Vessel;
+/// you may play it this turn.
+pub fn muse_vessel() -> CardDefinition {
+    use crate::card::{ActivatedAbility, MayPlayDuration};
+    CardDefinition {
+        name: "Muse Vessel",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                sorcery_speed: true,
+                effect: Effect::ExileChosenFromHand {
+                    from: Selector::Player(PlayerRef::Target(0)),
+                    count: Value::ONE,
+                    filter: R::Any,
+                    link_to_source: true,
+                    face_down: false,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::GrantMayPlay {
+                    what: Selector::one_of(Selector::CardExiledWithSource),
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
