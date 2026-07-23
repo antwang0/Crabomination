@@ -9,6 +9,7 @@ mod avatar_water;
 mod blight;
 mod bro;
 mod chk;
+mod dgm;
 mod eoe;
 mod fin;
 mod dis;

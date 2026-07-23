@@ -282,6 +282,7 @@ pub mod arn;
 pub mod bro;
 pub mod c21;
 pub mod chk;
+pub mod dgm;
 pub mod dis;
 pub mod eoe;
 pub mod fem;
