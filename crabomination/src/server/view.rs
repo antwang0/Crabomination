@@ -1122,6 +1122,7 @@ fn project_permanent(
         }),
         triggered_ability_labels: project_triggered_ability_labels(card),
         static_ability_labels: project_static_ability_labels(card),
+        activated_ability_labels: project_activated_ability_labels(card),
         has_stun_counters: card.counter_count(crate::card::CounterType::Stun) > 0,
         wont_untap: state.untap_prevented_by_static(card.id),
         has_finality_counters: card.counter_count(crate::card::CounterType::Finality) > 0,
@@ -1357,6 +1358,27 @@ fn project_static_ability_labels(card: &CardInstance) -> Vec<String> {
     out
 }
 
+/// Generate one-line "cost: effect" summaries per activated ability for the
+/// client tooltip (the activated analogue of `project_triggered_ability_labels`),
+/// so a hover shows "{2}{T}: Draw a card" without opening the detail panel.
+/// Skips plain mana abilities (their effect is already the mana line).
+fn project_activated_ability_labels(card: &CardInstance) -> Vec<String> {
+    card.definition
+        .activated_abilities
+        .iter()
+        .filter(|a| !matches!(a.effect, Effect::AddMana { .. }))
+        .map(|a| {
+            let cost = ability_cost_label(a);
+            let eff = ability_effect_label(&a.effect);
+            if cost.is_empty() {
+                eff.to_string()
+            } else {
+                format!("{cost}: {eff}")
+            }
+        })
+        .collect()
+}
+
 /// Generate one-line summaries per triggered ability for the client
 /// tooltip. Format: "Event: Effect" e.g. "ETB: Draw a card",
 /// "Magecraft: Drain 1", "Dies: Mill 2". The trigger-event prefix is
@@ -1480,6 +1502,7 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::DealsCombatDamageToPlayer, EventScope::YourControl) => "Your combat dmg",
         (EventKind::ControllerDealtCombatDamage, EventScope::SelfSource) => "You're hit",
         (EventKind::DealsCombatDamageToCreature, EventScope::SelfSource) => "Combat dmg to crea",
+        (EventKind::YourInstantOrSorceryDealtDamage, _) => "Your spell deals dmg",
         (EventKind::LandPlayed, EventScope::YourControl) => "Landfall",
         (EventKind::LandPlayed, EventScope::AnyPlayer) => "Any landfall",
         (EventKind::SpellCast, EventScope::OpponentControl) => "Opp casts",
@@ -2067,6 +2090,9 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Ascend { .. } => "Ascend",
         Effect::ReturnSelfTappedWithCounters { .. } => "Return tapped with counters",
         Effect::ReturnTopCreatureFromGraveyard { .. } => "Reanimate top creature",
+        Effect::ChooseRandomGraveyardCardCreatureToBattlefieldElseHand { .. } => {
+            "Random GY card to play/hand"
+        }
         Effect::Regenerate { .. } => "Regenerate",
         Effect::SacrificePermanent { .. } => "Sacrifice",
         Effect::LoseKeywordThisTurn { .. } => "Remove keyword",
@@ -2855,6 +2881,22 @@ mod tests {
         let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
         assert!(perm.static_ability_labels.is_empty(),
             "vanilla creature has no statics");
+    }
+
+    #[test]
+    fn permanent_view_surfaces_activated_ability_labels() {
+        // Ral Zarek is a planeswalker (loyalty abilities, not activated) — use a
+        // creature with a real activated ability. Zhur-Taa Druid's mana ability is
+        // filtered out, but Prodigal Sorcerer's "{T}: 1 damage" should surface.
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
+        assert!(
+            perm.activated_ability_labels.iter().any(|s| s.contains("Deal damage")),
+            "activated ability should surface: {:?}",
+            perm.activated_ability_labels
+        );
     }
 
     #[test]

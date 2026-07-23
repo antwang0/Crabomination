@@ -397,6 +397,19 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         }
     }
 
+    // Activated abilities — "{cost}: {effect}" summaries exposed by the server
+    // via `PermanentView.activated_ability_labels`, so a hover shows what a
+    // creature or artifact can *do* ("{2}{T}: Draw a card") without opening the
+    // detail panel. The activated analogue of the trigger/static blocks above.
+    if !p.activated_ability_labels.is_empty() {
+        if !lines.is_empty() {
+            lines.push(String::from("─────────"));
+        }
+        for l in &p.activated_ability_labels {
+            lines.push(l.clone());
+        }
+    }
+
     if p.ward_cost > 0 {
         lines.push(format!("Ward {{{}}}", p.ward_cost));
     }
@@ -1311,6 +1324,7 @@ mod tests {
             blocking_attacker: None,
             triggered_ability_labels: vec![],
             static_ability_labels: vec![],
+            activated_ability_labels: vec![],
             abilities: vec![],
             loyalty_abilities: vec![],
             loyalty_uses_remaining: None,

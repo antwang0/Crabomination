@@ -1676,6 +1676,12 @@ fn cr_601_2c_every_catalog_target_filter_is_surfaced() {
                     if k == "Reflexive" {
                         continue;
                     }
+                    // A `GrantTriggeredAbility`'s granted `trigger` chooses its
+                    // own targets when that trigger later goes on the stack, not
+                    // at the granting spell's cast (Showstopper's death ping).
+                    if k == "trigger" {
+                        continue;
+                    }
                     collect_slots(v, out);
                 }
             }

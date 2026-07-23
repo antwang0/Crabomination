@@ -1280,6 +1280,14 @@ pub struct PermanentView {
     /// empty for older clients without this field.
     #[serde(default)]
     pub static_ability_labels: Vec<String>,
+    /// Compact "cost: effect" summaries of the permanent's activated
+    /// abilities ("{2}{T}: Draw a card", "Sacrifice: Deal 1 damage"). Pulled
+    /// from `ActivatedAbility` so the client tooltip can show what a creature
+    /// or artifact can *do* without opening the detail panel — the activated
+    /// analogue of `triggered_ability_labels`. Defaults to empty for older
+    /// clients without this field.
+    #[serde(default)]
+    pub activated_ability_labels: Vec<String>,
     /// True when the permanent has one or more stun counters — a UI
     /// hint so the client can badge stunned permanents without scanning
     /// the full `counters` vec. Populated by `project_permanent`.
