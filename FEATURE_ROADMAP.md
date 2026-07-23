@@ -16,7 +16,29 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **GTC wave 16 (this run, 8 cards):** Aurelia's Fury, Nightveil Specter,
+- **DIS/RTR gap wave (this run, 14 cards):** Momir Vig, Sphinx of the Chimes,
+  Elemental Resonance, Vigean Intuition, Fertile Imagination, Aethermage's
+  Touch, Infernal Tutor, Ignorant Bliss, Dovescape, Muse Vessel, Isperia the
+  Inscrutable (DIS); Slaughter Games, Guild Feud, Grave Betrayal (RTR). New
+  engine work: `ActivatedAbility.discard_cost_same_name` (Sphinx);
+  `Effect::AddManaEqualToPermanentCost` (Elemental Resonance);
+  `Effect::NameCardExileMatchingAllZones` (Slaughter Games); a shared
+  `choose_a_card_type` helper behind `Effect::ChooseTypeRevealTopPartition`
+  (Vigean) and `Effect::FertileImagination`; `Effect::GuildFeud` (dueling
+  reveal-deploy-fight); `Effect::AethermagesTouch` (flash-until-end-step deploy);
+  `Effect::InfernalTutor` (Hellbent-aware); `Effect::IgnorantBliss` (hand blink
+  + draw via a NextEndStep delayed trigger); `Effect::Dovescape` (counter →
+  caster mints Birds per MV); `Effect::IsperiaReveal` (name → tutor flyer);
+  `Effect::GraveBetrayal{Register,Reanimate}` (delayed reanimate opponents'
+  dead under your control, as a Zombie with a +1/+1 counter). CR conformance
+  (`cr_recent22`): 701.12b fight power-snapshot, 106.6 hybrid mana, 205.1 chosen
+  card type. UI/server: readable labels for every new effect. Deferred (each
+  blocked on one primitive — see TODO.md): Valor Made Real / Guardian of the
+  Gateless (multi-block), Psychic Possession (player-Auras), Bronze Bombshell
+  (control-change trigger), Kindle the Carnage (discard-at-random), Azor's
+  Elocutors (filibuster counter + damaged-you trigger), Tablet of the Guilds
+  (choose-two-colors), Epic Experiment (filtered exile-free-cast).
+- **GTC wave 16 (prior run, 8 cards):** Aurelia's Fury, Nightveil Specter,
   Glaring Spotlight, Bane Alley Broker, Signal the Clans, Unexpected Results,
   Soul Ransom, Vizkopa Confessor. New engine work: `GameState.damaged_this_
   resolution` scratch + `Selector::DamagedThisResolution` (tap/lock the entities
