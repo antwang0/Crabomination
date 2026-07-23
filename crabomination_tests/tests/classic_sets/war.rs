@@ -1061,3 +1061,56 @@ fn finale_of_glory_makes_soldiers() {
     assert_eq!(soldiers, 3, "X=3 Soldiers");
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Angel"), "no Angels below X=10");
 }
+
+// ── Batch 4 (2026-07-23) ──────────────────────────────────────────────────────
+
+/// Guildpact Informant proliferates on combat damage to a player.
+#[test]
+fn guildpact_informant_proliferates_on_hit() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let inf = g.add_card_to_battlefield(0, catalog::guildpact_informant());
+    g.fire_combat_damage_to_player_triggers(inf, 1, 1);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Teyo's Lightshield buffs your creature on entry.
+#[test]
+fn teyos_lightshield_buffs_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::teyos_lightshield());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Roalesk proliferates twice when it dies.
+#[test]
+fn roalesk_proliferates_twice_on_death() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let roalesk = g.add_card_to_battlefield(0, catalog::roalesk_apex_hybrid());
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(roalesk), 5, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 3, "proliferated twice → 1+1+1");
+}
+
+/// Jace's Projection grows whenever you draw a card.
+#[test]
+fn jaces_projection_grows_on_draw() {
+    let mut g = two_player_game();
+    let proj = g.add_card_to_battlefield(0, catalog::jaces_projection());
+    g.add_card_to_library(0, catalog::forest());
+    let mut drawn = Vec::new();
+    g.draw_one(0, &mut drawn);
+    g.dispatch_triggers_for_events(&drawn);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(proj).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}

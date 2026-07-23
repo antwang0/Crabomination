@@ -1846,3 +1846,71 @@ pub fn finale_of_glory() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 4 (2026-07-23) ──────────────────────────────────────────────────────
+
+/// Guildpact Informant — {2}{U} 1/1 Faerie Rogue with flying. Whenever it deals
+/// combat damage to a player, proliferate.
+pub fn guildpact_informant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Proliferate,
+        }],
+        ..vanilla("Guildpact Informant", cost(&[generic(2), u()]), 1, 1, vec![CreatureType::Faerie, CreatureType::Rogue])
+    }
+}
+
+/// Teyo's Lightshield — {2}{W} 0/3 Illusion. ETB put a +1/+1 counter on target
+/// creature you control.
+pub fn teyos_lightshield() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..vanilla("Teyo's Lightshield", cost(&[generic(2), w()]), 0, 3, vec![CreatureType::Illusion])
+    }
+}
+
+/// Roalesk, Apex Hybrid — {2}{G}{G}{U} 4/5 Human Mutant with flying and trample.
+/// ETB two +1/+1 counters on another target creature you control. Dies →
+/// proliferate twice.
+pub fn roalesk_apex_hybrid() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            }),
+            on_dies(Effect::Seq(vec![Effect::Proliferate, Effect::Proliferate])),
+        ],
+        ..vanilla("Roalesk, Apex Hybrid", cost(&[generic(2), g(), g(), u()]), 4, 5, vec![CreatureType::Human, CreatureType::Mutant])
+    }
+}
+
+/// Jace's Projection — {2}{U}{U} 2/2 Wizard Illusion. Whenever you draw a card,
+/// put a +1/+1 counter on it. {3}{U}: put a loyalty counter on target Jace.
+pub fn jaces_projection() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::HasPlaneswalkerType(PlaneswalkerSubtype::Jace)),
+                kind: CounterType::Loyalty,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..vanilla("Jace's Projection", cost(&[generic(2), u(), u()]), 2, 2, vec![CreatureType::Wizard, CreatureType::Illusion])
+    }
+}

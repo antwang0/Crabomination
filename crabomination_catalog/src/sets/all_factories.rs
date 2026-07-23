@@ -14777,6 +14777,10 @@ static WAR: &[Factory] = &[
     super::war::courage_in_crisis,
     super::war::casualties_of_war,
     super::war::finale_of_glory,
+    super::war::guildpact_informant,
+    super::war::teyos_lightshield,
+    super::war::roalesk_apex_hybrid,
+    super::war::jaces_projection,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,
