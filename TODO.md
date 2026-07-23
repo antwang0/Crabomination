@@ -40,6 +40,15 @@ Still open, grouped by primitive:
   Duskwatch Recruiter et al.).
 - **Jaya, Venerated Firemage** — "another red source deals +1 damage" static
   (source-color-scoped noncombat/combat damage bonus).
+- **Mowu, Loyal Companion** — "+1/+1 counters put on it → that many plus one"
+  (a counter-count replacement; distinct from Doubling Season's ×2).
+- **Bioessence Hydra** — enters with a +1/+1 per loyalty counter on your
+  planeswalkers + a "loyalty added → +1/+1" watcher (needs a `LoyaltyAdded`
+  event/count).
+- **Kaya's Ghostform** — Aura on your creature/PW that returns the host when it
+  dies OR is exiled (replacement-style aura-death-return).
+- **Command the Dreadhorde** — mass reanimation of any number of gy
+  creature/PW cards + self-damage = their total mana value.
 - The rest of the set's amass/proliferate/planeswalker-matters uncommons and the
   Amass-payoff rares; sweep `scripts/set_diff.py war` for the live list.
 
