@@ -2045,6 +2045,11 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Regenerate { .. } => "Regenerate",
         Effect::SacrificePermanent { .. } => "Sacrifice",
         Effect::LoseKeywordThisTurn { .. } => "Remove keyword",
+        Effect::AddManaEqualToPermanentCost { .. } => "Add mana of cost",
+        Effect::NameCardExileMatchingAllZones => "Name & exile all copies",
+        Effect::ChooseTypeRevealTopPartition { .. } => "Reveal & sort by type",
+        Effect::FertileImagination { .. } => "Saprolings per type",
+        Effect::GuildFeud => "Duel top creatures",
         _ => "Activate",
     }
 }

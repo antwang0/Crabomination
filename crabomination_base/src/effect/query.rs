@@ -1589,6 +1589,25 @@ impl Effect {
             Effect::SearchLibraryOrGraveyard { .. } => {
                 "search your library and/or graveyard for a card".into()
             }
+            Effect::AddManaEqualToPermanentCost { .. } => {
+                "add mana equal to the enchanted permanent's mana cost".into()
+            }
+            Effect::NameCardExileMatchingAllZones => {
+                "name a card; exile every copy from that player's hand, graveyard, and library".into()
+            }
+            Effect::ChooseTypeRevealTopPartition { count } => match count {
+                Value::Const(n) => format!(
+                    "choose a card type, then reveal the top {n}; keep that type, bin the rest"),
+                _ => "choose a card type, then reveal cards; keep that type, bin the rest".into(),
+            },
+            Effect::FertileImagination { per } => match per {
+                Value::Const(n) => format!(
+                    "choose a card type; make {n} Saprolings per matching card in target hand"),
+                _ => "choose a card type; make Saprolings per matching card in target hand".into(),
+            },
+            Effect::GuildFeud => {
+                "each side reveals three, deploys a creature; the two deployed creatures fight".into()
+            }
             _ => String::new(),
         }
     }
