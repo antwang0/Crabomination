@@ -3457,6 +3457,11 @@ pub enum Effect {
 
     // ── Mana ─────────────────────────────────────────────────────────────────
     AddMana { who: PlayerRef, pool: ManaPayload },
+    /// "Add mana equal to [permanent]'s mana cost" (Elemental Resonance).
+    /// Reads the resolved permanent's printed cost pip-by-pip: colored →
+    /// that color, generic/{C} → colorless, hybrid → its first color, X →
+    /// skipped. Mana goes to the resolving controller's pool.
+    AddManaEqualToPermanentCost { permanent: Selector },
     /// CR 500.4 exception — add these fixed color pips to the resolving
     /// player's pool and mark them "you don't lose this mana as steps and
     /// phases end" (Savage Ventmaw's attack trigger). The mana survives every

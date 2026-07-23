@@ -1686,3 +1686,19 @@ fn sphinx_of_the_chimes_discard_pair_draws_four() {
     assert!(g.players[0].hand.iter().any(|c| c.id == keep), "the odd card stays in hand");
     assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Island").count(), 4, "drew four");
 }
+
+/// Elemental Resonance adds mana equal to the enchanted permanent's cost at the
+/// start of the controller's first main phase.
+#[test]
+fn elemental_resonance_ramps_enchanted_cost() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // {1}{G}
+    let aura = g.add_card_to_battlefield(0, catalog::elemental_resonance());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    // {1}{G} → one colorless + one green = two mana total.
+    assert_eq!(g.players[0].mana_pool.total(), 2, "ramped the enchanted cost");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "green pip from the colored symbol");
+}

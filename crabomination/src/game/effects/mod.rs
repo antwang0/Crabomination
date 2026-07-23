@@ -5411,6 +5411,34 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddManaEqualToPermanentCost { permanent } => {
+                use crate::mana::ManaSymbol;
+                let Some(p) = ctx.source.map(|_| ctx.controller) else { return Ok(()) };
+                let syms = self
+                    .resolve_selector(permanent, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                    .and_then(|id| self.battlefield_find(id))
+                    .map(|c| c.definition.cost.symbols.clone());
+                let Some(syms) = syms else { return Ok(()) };
+                for s in &syms {
+                    match s {
+                        ManaSymbol::Colored(c)
+                        | ManaSymbol::Phyrexian(c)
+                        | ManaSymbol::Hybrid(c, _)
+                        | ManaSymbol::PhyrexianHybrid(c, _) => {
+                            self.players[p].mana_pool.add(*c, 1);
+                            events.push(GameEvent::ManaAdded { player: p, color: *c, source: ctx.source });
+                        }
+                        ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) | ManaSymbol::MonoHybrid(n, _) => {
+                            self.players[p].mana_pool.add_colorless(*n);
+                        }
+                        ManaSymbol::Snow | ManaSymbol::X => {}
+                    }
+                }
+                Ok(())
+            }
+
             Effect::AddManaKeptThisTurn { who, colors } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let mult = self.mana_production_multiplier.max(1);

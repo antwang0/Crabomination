@@ -5,6 +5,7 @@ use crate::card::{
     Keyword, Predicate, SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
+use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, u, Color};
 
 /// Momir Vig, Simic Visionary — {3}{G}{U} 2/2 Elf Wizard. Casting a green
@@ -64,6 +65,32 @@ pub fn sphinx_of_the_chimes() -> CardDefinition {
             discard_cost_same_name: true,
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(4) },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Elemental Resonance — {2}{G}{G} Aura. Enchant permanent; at the beginning of
+/// your first main phase, add mana equal to the enchanted permanent's cost.
+pub fn elemental_resonance() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Elemental Resonance",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: R::Permanent },
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
+            effect: Effect::AddManaEqualToPermanentCost {
+                permanent: Selector::AttachedTo(Box::new(Selector::This)),
+            },
         }],
         ..Default::default()
     }
