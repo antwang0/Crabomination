@@ -16,12 +16,13 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **DIS/RTR gap wave (this run, 14 cards):** Momir Vig, Sphinx of the Chimes,
+- **DIS/RTR gap wave (this run, 20 cards):** Momir Vig, Sphinx of the Chimes,
   Elemental Resonance, Vigean Intuition, Fertile Imagination, Aethermage's
   Touch, Infernal Tutor, Ignorant Bliss, Dovescape, Muse Vessel, Isperia the
-  Inscrutable (DIS); Slaughter Games, Guild Feud, Grave Betrayal (RTR). New
-  engine work: `ActivatedAbility.discard_cost_same_name` (Sphinx);
-  `Effect::AddManaEqualToPermanentCost` (Elemental Resonance);
+  Inscrutable, Simic Basilisk, Evolution Vat, Kindle the Carnage (DIS); Slaughter
+  Games, Guild Feud, Grave Betrayal, Angel of Serenity, Azor's Elocutors, Tablet
+  of the Guilds (RTR). New engine work: `ActivatedAbility.discard_cost_same_name`
+  (Sphinx); `Effect::AddManaEqualToPermanentCost` (Elemental Resonance);
   `Effect::NameCardExileMatchingAllZones` (Slaughter Games); a shared
   `choose_a_card_type` helper behind `Effect::ChooseTypeRevealTopPartition`
   (Vigean) and `Effect::FertileImagination`; `Effect::GuildFeud` (dueling
@@ -29,15 +30,19 @@ exercising each) was elided in a compaction pass; recover it from
   `Effect::InfernalTutor` (Hellbent-aware); `Effect::IgnorantBliss` (hand blink
   + draw via a NextEndStep delayed trigger); `Effect::Dovescape` (counter →
   caster mints Birds per MV); `Effect::IsperiaReveal` (name → tutor flyer);
-  `Effect::GraveBetrayal{Register,Reanimate}` (delayed reanimate opponents'
-  dead under your control, as a Zombie with a +1/+1 counter). CR conformance
-  (`cr_recent22`): 701.12b fight power-snapshot, 106.6 hybrid mana, 205.1 chosen
-  card type. UI/server: readable labels for every new effect. Deferred (each
-  blocked on one primitive — see TODO.md): Valor Made Real / Guardian of the
-  Gateless (multi-block), Psychic Possession (player-Auras), Bronze Bombshell
-  (control-change trigger), Kindle the Carnage (discard-at-random), Azor's
-  Elocutors (filibuster counter + damaged-you trigger), Tablet of the Guilds
-  (choose-two-colors), Epic Experiment (filtered exile-free-cast).
+  `Effect::GraveBetrayal{Register,Reanimate}` (delayed reanimate opponents' dead
+  under your control, as a Zombie with a +1/+1 counter); `Effect::KindleTheCarnage`
+  (repeatable random-discard board burn); `CounterType::Filibuster` + Azor's
+  win-at-5 loop; `CardInstance.chosen_colors` + `Effect::ChooseTwoColorsForSource`
+  / `GainLifePerChosenColorOfCast` (Tablet). Simic Basilisk (Graft) and Evolution
+  Vat (granted counter-doubler) and Angel of Serenity (up-to-3 exile-until-leaves)
+  ride existing primitives. CR conformance (`cr_recent22`): 701.12b fight
+  power-snapshot, 106.6 hybrid mana, 205.1 chosen card type. UI/server: readable
+  labels for every new effect. Deferred (each blocked on one primitive — see
+  TODO.md): Valor Made Real / Guardian of the Gateless (multi-block), Psychic
+  Possession (player-Auras), Bronze Bombshell (control-change trigger), Rakdos
+  Lord of Riots (dynamic cost-reduction static), Epic Experiment (filtered
+  exile-free-cast), Search the City, Experiment Kraj, the DIS split cards.
 - **GTC wave 16 (prior run, 8 cards):** Aurelia's Fury, Nightveil Specter,
   Glaring Spotlight, Bane Alley Broker, Signal the Clans, Unexpected Results,
   Soul Ransom, Vizkopa Confessor. New engine work: `GameState.damaged_this_
