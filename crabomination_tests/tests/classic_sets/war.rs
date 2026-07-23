@@ -1114,3 +1114,31 @@ fn jaces_projection_grows_on_draw() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(proj).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+// ── Batch 5 (2026-07-23) ──────────────────────────────────────────────────────
+
+/// Silent Submersible is a 2/3 Crew-2 Vehicle that draws on combat damage.
+#[test]
+fn silent_submersible_draws_on_hit() {
+    let mut g = two_player_game();
+    let sub = g.add_card_to_battlefield(0, catalog::silent_submersible());
+    g.add_card_to_library(0, catalog::forest());
+    let def = catalog::silent_submersible();
+    assert!(def.keywords.contains(&Keyword::Crew(2)));
+    assert!(def.subtypes.artifact_subtypes.contains(&crabomination::card::ArtifactSubtype::Vehicle));
+    let hand = g.players[0].hand.len();
+    g.fire_combat_damage_to_player_triggers(sub, 1, 2);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew on combat damage");
+}
+
+/// Storrev returns a creature card from the graveyard on combat damage.
+#[test]
+fn storrev_recurs_on_hit() {
+    let mut g = two_player_game();
+    let storrev = g.add_card_to_battlefield(0, catalog::storrev_devkarin_lich());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.fire_combat_damage_to_player_triggers(storrev, 1, 5);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature returned to hand");
+}

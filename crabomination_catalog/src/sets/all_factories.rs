@@ -14781,6 +14781,8 @@ static WAR: &[Factory] = &[
     super::war::teyos_lightshield,
     super::war::roalesk_apex_hybrid,
     super::war::jaces_projection,
+    super::war::silent_submersible,
+    super::war::storrev_devkarin_lich,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

@@ -1914,3 +1914,43 @@ pub fn jaces_projection() -> CardDefinition {
         ..vanilla("Jace's Projection", cost(&[generic(2), u(), u()]), 2, 2, vec![CreatureType::Wizard, CreatureType::Illusion])
     }
 }
+
+// ── Batch 5 (2026-07-23) ──────────────────────────────────────────────────────
+
+/// Silent Submersible — {U}{U} 2/3 Vehicle, Crew 2. Whenever it deals combat
+/// damage to a player, draw a card.
+pub fn silent_submersible() -> CardDefinition {
+    CardDefinition {
+        name: "Silent Submersible",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Crew(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: draw(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Storrev, Devkarin Lich — {1}{B}{B}{G} 5/4 Zombie Elf Wizard with trample.
+/// Whenever it deals combat damage to a player, return a creature or
+/// planeswalker card from your graveyard to your hand. (The "wasn't put there
+/// this combat" rider is approximated.)
+pub fn storrev_devkarin_lich() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered((R::Creature.or(R::Planeswalker)).and(R::InYourGraveyard)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..vanilla("Storrev, Devkarin Lich", cost(&[generic(1), b(), b(), g()]), 5, 4, vec![CreatureType::Zombie, CreatureType::Elf, CreatureType::Wizard])
+    }
+}
