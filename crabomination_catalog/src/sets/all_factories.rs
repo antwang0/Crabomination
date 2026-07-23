@@ -7203,6 +7203,7 @@ static DGM: &[Factory] = &[
     super::dgm::breaking_entering,
     super::dgm::council_of_the_absolute,
     super::dgm::blaze_commando,
+    super::dgm::deadbridge_chant,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

@@ -960,3 +960,22 @@ fn blaze_commando_spell_damage_tokens() {
     let soldiers = g.battlefield.iter().filter(|c| c.definition.name == "Soldier" && c.controller == 0).count();
     assert_eq!(soldiers, 2, "two Soldier tokens from the spell's damage");
 }
+
+/// Deadbridge Chant mills ten on ETB, then each upkeep pulls a random graveyard
+/// card back (creature → battlefield, else → hand).
+#[test]
+fn deadbridge_chant_mill_and_upkeep() {
+    let mut g = two_player_game();
+    for _ in 0..12 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    g.move_card_to_battlefield_for_test(0, catalog::deadbridge_chant());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 10, "milled ten");
+    // Upkeep: only creature cards are in the graveyard, so one enters play.
+    let bf_before = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let bf_after = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bf_after, bf_before + 1, "a creature was reanimated");
+    assert_eq!(g.players[0].graveyard.len(), 9, "one left the graveyard");
+}

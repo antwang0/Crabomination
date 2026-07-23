@@ -9,7 +9,8 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, generic, r, u, w, Color};
+use crate::game::TurnStep;
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// A 1/1 red-and-white Soldier with haste (Blaze Commando's token).
 fn boros_soldier() -> TokenDefinition {
@@ -167,6 +168,30 @@ pub fn breaking_entering() -> CardDefinition {
             fuse: true,
             aftermath: false,
         })),
+        ..Default::default()
+    }
+}
+
+/// Deadbridge Chant — {4}{B}{G} Enchantment. When it enters, mill ten cards. At
+/// the beginning of your upkeep, choose a card at random in your graveyard; a
+/// creature card enters the battlefield, otherwise it goes to your hand.
+pub fn deadbridge_chant() -> CardDefinition {
+    CardDefinition {
+        name: "Deadbridge Chant",
+        cost: cost(&[generic(4), b(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Mill { who: Selector::Player(PlayerRef::You), amount: Value::Const(10) }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::ChooseRandomGraveyardCardCreatureToBattlefieldElseHand {
+                    who: PlayerRef::You,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

@@ -181,6 +181,7 @@ impl Effect {
             | Effect::LandsBecomeChosenBasicType { .. }
             | Effect::ChooseBasicLandTypeForSource
             | Effect::ExileTopSelfPumpIfCreature
+            | Effect::ChooseRandomGraveyardCardCreatureToBattlefieldElseHand { .. }
             | Effect::DistributeCountersAmongLastCreated { .. } => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.

@@ -10940,6 +10940,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseRandomGraveyardCardCreatureToBattlefieldElseHand { who } => {
+                use rand::seq::IndexedRandom;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let ids: Vec<crate::card::CardId> =
+                    self.players[p].graveyard.iter().map(|c| c.id).collect();
+                let Some(&pick) = ids.choose(&mut rand::rng()) else { return Ok(()) };
+                let is_creature = self.players[p]
+                    .graveyard
+                    .iter()
+                    .find(|c| c.id == pick)
+                    .is_some_and(|c| c.definition.is_creature());
+                if is_creature {
+                    self.move_card_to(
+                        pick,
+                        &ZoneDest::Battlefield { controller: who.clone(), tapped: false },
+                        ctx,
+                        events,
+                    );
+                    self.last_moved_cards.push(pick);
+                } else if let Some(card) = Self::take_card(&mut self.players[p].graveyard, pick) {
+                    self.players[p].hand.push(card);
+                    self.last_moved_cards.push(pick);
+                }
+                Ok(())
+            }
+
             Effect::RedirectSpellTargetToSelf { what } => {
                 let Some(src) = ctx.source else { return Ok(()) };
                 // Locate the targeted spell on the stack.

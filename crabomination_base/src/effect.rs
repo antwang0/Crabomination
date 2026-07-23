@@ -3440,6 +3440,10 @@ pub enum Effect {
     /// to your hand" — Charmbreaker Devils). No player choice; stops early if
     /// the graveyard runs out of matches.
     ReturnRandomFromGraveyard { who: PlayerRef, filter: SelectionRequirement, count: Value },
+    /// Deadbridge Chant — choose a card at random in `who`'s graveyard; if it's
+    /// a creature card put it onto the battlefield under their control,
+    /// otherwise put it into their hand (CR 105-agnostic random pick).
+    ChooseRandomGraveyardCardCreatureToBattlefieldElseHand { who: PlayerRef },
     /// Second Sunrise — each player returns to the battlefield all artifact,
     /// creature, enchantment, and land cards in their graveyard that were put
     /// there from the battlefield this turn.
