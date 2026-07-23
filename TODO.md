@@ -24,6 +24,15 @@ Items are grouped by area and roughly ordered by impact within each group.
   Determined, Odds // Ends, Research // Development), and the block of
   planeswalkers (Jace AoT, Vraska the Unseen, Gideon CoJ, Domri already done).
 
+**Remaining WAR (War of the Spark) gap cards** — `catalog::sets::war` opened
+with 25 commons/uncommons this run. Still open, grouped by missing primitive:
+- **Planeswalkers** (Gideon Champion of Justice, and the WAR walkers generally)
+  — need "becomes a creature with P/T = its loyalty" + loyalty-add-per-count.
+- **Devouring Hellion** — "enters with twice that many +1/+1 counters" (sac any
+  number as-enters, ×2). **Charmed Stray** — ETB counter on other same-named.
+- The rest of the set's amass/proliferate/planeswalker-matters uncommons and the
+  Amass-payoff rares; sweep `scripts/set_diff.py war` for the live list.
+
 **Remaining DGM (Dragon's Maze) gap cards** — `catalog::sets::dgm`. The
 `dgm::gaps`/`gaps2` waves shipped the guild legends/mythics and easy commons
 (Sire of Insanity, Savageborn Hydra, Exava, Ruric Thar, Lavinia, Blood Baron,

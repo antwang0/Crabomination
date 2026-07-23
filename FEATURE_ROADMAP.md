@@ -16,6 +16,14 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **WAR opened + GTC gaps + aura-trigger fix (this run, 27 cards):** new
+  `catalog::sets::war` (25 WAR commons/uncommons — vanillas, ETB/death
+  proliferate + amass, Flurry, loot, drain, turn-gated first strike, self-
+  unblockable) and `gtc17` (Frenzied Tilling, Contaminated Ground). Correctness:
+  the trigger dispatcher skipped a host that lost all abilities (CR 613 "is a
+  Swamp") *entirely* — suppressing the attached Aura's own equip-granted
+  triggers; equip/Aura-granted triggers now fire regardless of host strip
+  (Contaminated Ground's tap-drain).
 - **DGM gap wave 4 (this run, 3 cards):** `dgm::gaps4` — Notion Thief, Boros
   Battleshaper, Varolz. New engine: `StaticEffect::OpponentExtraDrawsRedirected`
   (Notion Thief — `draw_one` redirects an opponent's non-draw-step draw to the
