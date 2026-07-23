@@ -1399,7 +1399,7 @@ impl GameState {
                     }
                 }
                 let mut picks: Vec<(CardId, u32)> = best_by_name.into_values().collect();
-                picks.sort_by(|a, b| b.1.cmp(&a.1));
+                picks.sort_by_key(|b| std::cmp::Reverse(b.1));
                 picks.truncate(3);
                 // Only "three cards with different names" hands a card to you.
                 if picks.len() == 3

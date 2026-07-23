@@ -210,6 +210,7 @@ mod tests {
                 is_monarch: false,
                 has_city_blessing: false,
                 cannot_gain_life: false,
+                cant_cast_noncreature: false,
                 life_locked: false,
                 has_hexproof: false,
                 commander_damage_taken: vec![],
