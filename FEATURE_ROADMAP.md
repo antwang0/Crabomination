@@ -16,7 +16,18 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **DGM (Dragon's Maze) opened + DIS Bronze Bombshell (this run, ~46 cards):**
+- **DGM gap waves + combat-damage-target fix (this run, 26 cards):**
+  `dgm::gaps`/`gaps2` — the guild legends/mythics and remaining commons (see
+  TODO.md for the roster). New engine: `Effect::DoubleAllCountersOn` (Vorel),
+  `Value::DistinctlyNamedGatesControlled` (Maze's End win). Correctness: Library
+  Larcenist / Krydle used `PlayerRef::Triggerer` for their combat-damage "that
+  player" clauses (resolves to the *controller*); switched to `DefendingPlayer`.
+  Azor's Elocutors' reset now removes *all* filibuster counters (was 1). CR
+  conformance (`cr_recent23`): 701.10e (double each counter), 702.102 (Fuse),
+  509.1c (true Lure). UI: Maze's End "gates N/10" HUD chip
+  (`PlayerView.mazes_end_gate_progress`) + Filibuster counter label/tooltip
+  (fixes a non-exhaustive-match break in the client that predated this run).
+- **DGM (Dragon's Maze) opened + DIS Bronze Bombshell (prior run, ~46 cards):**
   new `catalog::sets::dgm` module (keyword vanillas, the Gatekeeper cycle,
   Battalion/Unleash/Scavenge creatures, Zhur-Taa Druid, Maw of the Obzedat, Sin
   Collector, Trostani's Summoner, Pontiff of Blight, Blood Scrivener; plus

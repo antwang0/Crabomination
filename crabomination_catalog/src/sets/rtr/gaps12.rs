@@ -119,12 +119,18 @@ pub fn azors_elocutors() -> CardDefinition {
                     },
                 ]),
             },
+            // "Whenever a source deals damage to you, remove all filibuster
+            // counters." Modeled on combat damage to the controller (the common
+            // reset); noncombat damage is an approximation gap.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::ControllerDealtCombatDamage, EventScope::SelfSource),
                 effect: Effect::RemoveCounter {
                     what: Selector::This,
                     kind: CounterType::Filibuster,
-                    amount: Value::ONE,
+                    amount: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Filibuster,
+                    },
                 },
             },
         ],

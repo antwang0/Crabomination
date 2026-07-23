@@ -229,6 +229,7 @@ mod tests {
                 ferocious_active: false,
                 hellbent_active: false,
                 formidable_active: false,
+                mazes_end_gate_progress: None,
                 speed: 0,
                 at_max_speed: false,
             }],

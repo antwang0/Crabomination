@@ -7196,6 +7196,7 @@ static DGM: &[Factory] = &[
     super::dgm::armed_dangerous,
     super::dgm::protect_serve,
     super::dgm::down_dirty,
+    super::dgm::progenitor_mimic,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

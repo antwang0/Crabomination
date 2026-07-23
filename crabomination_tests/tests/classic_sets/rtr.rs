@@ -2013,3 +2013,36 @@ fn tablet_of_the_guilds_gains_life_on_chosen_color() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 1, "gained 1 life for the one matching chosen color");
 }
+
+/// Azor's Elocutors accrues a filibuster counter each upkeep and wins at five;
+/// combat damage to its controller removes *all* of them (regression: the
+/// reset previously removed only one).
+#[test]
+fn azors_elocutors_accrues_and_resets() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let azor = g.add_card_to_battlefield(0, catalog::azors_elocutors());
+    g.active_player_idx = 0;
+    // Two upkeeps → two filibuster counters.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(azor).unwrap().counter_count(CounterType::Filibuster), 2, "one per upkeep");
+    // Opponent connects with a creature → all filibuster counters fall off.
+    let atk = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(azor).unwrap().counter_count(CounterType::Filibuster), 0, "combat damage cleared all counters");
+}

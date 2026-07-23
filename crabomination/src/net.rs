@@ -828,6 +828,12 @@ pub struct PlayerView {
     /// Formidable (creatures you control total power 8+).
     #[serde(default)]
     pub formidable_active: bool,
+    /// Maze's End — when this seat controls a Maze's End, the number of Gates
+    /// they control with different names (win at 10). `None` when they control
+    /// no Maze's End, so the client shows a "Gates N/10" win-progress chip only
+    /// for players actually pursuing it. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub mazes_end_gate_progress: Option<u32>,
 }
 
 /// One source-commander's combat-damage tally against a player (CR 903.10a).

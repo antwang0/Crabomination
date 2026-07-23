@@ -806,3 +806,32 @@ fn down_left_half() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), before - 2, "discarded two");
 }
+
+/// Progenitor Mimic enters as a copy of a creature and mints a token copy of
+/// itself each upkeep.
+#[test]
+fn progenitor_mimic_copies_and_spawns() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // the copy target
+    let mimic = g.add_card_to_hand(0, catalog::progenitor_mimic());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.cast_spell(mimic, None, vec![], None, None).expect("cast Progenitor Mimic");
+    drain_stack(&mut g);
+    // Entered as a Grizzly Bears copy: now two Bears-named permanents.
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears" && c.controller == 0).count(),
+        2, "Mimic entered as a copy of the bear",
+    );
+    // Upkeep: mint a token copy of itself (a third Bears-named permanent).
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears" && c.controller == 0).count(),
+        3, "upkeep minted a token copy",
+    );
+}

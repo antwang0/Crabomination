@@ -24,17 +24,28 @@ Items are grouped by area and roughly ordered by impact within each group.
   Determined, Odds // Ends, Research // Development), and the block of
   planeswalkers (Jace AoT, Vraska the Unseen, Gideon CoJ, Domri already done).
 
-**Remaining DGM (Dragon's Maze) gap cards** — the set was opened this run
-(`catalog::sets::dgm`, ~46 cards). Still open:
-- **Blaze Commando** — "whenever an instant or sorcery you control deals
-  damage, make two Soldiers." Needs a `DealtDamage` trigger that filters on the
-  damage source being an I/S spell (the event carries `from_controller` but not
-  the source's card type).
-- Gate-count spells beyond the Gatekeeper cycle, the `Cluestone` mana-rock cycle
-  (bulk), the `Maze` guildmage-Elemental cycle, and the guild legends/mythics
-  (Lavinia, Melek, Ral Zarek, Progenitor Mimic, Deadbridge Chant, Emmara,
-  Exava, Ruric Thar, Savageborn Hydra, Council of the Absolute, Notion Thief,
-  Sire of Insanity, Aetherling, …) and the DGM split cards.
+**Remaining DGM (Dragon's Maze) gap cards** — `catalog::sets::dgm`. The
+`dgm::gaps`/`gaps2` waves shipped the guild legends/mythics and easy commons
+(Sire of Insanity, Savageborn Hydra, Exava, Ruric Thar, Lavinia, Blood Baron,
+Mirko Vosk, Tajic, Vorel, Zhur-Taa Ancient, Smelt-Ward Gatekeepers, Scion of
+Vitu-Ghazi, Rot Farm Skeleton, Gleam of Battle, Debt to the Deathless,
+Obzedat's Aid, Drown in Filth, Blast of Genius, Pyrewild Shaman, Maze's End,
+Aetherling, Dragonshift, Krasis Incubation, Armed//Dangerous, Protect//Serve,
+Down//Dirty). Still open, each needing one primitive:
+- **Blaze Commando** and **Teysa, Envoy of Ghosts** — a `DamageDealt` event that
+  carries its source `CardId` (Blaze filters on an I/S-spell source; Teysa
+  destroys "that creature" that dealt combat damage to you). The event only
+  carries `from_controller` today.
+- **Deadbridge Chant** — "choose a card at random in your graveyard" primitive.
+- **Notion Thief** — opponent-draw-replacement redirect.
+- **Progenitor Mimic** — enter-as-copy + upkeep token-copy of self.
+- **Council of the Absolute** — name-gated cast lock + own-copy cost reduction.
+- **Legion's Initiative** — the exile-all-your-creatures/return-at-next-combat
+  ability (the two anthems are trivial; the ability is a mass timed flicker).
+- **Varolz** — grant scavenge to all graveyard creatures.
+- **Boros Battleshaper** — per-combat force-attack/block on up to two targets.
+- **Reap Intellect / Plasm Capture** — bespoke (name-strip-all-zones; counter +
+  banked mana at next main).
 - Goblin Test Pilot / Scab-Clan Giant need a "target chosen at random" primitive.
 
 **Batched-ETB infrastructure (blocks several OTJ legends):** "whenever one or

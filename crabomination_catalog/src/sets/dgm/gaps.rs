@@ -3,9 +3,9 @@
 //! `classic_sets/dgm`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility, Subtypes,
-    Supertype, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EntersAsCopy,
+    EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
     battalion, cast_is_noncreature, etb, target_any, target_filtered, unleash,
@@ -538,6 +538,40 @@ pub fn mazes_end() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Progenitor Mimic — {4}{G}{U} 0/0 Shapeshifter. Enters as a copy of any
+/// creature on the battlefield, except at the beginning of your upkeep, if it
+/// isn't a token, create a token that's a copy of it.
+pub fn progenitor_mimic() -> CardDefinition {
+    CardDefinition {
+        name: "Progenitor Mimic",
+        cost: cost(&[generic(4), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Shapeshifter]),
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Creature,
+            extra_triggered: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::NotToken }),
+                effect: Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::This,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                },
+            }],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

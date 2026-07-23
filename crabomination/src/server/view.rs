@@ -693,6 +693,24 @@ fn project_player(
         ferocious_active,
         hellbent_active,
         formidable_active,
+        mazes_end_gate_progress: state
+            .battlefield
+            .iter()
+            .any(|c| c.controller == player_seat && c.definition.name == "Maze's End")
+            .then(|| {
+                let mut names: Vec<&str> = state
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == player_seat
+                            && c.definition.has_land_type(crate::card::LandType::Gate)
+                    })
+                    .map(|c| c.definition.name)
+                    .collect();
+                names.sort_unstable();
+                names.dedup();
+                names.len() as u32
+            }),
     }
 }
 

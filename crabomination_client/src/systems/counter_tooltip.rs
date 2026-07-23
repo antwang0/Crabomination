@@ -1222,6 +1222,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Supply => "Supply",
         CounterType::Unlock => "Unlock",
         CounterType::Palliation => "Palliation",
+        CounterType::Filibuster => "Filibuster",
     }
 }
 
@@ -1263,6 +1264,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Supply => "Stocking the Pantry tally — remove one to draw a card.",
         CounterType::Unlock => "Cryptex tally — one per collect-evidence; sacrifice for its payoff at five or more.",
         CounterType::Palliation => "Palliation Accord tally — one per opponent's creature tapped; remove one to prevent 1 damage to you.",
+        CounterType::Filibuster => "Azor's Elocutors tally — one each upkeep; at five you win the game (removed when a source deals damage to you).",
         _ => return None,
     })
 }

@@ -84,6 +84,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Void => (Color::srgba(0.18, 0.10, 0.30, 1.0), theme::TEXT_PRIMARY),
         // LCI Descend — a cavern earth-brown that deepens as the graveyard fills.
         StatChipKind::Descend => (Color::srgba(0.26, 0.18, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // Maze's End (DGM) — a Ravnican guildgate teal-gold for the ten-Gate
+        // win-race progress.
+        StatChipKind::MazesEnd => (Color::srgba(0.16, 0.26, 0.24, 1.0), theme::TEXT_PRIMARY),
         // Skipped combat (CR 506 — Stonehorn Dignitary) — a muted stone grey
         // so a player knows their next swing is off the table.
         StatChipKind::SkipCombat => (Color::srgba(0.24, 0.24, 0.26, 1.0), theme::TEXT_PRIMARY),
@@ -145,6 +148,9 @@ pub(super) enum StatChipKind {
     /// CR 702.26 — phased-out permanents (Out of Time, Teferi's Veil). They
     /// occupy no visible zone, so the chip is the only sign they still exist.
     PhasedOut,
+    /// Maze's End win progress (DGM) — differently-named Gates controlled,
+    /// win at 10. Shown only for a seat that controls a Maze's End.
+    MazesEnd,
 }
 
 /// Label for the pending "your next creature spell" rider chip (CR 603.7e),
@@ -859,6 +865,17 @@ pub fn update_player_stats_chips(
                 format!("\u{26CF} descend {}", p.descend_count)
             };
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Descend, label);
+        }
+        // Maze's End (DGM) — a seat controlling a Maze's End is racing to ten
+        // differently-named Gates; surface the running count so the win is
+        // legible.
+        if let Some(gates) = p.mazes_end_gate_progress {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::MazesEnd,
+                format!("\u{1F6AA} gates {gates}/10"),
+            );
         }
         // CR 701.54 The Ring — show the temptation level once the Ring has
         // tempted this player at least once.
