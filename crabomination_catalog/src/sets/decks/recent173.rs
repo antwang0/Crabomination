@@ -144,6 +144,8 @@ pub fn aggressive_negotiations() -> CardDefinition {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 count: Value::ONE,
                 filter: R::Nonland,
+                link_to_source: false,
+                face_down: false,
             },
             Effect::ApplyToTargets {
                 max_targets: 1,

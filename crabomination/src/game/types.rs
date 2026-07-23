@@ -1373,7 +1373,13 @@ pub enum PendingEffectState {
     /// Suspended on an `ExileChosenFromHand` decision (Thought-Knot Seer). The
     /// caster picks cards from `target_player`'s hand; the apply step exiles
     /// them permanently.
-    ExileChosenFromHandPending { target_player: usize },
+    ExileChosenFromHandPending {
+        target_player: usize,
+        #[serde(default)]
+        link_source: Option<crate::card::CardId>,
+        #[serde(default)]
+        face_down: bool,
+    },
     /// Suspended on a `HoneFromHand` decision (Uvilda, Dean of Perfection).
     /// The owner picks an instant/sorcery from their hand; the apply step
     /// exiles it with `count` hone counters.

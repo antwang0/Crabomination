@@ -2198,3 +2198,32 @@ fn gtc16_glaring_spotlight_ignores_and_shields() {
     assert!(g.check_target_legality(&Target::Permanent(rhino), 0).is_err(),
         "hexproof restored once Spotlight leaves");
 }
+
+/// Bane Alley Broker stashes a hand card face down under it, then returns it.
+#[test]
+fn gtc16_bane_alley_broker_stash_and_return() {
+    use crabomination::game::types::GameAction;
+    let mut g = two_player_game();
+    let broker = g.add_card_to_battlefield(0, catalog::bane_alley_broker());
+    let card = g.add_card_to_library(0, catalog::gutter_skulk());
+    g.clear_sickness(broker);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // {T}: draw the library card, then stash it face down under the broker.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: broker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("draw + stash");
+    drain_stack(&mut g);
+    let stashed = g.exile.iter().find(|c| c.id == card).expect("card stashed in exile");
+    assert_eq!(stashed.exiled_with, Some(broker), "stash is linked to the broker");
+    assert!(stashed.face_down, "stashed face down");
+    // {U}{B}, {T}: return it to its owner's hand (untap first).
+    g.battlefield_find_mut(broker).unwrap().tapped = false;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: broker, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("return stashed card");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == card), "card returned to owner's hand");
+}

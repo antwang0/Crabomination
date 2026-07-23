@@ -35871,6 +35871,8 @@ pub fn karn_liberated() -> CardDefinition {
                     from: Selector::Player(PlayerRef::Target(0)),
                     count: Value::Const(1),
                     filter: SelectionRequirement::Any,
+                    link_to_source: false,
+                    face_down: false,
                 },
                 ..Default::default()
             },

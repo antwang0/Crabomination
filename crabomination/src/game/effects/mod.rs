@@ -12915,7 +12915,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileChosenFromHand { from, count, filter } => {
+            Effect::ExileChosenFromHand { from, count, filter, link_to_source, face_down } => {
                 // Same caster-picks-from-hand shape as DiscardChosen, but the
                 // chosen card is exiled permanently (Thought-Knot Seer).
                 use crate::decision::Decision;
@@ -12944,12 +12944,19 @@ impl GameState {
                         count: n as u32,
                         hand: candidates,
                     };
-                    let pending = PendingEffectState::ExileChosenFromHandPending { target_player };
+                    let pending = PendingEffectState::ExileChosenFromHandPending {
+                        target_player,
+                        link_source: if *link_to_source { ctx.source } else { None },
+                        face_down: *face_down,
+                    };
                     if self.players[picker].wants_ui {
+                        let (lts, fd) = (*link_to_source, *face_down);
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::ExileChosenFromHand {
                             from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
                             count: crate::effect::Value::Const(n as i32),
                             filter: filter.clone(),
+                            link_to_source: lts,
+                            face_down: fd,
                         });
                         self.suspend_signal = Some((decision, pending, rest));
                         return Ok(());

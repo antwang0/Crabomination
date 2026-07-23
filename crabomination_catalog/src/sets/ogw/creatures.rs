@@ -1740,6 +1740,8 @@ pub fn thought_knot_seer() -> CardDefinition {
                     from: Selector::Player(PlayerRef::EachOpponent),
                     count: Value::Const(1),
                     filter: SelectionRequirement::Nonland,
+                    link_to_source: false,
+                    face_down: false,
                 },
             },
             // "That player draws a card" — modeled as each opponent (exact in 1v1).

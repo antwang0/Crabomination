@@ -146,12 +146,16 @@ pub fn castigate() -> CardDefinition {
                 from: Selector::Player(PlayerRef::Target(0)),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
+                link_to_source: false,
+                face_down: false,
             },
             Effect::HauntCreature {
                 body: Box::new(Effect::ExileChosenFromHand {
                     from: Selector::Player(PlayerRef::EachOpponent),
                     count: Value::Const(1),
                     filter: SelectionRequirement::Nonland,
+                    link_to_source: false,
+                    face_down: false,
                 }),
             },
         ]),

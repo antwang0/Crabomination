@@ -6,8 +6,8 @@ use crate::card::{
     Keyword, MayPlayDuration, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
     Value,
 };
-use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect};
-use crate::mana::{cost, generic, hybrid, r, w, x, Color};
+use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
+use crate::mana::{b, cost, generic, hybrid, r, u, w, x, Color};
 
 /// Aurelia's Fury — {X}{R}{W} Instant. Deals X damage divided among any number
 /// of targets; each creature dealt damage this way is tapped, and each player
@@ -60,6 +60,49 @@ pub fn nightveil_specter() -> CardDefinition {
                 uncast_penalty: None,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Bane Alley Broker — {1}{U}{B} 0/3 Human Rogue. {T}: draw, then stash a card
+/// from hand face down under it; {U}{B}, {T}: return a stashed card to its
+/// owner's hand.
+pub fn bane_alley_broker() -> CardDefinition {
+    CardDefinition {
+        name: "Bane Alley Broker",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::ExileChosenFromHand {
+                        from: Selector::You,
+                        count: Value::Const(1),
+                        filter: R::Any,
+                        link_to_source: true,
+                        face_down: true,
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[u(), b()]),
+                effect: Effect::Move {
+                    what: Selector::one_of(Selector::CardExiledWithSource),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

@@ -5213,11 +5213,17 @@ pub enum Effect {
     /// [filter] and exile [them]." Same caster-picks-from-hand shape as
     /// `DiscardChosen`, but the chosen cards are exiled permanently (not
     /// linked to a source, unlike `ExileChosenUntilSourceLeaves`). Thought-Knot
-    /// Seer.
+    /// Seer. With `link_to_source` the exiled cards are stamped
+    /// `exiled_with = source` (recoverable via `Selector::CardExiledWithSource`
+    /// — Bane Alley Broker's face-down stash); `face_down` hides them.
     ExileChosenFromHand {
         from: Selector,
         count: Value,
         filter: SelectionRequirement,
+        #[serde(default)]
+        link_to_source: bool,
+        #[serde(default)]
+        face_down: bool,
     },
 
     /// `what` becomes the given card type *in addition* to its other types,

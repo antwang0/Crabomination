@@ -242,6 +242,8 @@ pub fn intimidation_tactics() -> CardDefinition {
             from: Selector::Player(PlayerRef::Target(0)),
             count: Value::ONE,
             filter: R::HasCardType(CardType::Artifact).or(R::HasCardType(CardType::Creature)),
+            link_to_source: false,
+            face_down: false,
         },
         ..Default::default()
     }

@@ -12129,14 +12129,22 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ExileChosenFromHandPending { target_player } => {
+            PendingEffectState::ExileChosenFromHandPending {
+                target_player,
+                link_source,
+                face_down,
+            } => {
                 let DecisionAnswer::Discard(card_ids) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let mut events = Vec::with_capacity(card_ids.len());
                 for cid in card_ids {
-                    if let Some(card) = Self::take_card(&mut self.players[target_player].hand, *cid)
+                    if let Some(mut card) = Self::take_card(&mut self.players[target_player].hand, *cid)
                     {
+                        // Bane Alley Broker's face-down stash — recoverable via
+                        // `Selector::CardExiledWithSource`.
+                        card.exiled_with = link_source;
+                        card.face_down = face_down;
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: *cid });
                     }

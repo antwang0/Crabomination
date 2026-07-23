@@ -91,6 +91,8 @@ pub fn biting_palm_ninja() -> CardDefinition {
                             from: Selector::Player(PlayerRef::EachOpponent),
                             count: Value::Const(1),
                             filter: R::Nonland,
+                            link_to_source: false,
+                            face_down: false,
                         },
                     ])),
                 },

@@ -820,6 +820,8 @@ pub fn agonizing_remorse() -> CardDefinition {
                 from: Selector::Player(PlayerRef::Target(0)),
                 count: Value::ONE,
                 filter: SelectionRequirement::Nonland,
+                link_to_source: false,
+                face_down: false,
             },
             Effect::LoseLife { who: Selector::You, amount: Value::ONE },
         ]),
