@@ -325,6 +325,8 @@ pub enum CounterType {
     Experience,
     Stun,
     Verse,
+    /// Azor's Elocutors — a slow win condition (5 filibuster counters).
+    Filibuster,
     Shield,
     Wish,
     /// Invitation counter — Wedding Announcement's end-step tally.

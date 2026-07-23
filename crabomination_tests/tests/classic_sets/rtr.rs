@@ -1969,3 +1969,20 @@ fn angel_of_serenity_exiles_then_returns() {
     assert!(g.players[1].hand.iter().any(|c| c.id == a) && g.players[1].hand.iter().any(|c| c.id == b),
         "returned to owner's hand when Angel left");
 }
+
+/// Azor's Elocutors accrues a filibuster counter each upkeep and wins at five.
+#[test]
+fn azors_elocutors_filibuster_win() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let az = g.add_card_to_battlefield(0, catalog::azors_elocutors());
+    g.active_player_idx = 0;
+    // Four upkeeps → four counters, no win yet.
+    for _ in 0..4 { g.fire_step_triggers(TurnStep::Upkeep); drain_stack(&mut g); }
+    assert_eq!(g.battlefield_find(az).unwrap().counter_count(CounterType::Filibuster), 4);
+    assert!(!g.is_game_over(), "four counters isn't a win");
+    // A fifth upkeep → win.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.is_game_over(), "reached five filibuster counters → win");
+}

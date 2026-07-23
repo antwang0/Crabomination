@@ -2,12 +2,13 @@
 //! zones) and Guild Feud (dueling top-three reveal). Tests in `classic_sets/rtr`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, ExileReturnZone,
-    Keyword, SelectionRequirement as R, Subtypes, TriggeredAbility,
+    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
+    ExileReturnZone, Keyword, Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility,
+    Value,
 };
-use crate::effect::{Effect, Selector};
+use crate::effect::{Effect, PlayerRef, Selector};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, generic, r, w};
+use crate::mana::{b, cost, generic, hybrid, r, w, Color};
 
 /// Slaughter Games — {2}{B}{R} Sorcery that can't be countered. Choose a
 /// nonland card name; exile every card with that name from target opponent's
@@ -80,6 +81,53 @@ pub fn angel_of_serenity() -> CardDefinition {
                 }),
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Azor's Elocutors — {3}{W/U}{W/U} 3/5 Human Advisor. At your upkeep add a
+/// filibuster counter, then win if it has five or more; a source dealing (combat)
+/// damage to you removes one. (Noncombat damage doesn't remove — approximated.)
+pub fn azors_elocutors() -> CardDefinition {
+    let wu = || hybrid(Color::White, Color::Blue);
+    CardDefinition {
+        name: "Azor's Elocutors",
+        cost: cost(&[generic(3), wu(), wu()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Filibuster,
+                        amount: Value::ONE,
+                    },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(
+                            Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Filibuster },
+                            Value::Const(5),
+                        ),
+                        then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::ControllerDealtCombatDamage, EventScope::SelfSource),
+                effect: Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Filibuster,
+                    amount: Value::ONE,
+                },
+            },
+        ],
         ..Default::default()
     }
 }
