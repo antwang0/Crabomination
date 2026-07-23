@@ -325,7 +325,12 @@ impl GameState {
                     self.skip_first_draw = false;
                 } else {
                     let p = self.active_player_idx;
-                    if !self.draw_one(p, &mut events) {
+                    // CR 504.1 — the turn-based draw-step draw is exempt from
+                    // Notion Thief's redirect ("except the first one they draw").
+                    self.in_turn_based_draw = true;
+                    let drew = self.draw_one(p, &mut events);
+                    self.in_turn_based_draw = false;
+                    if !drew {
                         // CR 104.3c (or the Lab-Man win override). Game-over
                         // check happens inside SBA.
                         self.lose_to_empty_draw(p);

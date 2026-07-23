@@ -1104,6 +1104,15 @@ pub struct GameState {
     /// extra draws aren't themselves re-doubled (CR 614.5). Transient.
     #[serde(skip)]
     pub(crate) in_draw_double: bool,
+    /// Set only around the turn-based draw-step draw so Notion Thief's
+    /// replacement (`OpponentExtraDrawsRedirected`) exempts the first draw of
+    /// each draw step. Transient.
+    #[serde(skip)]
+    pub(crate) in_turn_based_draw: bool,
+    /// Reentrancy guard for the Notion Thief draw redirect (one redirect per
+    /// draw; the thief's own replacement draw isn't re-redirected). Transient.
+    #[serde(skip)]
+    pub(crate) in_draw_redirect: bool,
     /// Reentrancy guard for CR 614.9 damage redirection (one redirect per
     /// damage event). Transient.
     #[serde(skip)]
@@ -1373,6 +1382,8 @@ impl Clone for GameState {
             resolving_spell_caster: self.resolving_spell_caster,
             spell_damage_trigger_fired: self.spell_damage_trigger_fired,
             in_draw_double: self.in_draw_double,
+            in_turn_based_draw: self.in_turn_based_draw,
+            in_draw_redirect: self.in_draw_redirect,
             in_damage_redirect: self.in_damage_redirect,
             in_token_replacement: self.in_token_replacement,
             temporary_control: self.temporary_control.clone(),
@@ -1559,6 +1570,8 @@ impl GameState {
             resolving_spell_caster: None,
             spell_damage_trigger_fired: false,
             in_draw_double: false,
+            in_turn_based_draw: false,
+            in_draw_redirect: false,
             in_damage_redirect: false,
             in_token_replacement: false,
             temporary_control: Vec::new(),
@@ -8650,6 +8663,17 @@ impl GameState {
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
         }
+        // CR 614 — Notion Thief: redirect an opponent's draw (except the
+        // turn-based first draw of their draw step) to the thief's controller.
+        if !self.in_turn_based_draw
+            && !self.in_draw_redirect
+            && let Some(thief) = self.notion_thief_for_draw(p)
+        {
+            self.in_draw_redirect = true;
+            let drew = self.draw_one(thief, events);
+            self.in_draw_redirect = false;
+            return drew;
+        }
         // CR 121.2a — empty-hand draw replacement (Blood Scrivener). Snapshot
         // the bonus before the draw (the hand must be empty at draw time) and
         // apply the extra draws + life loss after, guarded against recursion.
@@ -8721,6 +8745,24 @@ impl GameState {
             }
         }
         drew
+    }
+
+    /// CR 614 — the controller of an opponent-of-`p` Notion Thief whose draw
+    /// redirect (`OpponentExtraDrawsRedirected`) applies to `p`'s draw. Returns
+    /// the first such controller (multiple redirects are a choice; approximated
+    /// as first-found).
+    fn notion_thief_for_draw(&self, p: usize) -> Option<usize> {
+        use crate::effect::StaticEffect;
+        let opps = self.opponents_of(p);
+        self.battlefield
+            .iter()
+            .find(|c| {
+                opps.contains(&c.controller)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, StaticEffect::OpponentExtraDrawsRedirected)
+                    })
+            })
+            .map(|c| c.controller)
     }
 
     /// CR 702.94 — Miracle. If `card_id` was the first card `p` drew this
@@ -14207,6 +14249,8 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerDrawsDoubledIf { .. }
             // Consulted directly in `draw_one`; no continuous-layer effect.
             | StaticEffect::EmptyHandDrawBonus { .. }
+            // Notion Thief — consulted in `draw_one` via `notion_thief_for_draw`.
+            | StaticEffect::OpponentExtraDrawsRedirected
             // ProliferateTwice / PoisonCappedAtOnePerTurn — consulted at the
             // proliferate resolver / `add_poison` funnel.
             | StaticEffect::ProliferateTwice

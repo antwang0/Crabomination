@@ -1085,3 +1085,35 @@ fn beck_call_halves() {
         4, "four Bird tokens",
     );
 }
+
+// ── DGM gap wave 4 ──────────────────────────────────────────────────────────
+
+/// Notion Thief redirects an opponent's non-draw-step draw to its controller.
+#[test]
+fn notion_thief_redirects_extra_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::notion_thief());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    let mut ev = Vec::new();
+    g.draw_one(0, &mut ev); // an extra draw by the opponent
+    assert_eq!(g.players[0].hand.len(), h0, "opponent's extra draw is skipped");
+    assert_eq!(g.players[1].hand.len(), h1 + 1, "thief draws instead");
+}
+
+/// The turn-based first draw of the opponent's draw step is exempt.
+#[test]
+fn notion_thief_exempts_draw_step() {
+    let mut g = two_player_game();
+    g.set_skip_first_draw(false);
+    g.step = TurnStep::Upkeep; // rewind before player 0's draw step
+    g.add_card_to_battlefield(1, catalog::notion_thief());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    while g.step != TurnStep::Draw {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.players[0].hand.len(), h0 + 1, "active player keeps the draw-step draw");
+    assert_eq!(g.players[1].hand.len(), h1, "thief does not steal the first draw");
+}

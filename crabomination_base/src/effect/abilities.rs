@@ -617,6 +617,11 @@ pub enum StaticEffect {
     /// source's controller ("Max speed — if you would draw a card, draw two
     /// cards instead" — Vnwxt, Verbose Host).
     ControllerDrawsDoubledIf { condition: Predicate },
+    /// CR 614 — Notion Thief: if an *opponent* of the source's controller would
+    /// draw a card except the first one they draw in each of their draw steps,
+    /// that player skips the draw and the source's controller draws instead.
+    /// Consulted in `draw_one`, exempting the turn-based draw-step draw.
+    OpponentExtraDrawsRedirected,
     /// CR 121.2a / 614 — "If you would draw a card while you have no cards in
     /// hand, instead draw `extra` additional card(s) and lose `life_loss` life"
     /// (Blood Scrivener). Consulted in `draw_one` only when the source's
