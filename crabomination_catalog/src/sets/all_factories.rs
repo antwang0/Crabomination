@@ -7209,6 +7209,7 @@ static DGM: &[Factory] = &[
     super::dgm::beck_call,
     super::dgm::notion_thief,
     super::dgm::boros_battleshaper,
+    super::dgm::varolz_the_scar_striped,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

@@ -14255,6 +14255,8 @@ fn static_effect_to_effects(
             | StaticEffect::EmptyHandDrawBonus { .. }
             // Notion Thief — consulted in `draw_one` via `notion_thief_for_draw`.
             | StaticEffect::OpponentExtraDrawsRedirected
+            // Varolz — surfaced as granted graveyard abilities, not a layer.
+            | StaticEffect::GraveyardCreaturesHaveScavenge
             // ProliferateTwice / PoisonCappedAtOnePerTurn — consulted at the
             // proliferate resolver / `add_poison` funnel.
             | StaticEffect::ProliferateTwice

@@ -1134,6 +1134,44 @@ fn boros_battleshaper_forces_and_forbids() {
     );
 }
 
+/// Varolz grants scavenge (cost = mana cost) to creature cards in your
+/// graveyard; a non-owner or a Varolz-less graveyard has no granted ability.
+#[test]
+fn varolz_grants_scavenge_to_graveyard_creatures() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    // Without Varolz, a vanilla graveyard creature has no index-0 ability.
+    let orphan = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: orphan, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        }).is_err(),
+        "no scavenge without Varolz",
+    );
+
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::varolz_the_scar_striped());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // 2 power
+    let boost = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Granted scavenge sits at index 0 (Grizzly Bears prints no ability).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dead, ability_index: 0, target: Some(Target::Permanent(boost)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate granted scavenge");
+    drain_stack(&mut g);
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == dead), "scavenged card exiled");
+    assert_eq!(
+        g.battlefield_find(boost).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "+1/+1 counters equal to scavenged power",
+    );
+}
+
 /// The turn-based first draw of the opponent's draw step is exempt.
 #[test]
 fn notion_thief_exempts_draw_step() {

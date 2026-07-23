@@ -779,6 +779,12 @@ pub enum StaticEffect {
     /// the Drowned. Consulted by the flashback-cast path and surfaced in the
     /// graveyard view so the UI offers the recast.
     GraveyardInstantsSorceriesHaveFlashback,
+    /// CR 702.97 — "Each creature card in your graveyard has scavenge. The
+    /// scavenge cost is equal to its mana cost." Varolz, the Scar-Striped. The
+    /// granted scavenge is surfaced as a virtual `from_graveyard` activated
+    /// ability at index ≥ printed_count on each of the controller's graveyard
+    /// creature cards.
+    GraveyardCreaturesHaveScavenge,
     /// "If one or more tokens would be created under your control, twice
     /// that many tokens are created instead." Used by Adrix and Nev,
     /// Twincasters (Quandrix uncommon legendary). Doubling Season uses a

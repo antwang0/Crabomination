@@ -1375,6 +1375,38 @@ impl crate::game::GameState {
         granted.then(|| card.definition.cost.clone())
     }
 
+    /// CR 702.97 — the extra activated abilities a card in `owner`'s graveyard
+    /// has by grant (Varolz grants scavenge, cost = mana cost, to that player's
+    /// creature cards). Surfaced as virtual `from_graveyard` abilities at
+    /// indices ≥ the card's printed activated-ability count. Empty for the
+    /// common case.
+    pub(crate) fn graveyard_granted_abilities(
+        &self,
+        owner: usize,
+        card: &crate::card::CardInstance,
+    ) -> Vec<crate::effect::ActivatedAbility> {
+        use crate::effect::StaticEffect;
+        let mut out = Vec::new();
+        // Varolz — scavenge on creature cards, unless the card prints its own.
+        if card.definition.is_creature()
+            && !card
+                .definition
+                .activated_abilities
+                .iter()
+                .any(|a| a.exile_self_cost && a.from_graveyard)
+            && self.battlefield.iter().any(|c| {
+                c.controller == owner
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::GraveyardCreaturesHaveScavenge))
+            })
+        {
+            out.push(crate::effect::shortcut::scavenge(card.definition.cost.clone()));
+        }
+        out
+    }
+
     /// Note restricted-mana riders from a cast's payment: spending
     /// Cavern-of-Souls mana stamps the cast uncounterable (consumed by
     /// `finalize_cast`).
@@ -9908,10 +9940,19 @@ impl GameState {
 
         let ability: crate::effect::ActivatedAbility = if source_in_gy {
             let owner = source_owner.unwrap();
-            self.players[owner].graveyard.iter()
+            let card = self.players[owner].graveyard.iter()
                 .find(|c| c.id == card_id)
-                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
-                .ok_or(GameError::AbilityIndexOutOfBounds)?
+                .ok_or(GameError::AbilityIndexOutOfBounds)?;
+            let printed_count = card.definition.activated_abilities.len();
+            if ability_index < printed_count {
+                card.definition.activated_abilities[ability_index].clone()
+            } else {
+                // Static-granted graveyard abilities (Varolz's scavenge).
+                self.graveyard_granted_abilities(owner, card)
+                    .into_iter()
+                    .nth(ability_index - printed_count)
+                    .ok_or(GameError::AbilityIndexOutOfBounds)?
+            }
         } else if source_in_hand {
             let owner = source_owner.unwrap();
             self.players[owner].hand.iter()

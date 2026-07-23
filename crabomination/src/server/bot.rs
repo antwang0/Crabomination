@@ -2817,7 +2817,11 @@ fn pick_graveyard_recursion(state: &GameState, seat: usize) -> Option<GameAction
         .collect();
     own.sort_by_key(|c| std::cmp::Reverse(c.power()));
     for card in state.players[seat].graveyard.iter() {
-        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+        // Printed graveyard abilities plus static-granted ones (Varolz's
+        // scavenge) at indices ≥ the printed count.
+        let printed = card.definition.activated_abilities.clone();
+        let granted = state.graveyard_granted_abilities(seat, card);
+        for (idx, ab) in printed.iter().chain(granted.iter()).enumerate() {
             // Graveyard-activated abilities worth firing: an exile-self payoff
             // (Embalm-style value) or a self-return that replays the creature
             // (Llanowar Greenwidow's "{7}{G}: return this from your graveyard").

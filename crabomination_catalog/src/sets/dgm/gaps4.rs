@@ -2,12 +2,13 @@
 //! cards. Tests in `classic_sets/dgm`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
+    TriggeredAbility,
 };
 use crate::effect::{Duration, Selector, StaticEffect};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Notion Thief — {2}{U}{B} 3/1 Human Rogue. Flash. If an opponent would draw a
 /// card except the first one they draw in each of their draw steps, instead that
@@ -64,6 +65,34 @@ pub fn boros_battleshaper() -> CardDefinition {
                     grant(1, Keyword::CantBlock),
                 ])),
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Varolz, the Scar-Striped — {1}{B}{G} 2/2 Legendary Troll Warrior. Each
+/// creature card in your graveyard has scavenge, its scavenge cost equal to its
+/// mana cost. Sacrifice another creature: Regenerate Varolz.
+pub fn varolz_the_scar_striped() -> CardDefinition {
+    CardDefinition {
+        name: "Varolz, the Scar-Striped",
+        cost: cost(&[generic(1), b(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Troll, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Each creature card in your graveyard has scavenge (cost = its mana cost).",
+            effect: StaticEffect::GraveyardCreaturesHaveScavenge,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
         }],
         ..Default::default()
     }
