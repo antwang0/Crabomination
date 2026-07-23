@@ -4864,6 +4864,33 @@ mod tests {
         }
     }
 
+    /// The bot activates Varolz's *granted* scavenge (a virtual graveyard
+    /// ability at index ≥ printed_count), not just printed scavenge cards.
+    #[test]
+    fn bot_scavenges_via_varolz_grant() {
+        use crate::TurnStep;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::varolz_the_scar_striped());
+        let beater = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = pick_graveyard_recursion(&g, 0).expect("bot should Scavenge via Varolz");
+        match action {
+            GameAction::ActivateAbility { card_id, ability_index, target, .. } => {
+                assert_eq!(card_id, dead);
+                assert_eq!(ability_index, 0, "granted scavenge at index 0 (no printed abilities)");
+                // Auto-targets one of the bot's own creatures.
+                let t = matches!(target, Some(crate::game::Target::Permanent(id))
+                    if id == beater || g.battlefield_find(id).is_some_and(|c| c.controller == 0));
+                assert!(t, "scavenge targets an own creature");
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+    }
+
     /// The bot also recognises the real-cost energy form
     /// (`ActivatedAbility.energy_cost`), not just resolve-time `PayEnergy`.
     #[test]

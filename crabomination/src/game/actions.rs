@@ -1407,6 +1407,38 @@ impl crate::game::GameState {
         out
     }
 
+    /// The scavenge cost (CR 702.97) a graveyard creature card can be exiled for
+    /// — its printed scavenge ability, or a Varolz-style grant — so the client
+    /// can offer the activation. `None` for non-scavengers.
+    pub fn effective_scavenge_cost(
+        &self,
+        owner: usize,
+        card: &crate::card::CardInstance,
+    ) -> Option<crate::mana::ManaCost> {
+        let is_scavenge = |ab: &crate::effect::ActivatedAbility| {
+            ab.from_graveyard
+                && ab.exile_self_cost
+                && matches!(
+                    &ab.effect,
+                    crate::effect::Effect::AddCounter {
+                        kind: crate::card::CounterType::PlusOnePlusOne,
+                        ..
+                    }
+                )
+        };
+        card.definition
+            .activated_abilities
+            .iter()
+            .find(|ab| is_scavenge(ab))
+            .map(|ab| ab.mana_cost.clone())
+            .or_else(|| {
+                self.graveyard_granted_abilities(owner, card)
+                    .into_iter()
+                    .find(is_scavenge)
+                    .map(|ab| ab.mana_cost)
+            })
+    }
+
     /// Note restricted-mana riders from a cast's payment: spending
     /// Cavern-of-Souls mana stamps the cast uncounterable (consumed by
     /// `finalize_cast`).

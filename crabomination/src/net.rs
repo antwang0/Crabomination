@@ -1150,6 +1150,11 @@ pub struct GraveyardCardView {
     /// power). `None` otherwise.
     #[serde(default)]
     pub harmonize_cost: Option<crate::mana::ManaCost>,
+    /// Scavenge cost (CR 702.97) if this creature card can be exiled from the
+    /// graveyard for +1/+1 counters — printed (Dreg Mangler) or granted (Varolz).
+    /// `None` otherwise. The activation is a sorcery-speed `ActivateAbility`.
+    #[serde(default)]
+    pub scavenge_cost: Option<crate::mana::ManaCost>,
 }
 
 /// A single card sitting in the shared exile zone. Owners are surfaced so

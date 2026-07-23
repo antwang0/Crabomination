@@ -1028,6 +1028,7 @@ fn graveyard_entry(
             state.players[seat].discarded_this_turn.contains(&card.id)
         }),
         harmonize_cost: card.definition.harmonize_cost().cloned(),
+        scavenge_cost: state.effective_scavenge_cost(seat, card),
     }
 }
 
@@ -2803,6 +2804,25 @@ mod tests {
         let entry = view.players[0].graveyard.iter().find(|c| c.id == crime).unwrap();
         assert!(entry.retrace, "Retrace flagged on graveyard view");
         assert!(entry.flashback_cost.is_none(), "no flashback cost for Raven's Crime");
+    }
+
+    #[test]
+    fn graveyard_view_surfaces_scavenge_grant() {
+        // Varolz grants scavenge to the controller's graveyard creatures; the
+        // view advertises the cost only while a granting source is in play.
+        let mut state = two_player_game();
+        let dead = state.add_card_to_graveyard(0, catalog::grizzly_bears());
+        let before = project(&state, 0);
+        assert!(
+            before.players[0].graveyard.iter().find(|c| c.id == dead).unwrap().scavenge_cost.is_none(),
+            "no scavenge without Varolz",
+        );
+        state.add_card_to_battlefield(0, catalog::varolz_the_scar_striped());
+        let after = project(&state, 0);
+        assert!(
+            after.players[0].graveyard.iter().find(|c| c.id == dead).unwrap().scavenge_cost.is_some(),
+            "scavenge cost surfaced under Varolz",
+        );
     }
 
     #[test]
