@@ -7,7 +7,7 @@
 
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{GameAction, TurnStep};
 use crabomination::game::{drain_stack, two_player_game};
 use crabomination::mana::Color;
 
