@@ -2289,3 +2289,46 @@ fn awakening_of_vitu_ghazi_animates_land() {
     assert_eq!((cp.power, cp.toughness), (9, 9), "0/0 with nine +1/+1 counters");
     assert!(cp.keywords.contains(&Keyword::Haste), "has haste");
 }
+
+/// Sorin grants lifelink on your turn and his −X reanimates an MV-matching
+/// creature as a Vampire.
+#[test]
+fn sorin_lifelink_and_reanimate() {
+    let mut g = two_player_game();
+    let sorin = g.add_card_to_battlefield(0, catalog::sorin_vengeful_bloodlord());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink), "lifelink on your turn");
+    // Graveyard has a MV-2 (Bear) and a MV-5 (Serra Angel). −X with X=2 only
+    // reanimates the mana-value-2 creature (the X gate concretizes the filter).
+    g.add_card_to_graveyard(0, catalog::serra_angel());
+    let gy_angel = g.players[0].graveyard.last().unwrap().id;
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let gy_bear = g.players[0].graveyard.last().unwrap().id;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: sorin, ability_index: 1, target: None, x_value: Some(2) }).expect("-X");
+    drain_stack(&mut g);
+    let reanimated = g.battlefield_find(gy_bear).expect("MV-2 bear reanimated");
+    assert!(reanimated.definition.subtypes.creature_types.contains(&CreatureType::Bear), "the bear returned");
+    assert!(g.battlefield_find(gy_angel).is_none(), "the MV-5 Angel is off-limits at X=2");
+    assert!(g.computed_permanent(gy_bear).unwrap().subtypes.creature_types.contains(&CreatureType::Vampire), "now also a Vampire");
+}
+
+/// Jace's Ruse bounces up to two creatures.
+#[test]
+fn jaces_ruse_bounces_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ruse = g.add_card_to_hand(0, catalog::jaces_ruse());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: ruse, target: Some(Target::Permanent(a)), additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both bounced");
+    assert_eq!(g.players[1].hand.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 2, "both in owner's hand");
+}

@@ -2727,6 +2727,70 @@ pub fn rescuer_sphinx() -> CardDefinition {
     }
 }
 
+/// Sorin, Vengeful Bloodlord — {2}{W}{B} loyalty 4. During your turn, your
+/// creatures and planeswalkers have lifelink. +2: 1 damage to target player or
+/// planeswalker. −X: reanimate a creature card with mana value X from your
+/// graveyard; it becomes a Vampire too.
+pub fn sorin_vengeful_bloodlord() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, creatures and planeswalkers you control have lifelink.",
+            effect: StaticEffect::WhileYourTurn {
+                inner: Box::new(StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent((R::Creature.or(R::Planeswalker)).and(R::ControlledByYou)),
+                    keyword: Keyword::Lifelink,
+                }),
+            },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility { loyalty_cost: 2, effect: deal(1, target_filtered(R::Player.or(R::Planeswalker))), ..Default::default() },
+            LoyaltyAbility {
+                x_cost: true,
+                // Reanimate a creature card with mana value X from your
+                // graveyard as a resolution pick (X concretizes the filter).
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::one_of(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: crate::card::Zone::Graveyard,
+                            filter: R::Creature.and(R::ManaValueExactlyXFromCost),
+                        }),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::AddCreatureTypes { what: Selector::LastMoved, creature_types: vec![CreatureType::Vampire], duration: Duration::Permanent },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..walker("Sorin, Vengeful Bloodlord", cost(&[generic(2), w(), b()]), PlaneswalkerSubtype::Sorin, 4)
+    }
+}
+
+/// Jace's Ruse — {3}{U}{U} Sorcery. Return up to two target creatures to their
+/// owners' hands, then you may tutor a card named Jace, Arcane Strategist from
+/// your library and/or graveyard to hand.
+pub fn jaces_ruse() -> CardDefinition {
+    CardDefinition {
+        name: "Jace's Ruse",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::Creature,
+                effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) }),
+            },
+            Effect::SearchLibraryOrGraveyard {
+                who: PlayerRef::You,
+                filter: R::HasName("Jace, Arcane Strategist".into()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Ajani, the Greathearted — {2}{G}{W} loyalty 5. Static: creatures you control
 /// have vigilance. +1: gain 3 life. −2: +1/+1 counter on each creature you
 /// control and a loyalty counter on each other planeswalker you control.

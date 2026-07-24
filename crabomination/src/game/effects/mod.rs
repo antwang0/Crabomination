@@ -18269,6 +18269,10 @@ impl GameState {
                 // aggregate cards from every matching seat (Soul-Guide
                 // Lantern's mass-graveyard exile, Bojuka Bog–style effects,
                 // future Windfall-shape primitives all need this).
+                // Substitute the resolving ability's X into the filter so
+                // `ManaValueExactlyXFromCost`-style atoms concretize (Sorin's
+                // −X "creature card with mana value X").
+                let filter = &filter.resolve_x(ctx.x_value);
                 let players = self.resolve_players(who, ctx);
                 let mut out: Vec<EntityRef> = Vec::new();
                 for p in players {
