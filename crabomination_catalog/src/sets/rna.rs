@@ -1316,3 +1316,220 @@ pub fn silhana_wayfinder() -> CardDefinition {
         ..body("Silhana Wayfinder", cost(&[generic(1), g()]), 2, 1, vec![CreatureType::Elf, CreatureType::Scout], vec![])
     }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// Batch 5 (2026-07-24): auras, guildmages, ETB value, addendum spells
+// ══════════════════════════════════════════════════════════════════════════
+
+/// Aura helper: attaches to a creature and grants a flat P/T + keyword bonus.
+/// `card_kw` are keywords on the Aura spell itself (e.g. Flash).
+fn aura(name: &'static str, mana: crate::mana::ManaCost, power: i32, toughness: i32, granted: Vec<Keyword>, card_kw: Vec<Keyword>) -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        keywords: card_kw,
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus { power, toughness, keywords: granted, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Basilica Bell-Haunt — {W}{W}{B}{B} 3/4 Spirit. ETB each opponent discards a
+/// card and you gain 3 life.
+pub fn basilica_bell_haunt() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Discard { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE, random: false },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        ]))],
+        ..body("Basilica Bell-Haunt", cost(&[w(), w(), b(), b()]), 3, 4, vec![CreatureType::Spirit], vec![])
+    }
+}
+
+/// Orzhov Enforcer — {1}{B} 1/2 Human Rogue with deathtouch and afterlife 1.
+pub fn orzhov_enforcer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![afterlife(1)],
+        ..body("Orzhov Enforcer", cost(&[generic(1), b()]), 1, 2, vec![CreatureType::Human, CreatureType::Rogue], vec![Keyword::Deathtouch])
+    }
+}
+
+/// Bloodmist Infiltrator — {2}{B} 3/1 Vampire. Whenever it attacks, you may
+/// sacrifice another creature; if you do, it can't be blocked this turn.
+pub fn bloodmist_infiltrator() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::MaySacrifice {
+            description: "Sacrifice another creature: this can't be blocked this turn.".into(),
+            filter: R::Creature.and(R::OtherThanSource),
+            count: Value::ONE,
+            then: Box::new(Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Unblockable, duration: Duration::EndOfTurn }),
+            else_: None,
+        })],
+        ..body("Bloodmist Infiltrator", cost(&[generic(2), b()]), 3, 1, vec![CreatureType::Vampire], vec![])
+    }
+}
+
+/// Lawmage's Binding — {1}{W}{U} Aura with flash. Enchanted creature can't
+/// attack or block, and its activated abilities can't be activated.
+pub fn lawmages_binding() -> CardDefinition {
+    aura("Lawmage's Binding", cost(&[generic(1), w(), u()]), 0, 0,
+        vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateAbilities], vec![Keyword::Flash])
+}
+
+/// Sky Tether — {W} Aura. Enchanted creature has defender and loses flying.
+pub fn sky_tether() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Sky Tether",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::Defender], remove_keywords: vec![Keyword::Flying], ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Slimebind — {1}{U} Aura with flash. Enchanted creature gets -4/-0.
+pub fn slimebind() -> CardDefinition {
+    aura("Slimebind", cost(&[generic(1), u()]), -4, 0, vec![], vec![Keyword::Flash])
+}
+
+/// Sentinel's Mark — {1}{W} Aura with flash. Enchanted creature gets +1/+2 and
+/// has vigilance. Addendum — if cast during your main phase, it gains lifelink
+/// until end of turn.
+pub fn sentinels_mark() -> CardDefinition {
+    let mut def = aura("Sentinel's Mark", cost(&[generic(1), w()]), 1, 2, vec![Keyword::Vigilance], vec![Keyword::Flash]);
+    // Addendum: the engine auto-attaches the aura, so grant lifelink to the
+    // host via a self-ETB trigger (its `attached_to` link is live by then).
+    def.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::If {
+            cond: Predicate::YourMainPhase,
+            then: Box::new(Effect::GrantKeyword {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::Noop),
+        },
+    }];
+    def
+}
+
+/// Sphinx of Foresight — {2}{U}{U} 4/4 Sphinx with flying. At the beginning of
+/// your upkeep, scry 1. (The opening-hand reveal → first-upkeep scry 3 rider is
+/// approximated by the recurring upkeep scry.)
+pub fn sphinx_of_foresight() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        ..body("Sphinx of Foresight", cost(&[generic(2), u(), u()]), 4, 4, vec![CreatureType::Sphinx], vec![Keyword::Flying])
+    }
+}
+
+/// Cult Guildmage — {B}{R} 2/2 Human Shaman. {3}{B}, {T}: target player
+/// discards (sorcery-speed). {R}, {T}: deal 1 to target opponent or planeswalker.
+pub fn cult_guildmage() -> CardDefinition {
+    let opp_or_pw = R::OpponentPlayer.or(R::HasCardType(CardType::Planeswalker));
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), b()]),
+                tap_cost: true,
+                sorcery_speed: true,
+                effect: Effect::Discard { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE, random: false },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[r()]),
+                tap_cost: true,
+                effect: deal(1, target_filtered(opp_or_pw)),
+                ..Default::default()
+            },
+        ],
+        ..body("Cult Guildmage", cost(&[b(), r()]), 2, 2, vec![CreatureType::Human, CreatureType::Shaman], vec![])
+    }
+}
+
+/// Syndicate Guildmage — {W}{B} 2/2 Human Cleric. {1}{W}, {T}: tap target
+/// creature with power 4+. {4}{B}, {T}: deal 2 to target opponent or planeswalker.
+pub fn syndicate_guildmage() -> CardDefinition {
+    let opp_or_pw = R::OpponentPlayer.or(R::HasCardType(CardType::Planeswalker));
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), w()]),
+                tap_cost: true,
+                effect: Effect::Tap { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), b()]),
+                tap_cost: true,
+                effect: deal(2, target_filtered(opp_or_pw)),
+                ..Default::default()
+            },
+        ],
+        ..body("Syndicate Guildmage", cost(&[w(), b()]), 2, 2, vec![CreatureType::Human, CreatureType::Cleric], vec![])
+    }
+}
+
+/// Expose to Daylight — {2}{W} Instant. Destroy target artifact or enchantment.
+/// Scry 1.
+pub fn expose_to_daylight() -> CardDefinition {
+    CardDefinition {
+        name: "Expose to Daylight",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rally to Battle — {3}{W} Instant. Creatures you control get +1/+3 until end
+/// of turn. Untap them.
+pub fn rally_to_battle() -> CardDefinition {
+    CardDefinition {
+        name: "Rally to Battle",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)), power: Value::ONE, toughness: Value::Const(3), duration: Duration::EndOfTurn },
+            Effect::Untap { what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)), up_to: None },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Code of Constraint — {2}{U} Instant. Target creature gets -4/-0 until end of
+/// turn. Draw a card. Addendum — if cast during your main phase, tap that
+/// creature and it doesn't untap during its controller's next untap step.
+pub fn code_of_constraint() -> CardDefinition {
+    CardDefinition {
+        name: "Code of Constraint",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(-4), toughness: Value::ZERO, duration: Duration::EndOfTurn },
+            draw(1),
+            Effect::If {
+                cond: Predicate::YourMainPhase,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Tap { what: Selector::Target(0) },
+                    Effect::SkipNextUntap { what: Selector::Target(0) },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}

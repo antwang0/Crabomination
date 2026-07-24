@@ -975,3 +975,164 @@ fn gyre_engineer_untaps_on_adapt() {
     drain_stack(&mut g);
     assert!(!g.battlefield_find(eng).unwrap().tapped, "engineer untapped by adapt trigger");
 }
+
+// ── Batch 5 (2026-07-24) functionality tests ─────────────────────────────────
+
+/// Basilica Bell-Haunt makes each opponent discard and gains 3.
+#[test]
+fn basilica_bell_haunt_discard_and_gain() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    let hand = g.players[1].hand.len();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::basilica_bell_haunt().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[0].life, life + 3, "gained 3");
+    assert_eq!(g.players[1].hand.len(), hand - 1, "opponent discarded");
+}
+
+/// Sky Tether gives defender and removes flying.
+#[test]
+fn sky_tether_grounds_flyer() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::wind_drake()); // 2/2 flying
+    let tether = g.add_card_to_hand(0, catalog::sky_tether());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell { card_id: tether, target: Some(Target::Permanent(flyer)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let p = g.computed_permanent(flyer).unwrap();
+    assert!(!p.keywords.contains(&Keyword::Flying), "loses flying");
+    assert!(p.keywords.contains(&Keyword::Defender), "has defender");
+}
+
+/// Slimebind saps -4/-0.
+#[test]
+fn slimebind_saps_power() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let aura = g.add_card_to_hand(0, catalog::slimebind());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: aura, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 2, "6/4 → 2/4");
+}
+
+/// Sentinel's Mark grants +1/+2 and vigilance, plus lifelink on a main-phase cast.
+#[test]
+fn sentinels_mark_addendum_lifelink() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::sentinels_mark());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let p = g.computed_permanent(bear).unwrap();
+    assert_eq!((p.power, p.toughness), (3, 4), "+1/+2");
+    assert!(p.keywords.contains(&Keyword::Vigilance), "vigilance");
+    assert!(p.keywords.contains(&Keyword::Lifelink), "addendum lifelink on main-phase cast");
+}
+
+/// Lawmage's Binding locks a creature down and has flash.
+#[test]
+fn lawmages_binding_locks_down() {
+    assert!(catalog::lawmages_binding().keywords.contains(&Keyword::Flash), "has flash");
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::lawmages_binding());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: aura, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let p = g.computed_permanent(foe).unwrap();
+    assert!(p.keywords.contains(&Keyword::CantAttack) && p.keywords.contains(&Keyword::CantBlock), "can't attack or block");
+}
+
+/// Syndicate Guildmage taps a big creature.
+#[test]
+fn syndicate_guildmage_taps_big() {
+    let mut g = two_player_game();
+    let gm = g.add_card_to_battlefield(0, catalog::syndicate_guildmage());
+    g.clear_sickness(gm);
+    let foe = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4, power 4+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility { card_id: gm, ability_index: 0, target: Some(Target::Permanent(foe)), additional_targets: Vec::new(), x_value: None }).expect("tap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "big creature tapped");
+}
+
+/// Cult Guildmage pings an opponent.
+#[test]
+fn cult_guildmage_pings() {
+    let mut g = two_player_game();
+    let gm = g.add_card_to_battlefield(0, catalog::cult_guildmage());
+    g.clear_sickness(gm);
+    let opp = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility { card_id: gm, ability_index: 1, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "1 damage to opponent");
+}
+
+/// Rally to Battle pumps +1/+3 and untaps your creatures.
+#[test]
+fn rally_to_battle_pump_untap() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let cast = g.add_card_to_hand(0, catalog::rally_to_battle());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let p = g.computed_permanent(bear).unwrap();
+    assert_eq!((p.power, p.toughness), (3, 5), "+1/+3");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
+}
+
+/// Expose to Daylight destroys an enchantment.
+#[test]
+fn expose_to_daylight_destroys() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let ench = g.add_card_to_battlefield(1, catalog::pacifism());
+    let cast = g.add_card_to_hand(0, catalog::expose_to_daylight());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(ench)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+}
+
+/// Orzhov Enforcer has deathtouch and afterlife 1.
+#[test]
+fn orzhov_enforcer_afterlife() {
+    let mut g = two_player_game();
+    let e = g.add_card_to_battlefield(0, catalog::orzhov_enforcer());
+    g.remove_to_graveyard_with_triggers(e);
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter().filter(|c| c.definition.name.contains("Spirit")).count();
+    assert_eq!(spirits, 1, "afterlife 1 made a Spirit token");
+}

@@ -2874,6 +2874,10 @@ pub struct EquipBonus {
     pub toughness: i32,
     /// Keywords granted to the equipped creature (layer 6).
     pub keywords: Vec<Keyword>,
+    /// Keywords REMOVED from the equipped creature (layer 6 — CR 613.1f).
+    /// "Enchanted creature loses flying" (Sky Tether) and similar auras.
+    #[serde(default)]
+    pub remove_keywords: Vec<Keyword>,
     /// Keywords granted to the equipped creature only during the source's
     /// controller's turn (layer 6, gated on active player). Dragoon's Lance —
     /// "During your turn, equipped creature has flying."

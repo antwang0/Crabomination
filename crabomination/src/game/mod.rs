@@ -4959,6 +4959,17 @@ impl GameState {
                     modification: Modification::AddKeyword(kw.clone()),
                 });
             }
+            for kw in &bonus.remove_keywords {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(vec![target]),
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::RemoveKeyword(kw.clone()),
+                });
+            }
             // "During your turn, equipped creature has [keyword]" (Dragoon's
             // Lance) — layer-6 grant gated on the source controller's turn.
             if self.active_player_idx == card.controller {
