@@ -2706,3 +2706,39 @@ fn chandra_fire_artisan_pings_on_loyalty_loss() {
     assert_eq!(g.battlefield_find(chandra).unwrap().counter_count(CounterType::Loyalty), 1, "lost 3 loyalty");
     assert_eq!(g.players[1].life, opp_life - 3, "Chandra dealt 3 to the opponent");
 }
+
+/// Ral, Storm Conduit pings when you cast an instant or sorcery.
+#[test]
+fn ral_storm_conduit_pings_on_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ral_storm_conduit());
+    g.add_card_to_library(0, catalog::forest()); // Opt's draw
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    let opp = g.players[1].life;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell { card_id: opt, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast Opt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "Ral pinged the opponent on the cast");
+}
+
+/// Ral's −2 copies your next instant/sorcery, and the copy pings too.
+#[test]
+fn ral_storm_conduit_copy_pings_again() {
+    let mut g = two_player_game();
+    let ral = g.add_card_to_battlefield(0, catalog::ral_storm_conduit());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); } // Opt + its copy each draw
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    let opp = g.players[1].life;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: ral, ability_index: 1, target: None, x_value: None }).expect("-2");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell { card_id: opt, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast Opt");
+    drain_stack(&mut g);
+    // One ping for the cast, one for the copy.
+    assert_eq!(g.players[1].life, opp - 2, "cast and copy each pinged");
+}

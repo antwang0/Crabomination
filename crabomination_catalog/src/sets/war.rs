@@ -3504,6 +3504,43 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
     }
 }
 
+/// Ral, Storm Conduit — {2}{U}{R} loyalty 4. Whenever you cast or copy an
+/// instant or sorcery, deal 1 to target opponent or planeswalker. +2: scry 1.
+/// −2: copy your next instant/sorcery this turn (may choose new targets).
+pub fn ral_storm_conduit() -> CardDefinition {
+    let ping = |kind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: instant_or_sorcery(),
+        }),
+        effect: Effect::DealDamage {
+            to: target_filtered(R::OpponentPlayer.or(R::Planeswalker)),
+            amount: Value::ONE,
+        },
+    };
+    CardDefinition {
+        triggered_abilities: vec![ping(EventKind::SpellCast), ping(EventKind::SpellCopied)],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::OnYourNextInstantSorceryThisTurn {
+                    body: Box::new(Effect::CopySpellMayChooseTargets {
+                        what: Selector::TriggerSource,
+                        count: Value::ONE,
+                    }),
+                },
+                ..Default::default()
+            },
+        ],
+        ..walker("Ral, Storm Conduit", cost(&[generic(2), u(), r()]), PlaneswalkerSubtype::Ral, 4)
+    }
+}
+
 /// Chandra, Fire Artisan — {2}{R}{R} loyalty 4. Whenever loyalty counters are
 /// removed from her, she deals that much damage to target opponent or
 /// planeswalker. +1: impulse one. −7: impulse seven.

@@ -1751,7 +1751,7 @@ pub enum GameEvent {
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
     PlaneswalkerDied { card_id: CardId },
-    SpellsCopied { original: CardId, count: u32 },
+    SpellsCopied { original: CardId, count: u32, controller: usize },
     SurveilPerformed { player: usize, looked_at: usize, graveyarded: usize },
     /// A card left `player`'s graveyard (returned to hand, battlefield, or
     /// exiled from there). Fires per card removed. Used by Strixhaven

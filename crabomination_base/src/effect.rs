@@ -1797,6 +1797,10 @@ pub enum EventKind {
     LandPlayed,
     /// A spell was cast.
     SpellCast,
+    /// A spell was copied (CR 707.10 — the copy is created on the stack). Scope
+    /// by `YourControl` for "whenever you copy …"; filter the copied spell via
+    /// `Predicate::EntityMatches { what: TriggerSource, .. }`. Ral, Storm Conduit.
+    SpellCopied,
     /// A creature was declared as an attacker.
     Attacks,
     /// CR 508 — "Whenever you attack": fires **once** per combat for the

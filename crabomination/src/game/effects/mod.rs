@@ -495,7 +495,7 @@ impl GameState {
                 uncounterable: true, // copies can't be countered
             });
         }
-        events.push(GameEvent::SpellsCopied { original: cid, count: n as u32 });
+        events.push(GameEvent::SpellsCopied { original: cid, count: n as u32, controller: caster });
     }
 
     /// Helper for `copy_stack_spell`: enumerate legal targets for the

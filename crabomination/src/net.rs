@@ -2437,7 +2437,7 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PlaneswalkerDied { card_id } => {
                 GameEventWire::PlaneswalkerDied { card_id: *card_id }
             }
-            GameEvent::SpellsCopied { original, count } => GameEventWire::SpellsCopied {
+            GameEvent::SpellsCopied { original, count, .. } => GameEventWire::SpellsCopied {
                 original: *original,
                 count: *count,
             },

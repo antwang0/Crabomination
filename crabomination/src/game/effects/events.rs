@@ -34,6 +34,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. }) => true,
         (EventKind::LandPlayed, GameEvent::LandPlayed { .. }) => true,
         (EventKind::SpellCast, GameEvent::SpellCast { .. }) => true,
+        (EventKind::SpellCopied, GameEvent::SpellsCopied { .. }) => true,
         (EventKind::Attacks, GameEvent::AttackerDeclared(_)) => true,
         // `Blocks` fires from the blocker's side ("whenever this creature
         // blocks"). `BecomesBlocked` fires from the attacker's side
@@ -532,6 +533,8 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // Player-directed damage: the damaged player is the event actor
         // (a card-directed DamageDealt has to_player: None → falls through).
         GameEvent::DamageDealt { to_player: Some(p), .. } => Some(*p),
+        // The copier is the event actor (Ral, Storm Conduit's "cast or copy").
+        GameEvent::SpellsCopied { controller, .. } => Some(*controller),
         // For BecameTarget the "actor" is the caster of the spell or
         // ability that picked the target. This drives YourControl /
         // OpponentControl scope checks (Tenured Concocter wants
@@ -575,6 +578,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
 pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<EntityRef> {
     match event {
         GameEvent::SpellCast { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::SpellsCopied { original, .. } => Some(EntityRef::Card(*original)),
         GameEvent::PermanentEntered { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentExiled { card_id } => Some(EntityRef::Card(*card_id)),

@@ -1723,7 +1723,7 @@ impl GameState {
                 mana_spent: 0,
                 uncounterable: true, // copies can't be countered
             });
-            events.push(GameEvent::SpellsCopied { original: new_id, count: 1 });
+            events.push(GameEvent::SpellsCopied { original: new_id, count: 1, controller: p });
         }
         events
     }
