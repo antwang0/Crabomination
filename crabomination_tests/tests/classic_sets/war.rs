@@ -2240,3 +2240,52 @@ fn dovin_taxes_noncreature_spells() {
     g.players[1].mana_pool.add_colorless(1);
     assert!(g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).is_ok(), "creature spell untaxed");
 }
+
+/// Ajani, the Greathearted grants vigilance and his −2 pumps your team and
+/// bumps your other planeswalkers.
+#[test]
+fn ajani_greathearted_anthem_and_minus_two() {
+    let mut g = two_player_game();
+    let ajani = g.add_card_to_battlefield(0, catalog::ajani_the_greathearted());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other_pw = g.add_card_to_battlefield(0, catalog::jace_arcane_strategist()); // loyalty 4
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance), "team has vigilance");
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: ajani, ability_index: 1, target: None, x_value: None }).expect("-2");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "creature grew");
+    assert_eq!(g.battlefield_find(other_pw).unwrap().counter_count(CounterType::Loyalty), 5, "other walker gained loyalty");
+    assert_eq!(g.battlefield_find(ajani).unwrap().counter_count(CounterType::Loyalty), 3, "Ajani itself unaffected (5-2)");
+}
+
+/// Davriel pings a hellbent opponent at their upkeep; a full-handed opponent is
+/// spared.
+#[test]
+fn davriel_pings_hellbent_opponent() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::davriel_rogue_shadowmage());
+    // Opponent with an empty hand takes 2 at their upkeep.
+    g.players[1].hand.clear();
+    g.active_player_idx = 1;
+    let life = g.players[1].life;
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep { g.perform_action(GameAction::PassPriority).expect("pass"); }
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "hellbent opponent pinged for 2");
+}
+
+/// Awakening of Vitu-Ghazi turns a land into a 9/9 hasty Elemental that's still
+/// a land.
+#[test]
+fn awakening_of_vitu_ghazi_animates_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    cast_at_target(&mut g, catalog::awakening_of_vitu_ghazi(), Target::Permanent(land), &[(Color::Green, 2)], 3);
+    let cp = g.computed_permanent(land).unwrap();
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert_eq!((cp.power, cp.toughness), (9, 9), "0/0 with nine +1/+1 counters");
+    assert!(cp.keywords.contains(&Keyword::Haste), "has haste");
+}

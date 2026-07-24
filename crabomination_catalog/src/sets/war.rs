@@ -2727,6 +2727,70 @@ pub fn rescuer_sphinx() -> CardDefinition {
     }
 }
 
+/// Ajani, the Greathearted — {2}{G}{W} loyalty 5. Static: creatures you control
+/// have vigilance. +1: gain 3 life. −2: +1/+1 counter on each creature you
+/// control and a loyalty counter on each other planeswalker you control.
+pub fn ajani_the_greathearted() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![your_creatures_have(Keyword::Vigilance, "Creatures you control have vigilance.")],
+        loyalty_abilities: vec![
+            LoyaltyAbility { loyalty_cost: 1, effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) }, ..Default::default() },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter { what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                    Effect::AddCounter { what: Selector::EachPermanent(R::Planeswalker.and(R::ControlledByYou).and(R::OtherThanSource)), kind: CounterType::Loyalty, amount: Value::ONE },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..walker("Ajani, the Greathearted", cost(&[generic(2), g(), w()]), PlaneswalkerSubtype::Ajani, 5)
+    }
+}
+
+/// Davriel, Rogue Shadowmage — {2}{B} loyalty 3. At each opponent's upkeep, if
+/// that player has one or fewer cards in hand, deal 2 to them. −1: target player
+/// discards a card.
+pub fn davriel_rogue_shadowmage() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::OpponentControl)
+                .with_filter(Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::ActivePlayer), Value::ONE)),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::ActivePlayer), amount: Value::Const(2) },
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -1,
+            effect: Effect::Discard { who: target_filtered(R::Player), amount: Value::ONE, random: false },
+            ..Default::default()
+        }],
+        ..walker("Davriel, Rogue Shadowmage", cost(&[generic(2), b()]), PlaneswalkerSubtype::Davriel, 3)
+    }
+}
+
+/// Awakening of Vitu-Ghazi — {3}{G}{G} Instant. Put nine +1/+1 counters on
+/// target land you control; it becomes a 0/0 Elemental creature with haste
+/// (a 9/9 with the counters), still a land. (The legendary + name riders are
+/// cosmetic and dropped.)
+pub fn awakening_of_vitu_ghazi() -> CardDefinition {
+    CardDefinition {
+        name: "Awakening of Vitu-Ghazi",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: target_filtered(R::Land.and(R::ControlledByYou)), kind: CounterType::PlusOnePlusOne, amount: Value::Const(9) },
+            Effect::BecomeCreature {
+                what: Selector::Target(0),
+                power: Value::ZERO,
+                toughness: Value::ZERO,
+                creature_types: vec![CreatureType::Elemental],
+                keywords: vec![Keyword::Haste],
+                duration: Duration::Permanent,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Dovin, Hand of Control — {2}{W/U} loyalty 5. Static: opponents' artifact,
 /// instant, and sorcery spells cost {1} more. −1: neutralize an opponent's
 /// permanent. (The −1's prevention is modeled combat-only for the turn.)
