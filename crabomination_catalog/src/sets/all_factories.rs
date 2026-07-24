@@ -9725,6 +9725,20 @@ static RAV: &[Factory] = &[
     super::rav::lightning_helix,
     super::rav::putrefy,
 ];
+static RNA: &[Factory] = &[
+    super::rna::catacomb_crocodile,
+    super::rna::azorius_knight_arbiter,
+    super::rna::carrion_imp,
+    super::rna::civic_stalwart,
+    super::rna::blade_juggler,
+    super::rna::devkarin_dissident,
+    super::rna::passwall_adept,
+    super::rna::rakdos_firewheeler,
+    super::rna::gyre_engineer,
+    super::rna::bring_to_trial,
+    super::rna::burn_bright,
+    super::rna::applied_biomancy,
+];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,
     super::rtr::ghor_clan_rampager,
@@ -14930,6 +14944,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("pc2", PC2),
     ("por", POR),
     ("rav", RAV),
+    ("rna", RNA),
     ("rtr", RTR),
     ("shm", SHM),
     ("sos", SOS),
