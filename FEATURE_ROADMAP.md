@@ -16,10 +16,21 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **RNA wave (modern_decks, this run, 75 cards):** Locket cycle, adapt/riot/
+- **RNA wave (modern_decks, this run, 95 cards):** Locket cycle, adapt/riot/
   spectacle/afterlife/addendum commons + uncommons, flash Auras, guildmages,
   the RNA split cycle (Depose/Consecrate/Warrant/Thrash/Collision/Carnival),
   wraths (Kaya's Wrath), Gate/Domri/Dovin payoffs, High Alert.
+  Batch 9 (+20): Rix Maadi Reveler, Rafter Demon, Hackrobat, Gruul Spellbreaker,
+  Smelt-Ward Ignus, Sphinx of New Prahv, Pestilent Spirit, Scuttlegator,
+  Angelic Exaltation, Ethereal Absolution, Cry of the Carnarium, Pitiless
+  Pontiff, Unbreakable Formation, Flames of the Raze-Boar, Swirling Torrent,
+  Mesmerizing Benthid, Immolation Shaman, Screaming Shield, Clear the Stage,
+  Domri's Nodorog. New engine:
+  `StaticEffect::TaxOpponentSpellsTargetingThis` (Sphinx of New Prahv) and
+  `StaticEffect::YourISSpellsHaveDeathtouch` (Pestilent Spirit — resolving I/S
+  routes its damage through the deathtouch SBA via `resolving_spell_deathtouch_seat`,
+  mirroring the lifelink-seat path). CR conformance in `core_rules/cr_recent33`
+  (601.2f target tax, 702.2c spell-deathtouch, 508.1a defender-bypass).
   New engine: `EventKind::AdaptAbilityActivated` (CR 702.108c — adapt-ability
   activation event, `Effect::is_adapt` shape detector; finishes Gyre Engineer),
   `EquipBonus.remove_keywords` (CR 613.1f "loses flying" Auras — Sky Tether),

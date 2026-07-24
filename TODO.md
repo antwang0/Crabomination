@@ -711,14 +711,29 @@ factory doc comment:
 
 - **RNA batch-7 leftovers (each needs one primitive):** Knight of Sorrows /
   Lumbering Battlement "can block an additional creature" (the multi-block item
-  below); Pestilent Spirit's "instant and sorcery spells you control have
-  deathtouch" (a controller-scoped damage-source static, wire into
-  `deal_damage_to_from` lethality); Persistent Petitioners' "tap four untapped
+  below); Persistent Petitioners' "tap four untapped
   Advisors: mill 12" (a tap-N-other-of-a-type activation cost); Rakdos, the
   Showstopper (per-creature coin-flip destroy filtered by type); Teysa Karlov
   (extra death-trigger + token vigilance/lifelink static). Opponent-threat
   displays in `player_stats.rs` still value a High Alert/Doran wall by power
-  (0), not toughness — refine when convenient.
+  (0), not toughness — refine when convenient. (Pestilent Spirit's I/S-spell
+  deathtouch shipped in batch 9 via `StaticEffect::YourISSpellsHaveDeathtouch`.)
+- **RNA batch-9 deferrals (each needs one primitive):** Bolrac-Clan Crusher —
+  "remove a +1/+1 counter from a creature you control" as an activation cost
+  (`remove_counter_cost` on `ActivatedAbility`); Galloping Lizrog — "remove any
+  number of counters from among your creatures, put twice that many on this"
+  (a remove-and-double effect); Combine Guildmage — a *this-turn* "creatures you
+  control enter with an extra +1/+1 counter" (turn-scoped enters-with
+  replacement); Nikya of the Old Ways — a land-mana doubler ("whenever you tap a
+  land for mana, add one mana of any type it produced") + `ControllerCantCastNoncreatureSpells`;
+  Forbidding Spirit — an until-your-next-turn Propaganda tax (turn-scoped
+  `AttackTaxToController`); Font of Agonies — blood counters + a "whenever you
+  pay life" trigger; Verity Circle — a "creature an opponent controls becomes
+  tapped (not as an attacker)" event; Angel of Grace — install a damage-to-1
+  static until end of turn (`DamageWontReduceControllerLifeBelowOne` as a
+  one-shot); Rhythm of the Wild — "nontoken creatures you control have riot" (a
+  riot-granting anthem); Ravager Wurm mode 2 — "destroy a land with a non-mana
+  activated ability" (a land-with-nonmana-ability target filter).
 - **Multi-block ("can block any number of creatures", CR 509.1g).** `block_map`
   is `HashMap<CardId, CardId>` (one attacker per blocker); the declare-blockers
   `seen_blockers` gate rejects a blocker appearing twice. Supporting Guardian of

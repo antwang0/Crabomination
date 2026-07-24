@@ -2049,6 +2049,8 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::CopySpellMayChooseTargets { .. } => "Copy spell (new targets)",
         Effect::ChooseNewTargetsForSpell { .. } => "Choose new targets",
         Effect::GainControl { .. } => "Gain control",
+        Effect::ExileIfWouldDieThisTurn { .. } => "Exile if it would die",
+        Effect::ChooseModesCast { .. } => "Choose modes",
         Effect::ResetCreature { .. } => "Reset creature",
         Effect::BecomeBasicLand { .. } => "Become basic land",
         Effect::Attach { .. } => "Attach",
