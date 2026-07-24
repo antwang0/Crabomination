@@ -4479,6 +4479,16 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Dual-pile exile-return-to-hand linked to LTB** — Fear of Abduction (the
     additional-cost-exiled own creature and the ETB-exiled opponent creature
     both return to their owners' hands when it leaves).
+- ⏳ **Newly-noticed primitives (RNA batch):**
+  - **Your instants/sorceries have deathtouch** static — Pestilent Spirit
+    ("Instant and sorcery spells you control have deathtouch"). No static
+    grants deathtouch to a player's I/S spell damage yet.
+  - **Opponent activates a nonmana ability of an artifact/creature/land →
+    ping** — Immolation Shaman. `EventKind::AbilityActivated` exists but there
+    is no scope/filter for "source is an artifact/creature/land, nonmana."
+  - **Adapt-activation trigger** — Gyre Engineer ("Whenever you activate an
+    adapt ability, untap this"); needs an adapt-tagged `AbilityActivated`
+    hook. (Its `{T}: Add {G}{U}` mana ability already ships.)
 - ⏳ **Newly-noticed primitives (discovered during the DSK/BLB gap batch):**
   - **Gift on a permanent (creature/artifact)** — the gift's `gifted_effect`
     resolves only on the instant/sorcery spell path; a Gift *creature*
@@ -4506,8 +4516,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     Felling Blow. The `Selector::Target(0/1)` shape works (Hunter's Edge) but
     the per-slot you-control / opponent target filters aren't declared, so it's
     approximated; wants explicit multi-target-slot filters.
-  - **Target-conditional cost reduction** — Luminous Rebuke ("{3} less if it
-    targets a tapped creature"); no `SelfCostReducedIfTargetMatches` yet.
+  - ✅ ~~**Target-conditional cost reduction**~~ — shipped via
+    `CardDefinition.self_cost_reduction_cost_if_target: (filter, cost)` (read
+    in `extra_cost_for_spell`). Titanic Brawl ("{1} less if it targets a
+    +1/+1-countered creature you control") uses it; Luminous Rebuke's
+    tapped-creature discount is the same shape.
   - **Per-creature "prevent all combat/creature damage this turn" shield** —
     Fleeting Flight, Eerie Interference (fog scoped to one creature / player).
   - **Reflexive "discard N, then N targets get -2/-2"** — Miasma Demon links a

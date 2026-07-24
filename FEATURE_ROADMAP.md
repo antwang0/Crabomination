@@ -1213,6 +1213,9 @@ Each unblocks a large swath of cards.
   (`StaticEffect::WhileYourTurn`, CR 611.2 — general on both the live and pure
   gather paths; Blacksmith's Talent L3); an opponent-scoped spell tax
   (`OpponentSpellsCostMore` — Grand Arbiter Augustin IV, exempts the controller)
+  and its turn-gated sibling that also taxes non-mana abilities
+  (`OpponentActivityCostsMoreOnYourTurn` — Tithe Taker, spell half in
+  `extra_cost_for_spell` + ability half in `effective_ability_mana_cost`)
   and a multicolored-only spend restriction (`SpendRestriction::MulticoloredSpell`
   — Pillar of the Paruns). Remaining: broader "you may play", devotion-gated
   non-type states.
