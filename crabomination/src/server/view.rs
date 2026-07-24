@@ -1491,7 +1491,6 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
     match (&event.kind, event.scope) {
         (EventKind::EntersBattlefield, EventScope::SelfSource) => "ETB",
         (EventKind::EntersBattlefield, EventScope::AnotherOfYours) => "Another ETB",
-        (EventKind::EntersBattlefield, EventScope::YourControl) => "Your ETB",
         (EventKind::EntersBattlefield, EventScope::AnyPlayer) => "Any ETB",
         (EventKind::CreatureDied, EventScope::SelfSource) => "Dies",
         (EventKind::CreatureDied, EventScope::AnotherOfYours) => "Other dies",
