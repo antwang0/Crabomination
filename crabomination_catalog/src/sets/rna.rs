@@ -2,15 +2,11 @@
 //! Tests in `classic_sets/rna`.
 
 use crate::card::{
-    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    EventKind, EventScope, EventSpec, Keyword, LandType, MayPlayDuration, StaticAbility, Subtypes,
-    TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
+    EventSpec, Keyword, LandType, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::SelectionRequirement as R;
-use crate::effect::shortcut::{
-    adapt, afterlife, deal, draw, etb, mentor, on_dies, riot, spectacle, target_any,
-    target_filtered,
-};
+use crate::effect::shortcut::{adapt, afterlife, deal, draw, etb, riot, spectacle, target_filtered};
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, StaticEffect, ZoneDest,
 };
@@ -315,27 +311,6 @@ fn token(name: &'static str, colors: Vec<Color>, p: i32, t: i32, ct: Vec<Creatur
     }
 }
 
-/// Hunted Witness — {W} 1/1 Human. When it dies, create a 1/1 white Soldier
-/// with lifelink.
-pub fn hunted_witness() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![on_dies(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::ONE,
-            definition: token("Soldier", vec![Color::White], 1, 1, vec![CreatureType::Soldier], vec![Keyword::Lifelink]),
-        })],
-        ..body("Hunted Witness", cost(&[w()]), 1, 1, vec![CreatureType::Human], vec![])
-    }
-}
-
-/// Ministrant of Obligation — {2}{W} 2/1 Human Cleric with Afterlife 2.
-pub fn ministrant_of_obligation() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![afterlife(2)],
-        ..body("Ministrant of Obligation", cost(&[generic(2), w()]), 2, 1, vec![CreatureType::Human, CreatureType::Cleric], vec![])
-    }
-}
-
 /// Tithe Taker — {1}{W} 2/1 Human Soldier with Afterlife 1. During your turn,
 /// opponents' spells and non-mana abilities cost {1} more.
 pub fn tithe_taker() -> CardDefinition {
@@ -357,86 +332,11 @@ pub fn imperious_oligarch() -> CardDefinition {
     }
 }
 
-/// Grasping Thrull — {3}{W}{B} 3/3 Thrull with flying. ETB deal 2 to each
-/// opponent and gain 2 life.
-pub fn grasping_thrull() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-        ]))],
-        ..body("Grasping Thrull", cost(&[generic(3), w(), b()]), 3, 3, vec![CreatureType::Thrull], vec![Keyword::Flying])
-    }
-}
-
-/// Zhur-Taa Goblin — {R}{G} 2/2 Goblin Berserker with Riot.
-pub fn zhur_taa_goblin() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![riot()],
-        ..body("Zhur-Taa Goblin", cost(&[r(), g()]), 2, 2, vec![CreatureType::Goblin, CreatureType::Berserker], vec![])
-    }
-}
-
 /// Rampaging Rendhorn — {4}{G} 4/4 Beast with Riot.
 pub fn rampaging_rendhorn() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![riot()],
         ..body("Rampaging Rendhorn", cost(&[generic(4), g()]), 4, 4, vec![CreatureType::Beast], vec![])
-    }
-}
-
-/// Frenzied Arynx — {2}{R}{G} 3/3 Cat Beast with Riot and trample. {4}{R}{G}:
-/// +3/+0 until end of turn.
-pub fn frenzied_arynx() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![riot()],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(4), r(), g()]),
-            effect: Effect::PumpPT { what: Selector::This, power: Value::Const(3), toughness: Value::ZERO, duration: Duration::EndOfTurn },
-            ..Default::default()
-        }],
-        ..body("Frenzied Arynx", cost(&[generic(2), r(), g()]), 3, 3, vec![CreatureType::Cat, CreatureType::Beast], vec![Keyword::Trample])
-    }
-}
-
-/// Sunhome Stalwart — {1}{W} 2/2 Human Soldier with first strike and Mentor.
-pub fn sunhome_stalwart() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![mentor()],
-        ..body("Sunhome Stalwart", cost(&[generic(1), w()]), 2, 2, vec![CreatureType::Human, CreatureType::Soldier], vec![Keyword::FirstStrike])
-    }
-}
-
-/// Skewer the Critics — {2}{R} Sorcery with Spectacle {R}. Deals 3 damage to
-/// any target.
-pub fn skewer_the_critics() -> CardDefinition {
-    CardDefinition {
-        name: "Skewer the Critics",
-        cost: cost(&[generic(2), r()]),
-        card_types: vec![CardType::Sorcery],
-        alternative_cost: Some(spectacle(cost(&[r()]))),
-        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
-        ..Default::default()
-    }
-}
-
-/// Light Up the Stage — {2}{R} Sorcery with Spectacle {R}. Exile the top two
-/// cards; until the end of your next turn you may play them.
-pub fn light_up_the_stage() -> CardDefinition {
-    CardDefinition {
-        name: "Light Up the Stage",
-        cost: cost(&[generic(2), r()]),
-        card_types: vec![CardType::Sorcery],
-        alternative_cost: Some(spectacle(cost(&[r()]))),
-        effect: Effect::ExileTopAndGrantMayPlay {
-            who: PlayerRef::You,
-            count: Value::Const(2),
-            duration: MayPlayDuration::EndOfControllersNextTurn,
-            pay_any_color: false,
-            pay_own_cost: true,
-            uncast_penalty: None,
-        },
-        ..Default::default()
     }
 }
 
@@ -492,21 +392,6 @@ pub fn skitter_eel() -> CardDefinition {
             ..Default::default()
         }],
         ..body("Skitter Eel", cost(&[generic(3), u()]), 3, 3, vec![CreatureType::Fish, CreatureType::Crab], vec![])
-    }
-}
-
-/// Gift of Strength — {1}{G} Instant. Target creature gets +3/+3 and gains
-/// reach until end of turn.
-pub fn gift_of_strength() -> CardDefinition {
-    CardDefinition {
-        name: "Gift of Strength",
-        cost: cost(&[generic(1), g()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(3), toughness: Value::Const(3), duration: Duration::EndOfTurn },
-            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Reach, duration: Duration::EndOfTurn },
-        ]),
-        ..Default::default()
     }
 }
 
@@ -645,39 +530,9 @@ pub fn feral_maaka() -> CardDefinition {
     body("Feral Maaka", cost(&[generic(1), r()]), 2, 2, vec![CreatureType::Cat], vec![])
 }
 
-/// Wild Ceratok — {3}{G} 4/3 Rhino.
-pub fn wild_ceratok() -> CardDefinition {
-    body("Wild Ceratok", cost(&[generic(3), g()]), 4, 3, vec![CreatureType::Rhino], vec![])
-}
-
 /// Rubble Slinger — {2}{R/G} 2/3 Human Warrior with reach.
 pub fn rubble_slinger() -> CardDefinition {
     body("Rubble Slinger", cost(&[generic(2), hybrid(Color::Red, Color::Green)]), 2, 3, vec![CreatureType::Human, CreatureType::Warrior], vec![Keyword::Reach])
-}
-
-/// Impassioned Orator — {1}{W} 2/2 Human Cleric. Whenever another creature you
-/// control enters, you gain 1 life.
-pub fn impassioned_orator() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
-                what: Selector::TriggerSource,
-                filter: R::Creature.and(R::OtherThanSource),
-            }),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
-        }],
-        ..body("Impassioned Orator", cost(&[generic(1), w()]), 2, 2, vec![CreatureType::Human, CreatureType::Cleric], vec![])
-    }
-}
-
-/// Concordia Pegasus — {1}{W} 1/3 Pegasus with flying.
-pub fn concordia_pegasus() -> CardDefinition {
-    body("Concordia Pegasus", cost(&[generic(1), w()]), 1, 3, vec![CreatureType::Pegasus], vec![Keyword::Flying])
-}
-
-/// Prowling Caracal — {1}{W} 3/1 Cat.
-pub fn prowling_caracal() -> CardDefinition {
-    body("Prowling Caracal", cost(&[generic(1), w()]), 3, 1, vec![CreatureType::Cat], vec![])
 }
 
 /// Watchful Giant — {5}{W} 3/6 Giant Soldier. ETB create a 1/1 white Human.
@@ -732,19 +587,6 @@ pub fn windstorm_drake() -> CardDefinition {
     }
 }
 
-/// Bankrupt in Blood — {1}{B} Sorcery. Additional cost: sacrifice two creatures.
-/// Draw three cards.
-pub fn bankrupt_in_blood() -> CardDefinition {
-    CardDefinition {
-        name: "Bankrupt in Blood",
-        cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent { filter: R::Creature, count: 2 }],
-        effect: draw(3),
-        ..Default::default()
-    }
-}
-
 /// Drill Bit — {2}{B} Sorcery with Spectacle {B}. Target player reveals their
 /// hand; you choose a nonland card; that player discards it.
 pub fn drill_bit() -> CardDefinition {
@@ -788,24 +630,6 @@ pub fn ghor_clan_wrecker() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![riot()],
         ..body("Ghor-Clan Wrecker", cost(&[generic(3), r()]), 2, 2, vec![CreatureType::Human, CreatureType::Warrior], vec![Keyword::Menace])
-    }
-}
-
-/// Territorial Boar — {1}{G} 2/2 Boar. Whenever a creature you control with
-/// power 4+ enters, it gets +1/+1 and gains vigilance until end of turn.
-pub fn territorial_boar() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
-                what: Selector::TriggerSource,
-                filter: R::Creature.and(R::PowerAtLeast(4)),
-            }),
-            effect: Effect::Seq(vec![
-                Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
-                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
-            ]),
-        }],
-        ..body("Territorial Boar", cost(&[generic(1), g()]), 2, 2, vec![CreatureType::Boar], vec![])
     }
 }
 
@@ -875,40 +699,6 @@ pub fn cindervines() -> CardDefinition {
             ]),
             ..Default::default()
         }],
-        ..Default::default()
-    }
-}
-
-/// Sphinx's Insight — {2}{W}{U} Instant. Draw two cards. Addendum — if cast
-/// during your main phase, gain 2 life.
-pub fn sphinxs_insight() -> CardDefinition {
-    CardDefinition {
-        name: "Sphinx's Insight",
-        cost: cost(&[generic(2), w(), u()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            draw(2),
-            Effect::If {
-                cond: Predicate::YourMainPhase,
-                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
-                else_: Box::new(Effect::Noop),
-            },
-        ]),
-        ..Default::default()
-    }
-}
-
-/// Bladebrand — {1}{B} Instant. Target creature gains deathtouch until end of
-/// turn. Draw a card.
-pub fn bladebrand() -> CardDefinition {
-    CardDefinition {
-        name: "Bladebrand",
-        cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
-            draw(1),
-        ]),
         ..Default::default()
     }
 }

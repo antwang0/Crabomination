@@ -24,15 +24,9 @@ fn rna_stat_and_keyword_lines() {
         (catalog::rakdos_trumpeter, 1, 3, &[Keyword::Menace]),
         (catalog::griffin_protector, 2, 3, &[Keyword::Flying]),
         (catalog::ironshell_beetle, 1, 1, &[]),
-        (catalog::hunted_witness, 1, 1, &[]),
         (catalog::tithe_taker, 2, 1, &[]),
-        (catalog::ministrant_of_obligation, 2, 1, &[]),
         (catalog::imperious_oligarch, 2, 1, &[Keyword::Vigilance]),
-        (catalog::grasping_thrull, 3, 3, &[Keyword::Flying]),
-        (catalog::zhur_taa_goblin, 2, 2, &[]),
         (catalog::rampaging_rendhorn, 4, 4, &[]),
-        (catalog::frenzied_arynx, 3, 3, &[Keyword::Trample]),
-        (catalog::sunhome_stalwart, 2, 2, &[Keyword::FirstStrike]),
         (catalog::spear_spewer, 0, 2, &[Keyword::Defender]),
         (catalog::vindictive_vampire, 2, 3, &[]),
         (catalog::sauroform_hybrid, 2, 2, &[]),
@@ -40,18 +34,13 @@ fn rna_stat_and_keyword_lines() {
         (catalog::rakdos_roustabout, 3, 2, &[]),
         (catalog::gatebreaker_ram, 2, 2, &[]),
         (catalog::feral_maaka, 2, 2, &[]),
-        (catalog::wild_ceratok, 4, 3, &[]),
         (catalog::rubble_slinger, 2, 3, &[Keyword::Reach]),
-        (catalog::impassioned_orator, 2, 2, &[]),
-        (catalog::concordia_pegasus, 1, 3, &[Keyword::Flying]),
-        (catalog::prowling_caracal, 3, 1, &[]),
         (catalog::watchful_giant, 3, 6, &[]),
         (catalog::faerie_duelist, 1, 2, &[Keyword::Flash, Keyword::Flying]),
         (catalog::coral_commando, 3, 2, &[]),
         (catalog::windstorm_drake, 3, 3, &[Keyword::Flying]),
         (catalog::burning_tree_vandal, 2, 1, &[]),
         (catalog::ghor_clan_wrecker, 2, 2, &[Keyword::Menace]),
-        (catalog::territorial_boar, 2, 2, &[]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -270,105 +259,6 @@ fn griffin_protector_self_pump_on_other_etb() {
     assert_eq!(g.computed_permanent(griffin).unwrap().power, 3, "Griffin gets +1/+1 when another creature enters");
 }
 
-/// Ministrant of Obligation's Afterlife 2 makes two flying Spirit tokens.
-#[test]
-fn ministrant_afterlife_makes_two_spirits() {
-    use crabomination::game::effects::EntityRef;
-    let mut g = two_player_game();
-    let m = g.add_card_to_battlefield(0, catalog::ministrant_of_obligation()); // 2/1
-    let mut evs = Vec::new();
-    g.deal_damage_to_from(EntityRef::Permanent(m), 2, None, &mut evs);
-    let sba = g.check_state_based_actions();
-    g.dispatch_triggers_for_events(&sba);
-    drain_stack(&mut g);
-    let spirits = g.battlefield.iter()
-        .filter(|c| c.controller == 0 && c.definition.name == "Spirit" && c.definition.keywords.contains(&Keyword::Flying))
-        .count();
-    assert_eq!(spirits, 2, "Afterlife 2 → two flying Spirits");
-}
-
-/// Hunted Witness dies into a 1/1 Soldier with lifelink.
-#[test]
-fn hunted_witness_makes_lifelink_soldier() {
-    use crabomination::game::effects::EntityRef;
-    let mut g = two_player_game();
-    let w = g.add_card_to_battlefield(0, catalog::hunted_witness());
-    let mut evs = Vec::new();
-    g.deal_damage_to_from(EntityRef::Permanent(w), 1, None, &mut evs);
-    let sba = g.check_state_based_actions();
-    g.dispatch_triggers_for_events(&sba);
-    drain_stack(&mut g);
-    assert!(g.battlefield.iter()
-        .any(|c| c.controller == 0 && c.definition.name == "Soldier" && c.definition.keywords.contains(&Keyword::Lifelink)),
-        "lifelink Soldier token minted");
-}
-
-/// Zhur-Taa Goblin's Riot grants haste by default (mode 0).
-#[test]
-fn zhur_taa_goblin_riot_default_haste() {
-    let mut g = two_player_game();
-    g.active_player_idx = 0;
-    let gob = g.move_card_to_battlefield_for_test(0, catalog::zhur_taa_goblin());
-    drain_stack(&mut g);
-    assert!(g.computed_permanent(gob).unwrap().keywords.contains(&Keyword::Haste), "Riot → haste");
-}
-
-/// Sunhome Stalwart's Mentor puts a +1/+1 counter on a lesser-power attacker.
-#[test]
-fn sunhome_stalwart_mentor_pumps_smaller_attacker() {
-    let mut g = two_player_game();
-    let stalwart = g.add_card_to_battlefield(0, catalog::sunhome_stalwart()); // 2/2
-    let small_def = crabomination::card::TokenDefinition {
-        name: "Goblin".into(), power: 1, toughness: 1,
-        card_types: vec![CardType::Creature], ..Default::default()
-    };
-    let small = g.add_token_to_battlefield(0, &small_def); // 1/1
-    g.clear_sickness(stalwart);
-    g.clear_sickness(small);
-    g.active_player_idx = 0;
-    g.step = TurnStep::DeclareAttackers;
-    g.priority.player_with_priority = 0;
-    g.declare_attackers(vec![
-        Attack { attacker: stalwart, target: AttackTarget::Player(1) },
-        Attack { attacker: small, target: AttackTarget::Player(1) },
-    ]).expect("attack");
-    drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(small).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
-        "Mentor counter on the lesser attacker");
-}
-
-/// Skewer the Critics deals 3 to any target.
-#[test]
-fn skewer_the_critics_burns_three() {
-    let mut g = two_player_game();
-    let cast = g.add_card_to_hand(0, catalog::skewer_the_critics());
-    g.active_player_idx = 0;
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    let life = g.players[1].life;
-    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, life - 3, "3 damage to the opponent");
-}
-
-/// Light Up the Stage exiles the top two cards with a may-play grant.
-#[test]
-fn light_up_the_stage_exiles_two() {
-    let mut g = two_player_game();
-    for _ in 0..3 { g.add_card_to_library(0, catalog::mountain()); }
-    let cast = g.add_card_to_hand(0, catalog::light_up_the_stage());
-    g.active_player_idx = 0;
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
-    drain_stack(&mut g);
-    assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Mountain").count(), 2, "two cards exiled");
-}
-
 /// Spear Spewer pings each player for 1.
 #[test]
 fn spear_spewer_pings_each_player() {
@@ -541,36 +431,6 @@ fn rakdos_roustabout_pings_on_block() {
     assert_eq!(g.players[1].life, life - 1, "becomes-blocked ping hit the defending player");
 }
 
-/// Grasping Thrull's ETB drains each opponent for 2.
-#[test]
-fn grasping_thrull_etb_drains() {
-    let mut g = two_player_game();
-    g.active_player_idx = 0;
-    let (mine, opp) = (g.players[0].life, g.players[1].life);
-    g.move_card_to_battlefield_for_test(0, catalog::grasping_thrull());
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp - 2, "opponent lost 2");
-    assert_eq!(g.players[0].life, mine + 2, "gained 2");
-}
-
-/// Gift of Strength pumps +3/+3 and grants reach.
-#[test]
-fn gift_of_strength_pumps_and_grants_reach() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let cast = g.add_card_to_hand(0, catalog::gift_of_strength());
-    g.active_player_idx = 0;
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
-    drain_stack(&mut g);
-    let cp = g.computed_permanent(bear).unwrap();
-    assert_eq!((cp.power, cp.toughness), (5, 5), "+3/+3");
-    assert!(cp.keywords.contains(&Keyword::Reach), "gains reach");
-}
-
 /// Tithe Taker taxes opponents' spells {1} more only on its controller's turn,
 /// and never taxes the controller.
 #[test]
@@ -590,18 +450,6 @@ fn tithe_taker_taxes_opponents_on_your_turn() {
     let own_spell = g.players[0].hand.iter().find(|c| c.id == oid).unwrap().clone();
     g.active_player_idx = 0;
     assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &own_spell, None, 0), 0, "controller exempt");
-}
-
-/// Impassioned Orator gains 1 life when another creature you control enters.
-#[test]
-fn impassioned_orator_gains_on_ally_etb() {
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::impassioned_orator());
-    let life = g.players[0].life;
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bear }]);
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life + 1, "gained 1 when the bear entered");
 }
 
 /// Watchful Giant's ETB makes a 1/1 white Human.
@@ -659,19 +507,6 @@ fn bankrupt_in_blood_sacs_two_draws_three() {
     assert_eq!(g.players[0].hand.len(), hand - 1 + 3, "drew three");
 }
 
-/// Territorial Boar grows when a power-4+ creature you control enters.
-#[test]
-fn territorial_boar_grows_on_big_etb() {
-    let mut g = two_player_game();
-    let boar = g.add_card_to_battlefield(0, catalog::territorial_boar());
-    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm()); // 6/4
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: wurm }]);
-    drain_stack(&mut g);
-    let cp = g.computed_permanent(boar).unwrap();
-    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "gains vigilance");
-}
-
 /// Open the Gates fetches a Gate to hand.
 #[test]
 fn open_the_gates_fetches_gate() {
@@ -702,43 +537,6 @@ fn cindervines_pings_on_opponent_noncreature_cast() {
     g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 1, "opponent pinged 1 for a noncreature cast");
-}
-
-/// Sphinx's Insight draws two, and gains 2 life under Addendum.
-#[test]
-fn sphinxs_insight_addendum_life() {
-    let mut g = two_player_game();
-    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
-    let cast = g.add_card_to_hand(0, catalog::sphinxs_insight());
-    g.active_player_idx = 0;
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    let life = g.players[0].life;
-    g.perform_action(GameAction::CastSpell { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life + 2, "Addendum gained 2 on your main phase");
-}
-
-/// Bladebrand grants deathtouch and draws a card.
-#[test]
-fn bladebrand_deathtouch_and_draw() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.add_card_to_library(0, catalog::island());
-    let cast = g.add_card_to_hand(0, catalog::bladebrand());
-    g.active_player_idx = 0;
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let hand = g.players[0].hand.len();
-    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
-    drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch), "bear gains deathtouch");
-    assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "drew a card");
 }
 
 /// Sprouting Renewal is a convoke modal (make a token / destroy).
