@@ -51,6 +51,26 @@ fn rna_stat_and_keyword_lines() {
         (catalog::trollbred_guardian, 5, 5, &[]),
         (catalog::loxodon_restorer, 3, 4, &[Keyword::Convoke]),
         (catalog::syndicate_messenger, 2, 3, &[Keyword::Flying]),
+        (catalog::aeromunculus, 2, 3, &[Keyword::Flying]),
+        (catalog::sages_row_savant, 2, 1, &[]),
+        (catalog::senate_griffin, 3, 2, &[Keyword::Flying]),
+        (catalog::sylvan_brushstrider, 3, 2, &[]),
+        (catalog::wrecking_beast, 6, 6, &[Keyword::Trample]),
+        (catalog::thirsting_shade, 1, 1, &[Keyword::Lifelink]),
+        (catalog::senate_courier, 1, 4, &[Keyword::Flying]),
+        (catalog::enraged_ceratok, 4, 4, &[Keyword::CantBeBlockedByPowerAtMost(2)]),
+        (catalog::debtors_transport, 5, 3, &[]),
+        (catalog::spikewheel_acrobat, 5, 2, &[]),
+        (catalog::dagger_caster, 2, 3, &[]),
+        (catalog::footlight_fiend, 1, 1, &[]),
+        (catalog::skatewing_spy, 2, 3, &[]),
+        (catalog::spirit_of_the_spires, 2, 4, &[Keyword::Flying]),
+        (catalog::clamor_shaman, 1, 1, &[]),
+        (catalog::resolute_watchdog, 1, 3, &[Keyword::Defender]),
+        (catalog::tenth_district_veteran, 2, 3, &[Keyword::Vigilance]),
+        (catalog::silhana_wayfinder, 2, 1, &[]),
+        (catalog::elite_arrester, 0, 3, &[]),
+        (catalog::wall_of_lost_thoughts, 0, 4, &[Keyword::Defender]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -713,4 +733,226 @@ fn prying_eyes_draw_four_discard_two() {
     drain_stack(&mut g);
     // -1 spell, +4 draw, -2 discard = net +1.
     assert_eq!(g.players[0].hand.len(), hand - 1 + 4 - 2, "net +1 card");
+}
+
+// ── Batch 4 (2026-07-24) functionality tests ─────────────────────────────────
+
+/// Azorius Locket taps for {W} or {U} and sacrifices to draw two.
+#[test]
+fn azorius_locket_mana_and_sac_draw() {
+    let mut g = two_player_game();
+    let locket = g.add_card_to_battlefield(0, catalog::azorius_locket());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    // Mana ability: adds one of {W}/{U}.
+    g.perform_action(GameAction::ActivateAbility { card_id: locket, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.amount(Color::White) + g.players[0].mana_pool.amount(Color::Blue), 1, "one W or U");
+    // Sac ability draws two.
+    let hand = g.players[0].hand.len();
+    g.battlefield_find_mut(locket).unwrap().tapped = false;
+    g.players[0].mana_pool.add(Color::White, 4);
+    g.perform_action(GameAction::ActivateAbility { card_id: locket, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("sac draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew two");
+    assert!(g.battlefield_find(locket).is_none(), "locket sacrificed");
+}
+
+/// Aeromunculus's adapt puts a +1/+1 counter on it (once).
+#[test]
+fn aeromunculus_adapt() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::aeromunculus());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility { card_id: c, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("adapt");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(c).unwrap().power, 3, "2/3 → 3/4 after adapt 1");
+}
+
+/// Sylvan Brushstrider gains 2 life on entry.
+#[test]
+fn sylvan_brushstrider_gains_two() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let life = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::sylvan_brushstrider());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "ETB gained 2");
+}
+
+/// Enraged Ceratok can't be blocked by a power-2-or-less creature.
+#[test]
+fn enraged_ceratok_evades_small_blockers() {
+    let c = catalog::enraged_ceratok();
+    assert!(c.keywords.contains(&Keyword::CantBeBlockedByPowerAtMost(2)), "power-2-or-less can't block");
+}
+
+/// Dagger Caster pings each opponent and each opposing creature on entry.
+#[test]
+fn dagger_caster_etb_pings() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let opp = g.players[1].life;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::dagger_caster().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    assert_eq!(g.players[1].life, opp - 1, "opponent took 1");
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 1, "opposing creature took 1");
+}
+
+/// Footlight Fiend deals 1 to any target when it dies.
+#[test]
+fn footlight_fiend_dies_ping() {
+    let mut g = two_player_game();
+    let opp = g.players[1].life;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
+    let effect = catalog::footlight_fiend().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[1].life, opp - 1, "1 damage to any target");
+}
+
+/// Storm Strike buffs +1/+0 and grants first strike.
+#[test]
+fn storm_strike_pump_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let cast = g.add_card_to_hand(0, catalog::storm_strike());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let p = g.computed_permanent(bear).unwrap();
+    assert_eq!(p.power, 3, "+1/+0");
+    assert!(p.keywords.contains(&Keyword::FirstStrike), "gains first strike");
+}
+
+/// Stony Strength adds a +1/+1 counter and untaps the creature.
+#[test]
+fn stony_strength_counter_and_untap() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let cast = g.add_card_to_hand(0, catalog::stony_strength());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 counter");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
+}
+
+/// Ragefire deals 3 to a creature.
+#[test]
+fn ragefire_burns_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let cast = g.add_card_to_hand(0, catalog::ragefire());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 3, "3 damage marked");
+}
+
+/// Elite Arrester taps a target creature.
+#[test]
+fn elite_arrester_taps() {
+    let mut g = two_player_game();
+    let arr = g.add_card_to_battlefield(0, catalog::elite_arrester());
+    g.clear_sickness(arr);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility { card_id: arr, ability_index: 0, target: Some(Target::Permanent(foe)), additional_targets: Vec::new(), x_value: None }).expect("tap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");
+}
+
+/// Wall of Lost Thoughts mills a target player 4.
+#[test]
+fn wall_of_lost_thoughts_mills_four() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(1, catalog::island()); }
+    let gy = g.players[1].graveyard.len();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
+    let effect = catalog::wall_of_lost_thoughts().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[1].graveyard.len(), gy + 4, "milled 4");
+}
+
+/// Spirit of the Spires gives other flyers you control +0/+1.
+#[test]
+fn spirit_of_the_spires_flying_anthem() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spirit_of_the_spires());
+    let flyer = g.add_card_to_battlefield(0, catalog::wind_drake()); // 2/2 flying
+    assert_eq!(g.computed_permanent(flyer).unwrap().toughness, 3, "flyer gets +0/+1");
+    let ground = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(ground).unwrap().toughness, 2, "non-flyer unaffected");
+}
+
+/// Skatewing Spy grants flying to your +1/+1-countered creatures.
+#[test]
+fn skatewing_spy_counter_flying_anthem() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::skatewing_spy());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying), "no counter → no flying");
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying), "counter → flying");
+}
+
+/// Dead Revels returns up to two creature cards from your graveyard.
+#[test]
+fn dead_revels_returns_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::craw_wurm());
+    g.decider = Box::new(crabomination::decision::AutoDecider::default());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::dead_revels().effect.clone();
+    let hand = g.players[0].hand.len();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 2, "two creatures returned to hand");
+}
+
+/// Resolute Watchdog sacrifices to grant indestructible.
+#[test]
+fn resolute_watchdog_grants_indestructible() {
+    let mut g = two_player_game();
+    let dog = g.add_card_to_battlefield(0, catalog::resolute_watchdog());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility { card_id: dog, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None }).expect("sac");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible), "bear indestructible");
+    assert!(g.battlefield_find(dog).is_none(), "watchdog sacrificed");
+}
+
+/// Silhana Wayfinder puts a creature or land on top of the library.
+#[test]
+fn silhana_wayfinder_stacks_top() {
+    let mut g = two_player_game();
+    // Bottom-most drawn last; put a land under a few misses.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    let lib0 = g.players[0].library.len();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::silhana_wayfinder().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    // A creature or land ends on top; library size unchanged (rest bottomed).
+    assert_eq!(g.players[0].library.len(), lib0, "no cards leave the library");
+    let top = g.players[0].library.last().unwrap();
+    assert!(top.definition.card_types.contains(&CardType::Creature) || top.definition.card_types.contains(&CardType::Land), "top is a creature or land");
 }

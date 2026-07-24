@@ -6,9 +6,12 @@ use crate::card::{
     EventSpec, Keyword, LandType, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::SelectionRequirement as R;
-use crate::effect::shortcut::{adapt, afterlife, deal, draw, etb, riot, spectacle, target_filtered};
+use crate::effect::shortcut::{
+    adapt, afterlife, deal, draw, etb, etb_scry, on_attack, riot, spectacle, target_filtered,
+};
 use crate::effect::{
-    Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, StaticEffect, ZoneDest,
+    Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, RevealMissDest, Selector,
+    StaticEffect, ZoneDest,
 };
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 
@@ -926,5 +929,387 @@ pub fn prying_eyes() -> CardDefinition {
             Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
         ]),
         ..Default::default()
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Batch 4 (2026-07-24): Locket cycle, adapt/scry creatures, spectacle, spells
+// ══════════════════════════════════════════════════════════════════════════
+
+/// The RNA guild Locket cycle — {3} artifacts that tap for one of two colors
+/// and sacrifice (paying four hybrid mana) to draw two cards.
+fn locket(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![c1, c2], Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[hybrid(c1, c2), hybrid(c1, c2), hybrid(c1, c2), hybrid(c1, c2)]),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+pub fn azorius_locket() -> CardDefinition { locket("Azorius Locket", Color::White, Color::Blue) }
+pub fn orzhov_locket() -> CardDefinition { locket("Orzhov Locket", Color::White, Color::Black) }
+pub fn rakdos_locket() -> CardDefinition { locket("Rakdos Locket", Color::Black, Color::Red) }
+pub fn gruul_locket() -> CardDefinition { locket("Gruul Locket", Color::Red, Color::Green) }
+pub fn simic_locket() -> CardDefinition { locket("Simic Locket", Color::Green, Color::Blue) }
+
+/// Aeromunculus — {1}{G}{U} 2/3 Homunculus Mutant with flying. {2}{G}{U}: Adapt 1.
+pub fn aeromunculus() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g(), u()]),
+            effect: adapt(1),
+            ..Default::default()
+        }],
+        ..body("Aeromunculus", cost(&[generic(1), g(), u()]), 2, 3, vec![CreatureType::Homunculus, CreatureType::Mutant], vec![Keyword::Flying])
+    }
+}
+
+/// Sage's Row Savant — {1}{U} 2/1 Vedalken Wizard. ETB scry 2.
+pub fn sages_row_savant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb_scry(2)],
+        ..body("Sage's Row Savant", cost(&[generic(1), u()]), 2, 1, vec![CreatureType::Vedalken, CreatureType::Wizard], vec![])
+    }
+}
+
+/// Senate Griffin — {2}{W/U}{W/U} 3/2 Griffin with flying. ETB scry 1.
+pub fn senate_griffin() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb_scry(1)],
+        ..body("Senate Griffin", cost(&[generic(2), hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]), 3, 2, vec![CreatureType::Griffin], vec![Keyword::Flying])
+    }
+}
+
+/// Sylvan Brushstrider — {2}{G} 3/2 Beast. ETB gain 2 life.
+pub fn sylvan_brushstrider() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(2) })],
+        ..body("Sylvan Brushstrider", cost(&[generic(2), g()]), 3, 2, vec![CreatureType::Beast], vec![])
+    }
+}
+
+/// Wrecking Beast — {5}{G}{G} 6/6 Beast with riot and trample.
+pub fn wrecking_beast() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![riot()],
+        ..body("Wrecking Beast", cost(&[generic(5), g(), g()]), 6, 6, vec![CreatureType::Beast], vec![Keyword::Trample])
+    }
+}
+
+/// Thirsting Shade — {B} 1/1 Shade with lifelink. {2}{B}: +1/+1 until end of turn.
+pub fn thirsting_shade() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..body("Thirsting Shade", cost(&[b()]), 1, 1, vec![CreatureType::Shade], vec![Keyword::Lifelink])
+    }
+}
+
+/// Senate Courier — {2}{U} 1/4 Bird with flying. {1}{W}: gains vigilance until EOT.
+pub fn senate_courier() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..body("Senate Courier", cost(&[generic(2), u()]), 1, 4, vec![CreatureType::Bird], vec![Keyword::Flying])
+    }
+}
+
+/// Enraged Ceratok — {2}{G}{G} 4/4 Rhino. Can't be blocked by creatures with
+/// power 2 or less.
+pub fn enraged_ceratok() -> CardDefinition {
+    body("Enraged Ceratok", cost(&[generic(2), g(), g()]), 4, 4, vec![CreatureType::Rhino], vec![Keyword::CantBeBlockedByPowerAtMost(2)])
+}
+
+/// Debtors' Transport — {5}{B} 5/3 Thrull with afterlife 2.
+pub fn debtors_transport() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![afterlife(2)],
+        ..body("Debtors' Transport", cost(&[generic(5), b()]), 5, 3, vec![CreatureType::Thrull], vec![])
+    }
+}
+
+/// Spikewheel Acrobat — {3}{R} 5/2 Human Rogue with Spectacle {2}{R}.
+pub fn spikewheel_acrobat() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(spectacle(cost(&[generic(2), r()]))),
+        ..body("Spikewheel Acrobat", cost(&[generic(3), r()]), 5, 2, vec![CreatureType::Human, CreatureType::Rogue], vec![])
+    }
+}
+
+/// Dagger Caster — {3}{R} 2/3 Lizard Rogue. ETB deals 1 damage to each opponent
+/// and 1 damage to each creature your opponents control.
+pub fn dagger_caster() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            deal(1, Selector::Player(PlayerRef::EachOpponent)),
+            Effect::DealDamage { to: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)), amount: Value::Const(1) },
+        ]))],
+        ..body("Dagger Caster", cost(&[generic(3), r()]), 2, 3, vec![CreatureType::Lizard, CreatureType::Rogue], vec![])
+    }
+}
+
+/// Footlight Fiend — {B/R} 1/1 Devil. When it dies, deals 1 damage to any target.
+pub fn footlight_fiend() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::dies_ping_any(1)],
+        ..body("Footlight Fiend", cost(&[hybrid(Color::Black, Color::Red)]), 1, 1, vec![CreatureType::Devil], vec![])
+    }
+}
+
+/// Storm Strike — {R} Instant. Target creature gets +1/+0 and gains first strike
+/// until end of turn. Scry 1.
+pub fn storm_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Storm Strike",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::ONE, toughness: Value::Const(0), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Stony Strength — {G} Instant. Put a +1/+1 counter on target creature you
+/// control; untap that creature.
+pub fn stony_strength() -> CardDefinition {
+    CardDefinition {
+        name: "Stony Strength",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: target_filtered(R::Creature.and(R::ControlledByYou)), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ragefire — {1}{R} Sorcery. Deals 3 damage to target creature.
+pub fn ragefire() -> CardDefinition {
+    CardDefinition {
+        name: "Ragefire",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: deal(3, target_filtered(R::Creature)),
+        ..Default::default()
+    }
+}
+
+/// Deface — {R} Sorcery. Choose one — destroy target artifact; or destroy target
+/// creature with defender.
+pub fn deface() -> CardDefinition {
+    CardDefinition {
+        name: "Deface",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Artifact) },
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Defender))) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Elite Arrester — {W} 0/3 Human Soldier. {1}{U}, {T}: Tap target creature.
+pub fn elite_arrester() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            tap_cost: true,
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..body("Elite Arrester", cost(&[w()]), 0, 3, vec![CreatureType::Human, CreatureType::Soldier], vec![])
+    }
+}
+
+/// Wall of Lost Thoughts — {1}{U} 0/4 Wall with defender. ETB target player mills 4.
+pub fn wall_of_lost_thoughts() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(4) })],
+        ..body("Wall of Lost Thoughts", cost(&[generic(1), u()]), 0, 4, vec![CreatureType::Wall], vec![Keyword::Defender])
+    }
+}
+
+/// Thought Collapse — {1}{U}{U} Instant. Counter target spell; its controller mills 3.
+pub fn thought_collapse() -> CardDefinition {
+    CardDefinition {
+        name: "Thought Collapse",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(R::Any) },
+            Effect::Mill { who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))), amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Skatewing Spy — {3}{U} 2/3 Vedalken Rogue Mutant. {5}{U}: Adapt 2. Each
+/// creature you control with a +1/+1 counter has flying.
+pub fn skatewing_spy() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), u()]),
+            effect: adapt(2),
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control with a +1/+1 counter has flying.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::WithCounter(CounterType::PlusOnePlusOne),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Flying],
+                opponents: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..body("Skatewing Spy", cost(&[generic(3), u()]), 2, 3, vec![CreatureType::Vedalken, CreatureType::Rogue, CreatureType::Mutant], vec![])
+    }
+}
+
+/// Spirit of the Spires — {3}{W} 2/4 Spirit with flying. Other creatures you
+/// control with flying get +0/+1.
+pub fn spirit_of_the_spires() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control with flying get +0/+1.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::HasKeyword(Keyword::Flying).and(R::OtherThanSource),
+                power: 0,
+                toughness: 1,
+                keywords: vec![],
+                opponents: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..body("Spirit of the Spires", cost(&[generic(3), w()]), 2, 4, vec![CreatureType::Spirit], vec![Keyword::Flying])
+    }
+}
+
+/// Shimmer of Possibility — {1}{U} Sorcery. Look at the top four cards of your
+/// library. Put one of them into your hand and the rest on the bottom in a
+/// random order.
+pub fn shimmer_of_possibility() -> CardDefinition {
+    CardDefinition {
+        name: "Shimmer of Possibility",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: false,
+            pick_filter: None,
+            take: None,
+            to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
+            optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: true,
+        },
+        ..Default::default()
+    }
+}
+
+/// Dead Revels — {3}{B} Sorcery with Spectacle {1}{B}. Return up to two creature
+/// cards from your graveyard to your hand.
+pub fn dead_revels() -> CardDefinition {
+    CardDefinition {
+        name: "Dead Revels",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        alternative_cost: Some(spectacle(cost(&[generic(1), b()]))),
+        effect: Effect::ReturnGraveyardCardsToHand { filter: R::Creature, max: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Clamor Shaman — {2}{R} 1/1 Goblin Shaman with riot. Whenever it attacks,
+/// target creature an opponent controls can't block this turn.
+pub fn clamor_shaman() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            riot(),
+            on_attack(Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            }),
+        ],
+        ..body("Clamor Shaman", cost(&[generic(2), r()]), 1, 1, vec![CreatureType::Goblin, CreatureType::Shaman], vec![])
+    }
+}
+
+/// Resolute Watchdog — {W} 1/3 Dog with defender. {1}, Sacrifice this creature:
+/// Target creature you control gains indestructible until end of turn.
+pub fn resolute_watchdog() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..body("Resolute Watchdog", cost(&[w()]), 1, 3, vec![CreatureType::Dog], vec![Keyword::Defender])
+    }
+}
+
+/// Tenth District Veteran — {2}{W} 2/3 Human Soldier with vigilance. Whenever it
+/// attacks, untap another target creature you control.
+pub fn tenth_district_veteran() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::Untap {
+            what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            up_to: None,
+        })],
+        ..body("Tenth District Veteran", cost(&[generic(2), w()]), 2, 3, vec![CreatureType::Human, CreatureType::Soldier], vec![Keyword::Vigilance])
+    }
+}
+
+/// Silhana Wayfinder — {1}{G} 2/1 Elf Scout. ETB look at the top four cards; you
+/// may reveal a creature or land from among them and put it on top of your
+/// library. Put the rest on the bottom in a random order.
+pub fn silhana_wayfinder() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: R::Creature.or(R::Land),
+            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            cap: Value::Const(4),
+            life_per_revealed: 0,
+            miss_dest: RevealMissDest::BottomRandom,
+        })],
+        ..body("Silhana Wayfinder", cost(&[generic(1), g()]), 2, 1, vec![CreatureType::Elf, CreatureType::Scout], vec![])
     }
 }
