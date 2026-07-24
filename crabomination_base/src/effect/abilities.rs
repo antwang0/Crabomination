@@ -1039,6 +1039,10 @@ pub enum StaticEffect {
     /// an instant or sorcery spell from the top of your library"). Tracked via
     /// `Player.cast_from_library_top_this_turn`.
     PlayFromLibraryTopOncePerTurn { filter: crate::card::SelectionRequirement },
+    /// Like `PlayFromLibraryTop`, but a *spell* cast this way pays life equal to
+    /// its mana value instead of its mana cost (Bolas's Citadel). Lands are
+    /// still played for free. Read by the cast-from-top path.
+    PlayFromLibraryTopPayLife { filter: crate::card::SelectionRequirement },
     /// "Creatures you control with +1/+1 counters on them have all
     /// activated abilities of all creature cards exiled with [the
     /// source]." Agatha's Soul Cauldron — the exile-zone sibling of

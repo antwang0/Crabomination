@@ -14222,6 +14222,7 @@ fn static_effect_to_effects(
             // cast paths and the view projection; no layer effect.
             | StaticEffect::PlayFromLibraryTop { .. }
             | StaticEffect::PlayFromLibraryTopOncePerTurn { .. }
+            | StaticEffect::PlayFromLibraryTopPayLife { .. }
             | StaticEffect::TopOfLibraryRevealed
             | StaticEffect::AllLibraryTopsRevealed
             // NamedSpellCantBeCast — consulted in cast_spell_with_convoke

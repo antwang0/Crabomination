@@ -14868,6 +14868,7 @@ static WAR: &[Factory] = &[
     super::war::feather_the_redeemed,
     super::war::deliver_unto_evil,
     super::war::nicol_bolas_dragon_god,
+    super::war::bolass_citadel,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

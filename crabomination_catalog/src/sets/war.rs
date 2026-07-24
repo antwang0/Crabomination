@@ -4125,3 +4125,28 @@ pub fn nicol_bolas_dragon_god() -> CardDefinition {
         ..walker("Nicol Bolas, Dragon-God", cost(&[u(), b(), b(), b(), r()]), PlaneswalkerSubtype::Bolas, 4)
     }
 }
+
+/// Bolas's Citadel — {3}{B}{B}{B} Legendary Artifact. You may look at and play
+/// the top card of your library; a spell cast this way costs life equal to its
+/// mana value instead of mana. {T}, Sacrifice ten nonland permanents: each
+/// opponent loses 10 life.
+pub fn bolass_citadel() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Bolas's Citadel",
+        cost: cost(&[generic(3), b(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You may play lands and cast spells from the top of your library, paying life equal to a spell's mana value.",
+            effect: StaticEffect::PlayFromLibraryTopPayLife { filter: R::Any },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Nonland, 10)),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(10) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

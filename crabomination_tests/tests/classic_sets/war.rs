@@ -3068,3 +3068,21 @@ fn deliver_unto_evil_with_bolas_returns_all() {
     g.resolve_effect(&catalog::deliver_unto_evil().effect, &ctx).unwrap();
     assert!(g.players[0].hand.iter().any(|x| x.id == a) && g.players[0].hand.iter().any(|x| x.id == b), "both returned with a Bolas walker out");
 }
+
+/// Bolas's Citadel lets you cast a spell off the top of your library, paying
+/// life equal to its mana value instead of mana.
+#[test]
+fn bolass_citadel_casts_from_top_paying_life() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bolass_citadel());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt()); // MV 1, top card
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let my_life = g.players[0].life;
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("cast from top");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, my_life - 1, "paid 1 life (Bolt's mana value)");
+    assert_eq!(g.players[1].life, opp_life - 3, "Bolt dealt 3");
+}

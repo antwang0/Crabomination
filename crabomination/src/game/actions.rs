@@ -2773,6 +2773,36 @@ impl GameState {
             }
             return r;
         }
+        // Bolas's Citadel — cast a spell off the library top paying life equal
+        // to its mana value instead of its mana cost. Hop to hand, pay life,
+        // and free-cast; restore the card to the top on failure.
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && !self.players[p].library.first().is_some_and(|c| {
+                self.cast_from_zone_blocked(p, &c.definition, crate::card::Zone::Library)
+            })
+            && let Some(life) = self.library_top_pay_life_cost(p, card_id)
+        {
+            if self.players[p].life < life as i32 {
+                return Err(GameError::InsufficientLife);
+            }
+            let card = self.players[p].library.remove(0);
+            self.players[p].hand.push(card);
+            let r = self.cast_card_for_free(
+                p, card_id, crate::card::Zone::Hand, target, additional_targets.clone(), mode, x_value, false,
+            );
+            match r {
+                Err(e) => {
+                    if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
+                        self.players[p].library.insert(0, card);
+                    }
+                    return Err(e);
+                }
+                Ok(events) => {
+                    self.pay_life_cost(p, life);
+                    return Ok(events);
+                }
+            }
+        }
         // CR 401.6 — cast off the library top when a PlayFromLibraryTop
         // static covers the card (Mystic Forge). Hop the card into hand for
         // the normal cast pipeline; restore it to the top on failure.
@@ -2883,7 +2913,8 @@ impl GameState {
         self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                    StaticEffect::PlayFromLibraryTop { filter } => {
+                    StaticEffect::PlayFromLibraryTop { filter }
+                    | StaticEffect::PlayFromLibraryTopPayLife { filter } => {
                         self.evaluate_requirement_on_card(filter, card, p)
                     }
                     // Johann — the once-per-turn grant lapses after the first
@@ -2894,6 +2925,26 @@ impl GameState {
                     _ => false,
                 })
         })
+    }
+
+    /// Bolas's Citadel — if `card_id` is the top card of `p`'s library, covered
+    /// by a `PlayFromLibraryTopPayLife` static, and is a spell (not a land),
+    /// return the life to pay in lieu of its mana cost (its mana value).
+    pub(crate) fn library_top_pay_life_cost(&self, p: usize, card_id: crate::card::CardId) -> Option<u32> {
+        use crate::effect::StaticEffect;
+        let card = self.players[p].library.first()?;
+        if card.id != card_id || card.definition.is_land() {
+            return None;
+        }
+        let covered = self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| matches!(
+                    &sa.effect,
+                    StaticEffect::PlayFromLibraryTopPayLife { filter }
+                        if self.evaluate_requirement_on_card(filter, card, p)
+                ))
+        });
+        covered.then(|| card.definition.cost.cmc())
     }
 
     /// True when the *only* grant letting `p` play `card_id` off the library
