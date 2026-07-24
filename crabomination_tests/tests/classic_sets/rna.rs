@@ -1136,3 +1136,24 @@ fn orzhov_enforcer_afterlife() {
     let spirits = g.battlefield.iter().filter(|c| c.definition.name.contains("Spirit")).count();
     assert_eq!(spirits, 1, "afterlife 1 made a Spirit token");
 }
+
+/// The bot activates an adapt ability to grow an uncountered creature
+/// (regression for adapt-shape recognition in `pick_self_pump_counter`).
+#[test]
+fn bot_activates_adapt_ability() {
+    use crabomination::server::bot::{Bot, RandomBot};
+    let mut g = two_player_game();
+    let munc = g.add_card_to_battlefield(0, catalog::aeromunculus());
+    g.clear_sickness(munc);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let action = RandomBot::new().next_action(&g, 0);
+    assert!(
+        matches!(action, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == munc),
+        "bot adapts Aeromunculus: {action:?}"
+    );
+}

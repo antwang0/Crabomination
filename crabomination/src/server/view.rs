@@ -1532,6 +1532,8 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::CounterAdded(_), EventScope::SelfSource) => "On counter",
         (EventKind::CounterAdded(_), EventScope::YourControl) => "On any counter",
         (EventKind::AbilityActivated, _) => "Ability activated",
+        (EventKind::ExhaustAbilityActivated, _) => "Exhaust activated",
+        (EventKind::AdaptAbilityActivated, _) => "Adapt activated",
         (EventKind::BecameTarget, EventScope::SelfSource) => "Becomes target",
         (EventKind::Blocks, EventScope::AnotherOfYours) => "Another blocks",
         // CR 509 — a creature *you control* becomes blocked (the attacker side,

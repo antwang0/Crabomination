@@ -2389,19 +2389,25 @@ fn pick_self_pump_counter(state: &GameState, seat: usize) -> Option<GameAction> 
             if ab.sac_cost || ab.exhaust {
                 continue;
             }
-            let Effect::AddCounter { what: Selector::This, kind, .. } = &ab.effect else {
-                continue;
+            // Adapt abilities (CR 702.108) put +1/+1 counters on a creature with
+            // none — recognize the `If`-wrapped counter shape and fire only when
+            // the creature isn't already adapted (else it's a mana-wasting no-op).
+            let useful = if let Effect::AddCounter { what: Selector::This, kind, .. } = &ab.effect {
+                // Always sink into +1/+1 self-pumps; otherwise only into a counter
+                // that still progresses an unmet "becomes a creature at N counters"
+                // static (War Balloon's fire counters), so the bot animates it
+                // instead of stalling and doesn't dump mana past the threshold.
+                *kind == CounterType::PlusOnePlusOne
+                    || card.definition.static_abilities.iter().any(|sa| {
+                        matches!(&sa.effect,
+                            crate::effect::StaticEffect::SelfIsCreatureWhileCountersAtLeast { kind: k, n }
+                            if k == kind && card.counter_count(*kind) < *n)
+                    })
+            } else if ab.effect.is_adapt() {
+                card.counter_count(CounterType::PlusOnePlusOne) == 0
+            } else {
+                false
             };
-            // Always sink into +1/+1 self-pumps; otherwise only into a counter
-            // that still progresses an unmet "becomes a creature at N counters"
-            // static (War Balloon's fire counters), so the bot animates it
-            // instead of stalling and doesn't dump mana past the threshold.
-            let useful = *kind == CounterType::PlusOnePlusOne
-                || card.definition.static_abilities.iter().any(|sa| {
-                    matches!(&sa.effect,
-                        crate::effect::StaticEffect::SelfIsCreatureWhileCountersAtLeast { kind: k, n }
-                        if k == kind && card.counter_count(*kind) < *n)
-                });
             if !useful {
                 continue;
             }
