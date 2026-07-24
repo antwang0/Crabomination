@@ -1162,7 +1162,13 @@ fn project_permanent(
             // Creatures and Vehicles (CR 208.3 noncreature P/T — a `*`-power
             // Vehicle like Lumbering Worldwagon shifts with the board) both
             // carry a P/T box; flag it when the live value differs from base.
-            let has_pt_box = card.definition.is_creature()
+            // Use the *computed* type so a permanent animated into a creature
+            // (Gideon Blackblade during your turn, Awakening of Vitu-Ghazi's
+            // land, manlands) shows its P/T box too.
+            let live_creature = cp
+                .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                .unwrap_or_else(|| card.definition.is_creature());
+            let has_pt_box = live_creature
                 || card.definition.subtypes.artifact_subtypes
                     .contains(&crate::card::ArtifactSubtype::Vehicle);
             has_pt_box
@@ -1508,6 +1514,8 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::LifeLost, EventScope::OpponentControl) => "Opp life loss",
         (EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource) => "Combat dmg",
         (EventKind::DealsCombatDamageToPlayer, EventScope::YourControl) => "Your combat dmg",
+        (EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource) => "Combat dmg to PW",
+        (EventKind::DealsCombatDamageToPlaneswalker, EventScope::YourControl) => "Your combat dmg to PW",
         (EventKind::ControllerDealtCombatDamage, EventScope::SelfSource) => "You're hit",
         (EventKind::DealsCombatDamageToCreature, EventScope::SelfSource) => "Combat dmg to crea",
         (EventKind::YourInstantOrSorceryDealtDamage, _) => "Your spell deals dmg",
@@ -3837,5 +3845,46 @@ mod tests {
         assert!(k.has_alternative_cost);
         assert!(k.alt_cost_label.contains("Return"),
             "alt-cost label describes the return rider, got {:?}", k.alt_cost_label);
+    }
+
+    /// The view labels a "deals combat damage to a planeswalker" trigger
+    /// (Vraska, Swarm's Eminence) rather than leaving it blank.
+    #[test]
+    fn trigger_label_covers_combat_damage_to_planeswalker() {
+        let mut g = two_player_game();
+        let vraska = g.add_card_to_battlefield(0, catalog::vraska_swarms_eminence());
+        let view = project(&g, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == vraska).unwrap();
+        assert!(
+            perm.triggered_ability_labels.iter().any(|s| s.contains("combat dmg to PW")),
+            "expected a combat-damage-to-planeswalker label; got {:?}",
+            perm.triggered_ability_labels,
+        );
+    }
+
+    /// A permanent animated into a creature (Awakening of Vitu-Ghazi's land)
+    /// surfaces `pt_modified` so the client draws its P/T box — even though its
+    /// printed type isn't a creature.
+    #[test]
+    fn animated_noncreature_shows_pt_box() {
+        use crate::card::{CounterType, CreatureType};
+        use crate::effect::{Duration, Selector, Value};
+        use crate::game::effects::EffectContext;
+        use crate::game::types::Target;
+        let mut g = two_player_game();
+        let land = g.add_card_to_battlefield(0, catalog::forest());
+        g.battlefield_find_mut(land).unwrap().add_counters(CounterType::PlusOnePlusOne, 9);
+        let ctx = EffectContext::for_spell(0, Some(Target::Permanent(land)), 0, 0);
+        g.resolve_effect(&Effect::BecomeCreature {
+            what: Selector::Target(0),
+            power: Value::ZERO,
+            toughness: Value::ZERO,
+            creature_types: vec![CreatureType::Elemental],
+            keywords: vec![],
+            duration: Duration::Permanent,
+        }, &ctx).unwrap();
+        let view = project(&g, 0);
+        let pv = view.battlefield.iter().find(|p| p.id == land).unwrap();
+        assert!(pv.pt_modified, "animated 9/9 land flags its P/T box");
     }
 }
