@@ -2,9 +2,9 @@
 //! Tests in `classic_sets/rna`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, LandType, MayPlayDuration, StaticAbility, Subtypes, TokenDefinition,
-    TriggeredAbility, Value,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
+    EventKind, EventScope, EventSpec, Keyword, LandType, MayPlayDuration, StaticAbility, Subtypes,
+    TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::SelectionRequirement as R;
 use crate::effect::shortcut::{
@@ -653,4 +653,262 @@ pub fn wild_ceratok() -> CardDefinition {
 /// Rubble Slinger — {2}{R/G} 2/3 Human Warrior with reach.
 pub fn rubble_slinger() -> CardDefinition {
     body("Rubble Slinger", cost(&[generic(2), hybrid(Color::Red, Color::Green)]), 2, 3, vec![CreatureType::Human, CreatureType::Warrior], vec![Keyword::Reach])
+}
+
+/// Impassioned Orator — {1}{W} 2/2 Human Cleric. Whenever another creature you
+/// control enters, you gain 1 life.
+pub fn impassioned_orator() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::OtherThanSource),
+            }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        }],
+        ..body("Impassioned Orator", cost(&[generic(1), w()]), 2, 2, vec![CreatureType::Human, CreatureType::Cleric], vec![])
+    }
+}
+
+/// Concordia Pegasus — {1}{W} 1/3 Pegasus with flying.
+pub fn concordia_pegasus() -> CardDefinition {
+    body("Concordia Pegasus", cost(&[generic(1), w()]), 1, 3, vec![CreatureType::Pegasus], vec![Keyword::Flying])
+}
+
+/// Prowling Caracal — {1}{W} 3/1 Cat.
+pub fn prowling_caracal() -> CardDefinition {
+    body("Prowling Caracal", cost(&[generic(1), w()]), 3, 1, vec![CreatureType::Cat], vec![])
+}
+
+/// Watchful Giant — {5}{W} 3/6 Giant Soldier. ETB create a 1/1 white Human.
+pub fn watchful_giant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: token("Human", vec![Color::White], 1, 1, vec![CreatureType::Human], vec![]),
+        })],
+        ..body("Watchful Giant", cost(&[generic(5), w()]), 3, 6, vec![CreatureType::Giant, CreatureType::Soldier], vec![])
+    }
+}
+
+/// Faerie Duelist — {1}{U} 1/2 Faerie Rogue with flash and flying. ETB target
+/// creature an opponent controls gets -2/-0 until end of turn.
+pub fn faerie_duelist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            power: Value::Const(-2),
+            toughness: Value::ZERO,
+            duration: Duration::EndOfTurn,
+        })],
+        ..body("Faerie Duelist", cost(&[generic(1), u()]), 1, 2, vec![CreatureType::Faerie, CreatureType::Rogue], vec![])
+    }
+}
+
+/// Coral Commando — {2}{U} 3/2 Merfolk Warrior.
+pub fn coral_commando() -> CardDefinition {
+    body("Coral Commando", cost(&[generic(2), u()]), 3, 2, vec![CreatureType::Merfolk, CreatureType::Warrior], vec![])
+}
+
+/// Windstorm Drake — {4}{U} 3/3 Drake with flying. Other creatures you control
+/// with flying get +1/+0.
+pub fn windstorm_drake() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control with flying get +1/+0.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::HasKeyword(Keyword::Flying).and(R::OtherThanSource),
+                power: 1,
+                toughness: 0,
+                keywords: vec![],
+                opponents: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..body("Windstorm Drake", cost(&[generic(4), u()]), 3, 3, vec![CreatureType::Drake], vec![Keyword::Flying])
+    }
+}
+
+/// Bankrupt in Blood — {1}{B} Sorcery. Additional cost: sacrifice two creatures.
+/// Draw three cards.
+pub fn bankrupt_in_blood() -> CardDefinition {
+    CardDefinition {
+        name: "Bankrupt in Blood",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent { filter: R::Creature, count: 2 }],
+        effect: draw(3),
+        ..Default::default()
+    }
+}
+
+/// Drill Bit — {2}{B} Sorcery with Spectacle {B}. Target player reveals their
+/// hand; you choose a nonland card; that player discards it.
+pub fn drill_bit() -> CardDefinition {
+    CardDefinition {
+        name: "Drill Bit",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        alternative_cost: Some(spectacle(cost(&[b()]))),
+        effect: Effect::DiscardChosen {
+            from: Selector::Player(PlayerRef::Target(0)),
+            count: Value::ONE,
+            filter: R::Nonland,
+        },
+        ..Default::default()
+    }
+}
+
+/// Burning-Tree Vandal — {2}{R} 2/1 Human Rogue with Riot. Whenever it attacks,
+/// you may discard a card; if you do, draw a card.
+pub fn burning_tree_vandal() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            riot(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Discard a card, then draw a card.".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                        draw(1),
+                    ])),
+                },
+            },
+        ],
+        ..body("Burning-Tree Vandal", cost(&[generic(2), r()]), 2, 1, vec![CreatureType::Human, CreatureType::Rogue], vec![])
+    }
+}
+
+/// Ghor-Clan Wrecker — {3}{R} 2/2 Human Warrior with Riot and menace.
+pub fn ghor_clan_wrecker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![riot()],
+        ..body("Ghor-Clan Wrecker", cost(&[generic(3), r()]), 2, 2, vec![CreatureType::Human, CreatureType::Warrior], vec![Keyword::Menace])
+    }
+}
+
+/// Territorial Boar — {1}{G} 2/2 Boar. Whenever a creature you control with
+/// power 4+ enters, it gets +1/+1 and gains vigilance until end of turn.
+pub fn territorial_boar() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::PowerAtLeast(4)),
+            }),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..body("Territorial Boar", cost(&[generic(1), g()]), 2, 2, vec![CreatureType::Boar], vec![])
+    }
+}
+
+/// Sprouting Renewal — {2}{G} Sorcery with convoke. Choose one — create a 2/2
+/// green-and-white Elf Knight with vigilance; or destroy target artifact or
+/// enchantment.
+pub fn sprouting_renewal() -> CardDefinition {
+    CardDefinition {
+        name: "Sprouting Renewal",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::ChooseModesCast {
+            modes: vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: token("Elf Knight", vec![Color::Green, Color::White], 2, 2, vec![CreatureType::Elf, CreatureType::Knight], vec![Keyword::Vigilance]),
+                },
+                Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            ],
+            min: 1,
+            max: 1,
+            allow_repeats: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Open the Gates — {G} Sorcery. Search your library for a basic land or Gate
+/// card, reveal it, put it into your hand, then shuffle.
+pub fn open_the_gates() -> CardDefinition {
+    CardDefinition {
+        name: "Open the Gates",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: R::IsBasicLand.or(R::HasLandType(LandType::Gate)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Cindervines — {R}{G} Enchantment. Whenever an opponent casts a noncreature
+/// spell, deal 1 damage to that player. {1}, Sacrifice this: destroy target
+/// artifact or enchantment and deal 2 damage to that permanent's controller.
+pub fn cindervines() -> CardDefinition {
+    CardDefinition {
+        name: "Cindervines",
+        cost: cost(&[r(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Not(Box::new(R::Creature)),
+            }),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))), amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))), amount: Value::Const(2) },
+                Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sphinx's Insight — {2}{W}{U} Instant. Draw two cards. Addendum — if cast
+/// during your main phase, gain 2 life.
+pub fn sphinxs_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Sphinx's Insight",
+        cost: cost(&[generic(2), w(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            draw(2),
+            Effect::If {
+                cond: Predicate::YourMainPhase,
+                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bladebrand — {1}{B} Instant. Target creature gains deathtouch until end of
+/// turn. Draw a card.
+pub fn bladebrand() -> CardDefinition {
+    CardDefinition {
+        name: "Bladebrand",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+            draw(1),
+        ]),
+        ..Default::default()
+    }
 }

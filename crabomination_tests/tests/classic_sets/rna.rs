@@ -42,6 +42,16 @@ fn rna_stat_and_keyword_lines() {
         (catalog::feral_maaka, 2, 2, &[]),
         (catalog::wild_ceratok, 4, 3, &[]),
         (catalog::rubble_slinger, 2, 3, &[Keyword::Reach]),
+        (catalog::impassioned_orator, 2, 2, &[]),
+        (catalog::concordia_pegasus, 1, 3, &[Keyword::Flying]),
+        (catalog::prowling_caracal, 3, 1, &[]),
+        (catalog::watchful_giant, 3, 6, &[]),
+        (catalog::faerie_duelist, 1, 2, &[Keyword::Flash, Keyword::Flying]),
+        (catalog::coral_commando, 3, 2, &[]),
+        (catalog::windstorm_drake, 3, 3, &[Keyword::Flying]),
+        (catalog::burning_tree_vandal, 2, 1, &[]),
+        (catalog::ghor_clan_wrecker, 2, 2, &[Keyword::Menace]),
+        (catalog::territorial_boar, 2, 2, &[]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -580,4 +590,166 @@ fn tithe_taker_taxes_opponents_on_your_turn() {
     let own_spell = g.players[0].hand.iter().find(|c| c.id == oid).unwrap().clone();
     g.active_player_idx = 0;
     assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &own_spell, None, 0), 0, "controller exempt");
+}
+
+/// Impassioned Orator gains 1 life when another creature you control enters.
+#[test]
+fn impassioned_orator_gains_on_ally_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::impassioned_orator());
+    let life = g.players[0].life;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bear }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "gained 1 when the bear entered");
+}
+
+/// Watchful Giant's ETB makes a 1/1 white Human.
+#[test]
+fn watchful_giant_makes_human() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.move_card_to_battlefield_for_test(0, catalog::watchful_giant());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Human"), "1/1 Human token minted");
+}
+
+/// Faerie Duelist shrinks an opponent's creature by -2/-0 on entry.
+#[test]
+fn faerie_duelist_shrinks_opponent() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(foe)), 0, 0);
+    let effect = catalog::faerie_duelist().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 0, "2/2 → 0/2");
+}
+
+/// Windstorm Drake pumps other flyers you control +1/+0 (and not itself/ground).
+#[test]
+fn windstorm_drake_flying_anthem() {
+    let mut g = two_player_game();
+    let drake = g.add_card_to_battlefield(0, catalog::windstorm_drake());
+    let flyer = g.add_card_to_battlefield(0, catalog::concordia_pegasus()); // 1/3 flying
+    let ground = g.add_card_to_battlefield(0, catalog::grizzly_bears());     // 2/2 no fly
+    assert_eq!(g.computed_permanent(flyer).unwrap().power, 2, "other flyer +1/+0");
+    assert_eq!(g.computed_permanent(ground).unwrap().power, 2, "ground creature unaffected");
+    assert_eq!(g.computed_permanent(drake).unwrap().power, 3, "drake doesn't pump itself");
+}
+
+/// Bankrupt in Blood sacrifices two creatures and draws three.
+#[test]
+fn bankrupt_in_blood_sacs_two_draws_three() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let cast = g.add_card_to_hand(0, catalog::bankrupt_in_blood());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let creatures = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.card_types.contains(&CardType::Creature)).count();
+    assert_eq!(creatures, 0, "two creatures sacrificed");
+    // Spent the spell from hand, drew 3 → net +2 vs the pre-cast hand-minus-spell.
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3, "drew three");
+}
+
+/// Territorial Boar grows when a power-4+ creature you control enters.
+#[test]
+fn territorial_boar_grows_on_big_etb() {
+    let mut g = two_player_game();
+    let boar = g.add_card_to_battlefield(0, catalog::territorial_boar());
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm()); // 6/4
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: wurm }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(boar).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "gains vigilance");
+}
+
+/// Open the Gates fetches a Gate to hand.
+#[test]
+fn open_the_gates_fetches_gate() {
+    let mut g = two_player_game();
+    let gate = g.add_card_to_library(0, catalog::azorius_guildgate());
+    let cast = g.add_card_to_hand(0, catalog::open_the_gates());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Search(Some(gate))]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Azorius Guildgate"), "Gate in hand");
+}
+
+/// Cindervines pings an opponent who casts a noncreature spell.
+#[test]
+fn cindervines_pings_on_opponent_noncreature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cindervines());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "opponent pinged 1 for a noncreature cast");
+}
+
+/// Sphinx's Insight draws two, and gains 2 life under Addendum.
+#[test]
+fn sphinxs_insight_addendum_life() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let cast = g.add_card_to_hand(0, catalog::sphinxs_insight());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "Addendum gained 2 on your main phase");
+}
+
+/// Bladebrand grants deathtouch and draws a card.
+#[test]
+fn bladebrand_deathtouch_and_draw() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let cast = g.add_card_to_hand(0, catalog::bladebrand());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch), "bear gains deathtouch");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "drew a card");
+}
+
+/// Sprouting Renewal is a convoke modal (make a token / destroy).
+#[test]
+fn sprouting_renewal_is_convoke_modal() {
+    let def = catalog::sprouting_renewal();
+    assert!(def.keywords.contains(&Keyword::Convoke), "has convoke");
+    match def.effect {
+        crabomination::effect::Effect::ChooseModesCast { min, max, modes, .. } => {
+            assert_eq!((min, max, modes.len()), (1, 1, 2), "choose one of two modes");
+        }
+        _ => panic!("expected ChooseModesCast"),
+    }
 }
