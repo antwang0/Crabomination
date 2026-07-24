@@ -2,6 +2,7 @@
 
 use crabomination::card::{CounterType, CreatureType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -2013,4 +2014,77 @@ fn planewide_celebration_is_choose_four() {
         }
         _ => panic!("expected ChooseModesCast"),
     }
+}
+
+/// Devouring Hellion enters with twice as many +1/+1 counters as creatures
+/// sacrificed (devour ×2).
+#[test]
+fn devouring_hellion_devours_double() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::devouring_hellion());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "2/2 + four +1/+1 counters");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears").count(), 0, "both bears sacrificed");
+}
+
+/// Nahiri grants first strike to your creatures during your turn only, and her
+/// −X burns a tapped creature.
+#[test]
+fn nahiri_first_strike_and_burn() {
+    let mut g = two_player_game();
+    let nahiri = g.add_card_to_battlefield(0, catalog::nahiri_storm_of_stone());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike), "first strike on your turn");
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike), "not on opponent's turn");
+    // −X burns a tapped creature.
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: nahiri, ability_index: 0, target: Some(Target::Permanent(foe)), x_value: Some(2) }).expect("-X");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "2 damage kills the 2/2");
+}
+
+/// Mizzium Tank animates and pumps when you cast a noncreature spell.
+#[test]
+fn mizzium_tank_animates_on_noncreature() {
+    let mut g = two_player_game();
+    let tank = g.add_card_to_battlefield(0, catalog::mizzium_tank());
+    assert!(!g.computed_permanent(tank).unwrap().card_types.contains(&crabomination::card::CardType::Creature), "not a creature at rest");
+    cast_at_target(&mut g, catalog::lightning_bolt(), Target::Player(1), &[(Color::Red, 1)], 0);
+    let cp = g.computed_permanent(tank).unwrap();
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "animated by the noncreature cast");
+    assert_eq!((cp.power, cp.toughness), (4, 3), "3/2 +1/+1");
+}
+
+/// Narset's Reversal copies the target spell and returns it to hand.
+#[test]
+fn narsets_reversal_copies_and_returns() {
+    let mut g = two_player_game();
+    // Opponent's Lightning Bolt on the stack targeting our player.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None }).expect("cast bolt");
+    // We respond with Narset's Reversal targeting the bolt.
+    let nr = g.add_card_to_hand(0, catalog::narsets_reversal());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell { card_id: nr, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None }).expect("cast reversal");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "bolt returned to owner's hand");
 }

@@ -2727,6 +2727,94 @@ pub fn rescuer_sphinx() -> CardDefinition {
     }
 }
 
+/// Devouring Hellion — {2}{R} 2/2 Hellion. Devour-style: as it enters, you may
+/// sacrifice any number of creatures and/or planeswalkers; it enters with twice
+/// that many +1/+1 counters (`SacrificeAnyNumber` over creatures/PWs, ×2).
+pub fn devouring_hellion() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::SacrificeAnyNumber {
+            who: PlayerRef::You,
+            filter: (R::Creature.or(R::Planeswalker)).and(R::OtherThanSource),
+            per_each: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            }),
+        })],
+        ..vanilla("Devouring Hellion", cost(&[generic(2), r()]), 2, 2, vec![CreatureType::Hellion])
+    }
+}
+
+/// Nahiri, Storm of Stone — {2}{R/W}{R/W} loyalty 6. Static: during your turn,
+/// creatures you control have first strike and your equip abilities cost {1}
+/// less. −X: Nahiri deals X damage to target tapped creature.
+pub fn nahiri_storm_of_stone() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, creatures you control have first strike.",
+                effect: StaticEffect::WhileYourTurn {
+                    inner: Box::new(StaticEffect::GrantKeyword {
+                        applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                        keyword: Keyword::FirstStrike,
+                    }),
+                },
+            },
+            StaticAbility {
+                description: "During your turn, equip abilities you activate cost {1} less.",
+                effect: StaticEffect::WhileYourTurn { inner: Box::new(StaticEffect::EquipCostReduction { amount: 1 }) },
+            },
+        ],
+        loyalty_abilities: vec![LoyaltyAbility {
+            x_cost: true,
+            effect: Effect::DealDamage { to: target_filtered(R::Creature.and(R::Tapped)), amount: Value::XFromCost },
+            ..Default::default()
+        }],
+        ..walker("Nahiri, Storm of Stone", cost(&[generic(2), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]), PlaneswalkerSubtype::Nahiri, 6)
+    }
+}
+
+/// Mizzium Tank — {1}{R}{R} 3/2 Vehicle with trample, Crew 1. Whenever you cast
+/// a noncreature spell, it becomes an artifact creature and gets +1/+1 (EOT).
+pub fn mizzium_tank() -> CardDefinition {
+    CardDefinition {
+        name: "Mizzium Tank",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample, Keyword::Crew(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(cast_is_noncreature()),
+            effect: Effect::Seq(vec![
+                Effect::AnimateAsCreature { what: Selector::This, duration: Duration::EndOfTurn },
+                Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Narset's Reversal — {U}{U} Instant. Copy target instant or sorcery spell
+/// (may choose new targets), then return it to its owner's hand. (Modeled as a
+/// copy + Remand-style return; genuinely uncounterable spells are still bounced.)
+pub fn narsets_reversal() -> CardDefinition {
+    CardDefinition {
+        name: "Narset's Reversal",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CopySpellMayChooseTargets {
+                what: target_filtered(R::IsSpellOnStack.and(instant_or_sorcery())),
+                count: Value::ONE,
+            },
+            Effect::CounterSpellToZone { what: Selector::Target(0), zone: crate::effect::CounteredSpellZone::OwnerHand },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Storm the Citadel — {4}{G} Sorcery. Until end of turn, creatures you control
 /// get +2/+2 and gain "whenever this creature deals combat damage to a player or
 /// planeswalker, destroy target artifact or enchantment an opponent controls."

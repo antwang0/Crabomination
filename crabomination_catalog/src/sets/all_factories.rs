@@ -14828,6 +14828,10 @@ static WAR: &[Factory] = &[
     super::war::commence_the_endgame,
     super::war::teferis_time_twist,
     super::war::planewide_celebration,
+    super::war::devouring_hellion,
+    super::war::nahiri_storm_of_stone,
+    super::war::mizzium_tank,
+    super::war::narsets_reversal,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,
