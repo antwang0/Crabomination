@@ -1713,6 +1713,36 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Mobilized District animates into a 3/3 vigilant Citizen that's still a land.
+#[test]
+fn mobilized_district_animates() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_battlefield(0, catalog::mobilized_district());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None }).expect("animate");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(land).expect("district");
+    assert!(c.card_types.contains(&crabomination::card::CardType::Creature) && c.card_types.contains(&crabomination::card::CardType::Land));
+    assert_eq!((c.power, c.toughness), (3, 3));
+    assert!(c.keywords.contains(&Keyword::Vigilance));
+}
+
+/// Emergence Zone's sac ability lets you cast a sorcery-speed spell at instant speed.
+#[test]
+fn emergence_zone_grants_flash() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let zone = g.add_card_to_battlefield(0, catalog::emergence_zone());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility { card_id: zone, ability_index: 1, target: None, additional_targets: vec![], x_value: None }).expect("sac for flash");
+    drain_stack(&mut g);
+    assert!(g.players[0].sorceries_as_flash, "may cast at instant speed this turn");
+    assert!(g.battlefield_find(zone).is_none(), "sacrificed itself");
+}
+
 /// Enter the God-Eternals burns a creature, gains life, mills, and amasses 4.
 #[test]
 fn enter_the_god_eternals_full_line() {

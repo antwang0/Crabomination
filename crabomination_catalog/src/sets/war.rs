@@ -2574,6 +2574,52 @@ pub fn heartwarming_redemption() -> CardDefinition {
     }
 }
 
+/// Emergence Zone — Land. {T}: Add {C}. {1}, {T}, Sacrifice: you may cast
+/// spells this turn as though they had flash.
+pub fn emergence_zone() -> CardDefinition {
+    CardDefinition {
+        name: "Emergence Zone",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::GrantSorceriesAsFlash { who: PlayerRef::You },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mobilized District — Land. {T}: Add {C}. {4}: becomes a 3/3 Citizen with
+/// vigilance until end of turn (still a land). (The per-legendary cost reduction
+/// is dropped.)
+pub fn mobilized_district() -> CardDefinition {
+    CardDefinition {
+        name: "Mobilized District",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    creature_types: vec![CreatureType::Citizen],
+                    keywords: vec![Keyword::Vigilance],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Ashiok, Dream Render — {1}{U/B}{U/B} loyalty 5. Static: opponents' spells and
 /// abilities can't cause their controller to search their library. −1: target
 /// player mills four, then exile each opponent's graveyard.
