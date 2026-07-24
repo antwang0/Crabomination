@@ -71,6 +71,12 @@ fn rna_stat_and_keyword_lines() {
         (catalog::silhana_wayfinder, 2, 1, &[]),
         (catalog::elite_arrester, 0, 3, &[]),
         (catalog::wall_of_lost_thoughts, 0, 4, &[Keyword::Defender]),
+        (catalog::rubblebelt_runner, 3, 3, &[Keyword::CantBeBlockedBy(Box::new(crabomination::card::SelectionRequirement::IsToken))]),
+        (catalog::frilled_mystic, 3, 2, &[Keyword::Flash]),
+        (catalog::zegana_utopian_speaker, 4, 4, &[]),
+        (catalog::biogenic_ooze, 2, 2, &[]),
+        (catalog::sunder_shaman, 5, 5, &[Keyword::CantBeBlockedByMoreThanOne]),
+        (catalog::skarrgan_hellkite, 4, 4, &[Keyword::Flying]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -1155,4 +1161,96 @@ fn bot_activates_adapt_ability() {
         matches!(action, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == munc),
         "bot adapts Aeromunculus: {action:?}"
     );
+}
+
+// ── Batch 6 (2026-07-24) functionality tests ─────────────────────────────────
+
+/// Frilled Mystic has flash and an ETB "may counter target spell".
+#[test]
+fn frilled_mystic_flash_counter() {
+    use crabomination::effect::Effect;
+    let def = catalog::frilled_mystic();
+    assert!(def.keywords.contains(&Keyword::Flash), "flash");
+    assert!(matches!(&def.triggered_abilities[0].effect, Effect::MayDo { body, .. }
+        if matches!(&**body, Effect::CounterSpell { .. })), "ETB may counter a spell");
+}
+
+/// Rubblebelt Runner can't be blocked by a token.
+#[test]
+fn rubblebelt_runner_evades_tokens() {
+    let c = catalog::rubblebelt_runner();
+    assert!(c.keywords.iter().any(|k| matches!(k, Keyword::CantBeBlockedBy(_))), "carries the token-block restriction");
+}
+
+/// Zegana draws on entry when you control a countered creature.
+#[test]
+fn zegana_etb_draws_with_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let hand = g.players[0].hand.len();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::zegana_utopian_speaker().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Zegana's static gives trample to your +1/+1-countered creatures.
+#[test]
+fn zegana_trample_anthem() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zegana_utopian_speaker());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample), "countered creature has trample");
+}
+
+/// Ill-Gotten Inheritance's upkeep drains each opponent and gains you life.
+#[test]
+fn ill_gotten_inheritance_upkeep_drain() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    let opp = g.players[1].life;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::ill_gotten_inheritance().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[1].life, opp - 1, "each opponent took 1");
+    assert_eq!(g.players[0].life, life + 1, "gained 1");
+}
+
+/// Biogenic Ooze makes an Ooze token on entry.
+#[test]
+fn biogenic_ooze_makes_token() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.move_card_to_battlefield_for_test(0, catalog::biogenic_ooze());
+    drain_stack(&mut g);
+    let oozes = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Ooze)).count();
+    assert_eq!(oozes, 2, "Biogenic Ooze + one token");
+}
+
+/// Skarrgan Hellkite's ping is gated on having a +1/+1 counter.
+#[test]
+fn skarrgan_hellkite_ping_needs_counter() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::skarrgan_hellkite());
+    g.clear_sickness(dragon);
+    // Ensure no +1/+1 counter (riot's ETB choice may have added one).
+    g.battlefield_find_mut(dragon).unwrap().counters.remove(&CounterType::PlusOnePlusOne);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    // No counter yet → the "activate only if it has a +1/+1 counter" gate rejects.
+    let no_counter = g.perform_action(GameAction::ActivateAbility { card_id: dragon, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None });
+    assert!(matches!(no_counter, Err(crabomination::game::GameError::AbilityConditionNotMet)), "no counter → gate rejects: {no_counter:?}");
+    // Give it a counter → the gate is satisfied (no AbilityConditionNotMet).
+    g.battlefield_find_mut(dragon).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let with_counter = g.perform_action(GameAction::ActivateAbility { card_id: dragon, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None });
+    assert!(!matches!(with_counter, Err(crabomination::game::GameError::AbilityConditionNotMet)), "counter → gate satisfied: {with_counter:?}");
+}
+
+/// Sunder Shaman can't be blocked by more than one creature.
+#[test]
+fn sunder_shaman_menace_like() {
+    assert!(catalog::sunder_shaman().keywords.contains(&Keyword::CantBeBlockedByMoreThanOne), "can't be blocked by more than one");
 }

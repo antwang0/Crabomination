@@ -3,7 +3,8 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, LandType, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    EventSpec, Keyword, LandType, StaticAbility, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::card::SelectionRequirement as R;
 use crate::effect::shortcut::{
@@ -1531,5 +1532,156 @@ pub fn code_of_constraint() -> CardDefinition {
             },
         ]),
         ..Default::default()
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Batch 6 (2026-07-24): rares/uncommons — adapt payoffs, riot, tokens, control
+// ══════════════════════════════════════════════════════════════════════════
+
+/// Rubblebelt Runner — {1}{R}{G} 3/3 Lizard Warrior. Can't be blocked by
+/// creature tokens.
+pub fn rubblebelt_runner() -> CardDefinition {
+    body("Rubblebelt Runner", cost(&[generic(1), r(), g()]), 3, 3, vec![CreatureType::Lizard, CreatureType::Warrior], vec![Keyword::CantBeBlockedBy(Box::new(R::IsToken))])
+}
+
+/// Frilled Mystic — {G}{G}{U}{U} 3/2 Elf Lizard Wizard with flash. ETB you may
+/// counter target spell.
+pub fn frilled_mystic() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Counter target spell.".into(),
+            body: Box::new(Effect::CounterSpell { what: target_filtered(R::Any) }),
+        })],
+        ..body("Frilled Mystic", cost(&[g(), g(), u(), u()]), 3, 2, vec![CreatureType::Elf, CreatureType::Lizard, CreatureType::Wizard], vec![])
+    }
+}
+
+/// Zegana, Utopian Speaker — {2}{G}{U} 4/4 legendary Merfolk Wizard. ETB draw a
+/// card if you control another creature with a +1/+1 counter. {4}{G}{U}: Adapt
+/// 4. Each creature you control with a +1/+1 counter has trample.
+pub fn zegana_utopian_speaker() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource).and(R::WithCounter(CounterType::PlusOnePlusOne))),
+                n: Value::ONE,
+            },
+            then: Box::new(draw(1)),
+            else_: Box::new(Effect::Noop),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g(), u()]),
+            effect: adapt(4),
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control with a +1/+1 counter has trample.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::WithCounter(CounterType::PlusOnePlusOne),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Trample],
+                opponents: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..body("Zegana, Utopian Speaker", cost(&[generic(2), g(), u()]), 4, 4, vec![CreatureType::Merfolk, CreatureType::Wizard], vec![])
+    }
+}
+
+/// Ill-Gotten Inheritance — {3}{B} Enchantment. At the beginning of your upkeep,
+/// deals 1 to each opponent and you gain 1. {5}{B}, Sacrifice it: deals 4 to
+/// target opponent and you gain 4.
+pub fn ill_gotten_inheritance() -> CardDefinition {
+    CardDefinition {
+        name: "Ill-Gotten Inheritance",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                deal(1, Selector::Player(PlayerRef::EachOpponent)),
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), b()]),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                deal(4, target_filtered(R::OpponentPlayer)),
+                Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Biogenic Ooze — {3}{G}{G} 2/2 Ooze. ETB create a 2/2 green Ooze. At each of
+/// your end steps put a +1/+1 counter on each Ooze you control. {1}{G}{G}{G}:
+/// create a 2/2 green Ooze.
+pub fn biogenic_ooze() -> CardDefinition {
+    let make_ooze = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: token("Ooze", vec![Color::Green], 2, 2, vec![CreatureType::Ooze], vec![]),
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(make_ooze()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::End), EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Ooze).and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g(), g(), g()]),
+            effect: make_ooze(),
+            ..Default::default()
+        }],
+        ..body("Biogenic Ooze", cost(&[generic(3), g(), g()]), 2, 2, vec![CreatureType::Ooze], vec![])
+    }
+}
+
+/// Sunder Shaman — {R}{R}{G}{G} 5/5 Giant Shaman. Can't be blocked by more than
+/// one creature. Whenever it deals combat damage to a player, destroy target
+/// artifact or enchantment. (The "that player controls" restriction is
+/// approximated as any artifact/enchantment.)
+pub fn sunder_shaman() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+        }],
+        ..body("Sunder Shaman", cost(&[r(), r(), g(), g()]), 5, 5, vec![CreatureType::Giant, CreatureType::Shaman], vec![Keyword::CantBeBlockedByMoreThanOne])
+    }
+}
+
+/// Skarrgan Hellkite — {3}{R}{R} 4/4 Dragon with riot and flying. {3}{R}: deals
+/// 2 damage divided among one or two targets. Activate only if it has a +1/+1
+/// counter on it.
+pub fn skarrgan_hellkite() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![riot()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r()]),
+            condition: Some(Predicate::EntityMatches { what: Selector::This, filter: R::WithCounter(CounterType::PlusOnePlusOne) }),
+            effect: Effect::DealDamageDivided {
+                total: Value::Const(2),
+                filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                max_targets: 2,
+            },
+            ..Default::default()
+        }],
+        ..body("Skarrgan Hellkite", cost(&[generic(3), r(), r()]), 4, 4, vec![CreatureType::Dragon], vec![])
     }
 }

@@ -9832,6 +9832,13 @@ static RNA: &[Factory] = &[
     super::rna::expose_to_daylight,
     super::rna::rally_to_battle,
     super::rna::code_of_constraint,
+    super::rna::rubblebelt_runner,
+    super::rna::frilled_mystic,
+    super::rna::zegana_utopian_speaker,
+    super::rna::ill_gotten_inheritance,
+    super::rna::biogenic_ooze,
+    super::rna::sunder_shaman,
+    super::rna::skarrgan_hellkite,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,
