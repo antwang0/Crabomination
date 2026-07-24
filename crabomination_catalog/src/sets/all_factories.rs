@@ -14854,6 +14854,8 @@ static WAR: &[Factory] = &[
     super::war::jiang_yanggu_wildcrafter,
     super::war::finale_of_eternity,
     super::war::domri_anarch_of_bolas,
+    super::war::finale_of_revelation,
+    super::war::liliana_dreadhorde_general,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

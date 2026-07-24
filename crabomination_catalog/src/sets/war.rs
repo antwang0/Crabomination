@@ -3504,6 +3504,79 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
     }
 }
 
+/// Liliana, Dreadhorde General — {4}{B}{B} loyalty 6. Whenever a creature you
+/// control dies, draw a card. +1: make two 2/2 black Zombies. −4: each player
+/// sacrifices two creatures. −9: each opponent keeps one permanent of each type
+/// and sacrifices the rest.
+pub fn liliana_dreadhorde_general() -> CardDefinition {
+    let zombie = || TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: creatures(vec![CreatureType::Zombie]),
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: draw(1),
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: zombie() },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -4,
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    count: Value::Const(2),
+                    filter: R::Creature,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -9,
+                effect: Effect::SacrificeAllButOnePerType { who: Selector::Player(PlayerRef::EachOpponent) },
+                ..Default::default()
+            },
+        ],
+        ..walker("Liliana, Dreadhorde General", cost(&[generic(4), b(), b()]), PlaneswalkerSubtype::Liliana, 6)
+    }
+}
+
+/// Finale of Revelation — {X}{U}{U} Sorcery. Draw X. If X is 10 or more,
+/// instead shuffle your graveyard in, draw X, untap up to five lands, and gain
+/// no maximum hand size for the rest of the game. Exiled on resolution.
+pub fn finale_of_revelation() -> CardDefinition {
+    let draw_x = || Effect::Draw { who: Selector::You, amount: Value::XFromCost };
+    CardDefinition {
+        name: "Finale of Revelation",
+        cost: cost(&[x(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(10)),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+                    draw_x(),
+                    Effect::Untap {
+                        what: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+                        up_to: Some(Value::Const(5)),
+                    },
+                    Effect::SetNoMaxHandSize { who: Selector::You },
+                ])),
+                else_: Box::new(draw_x()),
+            },
+            Effect::ExileResolvingSpell,
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Domri, Anarch of Bolas — {1}{R}{G} loyalty 3. Static: creatures you control
 /// get +1/+0. +1: add {R} or {G}; creature spells you cast this turn can't be
 /// countered. −2: a creature you control fights a creature you don't control.

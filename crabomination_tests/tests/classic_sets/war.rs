@@ -2612,3 +2612,82 @@ fn domri_anarch_plus_one_mana_and_uncounterable() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "added one red (decider default)");
     assert!(g.players[0].creature_spells_uncounterable_this_turn, "creature spells shielded this turn");
 }
+
+/// Finale of Revelation draws X and exiles itself.
+#[test]
+fn finale_of_revelation_draws_x_and_exiles() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    let hand = g.players[0].hand.len();
+    let fin = g.add_card_to_hand(0, catalog::finale_of_revelation());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: fin, target: None, additional_targets: vec![], mode: None, x_value: Some(3) }).expect("cast X=3");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "drew three");
+    assert!(g.exile.iter().any(|c| c.id == fin), "Finale exiled itself");
+}
+
+/// Finale of Revelation at X=10 shuffles the graveyard in and removes the
+/// maximum hand size.
+#[test]
+fn finale_of_revelation_x10_no_max_hand_size() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    for _ in 0..12 { g.add_card_to_library(0, catalog::forest()); }
+    let fin = g.add_card_to_hand(0, catalog::finale_of_revelation());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastSpell { card_id: fin, target: None, additional_targets: vec![], mode: None, x_value: Some(10) }).expect("cast X=10");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled into library");
+    assert_eq!(g.players[0].max_hand_size, None, "no maximum hand size");
+}
+
+/// Liliana, Dreadhorde General's passive draws when your creature dies, and
+/// +1 makes two Zombies.
+#[test]
+fn liliana_dreadhorde_draws_on_death_and_makes_zombies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::liliana_dreadhorde_general());
+    g.add_card_to_library(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let hand = g.players[0].hand.len();
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(bear), 2, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew on the creature's death");
+    // +1 makes two 2/2 black Zombies.
+    let lili = g.battlefield.iter().find(|c| c.definition.name == "Liliana, Dreadhorde General").unwrap().id;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: lili, ability_index: 0, target: None, x_value: None }).expect("+1");
+    drain_stack(&mut g);
+    let zombies = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Zombie" && c.definition.power == 2).count();
+    assert_eq!(zombies, 2, "two Zombie tokens");
+}
+
+/// Liliana's −4 makes each player sacrifice two creatures.
+#[test]
+fn liliana_dreadhorde_minus_four_sacrifices_two_each() {
+    let mut g = two_player_game();
+    let lili = g.add_card_to_battlefield(0, catalog::liliana_dreadhorde_general());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); } // the death-draw passive needs a library
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::grizzly_bears()); }
+    for _ in 0..3 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: lili, ability_index: 1, target: None, x_value: None }).expect("-4");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count(), 1, "player 0 sacrificed two of three");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_creature()).count(), 1, "player 1 sacrificed two of three");
+}
