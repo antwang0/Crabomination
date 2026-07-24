@@ -77,6 +77,17 @@ fn rna_stat_and_keyword_lines() {
         (catalog::biogenic_ooze, 2, 2, &[]),
         (catalog::sunder_shaman, 5, 5, &[Keyword::CantBeBlockedByMoreThanOne]),
         (catalog::skarrgan_hellkite, 4, 4, &[Keyword::Flying]),
+        (catalog::humongulus, 2, 5, &[Keyword::Hexproof]),
+        (catalog::gravel_hide_goblin, 2, 1, &[]),
+        (catalog::seraph_of_the_scales, 4, 3, &[Keyword::Flying]),
+        (catalog::orzhov_racketeers, 3, 2, &[]),
+        (catalog::gutterbones, 2, 1, &[]),
+        (catalog::knight_of_the_last_breath, 4, 4, &[]),
+        (catalog::sphinx_of_the_guildpact, 5, 5, &[Keyword::Flying, Keyword::HexproofFromMonocolored]),
+        (catalog::azorius_skyguard, 3, 3, &[Keyword::Flying, Keyword::FirstStrike]),
+        (catalog::charging_war_boar, 3, 1, &[Keyword::Haste]),
+        (catalog::dovins_automaton, 3, 3, &[]),
+        (catalog::the_haunt_of_hightower, 3, 3, &[Keyword::Flying, Keyword::Lifelink]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -1253,4 +1264,199 @@ fn skarrgan_hellkite_ping_needs_counter() {
 #[test]
 fn sunder_shaman_menace_like() {
     assert!(catalog::sunder_shaman().keywords.contains(&Keyword::CantBeBlockedByMoreThanOne), "can't be blocked by more than one");
+}
+
+// ── RNA batch 7 (modern_decks) behavior tests ───────────────────────────────
+
+/// Get the Point destroys the target creature and scries.
+#[test]
+fn get_the_point_destroys() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(victim)), 0, 0);
+    let effect = catalog::get_the_point().effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == victim), "creature destroyed");
+}
+
+/// Kaya's Wrath destroys all creatures and gains life for each of yours.
+#[test]
+fn kayas_wrath_wraths_and_gains() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::kayas_wrath().effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.card_types.contains(&CardType::Creature)).count(), 0, "all creatures gone");
+    assert_eq!(g.players[0].life, life + 2, "gained 2 (your two creatures)");
+}
+
+/// Rampage of the Clans destroys artifacts/enchantments, minting a 3/3 Centaur
+/// for each destroyed permanent's controller.
+#[test]
+fn rampage_of_the_clans_swaps_for_centaurs() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::glass_of_the_guildpact()); // an artifact
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::rampage_of_the_clans().effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let centaurs = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Centaur)).count();
+    assert_eq!(centaurs, 1, "opponent gets a Centaur for their destroyed artifact");
+}
+
+/// Goblin Gathering scales with copies already in your graveyard.
+#[test]
+fn goblin_gathering_scales_with_graveyard() {
+    let mut g = two_player_game();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::goblin_gathering().effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let base = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Goblin)).count();
+    assert_eq!(base, 2, "two Goblins with an empty graveyard");
+    g.add_card_to_graveyard(0, catalog::goblin_gathering());
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Goblin)).count();
+    assert_eq!(after, base + 3, "two plus one graveyard copy → three more");
+}
+
+/// Gates Ablaze deals damage equal to Gates you control to each creature.
+#[test]
+fn gates_ablaze_scales_with_gates() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gateway_plaza());
+    g.add_card_to_battlefield(0, catalog::gateway_plaza());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::gates_ablaze().effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "2 damage from two Gates kills the 2/2");
+}
+
+/// Undercity's Embrace edicts and gains 4 with a power-4 creature out.
+#[test]
+fn undercitys_embrace_edict_and_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::craw_wurm()); // 6/4, power >= 4
+    let life = g.players[0].life;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let effect = catalog::undercitys_embrace().effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.card_types.contains(&CardType::Creature)).count(), 0, "opponent sacrificed their creature");
+    assert_eq!(g.players[0].life, life + 4, "gained 4 for the power-4 creature");
+}
+
+/// Glass of the Guildpact only pumps multicolored creatures.
+#[test]
+fn glass_of_the_guildpact_multicolored_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::glass_of_the_guildpact());
+    let mono = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green only
+    let multi = g.add_card_to_battlefield(0, catalog::rakdos_firewheeler()); // B/R multicolored
+    let m = g.computed_permanent(mono).unwrap();
+    assert_eq!((m.power, m.toughness), (2, 2), "monocolored unaffected");
+    let x = g.computed_permanent(multi).unwrap();
+    assert_eq!((x.power, x.toughness), (5, 4), "multicolored 4/3 → 5/4");
+}
+
+/// Macabre Mockery reanimates a creature from an opponent's graveyard under
+/// your control.
+#[test]
+fn macabre_mockery_steals_from_graveyard() {
+    let mut g = two_player_game();
+    let corpse = g.add_card_to_graveyard(1, catalog::craw_wurm());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(corpse)), 0, 0);
+    let effect = catalog::macabre_mockery().effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let reanimated = g.battlefield_find(corpse).expect("on battlefield");
+    assert_eq!(reanimated.controller, 0, "under your control");
+    assert!(g.computed_permanent(corpse).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+}
+
+/// Azorius Skyguard weakens opposing creatures.
+#[test]
+fn azorius_skyguard_debuffs_opponents() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::azorius_skyguard());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let c = g.computed_permanent(opp).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 2), "opponent creature gets -1/-0");
+}
+
+/// Seraph of the Scales can grant itself deathtouch for {B}.
+#[test]
+fn seraph_grants_deathtouch() {
+    let mut g = two_player_game();
+    let seraph = g.add_card_to_battlefield(0, catalog::seraph_of_the_scales());
+    g.clear_sickness(seraph);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility { card_id: seraph, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(seraph).unwrap().keywords.contains(&Keyword::Deathtouch), "gained deathtouch");
+}
+
+/// Gutterbones returns from the graveyard once an opponent has lost life.
+#[test]
+fn gutterbones_recurs_after_opponent_loses_life() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bones = g.add_card_to_graveyard(0, catalog::gutterbones());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // No opponent life loss yet → the "only if an opponent lost life" gate rejects.
+    let early = g.perform_action(GameAction::ActivateAbility { card_id: bones, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
+    assert!(early.is_err(), "gate rejects before any life loss: {early:?}");
+    g.adjust_life(1, -1);
+    g.perform_action(GameAction::ActivateAbility { card_id: bones, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("recur");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bones), "returned to hand");
+}
+
+/// The Haunt of Hightower grows when cards hit an opponent's graveyard.
+#[test]
+fn haunt_of_hightower_grows_on_opponent_mill() {
+    let mut g = two_player_game();
+    let haunt = g.add_card_to_battlefield(0, catalog::the_haunt_of_hightower());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let events = g.resolve_effect(&crabomination::effect::Effect::Mill { who: crabomination::effect::Selector::Player(crabomination::effect::PlayerRef::EachOpponent), amount: crabomination::effect::Value::ONE }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(haunt).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1, "one +1/+1 counter from the milled card");
+}
+
+/// Depose taps a creature and draws; its Deploy half makes two Thopters.
+#[test]
+fn depose_deploy_halves() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(victim)), 0, 0);
+    g.resolve_effect(&catalog::depose_deploy().effect.clone(), &ctx).unwrap();
+    assert!(g.battlefield_find(victim).unwrap().tapped, "Depose taps the target");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "Depose draws a card");
+    let deploy = catalog::depose_deploy().split.unwrap().right.effect.clone();
+    let ctx2 = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&deploy, &ctx2).unwrap();
+    let thopters = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Thopter)).count();
+    assert_eq!(thopters, 2, "Deploy makes two Thopters");
+}
+
+/// Warden's right half mints a 4/4 flying, vigilant Sphinx.
+#[test]
+fn warrant_warden_sphinx() {
+    let mut g = two_player_game();
+    let warden = catalog::warrant_warden().split.unwrap().right.effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&warden, &ctx).unwrap();
+    let sphinx = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Sphinx)).expect("sphinx token");
+    assert_eq!((sphinx.power(), sphinx.toughness()), (4, 4), "4/4 Sphinx");
+    assert!(sphinx.definition.keywords.contains(&Keyword::Flying) && sphinx.definition.keywords.contains(&Keyword::Vigilance));
 }

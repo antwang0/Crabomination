@@ -83,6 +83,10 @@ pub(crate) fn event_matches_spec(
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land: true, .. }) => true,
         (EventKind::PutIntoGraveyard, GameEvent::CardPutIntoGraveyard { .. }) => true,
+        // CR 701.15b — a milled card is "put into a graveyard from a library",
+        // so "whenever a card is put into a graveyard from anywhere" triggers
+        // (Emrakul self-mill, The Haunt of Hightower) fire on mills too.
+        (EventKind::PutIntoGraveyard, GameEvent::CardMilled { .. }) => true,
         (EventKind::PutIntoHandFromGraveyard, GameEvent::CardPutIntoHandFromGraveyard { .. }) => true,
         (EventKind::CardExiled, GameEvent::PermanentExiled { .. }) => true,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,

@@ -8,11 +8,12 @@ use crate::card::{
 };
 use crate::card::SelectionRequirement as R;
 use crate::effect::shortcut::{
-    adapt, afterlife, deal, draw, etb, etb_scry, on_attack, riot, spectacle, target_filtered,
+    adapt, afterlife, deal, draw, each_creature, each_your_creature, etb, etb_scry, on_attack, riot,
+    spectacle, target_filtered,
 };
 use crate::effect::{
     Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, RevealMissDest, Selector,
-    StaticEffect, ZoneDest,
+    StaticEffect, ZoneDest, ZoneRef,
 };
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 
@@ -1683,5 +1684,559 @@ pub fn skarrgan_hellkite() -> CardDefinition {
             ..Default::default()
         }],
         ..body("Skarrgan Hellkite", cost(&[generic(3), r(), r()]), 4, 4, vec![CreatureType::Dragon], vec![])
+    }
+}
+
+// ── RNA batch 7 (modern_decks) ──────────────────────────────────────────────
+
+/// W/B 1/1 flying Spirit — the Orzhov afterlife/token body.
+fn wb_spirit() -> TokenDefinition {
+    token("Spirit", vec![Color::White, Color::Black], 1, 1, vec![CreatureType::Spirit], vec![Keyword::Flying])
+}
+
+/// Humongulus — {4}{U} 2/5 Homunculus with hexproof.
+pub fn humongulus() -> CardDefinition {
+    body("Humongulus", cost(&[generic(4), u()]), 2, 5, vec![CreatureType::Homunculus], vec![Keyword::Hexproof])
+}
+
+/// Gravel-Hide Goblin — {1}{R} 2/1 Goblin Shaman. {3}{G}: +2/+2 until end of turn.
+pub fn gravel_hide_goblin() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..body("Gravel-Hide Goblin", cost(&[generic(1), r()]), 2, 1, vec![CreatureType::Goblin, CreatureType::Shaman], vec![])
+    }
+}
+
+/// Seraph of the Scales — {2}{W}{B} 4/3 Angel with flying and Afterlife 2.
+/// {W}: gains vigilance until end of turn. {B}: gains deathtouch until end of turn.
+pub fn seraph_of_the_scales() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![afterlife(2)],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[w()]),
+                effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+        ],
+        ..body("Seraph of the Scales", cost(&[generic(2), w(), b()]), 4, 3, vec![CreatureType::Angel], vec![Keyword::Flying])
+    }
+}
+
+/// Orzhov Racketeers — {4}{B} 3/2 Human Rogue with Afterlife 2. Whenever it
+/// deals combat damage to a player, that player discards a card.
+pub fn orzhov_racketeers() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Discard { who: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::Const(1), random: false },
+            },
+            afterlife(2),
+        ],
+        ..body("Orzhov Racketeers", cost(&[generic(4), b()]), 3, 2, vec![CreatureType::Human, CreatureType::Rogue], vec![])
+    }
+}
+
+/// Gutterbones — {B} 2/1 Skeleton Warrior. Enters tapped. {1}{B}: return this
+/// from your graveyard to your hand. Activate only during your turn and only if
+/// an opponent lost life this turn.
+pub fn gutterbones() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            from_graveyard: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+            ])),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..body("Gutterbones", cost(&[b()]), 2, 1, vec![CreatureType::Skeleton, CreatureType::Warrior], vec![])
+    }
+}
+
+/// Knight of the Last Breath — {5}{W}{B} 4/4 Giant Knight with Afterlife 3.
+/// {3}, Sacrifice another nontoken creature: create a 1/1 W/B Spirit with flying.
+pub fn knight_of_the_last_breath() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![afterlife(3)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            sac_other_filter: Some((R::Creature.and(R::NotToken), 1)),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: wb_spirit() },
+            ..Default::default()
+        }],
+        ..body("Knight of the Last Breath", cost(&[generic(5), w(), b()]), 4, 4, vec![CreatureType::Giant, CreatureType::Knight], vec![])
+    }
+}
+
+/// Sphinx of the Guildpact — {7} Artifact Creature — Sphinx 5/5. All colors,
+/// flying, hexproof from monocolored.
+pub fn sphinx_of_the_guildpact() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        color_indicator: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+        keywords: vec![Keyword::Flying, Keyword::HexproofFromMonocolored],
+        ..body("Sphinx of the Guildpact", cost(&[generic(7)]), 5, 5, vec![CreatureType::Sphinx], vec![])
+    }
+}
+
+/// Azorius Skyguard — {4}{W}{U} 3/3 Human Knight with flying and first strike.
+/// Creatures your opponents control get -1/-0.
+pub fn azorius_skyguard() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures your opponents control get -1/-0.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::Creature,
+                power: -1,
+                toughness: 0,
+                keywords: vec![],
+                opponents: true,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..body("Azorius Skyguard", cost(&[generic(4), w(), u()]), 3, 3, vec![CreatureType::Human, CreatureType::Knight], vec![Keyword::Flying, Keyword::FirstStrike])
+    }
+}
+
+/// Charging War Boar — {1}{R}{G} 3/1 Boar with haste. As long as you control a
+/// Domri planeswalker, it gets +1/+1 and has trample.
+pub fn charging_war_boar() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control a Domri planeswalker, this gets +1/+1 and has trample.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasPlaneswalkerType(crate::card::PlaneswalkerSubtype::Domri).and(R::ControlledByYou),
+                )),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Trample],
+            },
+        }],
+        ..body("Charging War Boar", cost(&[generic(1), r(), g()]), 3, 1, vec![CreatureType::Boar], vec![Keyword::Haste])
+    }
+}
+
+/// Dovin's Automaton — {4} Artifact Creature — Homunculus 3/3. As long as you
+/// control a Dovin planeswalker, it gets +2/+2 and has vigilance.
+pub fn dovins_automaton() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control a Dovin planeswalker, this gets +2/+2 and has vigilance.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasPlaneswalkerType(crate::card::PlaneswalkerSubtype::Dovin).and(R::ControlledByYou),
+                )),
+                power: 2,
+                toughness: 2,
+                keywords: vec![Keyword::Vigilance],
+            },
+        }],
+        ..body("Dovin's Automaton", cost(&[generic(4)]), 3, 3, vec![CreatureType::Homunculus], vec![])
+    }
+}
+
+/// The Haunt of Hightower — {4}{B}{B} Legendary 3/3 Vampire with flying and
+/// lifelink. Whenever it attacks, defending player discards a card. Whenever a
+/// card is put into an opponent's graveyard from anywhere, put a +1/+1 counter on it.
+pub fn the_haunt_of_hightower() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            on_attack(Effect::Discard { who: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::Const(1), random: false }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::OpponentControl),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(1) },
+            },
+        ],
+        ..body("The Haunt of Hightower", cost(&[generic(4), b(), b()]), 3, 3, vec![CreatureType::Vampire], vec![Keyword::Flying, Keyword::Lifelink])
+    }
+}
+
+/// Get the Point — {3}{B}{R} Instant. Destroy target creature. Scry 1.
+pub fn get_the_point() -> CardDefinition {
+    CardDefinition {
+        name: "Get the Point",
+        cost: cost(&[generic(3), b(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Creature) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Root Snare — {1}{G} Instant. Prevent all combat damage that would be dealt
+/// this turn.
+pub fn root_snare() -> CardDefinition {
+    CardDefinition {
+        name: "Root Snare",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventAllCombatDamageThisTurn,
+        ..Default::default()
+    }
+}
+
+/// Kaya's Wrath — {W}{W}{B}{B} Sorcery. Destroy all creatures. You gain life
+/// equal to the number of creatures you controlled that were destroyed this way.
+pub fn kayas_wrath() -> CardDefinition {
+    CardDefinition {
+        name: "Kaya's Wrath",
+        cost: cost(&[w(), w(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::count(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))) },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(R::Creature),
+                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rampage of the Clans — {3}{G} Instant. Destroy all artifacts and
+/// enchantments. For each permanent destroyed this way, its controller creates
+/// a 3/3 green Centaur creature token.
+pub fn rampage_of_the_clans() -> CardDefinition {
+    CardDefinition {
+        name: "Rampage of the Clans",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(R::Artifact.or(R::Enchantment)),
+            body: Box::new(Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                    count: Value::Const(1),
+                    definition: token("Centaur", vec![Color::Green], 3, 3, vec![CreatureType::Centaur], vec![]),
+                },
+                Effect::Destroy { what: Selector::TriggerSource },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Macabre Mockery — {2}{B}{R} Instant. Put target creature card from an
+/// opponent's graveyard onto the battlefield under your control. It gets +2/+0
+/// and gains haste. Sacrifice it at the beginning of the next end step.
+pub fn macabre_mockery() -> CardDefinition {
+    CardDefinition {
+        name: "Macabre Mockery",
+        cost: cost(&[generic(2), b(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::InOpponentGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::PumpPT { what: Selector::Target(0), power: Value::Const(2), toughness: Value::Const(0), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            Effect::AtNextEndStep { body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Justiciar's Portal — {1}{W} Instant. Exile target creature you control, then
+/// return that card to the battlefield under its owner's control. It gains
+/// first strike until end of turn.
+pub fn justiciars_portal() -> CardDefinition {
+    CardDefinition {
+        name: "Justiciar's Portal",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Exile { what: target_filtered(R::Creature.and(R::ControlledByYou)) },
+            Effect::Move { what: Selector::Target(0), to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false } },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Goblin Gathering — {2}{R} Sorcery. Create a number of 1/1 red Goblin
+/// creature tokens equal to two plus the number of cards named Goblin Gathering
+/// in your graveyard.
+pub fn goblin_gathering() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Gathering",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Sum(vec![
+                Value::Const(2),
+                Value::count(Selector::EachMatching { zone: ZoneRef::Graveyard(PlayerRef::You), filter: R::HasName("Goblin Gathering".into()) }),
+            ]),
+            definition: token("Goblin", vec![Color::Red], 1, 1, vec![CreatureType::Goblin], vec![]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Gates Ablaze — {2}{R} Sorcery. Deals X damage to each creature, where X is
+/// the number of Gates you control.
+pub fn gates_ablaze() -> CardDefinition {
+    CardDefinition {
+        name: "Gates Ablaze",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: each_creature(),
+            amount: Value::count(Selector::EachPermanent(R::HasLandType(LandType::Gate).and(R::ControlledByYou))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Undercity's Embrace — {2}{B} Instant. Target opponent sacrifices a creature
+/// of their choice. If you control a creature with power 4 or greater, you gain
+/// 4 life. (The single "target opponent" is modeled as each opponent — exact in 1v1.)
+pub fn undercitys_embrace() -> CardDefinition {
+    CardDefinition {
+        name: "Undercity's Embrace",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice { who: Selector::Player(PlayerRef::EachOpponent), count: Value::Const(1), filter: R::Creature },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::PowerAtLeast(4)))),
+                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(4) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Glass of the Guildpact — {2} Artifact. Multicolored creatures you control
+/// get +1/+1.
+pub fn glass_of_the_guildpact() -> CardDefinition {
+    CardDefinition {
+        name: "Glass of the Guildpact",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Multicolored creatures you control get +1/+1.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::Creature.and(R::Multicolored),
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+                opponents: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Depose // Deploy — {1}{W/U} // {2}{W}{U} Instant // Instant. Depose taps a
+/// target creature and draws a card; Deploy makes two 1/1 flying Thopters and
+/// gains 1 life for each creature you control.
+pub fn depose_deploy() -> CardDefinition {
+    CardDefinition {
+        name: "Depose // Deploy",
+        cost: cost(&[generic(1), hybrid(Color::White, Color::Blue)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Creature) },
+            draw(1),
+        ]),
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(2), w(), u()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(2),
+                        definition: token("Thopter", vec![], 1, 1, vec![CreatureType::Thopter], vec![Keyword::Flying]),
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::count(each_your_creature()) },
+                ]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Consecrate // Consume — {1}{W/B} // {2}{W}{B} Instant // Sorcery. Consecrate
+/// exiles a card from a graveyard and draws; Consume makes a player sacrifice
+/// their greatest-power creature and gains you life equal to its power.
+pub fn consecrate_consume() -> CardDefinition {
+    CardDefinition {
+        name: "Consecrate // Consume",
+        cost: cost(&[generic(1), hybrid(Color::White, Color::Black)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Exile { what: target_filtered(R::InGraveyard) },
+            draw(1),
+        ]),
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(2), w(), b()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Seq(vec![
+                    Effect::SacrificeGreatestMV {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        count: Value::ONE,
+                        filter: R::Creature,
+                        by_power: true,
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::SacrificedPower },
+                ]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Warrant // Warden — {W/U}{W/U} // {3}{W}{U} Instant // Sorcery. Warrant puts
+/// a target attacking or blocking creature on top of its owner's library;
+/// Warden makes a 4/4 flying, vigilant Sphinx.
+pub fn warrant_warden() -> CardDefinition {
+    CardDefinition {
+        name: "Warrant // Warden",
+        cost: cost(&[hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+        },
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(3), w(), u()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: token("Sphinx", vec![Color::White, Color::Blue], 4, 4, vec![CreatureType::Sphinx], vec![Keyword::Flying, Keyword::Vigilance]),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Thrash // Threat — {R/G}{R/G} // {2}{R}{G} Instant // Sorcery. Thrash has
+/// target creature you control deal damage equal to its power to a creature or
+/// planeswalker you don't control; Threat makes a 4/4 trampling Beast.
+pub fn thrash_threat() -> CardDefinition {
+    CardDefinition {
+        name: "Thrash // Threat",
+        cost: cost(&[hybrid(Color::Red, Color::Green), hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamageEqualToPower {
+            source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            target: Selector::TargetFiltered { slot: 1, filter: (R::Creature.or(R::Planeswalker)).and(R::ControlledByOpponent) },
+        },
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(2), r(), g()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: token("Beast", vec![Color::Red, Color::Green], 4, 4, vec![CreatureType::Beast], vec![Keyword::Trample]),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Collision // Colossus — {1}{R/G} // {R}{G} Instant // Instant. Collision
+/// deals 6 damage to a target creature with flying; Colossus gives a creature
+/// +4/+2 and trample until end of turn.
+pub fn collision_colossus() -> CardDefinition {
+    CardDefinition {
+        name: "Collision // Colossus",
+        cost: cost(&[generic(1), hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage { to: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))), amount: Value::Const(6) },
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[r(), g()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: target_filtered(R::Creature),
+                        power: Value::Const(4),
+                        toughness: Value::Const(2),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+                ]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Carnival // Carnage — {B/R} // {2}{B}{R} Instant // Sorcery. Carnival deals 1
+/// damage to a target creature or planeswalker and 1 to its controller; Carnage
+/// deals 3 to a target opponent, who discards two cards.
+pub fn carnival_carnage() -> CardDefinition {
+    CardDefinition {
+        name: "Carnival // Carnage",
+        cost: cost(&[hybrid(Color::Black, Color::Red)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature.or(R::Planeswalker)), amount: Value::Const(1) },
+            Effect::DealDamage { to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))), amount: Value::Const(1) },
+        ]),
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(2), b(), r()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer }, amount: Value::Const(3) },
+                    Effect::Discard { who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer }))), amount: Value::Const(2), random: false },
+                ]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
     }
 }
