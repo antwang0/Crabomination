@@ -59,17 +59,68 @@ pub fn enumerate_for_cast(
         source_name: String::new(),
         description: String::new(),
     };
+    let ignore = viewer_hexproof_ignores(cv);
     for p in &cv.players {
+        // Skip an opponent shielded by hexproof (CR 702.11) — the server would
+        // reject the cast. `has_hexproof` is already surfaced from the viewer's
+        // perspective, so a Kaya-controlling viewer sees the opponent as legal.
+        if p.seat != cv.your_seat && p.has_hexproof {
+            continue;
+        }
         if evaluate_player(&filter, p, cv.your_seat) {
             out.players.insert(p.seat);
         }
     }
     for perm in &cv.battlefield {
+        if perm.controller != cv.your_seat && untargetable_by_hexproof_or_shroud(perm, ignore) {
+            continue;
+        }
         if evaluate_permanent(&filter, perm, cv.your_seat) {
             out.permanents.insert(perm.id);
         }
     }
     Some(out)
+}
+
+/// How the viewer's static abilities let them ignore an opponent's hexproof
+/// (CR 702.11 — Glaring Spotlight ignores *creature* hexproof; Kaya, Bane of the
+/// Dead ignores it broadly). Computed from the viewer's own battlefield via the
+/// catalog, mirroring `GameState::player_ignores_*_hexproof`.
+#[derive(Clone, Copy, Default)]
+struct HexproofIgnore {
+    creatures: bool,
+    broad: bool,
+}
+
+fn viewer_hexproof_ignores(cv: &ClientView) -> HexproofIgnore {
+    use crabomination::effect::StaticEffect;
+    let mut out = HexproofIgnore::default();
+    for perm in cv.battlefield.iter().filter(|p| p.controller == cv.your_seat) {
+        let Some(def) = crabomination::catalog::lookup_by_name(&perm.name) else { continue };
+        for sa in &def.static_abilities {
+            match sa.effect {
+                StaticEffect::IgnoreOpponentsHexproof => out.broad = true,
+                StaticEffect::IgnoreOpponentsCreatureHexproof => out.creatures = true,
+                _ => {}
+            }
+        }
+    }
+    out
+}
+
+/// True when `perm` (an opponent's) can't be targeted because of plain Shroud
+/// (CR 702.18) or Hexproof (CR 702.11) that the viewer can't ignore. Colour-
+/// scoped hexproof variants stay permissive — the server makes the final call.
+fn untargetable_by_hexproof_or_shroud(perm: &PermanentView, ignore: HexproofIgnore) -> bool {
+    use crabomination::card::{CardType, Keyword};
+    if perm.keywords.contains(&Keyword::Shroud) {
+        return true;
+    }
+    if perm.keywords.contains(&Keyword::Hexproof) && !ignore.broad {
+        let is_creature = perm.card_types.contains(&CardType::Creature);
+        return !(is_creature && ignore.creatures);
+    }
+    false
 }
 
 fn evaluate_player(req: &SelectionRequirement, p: &PlayerView, your_seat: usize) -> bool {

@@ -66,7 +66,14 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                 use crate::mana::Color;
                 let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                     .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
-                project_player(state, p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i), state.player_has_static_hexproof(i), known_library_top(state, i, viewer_seat))
+                // Hexproof is surfaced from the viewer's perspective: if the
+                // viewer controls a broad "ignore opponents' hexproof" static
+                // (Kaya, Bane of the Dead), an opponent's hexproof no longer
+                // shields them from the viewer, so the flag reads false and the
+                // client won't grey the player out as a target.
+                let hexproof = state.player_has_static_hexproof(i)
+                    && !(i != viewer_seat && state.player_ignores_hexproof(viewer_seat));
+                project_player(state, p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i), hexproof, known_library_top(state, i, viewer_seat))
             })
             .collect(),
         battlefield: {
@@ -2474,6 +2481,18 @@ mod tests {
         let v = project(&state, 0);
         assert!(v.players[0].has_hexproof, "controller's hexproof is surfaced");
         assert!(!v.players[1].has_hexproof, "the opponent has no hexproof");
+    }
+
+    #[test]
+    fn kaya_static_hides_opponent_hexproof_from_that_viewer() {
+        let mut state = two_player_game();
+        // Player 1 has hexproof (Aegis); player 0 controls Kaya's ignore-static.
+        state.add_card_to_battlefield(1, catalog::aegis_of_the_gods());
+        state.add_card_to_battlefield(0, catalog::kaya_bane_of_the_dead());
+        // From Kaya's controller (seat 0), the opponent no longer reads hexproof.
+        assert!(!project(&state, 0).players[1].has_hexproof, "Kaya's controller ignores it");
+        // From the opponent's own seat (seat 1), their hexproof still shows.
+        assert!(project(&state, 1).players[1].has_hexproof, "self-view keeps hexproof");
     }
 
     #[test]
