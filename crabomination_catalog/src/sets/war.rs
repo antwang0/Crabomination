@@ -3504,6 +3504,41 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
     }
 }
 
+/// Ugin, the Ineffable — {6} loyalty 4. Colorless spells you cast cost {2}
+/// less. +1: exile top face down, make a 2/2 Spirit; when it leaves, return the
+/// exiled card to hand. −3: destroy target permanent that's one or more colors.
+pub fn ugin_the_ineffable() -> CardDefinition {
+    let spirit = TokenDefinition {
+        name: "Spirit".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Spirit]),
+        ..Default::default()
+    };
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Colorless spells you cast cost {2} less to cast.",
+            effect: StaticEffect::CostReduction { filter: R::Colorless, amount: 2 },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::ExileTopFaceDownTokenReturns { token: spirit },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Destroy {
+                    what: target_filtered(R::Permanent.and(R::Not(Box::new(R::Colorless)))),
+                },
+                ..Default::default()
+            },
+        ],
+        ..walker("Ugin, the Ineffable", cost(&[generic(6)]), PlaneswalkerSubtype::Ugin, 4)
+    }
+}
+
 /// Ral, Storm Conduit — {2}{U}{R} loyalty 4. Whenever you cast or copy an
 /// instant or sorcery, deal 1 to target opponent or planeswalker. +2: scry 1.
 /// −2: copy your next instant/sorcery this turn (may choose new targets).

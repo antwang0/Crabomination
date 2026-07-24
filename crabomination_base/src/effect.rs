@@ -5088,6 +5088,11 @@ pub enum Effect {
     /// controller, lifted at the end of their first turn after this resolves.
     LockCreatureAndPlaneswalkerCasts,
 
+    /// Ugin, the Ineffable's +1: exile the top card of your library face down,
+    /// create `token`, and when that token leaves the battlefield put the
+    /// exiled card into its owner's hand.
+    ExileTopFaceDownTokenReturns { token: crate::card::TokenDefinition },
+
     /// "You may put a creature card from your hand onto the battlefield tapped
     /// and attacking [the defender the source is attacking]. Return that
     /// creature to its owner's hand at the beginning of the next end step"

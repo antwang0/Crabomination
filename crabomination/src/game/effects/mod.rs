@@ -10584,6 +10584,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopFaceDownTokenReturns { token } => {
+                let p = ctx.controller;
+                let exiled = self.players[p].library.first().map(|c| c.id);
+                if let Some(id) = exiled {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                }
+                self.run_effect(
+                    &Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: crate::effect::Value::ONE,
+                        definition: token.clone(),
+                    },
+                    ctx,
+                    events,
+                )?;
+                if let (Some(token_id), Some(exiled_id)) = (self.last_created_token, exiled) {
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: p,
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        kind: crate::game::types::DelayedKind::WhenCardLeavesBattlefield(token_id),
+                        effect: Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                        },
+                        target: Some(crate::game::Target::Permanent(exiled_id)),
+                        bound_token: Some(token_id),
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::DeployCreatureFromHandAttacking { filter, return_to_hand_eot } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::game::types::{Attack, AttackTarget};

@@ -2742,3 +2742,44 @@ fn ral_storm_conduit_copy_pings_again() {
     // One ping for the cast, one for the copy.
     assert_eq!(g.players[1].life, opp - 2, "cast and copy each pinged");
 }
+
+/// Ugin's +1 exiles the top card behind a 2/2 Spirit; killing the Spirit
+/// returns the exiled card to hand.
+#[test]
+fn ugin_ineffable_plus_one_token_returns_exiled_card() {
+    let mut g = two_player_game();
+    let ugin = g.add_card_to_battlefield(0, catalog::ugin_the_ineffable());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // the card to be exiled
+    let hand = g.players[0].hand.len();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: ugin, ability_index: 0, target: None, x_value: None }).expect("+1");
+    drain_stack(&mut g);
+    let spirit = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Spirit").expect("Spirit token").id;
+    assert!(g.exile.iter().any(|c| c.definition.name == "Grizzly Bears"), "card exiled face down");
+    assert_eq!(g.players[0].hand.len(), hand, "still exiled, not yet in hand");
+    // Kill the Spirit → the exiled card returns to hand.
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(spirit), 2, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "exiled card returned to hand");
+}
+
+/// Ugin's −3 destroys a colored permanent (a colorless one is not a legal
+/// target).
+#[test]
+fn ugin_ineffable_minus_three_destroys_colored() {
+    let mut g = two_player_game();
+    let ugin = g.add_card_to_battlefield(0, catalog::ugin_the_ineffable());
+    let colored = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: ugin, ability_index: 1, target: Some(Target::Permanent(colored)), x_value: None }).expect("-3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(colored).is_none(), "colored permanent destroyed");
+}

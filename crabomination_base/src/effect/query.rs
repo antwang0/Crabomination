@@ -300,6 +300,7 @@ impl Effect {
             Effect::PutFromHandOntoBattlefield { .. } => false,
             Effect::DeployCreatureFromHandAttacking { .. } => false,
             Effect::LockCreatureAndPlaneswalkerCasts => false,
+            Effect::ExileTopFaceDownTokenReturns { .. } => false,
             Effect::DeployLandsFromHandAndGraveyard { .. } => false,
             Effect::Manifest { .. } => false,
             Effect::ManifestFromHand { who, count, .. } => {

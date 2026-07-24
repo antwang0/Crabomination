@@ -14858,6 +14858,7 @@ static WAR: &[Factory] = &[
     super::war::liliana_dreadhorde_general,
     super::war::chandra_fire_artisan,
     super::war::ral_storm_conduit,
+    super::war::ugin_the_ineffable,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,
