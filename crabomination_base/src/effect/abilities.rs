@@ -1615,6 +1615,12 @@ pub enum StaticEffect {
     /// untapped." While the controller has a permanent carrying this static, a
     /// tapped creature they control is a legal blocker (Masako the Humorless).
     TappedCreaturesCanBlock,
+    /// CR 508.1a — "Creatures you control can attack as though they didn't have
+    /// defender." The team-wide sibling of the per-card
+    /// `CanAttackIgnoringDefenderWhile`; while the controller has a permanent
+    /// carrying this static, all their creatures ignore Defender for attacking
+    /// (High Alert, Assault Formation, Belligerent Brontodon).
+    YourCreaturesCanAttackAsThoughNoDefender,
     /// "Spells with the chosen name cost {N} more to cast" — reads the
     /// source's `named_card` (stamped at ETB via `Effect::NameCard`).
     /// Disruptor Flute. Folded into `extra_cost_for_spell`.

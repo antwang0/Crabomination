@@ -13,6 +13,17 @@ impl GameState {
         if self.attack_despite_defender_this_turn.contains(&card.id) {
             return true;
         }
+        // CR 508.1a — a team-wide static (High Alert, Assault Formation): any
+        // permanent the attacker's controller has granting "creatures you
+        // control can attack as though they didn't have defender".
+        if self.battlefield.iter().any(|c| {
+            c.controller == card.controller
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::YourCreaturesCanAttackAsThoughNoDefender)
+                })
+        }) {
+            return true;
+        }
         let ctx = crate::game::effects::EffectContext::for_ability(card.id, card.controller, None);
         card.definition.static_abilities.iter().any(|sa| {
             if let StaticEffect::CanAttackIgnoringDefenderWhile { condition } = &sa.effect {

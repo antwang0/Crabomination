@@ -2060,6 +2060,41 @@ pub fn glass_of_the_guildpact() -> CardDefinition {
     }
 }
 
+/// High Alert — {1}{W}{U} Enchantment. Each creature you control assigns combat
+/// damage equal to its toughness rather than its power. Creatures you control
+/// can attack as though they didn't have defender. {2}{W}{U}: untap target creature.
+pub fn high_alert() -> CardDefinition {
+    CardDefinition {
+        name: "High Alert",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each creature you control assigns combat damage equal to its toughness rather than its power.",
+                effect: StaticEffect::AnthemForFilter {
+                    filter: R::Creature,
+                    power: 0,
+                    toughness: 0,
+                    keywords: vec![Keyword::AssignsCombatDamageByToughness],
+                    opponents: false,
+                    only_your_turn: false,
+                    scale_by_counters_on_self: None,
+                },
+            },
+            StaticAbility {
+                description: "Creatures you control can attack as though they didn't have defender.",
+                effect: StaticEffect::YourCreaturesCanAttackAsThoughNoDefender,
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w(), u()]),
+            effect: Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Depose // Deploy — {1}{W/U} // {2}{W}{U} Instant // Instant. Depose taps a
 /// target creature and draws a card; Deploy makes two 1/1 flying Thopters and
 /// gains 1 life for each creature you control.

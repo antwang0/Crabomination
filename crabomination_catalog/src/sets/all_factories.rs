@@ -9860,6 +9860,7 @@ static RNA: &[Factory] = &[
     super::rna::gates_ablaze,
     super::rna::undercitys_embrace,
     super::rna::glass_of_the_guildpact,
+    super::rna::high_alert,
     super::rna::depose_deploy,
     super::rna::consecrate_consume,
     super::rna::warrant_warden,

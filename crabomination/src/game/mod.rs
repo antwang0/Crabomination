@@ -14418,6 +14418,9 @@ fn static_effect_to_effects(
             // TappedCreaturesCanBlock — consulted at block declaration via
             // `tapped_creatures_can_block`; no layer effect.
             | StaticEffect::TappedCreaturesCanBlock
+            // YourCreaturesCanAttackAsThoughNoDefender — consulted at attack
+            // declaration via `ignores_defender_for_attack`; no layer effect.
+            | StaticEffect::YourCreaturesCanAttackAsThoughNoDefender
             | StaticEffect::OpponentsMaxHandSizeReduced(_)
             | StaticEffect::ControllerMaxHandSize(_)
             | StaticEffect::NamedSpellTax { .. }
