@@ -9867,6 +9867,15 @@ static RNA: &[Factory] = &[
     super::rna::thrash_threat,
     super::rna::collision_colossus,
     super::rna::carnival_carnage,
+    super::rna::clan_guildmage,
+    super::rna::tin_street_dodger,
+    super::rna::fireblade_artist,
+    super::rna::saruli_caretaker,
+    super::rna::gate_colossus,
+    super::rna::persistent_petitioners,
+    super::rna::bedeck_bedazzle,
+    super::rna::incubation_incongruity,
+    super::rna::repudiate_replicate,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

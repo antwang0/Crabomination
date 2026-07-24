@@ -1460,3 +1460,126 @@ fn warrant_warden_sphinx() {
     assert_eq!((sphinx.power(), sphinx.toughness()), (4, 4), "4/4 Sphinx");
     assert!(sphinx.definition.keywords.contains(&Keyword::Flying) && sphinx.definition.keywords.contains(&Keyword::Vigilance));
 }
+
+// ── RNA batch 8 (modern_decks) behavior tests ───────────────────────────────
+
+/// Clan Guildmage animates a land you control into a 4/4 Elemental.
+#[test]
+fn clan_guildmage_animates_land() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::clan_guildmage());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.clear_sickness(mage);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility { card_id: mage, ability_index: 1, target: Some(Target::Permanent(land)), additional_targets: Vec::new(), x_value: None }).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(land).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "land is a 4/4");
+    assert!(cp.card_types.contains(&CardType::Creature) && cp.card_types.contains(&CardType::Land), "still a land");
+}
+
+/// Tin Street Dodger grants itself "can't be blocked except by defenders."
+#[test]
+fn tin_street_dodger_evasion() {
+    let mut g = two_player_game();
+    let dodger = g.add_card_to_battlefield(0, catalog::tin_street_dodger());
+    g.clear_sickness(dodger);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility { card_id: dodger, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("evade");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(dodger).unwrap().keywords.iter().any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))), "gained can't-be-blocked-except-by-defenders");
+}
+
+/// Saruli Caretaker taps another creature as part of its mana cost.
+#[test]
+fn saruli_caretaker_taps_a_creature_for_mana() {
+    let mut g = two_player_game();
+    let caretaker = g.add_card_to_battlefield(0, catalog::saruli_caretaker());
+    let helper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(caretaker);
+    g.clear_sickness(helper);
+    g.perform_action(GameAction::ActivateAbility { card_id: caretaker, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap for mana");
+    assert!(g.battlefield_find(caretaker).unwrap().tapped, "Caretaker taps");
+    assert!(g.battlefield_find(helper).unwrap().tapped, "the helper creature also taps");
+    assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
+}
+
+/// Gate Colossus recurs itself when a Gate enters.
+#[test]
+fn gate_colossus_recurs_on_gate() {
+    let mut g = two_player_game();
+    let colossus = g.add_card_to_graveyard(0, catalog::gate_colossus());
+    let gate = g.add_card_to_battlefield(0, catalog::gateway_plaza());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: gate }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].library.iter().any(|c| c.id == colossus), "Gate Colossus put on top of library");
+}
+
+/// Persistent Petitioners mills twelve when four Advisors tap.
+#[test]
+fn persistent_petitioners_advisor_mill() {
+    let mut g = two_player_game();
+    for _ in 0..20 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    let ids: Vec<_> = (0..4).map(|_| {
+        let id = g.add_card_to_battlefield(0, catalog::persistent_petitioners());
+        g.clear_sickness(id);
+        id
+    }).collect();
+    g.perform_action(GameAction::ActivateAbility { card_id: ids[0], ability_index: 1, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None }).expect("mill 12");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 12, "four Advisors mill twelve");
+}
+
+/// Fireblade Artist sacrifices a creature on upkeep to burn an opponent.
+#[test]
+fn fireblade_artist_sac_burn() {
+    let mut g = two_player_game();
+    let _artist = g.add_card_to_battlefield(0, catalog::fireblade_artist());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    let life = g.players[1].life;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
+    let effect = catalog::fireblade_artist().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[1].life, life - 2, "opponent took 2 from the sacrifice");
+}
+
+/// Bedeck weakens a creature; Bedazzle destroys a nonbasic land and burns.
+#[test]
+fn bedeck_bedazzle_halves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    g.resolve_effect(&catalog::bedeck_bedazzle().effect.clone(), &ctx).unwrap();
+    let cp = g.computed_permanent(bear);
+    // 2/2 +3/-3 → 5/-1 → dies as SBA; check it took the shrink or died.
+    g.check_state_based_actions();
+    assert!(cp.map(|c| c.toughness <= 0).unwrap_or(true) || g.battlefield_find(bear).is_none(), "Bedeck's -3 toughness is lethal");
+}
+
+/// Replicate makes a token copy of a creature you control.
+#[test]
+fn repudiate_replicate_copies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let replicate = catalog::repudiate_replicate().split.unwrap().right.effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    g.resolve_effect(&replicate, &ctx).unwrap();
+    let bears = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 2, "original plus a token copy");
+}
+
+/// Incongruity exiles a creature and gives its controller a 3/3 Frog Lizard.
+#[test]
+fn incubation_incongruity_frog() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let incongruity = catalog::incubation_incongruity().split.unwrap().right.effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(victim)), 0, 0);
+    g.resolve_effect(&incongruity, &ctx).unwrap();
+    assert!(g.battlefield_find(victim).is_none(), "creature exiled");
+    let frogs = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Frog)).count();
+    assert_eq!(frogs, 1, "controller gets a 3/3 Frog Lizard");
+}

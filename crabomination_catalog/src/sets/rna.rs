@@ -2275,3 +2275,230 @@ pub fn carnival_carnage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── RNA batch 8 (modern_decks) ──────────────────────────────────────────────
+
+/// Clan Guildmage — {R}{G} 2/2 Human Shaman. {1}{R}, {T}: target creature can't
+/// block this turn. {2}{G}, {T}: target land you control becomes a 4/4
+/// Elemental with haste until end of turn. It's still a land.
+pub fn clan_guildmage() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                tap_cost: true,
+                effect: Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), g()]),
+                tap_cost: true,
+                effect: Effect::BecomeCreature {
+                    what: target_filtered(R::Land.and(R::ControlledByYou)),
+                    power: Value::Const(4),
+                    toughness: Value::Const(4),
+                    creature_types: vec![CreatureType::Elemental],
+                    keywords: vec![Keyword::Haste],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..body("Clan Guildmage", cost(&[r(), g()]), 2, 2, vec![CreatureType::Human, CreatureType::Shaman], vec![])
+    }
+}
+
+/// Tin Street Dodger — {R} 1/1 Goblin Rogue with haste. {R}: this creature can't
+/// be blocked this turn except by creatures with defender.
+pub fn tin_street_dodger() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::CantBeBlockedExceptBy(Box::new(R::HasKeyword(Keyword::Defender))),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..body("Tin Street Dodger", cost(&[r()]), 1, 1, vec![CreatureType::Goblin, CreatureType::Rogue], vec![Keyword::Haste])
+    }
+}
+
+/// Fireblade Artist — {B}{R} 2/2 Human Shaman with haste. At the beginning of
+/// your upkeep, you may sacrifice a creature. When you do, this creature deals 2
+/// damage to target opponent or planeswalker.
+pub fn fireblade_artist() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MaySacrifice {
+                description: "You may sacrifice a creature; if you do, deal 2 damage to target opponent or planeswalker.".into(),
+                filter: R::Creature,
+                count: Value::Const(1),
+                then: Box::new(Effect::DealDamage {
+                    to: target_filtered(R::OpponentPlayer.or(R::Planeswalker)),
+                    amount: Value::Const(2),
+                }),
+                else_: None,
+            },
+        }],
+        ..body("Fireblade Artist", cost(&[b(), r()]), 2, 2, vec![CreatureType::Human, CreatureType::Shaman], vec![Keyword::Haste])
+    }
+}
+
+/// Saruli Caretaker — {G} 0/3 Dryad with defender. {T}, Tap an untapped
+/// creature you control: add one mana of any color.
+pub fn saruli_caretaker() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_other_filter: Some(R::Creature.and(R::ControlledByYou)),
+            effect: crate::effect::shortcut::add_any_one_color(1),
+            ..Default::default()
+        }],
+        ..body("Saruli Caretaker", cost(&[g()]), 0, 3, vec![CreatureType::Dryad], vec![Keyword::Defender])
+    }
+}
+
+/// Gate Colossus — {8} Artifact Creature — Construct 8/8. Affinity for Gates.
+/// Can't be blocked by creatures with power 2 or less. Whenever a Gate you
+/// control enters, you may put this card from your graveyard on top of your library.
+pub fn gate_colossus() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        affinity_filter: Some(R::HasLandType(LandType::Gate)),
+        keywords: vec![Keyword::CantBeBlockedByPowerAtMost(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::FromYourGraveyard)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasLandType(LandType::Gate) }),
+            effect: Effect::MayDo {
+                description: "Put Gate Colossus from your graveyard on top of your library.".into(),
+                body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top } }),
+            },
+        }],
+        ..body("Gate Colossus", cost(&[generic(8)]), 8, 8, vec![CreatureType::Construct], vec![])
+    }
+}
+
+/// Persistent Petitioners — {1}{U} 1/3 Human Advisor. {1}, {T}: target player
+/// mills a card. Tap four untapped Advisors you control: target player mills
+/// twelve cards.
+pub fn persistent_petitioners() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_n_filter: Some((R::HasCreatureType(CreatureType::Advisor), 4)),
+                effect: Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(12) },
+                ..Default::default()
+            },
+        ],
+        ..body("Persistent Petitioners", cost(&[generic(1), u()]), 1, 3, vec![CreatureType::Human, CreatureType::Advisor], vec![])
+    }
+}
+
+/// Bedeck // Bedazzle — {B/R}{B/R} // {4}{B}{R} Instant // Instant. Bedeck gives
+/// a creature +3/-3; Bedazzle destroys a nonbasic land and deals 2 to a target
+/// opponent or planeswalker.
+pub fn bedeck_bedazzle() -> CardDefinition {
+    CardDefinition {
+        name: "Bedeck // Bedazzle",
+        cost: cost(&[hybrid(Color::Black, Color::Red), hybrid(Color::Black, Color::Red)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(3), toughness: Value::Const(-3), duration: Duration::EndOfTurn },
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(4), b(), r()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Seq(vec![
+                    Effect::Destroy { what: Selector::TargetFiltered { slot: 0, filter: R::Land.and(R::NotToken).and(R::Not(Box::new(R::IsBasicLand))) } },
+                    Effect::DealDamage { to: Selector::TargetFiltered { slot: 1, filter: R::OpponentPlayer.or(R::Planeswalker) }, amount: Value::Const(2) },
+                ]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Incubation // Incongruity — {G/U} // {1}{G}{U} Sorcery // Instant. Incubation
+/// looks at the top five, revealing a creature to hand; Incongruity exiles a
+/// creature and its controller creates a 3/3 green Frog Lizard.
+pub fn incubation_incongruity() -> CardDefinition {
+    CardDefinition {
+        name: "Incubation // Incongruity",
+        cost: cost(&[hybrid(Color::Green, Color::Blue)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(R::Creature),
+            take: None,
+            to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
+            optional: true,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: true,
+        },
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(1), g(), u()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Seq(vec![
+                    Effect::Exile { what: target_filtered(R::Creature) },
+                    Effect::CreateToken {
+                        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                        count: Value::Const(1),
+                        definition: token("Frog Lizard", vec![Color::Green], 3, 3, vec![CreatureType::Frog, CreatureType::Lizard], vec![]),
+                    },
+                ]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Repudiate // Replicate — {G/U}{G/U} // {1}{G}{U} Instant // Sorcery.
+/// Repudiate counters a target activated or triggered ability; Replicate makes
+/// a token copy of a target creature you control.
+pub fn repudiate_replicate() -> CardDefinition {
+    CardDefinition {
+        name: "Repudiate // Replicate",
+        cost: cost(&[hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterAbility { what: target_filtered(R::Permanent) },
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(1), g(), u()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    extra_keywords: vec![],
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
