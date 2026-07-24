@@ -16,7 +16,7 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **RNA wave (modern_decks, this run, 63 cards):** Locket cycle, adapt/riot/
+- **RNA wave (modern_decks, this run, 75 cards):** Locket cycle, adapt/riot/
   spectacle/afterlife/addendum commons + uncommons, flash Auras, guildmages,
   the RNA split cycle (Depose/Consecrate/Warrant/Thrash/Collision/Carnival),
   wraths (Kaya's Wrath), Gate/Domri/Dovin payoffs, High Alert.
