@@ -418,3 +418,16 @@ fn dragon_or_omen_mana_funds_a_dragon_but_not_a_bear() {
     assert!(pool.clone().pay_for_spell(&cost(&[r()]), &dragon_kind).is_ok());
     assert!(pool.pay_for_spell(&cost(&[r()]), &bear_kind).is_err());
 }
+
+#[test]
+fn planeswalker_restricted_mana_funds_only_walkers() {
+    let walker_kind = SpellKind { planeswalker: true, ..Default::default() };
+    let bear_kind = SpellKind { creature: true, ..Default::default() };
+    assert!(SpendRestriction::PlaneswalkerSpellsOnly.allows(&walker_kind));
+    assert!(!SpendRestriction::PlaneswalkerSpellsOnly.allows(&bear_kind));
+    // A restricted pip pays a {G} planeswalker but not a {G} creature.
+    let mut pool = ManaPool::new();
+    pool.add_restricted(Color::Green, 1, SpendRestriction::PlaneswalkerSpellsOnly);
+    assert!(pool.clone().pay_for_spell(&cost(&[g()]), &walker_kind).is_ok());
+    assert!(pool.pay_for_spell(&cost(&[g()]), &bear_kind).is_err());
+}

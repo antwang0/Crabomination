@@ -445,6 +445,8 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast a multicolored spell." (Pillar of the
     /// Paruns.) Matches a spell with two or more colors.
     MulticoloredSpell,
+    /// "Spend this mana only to cast planeswalker spells." (Interplanar Beacon.)
+    PlaneswalkerSpellsOnly,
 }
 
 impl SpendRestriction {
@@ -479,6 +481,7 @@ impl SpendRestriction {
             }
             SpendRestriction::EnchantmentSpell => kind.enchantment,
             SpendRestriction::MulticoloredSpell => kind.multicolored,
+            SpendRestriction::PlaneswalkerSpellsOnly => kind.planeswalker,
         }
     }
 }
@@ -533,6 +536,9 @@ pub struct SpellKind {
     pub enchantment: bool,
     /// Casting a multicolored spell — two or more colors (Pillar of the Paruns).
     pub multicolored: bool,
+    /// Casting a planeswalker spell (Interplanar Beacon's "spend this mana only
+    /// to cast planeswalker spells").
+    pub planeswalker: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

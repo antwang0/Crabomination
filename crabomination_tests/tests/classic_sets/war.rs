@@ -1713,6 +1713,22 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Interplanar Beacon gains 1 life when you cast a planeswalker spell.
+#[test]
+fn interplanar_beacon_gains_on_walker_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::interplanar_beacon());
+    let walker = g.add_card_to_hand(0, catalog::samut_tyrant_smasher()); // {2}{R/G}{R/G}
+    let life = g.players[0].life;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: walker, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast walker");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "gained 1 for casting a planeswalker");
+}
+
 /// Oath of Kaya's ETB burns any target for 3 and gains 3 life.
 #[test]
 fn oath_of_kaya_etb_burns_and_gains() {

@@ -2627,6 +2627,39 @@ pub fn oath_of_kaya() -> CardDefinition {
     }
 }
 
+/// Interplanar Beacon — Land. Whenever you cast a planeswalker spell, gain 1
+/// life. {T}: Add {C}. {1}, {T}: Add two mana of any colors, spendable only on
+/// planeswalker spells. (The "two *different* colors" rider is not enforced.)
+pub fn interplanar_beacon() -> CardDefinition {
+    CardDefinition {
+        name: "Interplanar Beacon",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCardType(CardType::Planeswalker),
+            }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyColors(Value::Const(2))),
+                        crate::mana::SpendRestriction::PlaneswalkerSpellsOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Emergence Zone — Land. {T}: Add {C}. {1}, {T}, Sacrifice: you may cast
 /// spells this turn as though they had flash.
 pub fn emergence_zone() -> CardDefinition {
