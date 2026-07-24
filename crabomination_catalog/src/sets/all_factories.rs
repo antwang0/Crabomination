@@ -14869,6 +14869,7 @@ static WAR: &[Factory] = &[
     super::war::deliver_unto_evil,
     super::war::nicol_bolas_dragon_god,
     super::war::bolass_citadel,
+    super::war::finale_of_promise,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

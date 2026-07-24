@@ -3086,3 +3086,25 @@ fn bolass_citadel_casts_from_top_paying_life() {
     assert_eq!(g.players[0].life, my_life - 1, "paid 1 life (Bolt's mana value)");
     assert_eq!(g.players[1].life, opp_life - 3, "Bolt dealt 3");
 }
+
+/// Finale of Promise free-casts a targeted instant and sorcery from your
+/// graveyard, exiling each as it resolves.
+#[test]
+fn finale_of_promise_casts_instant_and_sorcery() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());  // instant, MV 1
+    let tutor = g.add_card_to_graveyard(0, catalog::demonic_tutor());  // sorcery, MV 2
+    let opp_life = g.players[1].life;
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(bolt), Target::Permanent(tutor)],
+        ..EffectContext::for_spell(0, None, 0, 2) // X = 2
+    };
+    g.resolve_effect(&catalog::finale_of_promise().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 3, "the free Bolt dealt 3");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "instant exiled after resolving");
+    assert!(g.exile.iter().any(|c| c.id == tutor), "sorcery exiled after resolving");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt || c.id == tutor), "neither left in graveyard");
+}

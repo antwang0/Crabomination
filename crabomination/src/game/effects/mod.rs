@@ -12932,6 +12932,35 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::FinaleOfPromise => {
+                let p = ctx.controller;
+                let x = ctx.x_value;
+                for slot in 0..2usize {
+                    let Some(crate::game::types::Target::Permanent(cid)) = ctx.targets.get(slot).cloned()
+                    else {
+                        continue;
+                    };
+                    if !self.players[p].graveyard.iter().any(|c| c.id == cid) {
+                        continue;
+                    }
+                    let def = self.players[p].graveyard.iter().find(|c| c.id == cid)
+                        .map(|c| c.definition.clone());
+                    let Some(def) = def else { continue };
+                    let auto = self.auto_target_for_effect_avoiding(&def.effect, p, Some(cid));
+                    // Free-cast from the graveyard; exile on resolve.
+                    if let Ok(cast_events) = self.cast_card_for_free(
+                        p, cid, crate::card::Zone::Graveyard, auto, vec![], None, Some(x), true,
+                    ) {
+                        events.extend(cast_events);
+                        // X ≥ 10 — copy each spell twice with new targets.
+                        if x >= 10 {
+                            self.copy_stack_spell(cid, 2, true, events);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::EachOpponentWithoutLegendaryLoses => {
                 use crate::card::{CardType, Supertype};
                 let p = ctx.controller;

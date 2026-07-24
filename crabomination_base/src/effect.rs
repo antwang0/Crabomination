@@ -3520,6 +3520,11 @@ pub enum Effect {
     /// Nicol Bolas, Dragon-God's −8 — "Each opponent who doesn't control a
     /// legendary creature or planeswalker loses the game" (CR 104.3a).
     EachOpponentWithoutLegendaryLoses,
+    /// Finale of Promise — slot 0 is up to one target instant card, slot 1 up
+    /// to one target sorcery card, each in your graveyard with mana value X or
+    /// less. Free-cast each (exiled on resolve); if X ≥ 10, copy each twice
+    /// with new targets.
+    FinaleOfPromise,
     /// Feather, the Redeemed — mark the selected spell on the stack so that,
     /// as it resolves, it's exiled instead of going to the graveyard and
     /// returns to its controller's hand at the next end step. Applied by

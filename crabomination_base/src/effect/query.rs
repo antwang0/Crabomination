@@ -20,6 +20,21 @@ static EARTHBEND_TARGET: std::sync::LazyLock<SelectionRequirement> =
         SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou)
     });
 
+/// Finale of Promise — slot 0 (instant) / slot 1 (sorcery), each a graveyard
+/// card of mana value X or less. Built lazily since `.and()` boxes.
+static FINALE_INSTANT_SLOT: std::sync::LazyLock<SelectionRequirement> =
+    std::sync::LazyLock::new(|| {
+        SelectionRequirement::HasCardType(crate::card::CardType::Instant)
+            .and(SelectionRequirement::InYourGraveyard)
+            .and(SelectionRequirement::ManaValueAtMostXFromCost)
+    });
+static FINALE_SORCERY_SLOT: std::sync::LazyLock<SelectionRequirement> =
+    std::sync::LazyLock::new(|| {
+        SelectionRequirement::HasCardType(crate::card::CardType::Sorcery)
+            .and(SelectionRequirement::InYourGraveyard)
+            .and(SelectionRequirement::ManaValueAtMostXFromCost)
+    });
+
 /// Player restriction synthesized for the player slot referenced by a
 /// `Selector::ControlledBy { who: PlayerRef::Target(n) }` — the spell targets
 /// a player and then acts on the permanents that player controls (Sleep).
@@ -461,6 +476,7 @@ impl Effect {
             Effect::DistributeCounters { .. } => true,
             Effect::ApplyToTargets { .. } => true,
             Effect::DeliverUntoEvil { .. } => true,
+            Effect::FinaleOfPromise => true,
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
@@ -2064,6 +2080,13 @@ impl Effect {
                 | Effect::DeliverUntoEvil { filter, max_targets, .. } => {
                     if slot < *max_targets { Some(filter) } else { None }
                 }
+                // Finale of Promise — slot 0 instant, slot 1 sorcery, each a
+                // graveyard card of mana value X or less.
+                Effect::FinaleOfPromise => match slot {
+                    0 => Some(&FINALE_INSTANT_SLOT),
+                    1 => Some(&FINALE_SORCERY_SLOT),
+                    _ => None,
+                },
                 Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target }
@@ -2322,6 +2345,8 @@ impl Effect {
             Effect::ApplyToTargets { min_targets, .. } => Some(*min_targets),
             // "up to four target cards" — every slot optional.
             Effect::DeliverUntoEvil { .. } => Some(0),
+            // "up to one instant and/or up to one sorcery" — both optional.
+            Effect::FinaleOfPromise => Some(0),
             Effect::OptionalTargets { min, .. } => Some(*min),
             Effect::Seq(v) => v.iter().find_map(|e| e.min_targets_in_mode(None)),
             Effect::ChooseMode(modes) => match mode {
@@ -2358,6 +2383,7 @@ impl Effect {
             | Effect::ApplyToTargets { max_targets, .. }
             | Effect::DeliverUntoEvil { max_targets, .. }
             | Effect::DistributeCounters { max_targets, .. } => Some(*max_targets),
+            Effect::FinaleOfPromise => Some(2),
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes.get(m).and_then(|e| e.distinct_target_count(None)),
                 None => modes.iter().find_map(|e| e.distinct_target_count(None)),

@@ -4150,3 +4150,16 @@ pub fn bolass_citadel() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Finale of Promise — {X}{R}{R} Sorcery. Cast up to one target instant and/or
+/// up to one target sorcery from your graveyard, each with mana value X or less,
+/// free (exiled on resolve). If X ≥ 10, copy each twice with new targets.
+pub fn finale_of_promise() -> CardDefinition {
+    CardDefinition {
+        name: "Finale of Promise",
+        cost: cost(&[x(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::FinaleOfPromise,
+        ..Default::default()
+    }
+}
