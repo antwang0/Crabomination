@@ -3461,6 +3461,68 @@ pub fn teferis_time_twist() -> CardDefinition {
     }
 }
 
+/// Massacre Girl — {3}{B}{B} 4/4 legendary Human Assassin with menace. ETB:
+/// each other creature gets -1/-1 EOT, then, until end of turn, whenever a
+/// creature dies each creature other than Massacre Girl gets -1/-1 EOT (the
+/// chain sweep).
+pub fn massacre_girl() -> CardDefinition {
+    let others_minus = || Effect::PumpPT {
+        what: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
+        power: Value::Const(-1),
+        toughness: Value::Const(-1),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::WheneverCreatureDiesThisTurn {
+                filter: R::Creature,
+                body: Box::new(others_minus()),
+            },
+            others_minus(),
+        ]))],
+        ..vanilla("Massacre Girl", cost(&[generic(3), b(), b()]), 4, 4, vec![CreatureType::Human, CreatureType::Assassin])
+    }
+}
+
+/// Ilharg, the Raze-Boar — {3}{R}{R} 6/6 legendary Boar God with trample.
+/// Attack: may put a creature from hand onto the battlefield tapped and
+/// attacking, returned to hand next end step. Death/exile → library third.
+pub fn ilharg_the_raze_boar() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            on_attack(Effect::DeployCreatureFromHandAttacking {
+                filter: R::Any,
+                return_to_hand_eot: true,
+            }),
+            god_eternal_recur(),
+        ],
+        ..vanilla("Ilharg, the Raze-Boar", cost(&[generic(3), r(), r()]), 6, 6, vec![CreatureType::Boar, CreatureType::God])
+    }
+}
+
+/// Single Combat — {3}{W}{W} Sorcery. Each player keeps one creature or
+/// planeswalker they control and sacrifices the rest; then no player can cast
+/// creature or planeswalker spells until the end of your next turn.
+pub fn single_combat() -> CardDefinition {
+    CardDefinition {
+        name: "Single Combat",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::EachPlayerKeepsOneSacrificeRest {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                filter: R::Creature.or(R::Planeswalker),
+            },
+            Effect::LockCreatureAndPlaneswalkerCasts,
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Planewide Celebration — {5}{G}{G} Sorcery. Choose four (repeats allowed):
 /// make an all-color 2/2 Citizen; return a permanent card from your graveyard
 /// to hand; proliferate; gain 4 life.

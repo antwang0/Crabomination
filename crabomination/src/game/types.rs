@@ -692,6 +692,11 @@ pub enum DelayedKind {
     /// `DelayedTrigger.controller` that dies for the rest of the turn; the dead
     /// creature is the trigger source. Expires at cleanup. Powers Waltz of Rage.
     CreatureYouControlDiesThisTurn,
+    /// "Until end of turn, whenever a creature [matching the filter] dies, …"
+    /// (CR 603.4) — any player's creature. Fires once per dead creature whose
+    /// death LKI snapshot matches the filter; the dead creature is the trigger
+    /// source. Expires at cleanup. Powers Massacre Girl's death chain.
+    MatchingCreatureDiesThisTurn(crate::card::SelectionRequirement),
     /// "Until end of turn, whenever a creature you control deals combat damage
     /// to a player, …" (CR 603.4). Fires per qualifying combat-damage event; the
     /// dealing creature is the trigger source. Expires at cleanup. Mistway Spy.

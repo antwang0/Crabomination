@@ -939,6 +939,12 @@ pub struct GameState {
     /// registrant's turn begins.
     #[serde(default)]
     pub(crate) staggered_damage_players: Vec<(usize, usize)>,
+    /// Single Combat's lock — `(registerer, registration_turn)`: no player may
+    /// cast a creature or planeswalker spell until the end of the registerer's
+    /// next turn. Cleared in `cleanup_wear_off` at the end of the registerer's
+    /// first turn strictly after `registration_turn`.
+    #[serde(default)]
+    pub(crate) creature_pw_cast_locks: Vec<(usize, u32)>,
     /// Per-pair "can't block" restrictions for the turn: `(blocker, attacker)`
     /// — the blocker can't block that specific attacker (Kozilek's Pathfinder's
     /// "{C}: Target creature can't block this creature this turn"). Cleared at
@@ -1358,6 +1364,7 @@ impl Clone for GameState {
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
             turn_scoped_spell_taxes: self.turn_scoped_spell_taxes.clone(),
             staggered_damage_players: self.staggered_damage_players.clone(),
+            creature_pw_cast_locks: self.creature_pw_cast_locks.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
             cant_block_pairs: self.cant_block_pairs.clone(),
             attack_despite_defender_this_turn: self.attack_despite_defender_this_turn.clone(),
@@ -1546,6 +1553,7 @@ impl GameState {
             search_tax_paid_this_turn: Vec::new(),
             turn_scoped_spell_taxes: Vec::new(),
             staggered_damage_players: Vec::new(),
+            creature_pw_cast_locks: Vec::new(),
             damage_prevented_sources: Vec::new(),
             cant_block_pairs: Vec::new(),
             attack_despite_defender_this_turn: Vec::new(),
@@ -7897,6 +7905,15 @@ impl GameState {
             if blocked {
                 return Err(GameError::SpellLimitReached);
             }
+            // Single Combat — while any lock is active, no player may cast a
+            // creature or planeswalker spell (CR 601 cast restriction).
+            if !self.creature_pw_cast_locks.is_empty()
+                && cast_types.as_ref().is_some_and(|t| {
+                    t.contains(&CardType::Creature) || t.contains(&CardType::Planeswalker)
+                })
+            {
+                return Err(GameError::SpellLimitReached);
+            }
         }
         // CR 702.61 — split second: while such a spell is on the stack no
         // player may cast spells or activate non-mana abilities. Special
@@ -9843,6 +9860,37 @@ impl GameState {
                             .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
                             .build(),
                     );
+                }
+            }
+            // "Whenever a creature [matching filter] dies this turn" — any
+            // player's creature (Massacre Girl). Gate each dead creature on its
+            // death LKI snapshot; the dead creature is the trigger source.
+            let matching_watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| matches!(dt.kind, DelayedKind::MatchingCreatureDiesThisTurn(_)))
+                .cloned()
+                .collect();
+            if !matching_watchers.is_empty() {
+                for (cid, _) in &died_creatures {
+                    let Some(snap) = self.died_card_snapshots.get(cid).cloned() else {
+                        continue;
+                    };
+                    for dt in &matching_watchers {
+                        let DelayedKind::MatchingCreatureDiesThisTurn(ref filt) = dt.kind else {
+                            continue;
+                        };
+                        if !self.evaluate_requirement_on_card(filt, &snap, dt.controller) {
+                            continue;
+                        }
+                        self.stack.push(
+                            TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                                .trigger_source(Some(crate::game::effects::EntityRef::Permanent(
+                                    *cid,
+                                )))
+                                .build(),
+                        );
+                    }
                 }
             }
         }

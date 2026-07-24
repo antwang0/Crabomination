@@ -298,6 +298,8 @@ impl Effect {
             Effect::GrantPlayFromTopThisTurn => false,
             Effect::HoneFromHand { .. } => false,
             Effect::PutFromHandOntoBattlefield { .. } => false,
+            Effect::DeployCreatureFromHandAttacking { .. } => false,
+            Effect::LockCreatureAndPlaneswalkerCasts => false,
             Effect::DeployLandsFromHandAndGraveyard { .. } => false,
             Effect::Manifest { .. } => false,
             Effect::ManifestFromHand { who, count, .. } => {
@@ -772,6 +774,7 @@ impl Effect {
             Effect::CreaturesYouControlEnteringThisTurn { .. } => false,
             Effect::EachPlayerReanimateCreatureMaxMv { .. } => false,
             Effect::CreaturesYouControlDyingThisTurn { .. } => false,
+            Effect::WheneverCreatureDiesThisTurn { .. } => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::WheneverYouGainLifeThisTurn { .. } => false,
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. } => false,

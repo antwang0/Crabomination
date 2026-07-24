@@ -14848,6 +14848,9 @@ static WAR: &[Factory] = &[
     super::war::nahiri_storm_of_stone,
     super::war::mizzium_tank,
     super::war::narsets_reversal,
+    super::war::massacre_girl,
+    super::war::ilharg_the_raze_boar,
+    super::war::single_combat,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

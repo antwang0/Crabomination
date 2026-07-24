@@ -10570,6 +10570,81 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LockCreatureAndPlaneswalkerCasts => {
+                self.creature_pw_cast_locks.push((ctx.controller, self.turn_number));
+                Ok(())
+            }
+
+            Effect::DeployCreatureFromHandAttacking { filter, return_to_hand_eot } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::game::types::{Attack, AttackTarget};
+                // Only meaningful mid-combat (the source is attacking).
+                if self.attacking.is_empty() {
+                    return Ok(());
+                }
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| {
+                        c.definition.is_creature() && self.evaluate_requirement_on_card(filter, c, p)
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Put a creature card from your hand onto the battlefield attacking?"
+                        .to_string(),
+                    candidates,
+                    min: 0,
+                    max: 1,
+                });
+                let DecisionAnswer::Cards(chosen) = answer else { return Ok(()) };
+                let Some(&cid) = chosen.first() else { return Ok(()) };
+                if !self.players[p].hand.iter().any(|c| c.id == cid) {
+                    return Ok(());
+                }
+                let target = ctx
+                    .source
+                    .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
+                    .map(|a| a.target)
+                    .or_else(|| {
+                        (0..self.players.len())
+                            .find(|&q| !self.same_team(q, p))
+                            .map(AttackTarget::Player)
+                    });
+                let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: true };
+                self.move_card_to(cid, &dest, ctx, events);
+                if let Some(target) = target
+                    && !self.attacking.iter().any(|a| a.attacker == cid)
+                {
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                        c.attacked_this_turn = true;
+                    }
+                    self.attacking.push(Attack { attacker: cid, target });
+                    events.push(GameEvent::AttackerDeclared(cid));
+                }
+                if *return_to_hand_eot {
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: ctx.controller,
+                        source: cid,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::Move {
+                            what: Selector::This,
+                            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                        },
+                        target: None,
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::DeployLandsFromHandAndGraveyard { count } => {
                 let p = ctx.controller;
                 let max = self.evaluate_value(count, ctx).max(0) as usize;
@@ -14363,6 +14438,22 @@ impl GameState {
                     controller: ctx.controller,
                     source,
                     kind: crate::game::types::DelayedKind::CreatureYouControlDiesThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    fires_once: false,
+                });
+                Ok(())
+            }
+
+            Effect::WheneverCreatureDiesThisTurn { filter, body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::MatchingCreatureDiesThisTurn(
+                        filter.clone(),
+                    ),
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,

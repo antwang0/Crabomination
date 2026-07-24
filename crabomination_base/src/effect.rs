@@ -5070,6 +5070,23 @@ pub enum Effect {
         sacrifice_eot: bool,
     },
 
+    /// "Players can't cast creature or planeswalker spells until the end of
+    /// your next turn" (Single Combat). Registers a game-wide lock keyed to the
+    /// controller, lifted at the end of their first turn after this resolves.
+    LockCreatureAndPlaneswalkerCasts,
+
+    /// "You may put a creature card from your hand onto the battlefield tapped
+    /// and attacking [the defender the source is attacking]. Return that
+    /// creature to its owner's hand at the beginning of the next end step"
+    /// (Ilharg, the Raze-Boar; Kaalia-style deploy). CR 508.4 — the creature
+    /// enters attacking without being declared, so no attack triggers fire.
+    DeployCreatureFromHandAttacking {
+        filter: SelectionRequirement,
+        /// `true` returns the creature to hand at the next end step; `false`
+        /// leaves it (a permanent deploy).
+        return_to_hand_eot: bool,
+    },
+
     /// "Put up to `count` land cards from your hand and/or graveyard onto the
     /// battlefield tapped." Deploys as many lands as available (up to `count`),
     /// preferring the graveyard so hand lands stay playable. Worldsoul's Rage.
@@ -5411,6 +5428,15 @@ pub enum Effect {
     /// the rest of the turn; the dead creature is exposed to `body` as
     /// `Selector::TriggerSource`. Expires at cleanup. Used by Waltz of Rage.
     CreaturesYouControlDyingThisTurn {
+        body: Box<Effect>,
+    },
+
+    /// "Until end of turn, whenever a creature [matching `filter`] dies, [body]"
+    /// — any player's creature (CR 603.4). Registers a turn-scoped delayed
+    /// trigger firing once per dead creature whose death LKI matches `filter`;
+    /// the dead creature is `Selector::TriggerSource`. Massacre Girl's chain.
+    WheneverCreatureDiesThisTurn {
+        filter: SelectionRequirement,
         body: Box<Effect>,
     },
 

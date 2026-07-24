@@ -2457,3 +2457,72 @@ fn sarkhan_masterless_animates_and_pings() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(attacker).unwrap().damage, 1, "attacker took 1 from the lone Dragon");
 }
+
+/// Massacre Girl's chain: a 2/2 that would survive the ETB's single -1/-1 is
+/// finished off by the death-triggered second wave.
+#[test]
+fn massacre_girl_death_chain_wipes_board() {
+    let mut g = two_player_game();
+    let bane = g.add_card_to_battlefield(0, catalog::banehound()); // 1/1
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.move_card_to_battlefield_for_test(0, catalog::massacre_girl());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bane).is_none(), "1/1 died to the ETB -1/-1");
+    assert!(g.battlefield_find(bear).is_none(), "2/2 died to the death-chain second wave");
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Massacre Girl"),
+        "Massacre Girl survives her own sweep",
+    );
+}
+
+/// Ilharg's attack trigger deploys a creature from hand tapped and attacking,
+/// then returns it to hand at the next end step.
+#[test]
+fn ilharg_deploys_attacker_then_returns_it() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    fn advance_to(g: &mut GameState, step: TurnStep) {
+        while g.step != step { g.perform_action(GameAction::PassPriority).expect("pass"); }
+    }
+    let mut g = two_player_game();
+    let ilharg = g.add_card_to_battlefield(0, catalog::ilharg_the_raze_boar());
+    g.clear_sickness(ilharg);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ilharg, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.attacking.iter().any(|a| a.attacker == bear), "deployed bear is attacking");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "deployed bear entered tapped");
+    // At the next end step it returns to its owner's hand.
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear left the battlefield");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bear returned to hand");
+}
+
+/// Single Combat leaves each player one creature/planeswalker and then locks
+/// creature and planeswalker casts.
+#[test]
+fn single_combat_keeps_one_and_locks_casts() {
+    let mut g = two_player_game();
+    let keep = g.add_card_to_battlefield(0, catalog::primordial_wurm()); // MV 7 — kept
+    let sac = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // MV 2 — sacrificed
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // opp's only one — kept
+    let sc = g.add_card_to_hand(0, catalog::single_combat());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: sc, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast Single Combat");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(keep).is_some(), "player 0 kept the higher-MV creature");
+    assert!(g.battlefield_find(sac).is_none(), "player 0 sacrificed the rest");
+    assert!(g.battlefield_find(opp).is_some(), "opponent's only creature is kept");
+    // No player may now cast a creature spell.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let r = g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None });
+    assert!(r.is_err(), "creature spell is locked out");
+}

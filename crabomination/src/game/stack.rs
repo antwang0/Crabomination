@@ -2447,6 +2447,11 @@ impl GameState {
         // CR 603.3d — "triggers only once each turn" abilities reset.
         self.triggered_once_per_turn_used.clear();
         self.per_subject_trigger_uses.clear();
+        // Single Combat — the creature/planeswalker cast lock ends at the end
+        // of the registerer's first turn strictly after it was registered
+        // ("until the end of your next turn").
+        let (active, turn) = (self.active_player_idx, self.turn_number);
+        self.creature_pw_cast_locks.retain(|(reg, t)| !(*reg == active && turn > *t));
         // CR 505.1b — discard any unconsumed additional combat phases so they
         // don't bleed into the next turn (e.g. the turn ended before combat).
         self.additional_combat_phases = 0;
@@ -2482,6 +2487,7 @@ impl GameState {
                 crate::game::types::DelayedKind::WhenCardDies(_)
                     | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
                     | crate::game::types::DelayedKind::CreatureYouControlDiesThisTurn
+                    | crate::game::types::DelayedKind::MatchingCreatureDiesThisTurn(_)
                     | crate::game::types::DelayedKind::CreatureYouControlDealsCombatDamageThisTurn
                     | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
                     | crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
