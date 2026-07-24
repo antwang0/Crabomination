@@ -1713,6 +1713,46 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Enter the God-Eternals burns a creature, gains life, mills, and amasses 4.
+#[test]
+fn enter_the_god_eternals_full_line() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, dies to 4
+    for _ in 0..6 { g.add_card_to_library(1, catalog::forest()); }
+    let lib1 = g.players[1].library.len();
+    let spell = g.add_card_to_hand(0, catalog::enter_the_god_eternals());
+    let life = g.players[0].life;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![Target::Player(1)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature took 4 and died");
+    assert_eq!(g.players[0].life, life + 4, "gained 4");
+    assert_eq!(g.players[1].library.len(), lib1 - 4, "target milled 4");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.counter_count(CounterType::PlusOnePlusOne) == 4 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)), "amassed 4");
+}
+
+/// Tolsimir makes Voja on entry; a Wolf entering gains 3 life and fights.
+#[test]
+fn tolsimir_makes_voja_and_wolf_fights() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 target for the fight
+    let _ = foe;
+    let life = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::tolsimir_friend_to_wolves());
+    drain_stack(&mut g);
+    // Voja (a Wolf) entered → Tolsimir's wolf-trigger fired: gain 3 life.
+    let voja = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Voja, Friend to Elves").expect("Voja");
+    assert!(voja.definition.subtypes.creature_types.contains(&CreatureType::Wolf));
+    assert!(voja.definition.supertypes.contains(&crabomination::card::Supertype::Legendary));
+    assert_eq!(g.players[0].life, life + 3, "gained 3 for the Wolf entering");
+}
+
 /// Role Reversal exchanges control of two target permanents.
 #[test]
 fn role_reversal_swaps_control() {

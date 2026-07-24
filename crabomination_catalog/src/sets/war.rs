@@ -2486,6 +2486,62 @@ pub fn god_eternal_rhonas() -> CardDefinition {
     }
 }
 
+/// Tolsimir, Friend to Wolves — {2}{G}{G}{W} 3/3 legendary Elf Scout. ETB make
+/// Voja, a legendary 3/3 GW Wolf. Whenever a Wolf you control enters, gain 3
+/// life and it fights up to one target creature you don't control.
+pub fn tolsimir_friend_to_wolves() -> CardDefinition {
+    let voja = TokenDefinition {
+        name: "Voja, Friend to Elves".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::White],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: creatures(vec![CreatureType::Wolf]),
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: voja }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Wolf),
+                }),
+                effect: Effect::Seq(vec![
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                    Effect::OptionalTargets {
+                        min: 0,
+                        body: Box::new(Effect::Fight {
+                            attacker: Selector::TriggerSource,
+                            defender: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) },
+                        }),
+                    },
+                ]),
+            },
+        ],
+        ..vanilla("Tolsimir, Friend to Wolves", cost(&[generic(2), g(), g(), w()]), 3, 3, vec![CreatureType::Elf, CreatureType::Scout])
+    }
+}
+
+/// Enter the God-Eternals — {2}{U}{U}{B} Sorcery. Deal 4 to target creature and
+/// gain that much life; target player mills four; Amass Zombies 4.
+pub fn enter_the_god_eternals() -> CardDefinition {
+    CardDefinition {
+        name: "Enter the God-Eternals",
+        cost: cost(&[generic(2), u(), u(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            deal(4, target_filtered(R::Creature)),
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            Effect::Mill { who: Selector::Player(PlayerRef::Target(1)), amount: Value::Const(4) },
+            Effect::Amass { who: PlayerRef::You, count: Value::Const(4), extra_type: Some(CreatureType::Zombie) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Role Reversal — {U}{U}{R} Sorcery. Exchange control of two target permanents.
 /// (The printed "that share a permanent type" restriction is not enforced at
 /// cast time.)

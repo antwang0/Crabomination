@@ -14812,6 +14812,8 @@ static WAR: &[Factory] = &[
     super::war::ashiok_dream_render,
     super::war::role_reversal,
     super::war::heartwarming_redemption,
+    super::war::enter_the_god_eternals,
+    super::war::tolsimir_friend_to_wolves,
     super::war::parhelion_ii,
     super::war::dreadhorde_invasion,
     super::war::god_eternal_rhonas,
