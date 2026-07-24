@@ -4088,3 +4088,40 @@ pub fn deliver_unto_evil() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nicol Bolas, Dragon-God — {U}{B}{B}{B}{R} loyalty 4. Has all loyalty
+/// abilities of all other planeswalkers on the battlefield. +1: draw a card;
+/// each opponent exiles a card from hand or a permanent. −3: destroy target
+/// creature or planeswalker. −8: each opponent not controlling a legendary
+/// creature or planeswalker loses.
+pub fn nicol_bolas_dragon_god() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Nicol Bolas has all loyalty abilities of all other planeswalkers on the battlefield.",
+            effect: StaticEffect::HasAllOtherPlaneswalkerLoyaltyAbilities,
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    draw(1),
+                    Effect::EachOpponentExilesHandCardOrPermanent,
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Destroy {
+                    what: target_filtered(R::Creature.or(R::HasCardType(CardType::Planeswalker))),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::EachOpponentWithoutLegendaryLoses,
+                ..Default::default()
+            },
+        ],
+        ..walker("Nicol Bolas, Dragon-God", cost(&[u(), b(), b(), b(), r()]), PlaneswalkerSubtype::Bolas, 4)
+    }
+}

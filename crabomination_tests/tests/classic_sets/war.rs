@@ -3018,3 +3018,53 @@ fn deliver_unto_evil_opponent_leaves_two() {
     assert!(g.players[0].graveyard.iter().any(|x| x.id == a), "chosen card stays in graveyard");
     assert!(g.players[0].graveyard.iter().any(|x| x.id == b), "chosen card stays in graveyard");
 }
+
+/// Nicol Bolas, Dragon-God can activate loyalty abilities borrowed from another
+/// planeswalker on the battlefield.
+#[test]
+fn nicol_bolas_dragon_god_borrows_loyalty_abilities() {
+    let mut g = two_player_game();
+    let bolas = g.add_card_to_battlefield(0, catalog::nicol_bolas_dragon_god());
+    // Chandra, Fire Artisan brings a +1 impulse at borrowed index 3.
+    g.add_card_to_battlefield(0, catalog::chandra_fire_artisan());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Index 0..2 are Bolas's own; index 3 is Chandra's +1 (impulse one).
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: bolas, ability_index: 3, target: None, x_value: None }).expect("borrowed ability");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.definition.name == "Grizzly Bears"), "Chandra's borrowed impulse fired off Bolas");
+}
+
+/// Nicol Bolas's −8 eliminates an opponent who controls no legendary
+/// creature/planeswalker.
+#[test]
+fn nicol_bolas_dragon_god_ult_eliminates() {
+    let mut g = two_player_game();
+    let bolas = g.add_card_to_battlefield(0, catalog::nicol_bolas_dragon_god());
+    g.battlefield_find_mut(bolas).unwrap().counters.insert(CounterType::Loyalty, 8);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // nonlegendary
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: bolas, ability_index: 2, target: None, x_value: None }).expect("-8");
+    drain_stack(&mut g);
+    assert!(g.players[1].eliminated, "opponent with no legendary lost the game");
+}
+
+/// Deliver Unto Evil returns everything when you control a Bolas planeswalker.
+#[test]
+fn deliver_unto_evil_with_bolas_returns_all() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nicol_bolas_dragon_god());
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(a), Target::Permanent(b)],
+        ..EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.resolve_effect(&catalog::deliver_unto_evil().effect, &ctx).unwrap();
+    assert!(g.players[0].hand.iter().any(|x| x.id == a) && g.players[0].hand.iter().any(|x| x.id == b), "both returned with a Bolas walker out");
+}

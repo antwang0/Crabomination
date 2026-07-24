@@ -162,6 +162,8 @@ impl Effect {
             | Effect::SignalTheClans
             | Effect::NivMizzetReveal
             | Effect::MarkExileReturnOnResolve { .. }
+            | Effect::EachOpponentExilesHandCardOrPermanent
+            | Effect::EachOpponentWithoutLegendaryLoses
             | Effect::UnexpectedResults
             | Effect::PayLifeRevealExileFromHand { .. }
             | Effect::ChannelLifeForMana

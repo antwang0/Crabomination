@@ -3513,6 +3513,13 @@ pub enum Effect {
     /// opponent chooses two of them to leave in your graveyard and the rest go
     /// to your hand.
     DeliverUntoEvil { max_targets: u8, filter: SelectionRequirement },
+    /// Nicol Bolas, Dragon-God's +1 rider — "Each opponent exiles a card from
+    /// their hand or a permanent they control." Each opponent chooses one
+    /// object among their hand cards and permanents to exile.
+    EachOpponentExilesHandCardOrPermanent,
+    /// Nicol Bolas, Dragon-God's −8 — "Each opponent who doesn't control a
+    /// legendary creature or planeswalker loses the game" (CR 104.3a).
+    EachOpponentWithoutLegendaryLoses,
     /// Feather, the Redeemed — mark the selected spell on the stack so that,
     /// as it resolves, it's exiled instead of going to the graveyard and
     /// returns to its controller's hand at the next end step. Applied by

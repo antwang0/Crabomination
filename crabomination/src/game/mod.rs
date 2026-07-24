@@ -13735,6 +13735,22 @@ pub(crate) fn effective_loyalty_abilities(
             abilities.extend(c.definition.loyalty_abilities.iter().cloned());
         }
     }
+    // Nicol Bolas, Dragon-God — has all loyalty abilities of all *other*
+    // planeswalkers on the battlefield (any controller).
+    if card.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            crate::effect::StaticEffect::HasAllOtherPlaneswalkerLoyaltyAbilities
+        )
+    }) {
+        for c in battlefield {
+            if c.id != card.id
+                && c.definition.card_types.contains(&crate::card::CardType::Planeswalker)
+            {
+                abilities.extend(c.definition.loyalty_abilities.iter().cloned());
+            }
+        }
+    }
     for c in battlefield {
         if c.controller != card.controller {
             continue;
@@ -14200,6 +14216,7 @@ fn static_effect_to_effects(
             // OtherPlaneswalkersHaveSourceLoyaltyAbilities — read at loyalty
             // activation time in `activate_loyalty_ability`; no layer effect.
             | StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities
+            | StaticEffect::HasAllOtherPlaneswalkerLoyaltyAbilities
             | StaticEffect::PlaneswalkersHaveLoyaltyAbilities { .. }
             // PlayFromLibraryTop / TopOfLibraryRevealed — read by the play/
             // cast paths and the view projection; no layer effect.

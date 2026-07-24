@@ -1020,6 +1020,11 @@ pub enum StaticEffect {
     /// which appends the source's loyalty abilities (indices ≥ printed
     /// count) to every other friendly planeswalker.
     OtherPlaneswalkersHaveSourceLoyaltyAbilities,
+    /// "[This] has all loyalty abilities of all other planeswalkers on the
+    /// battlefield" (Nicol Bolas, Dragon-God). Self-scoped: read by
+    /// `effective_loyalty_abilities`, which appends every *other* battlefield
+    /// planeswalker's loyalty abilities (any controller) past the printed count.
+    HasAllOtherPlaneswalkerLoyaltyAbilities,
     /// Ichormoon Gauntlet — "Planeswalkers you control have '[0]: Proliferate'
     /// and '[−12]: Take an extra turn after this one.'" Appended past the
     /// printed abilities at loyalty-activation time.

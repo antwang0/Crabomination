@@ -12895,6 +12895,62 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachOpponentExilesHandCardOrPermanent => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                for opp in self.opponents_of(p) {
+                    let mut cands: Vec<(crate::card::CardId, String)> = self.players[opp]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    cands.extend(
+                        self.battlefield
+                            .iter()
+                            .filter(|c| c.controller == opp)
+                            .map(|c| (c.id, c.definition.name.to_string())),
+                    );
+                    if cands.is_empty() {
+                        continue;
+                    }
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: "Exile a card from your hand or a permanent you control".to_string(),
+                        candidates: cands.clone(),
+                        min: 1,
+                        max: 1,
+                    });
+                    let pick = match answer {
+                        DecisionAnswer::Cards(ids) => ids.into_iter().next(),
+                        _ => None,
+                    }
+                    .or_else(|| cands.first().map(|(id, _)| *id));
+                    if let Some(id) = pick {
+                        self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::EachOpponentWithoutLegendaryLoses => {
+                use crate::card::{CardType, Supertype};
+                let p = ctx.controller;
+                for opp in self.opponents_of(p) {
+                    let controls_legend = self.battlefield.iter().any(|c| {
+                        c.controller == opp
+                            && c.definition.supertypes.contains(&Supertype::Legendary)
+                            && (c.definition.card_types.contains(&CardType::Creature)
+                                || c.definition.card_types.contains(&CardType::Planeswalker))
+                    });
+                    if !controls_legend && !self.player_cant_lose_game(opp) {
+                        self.players[opp].eliminated = true;
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::MarkExileReturnOnResolve { what } => {
                 let spell_id = self.resolve_selector(what, ctx).into_iter().find_map(|e| match e {
                     EntityRef::Card(cid) | EntityRef::Permanent(cid) => Some(cid),
