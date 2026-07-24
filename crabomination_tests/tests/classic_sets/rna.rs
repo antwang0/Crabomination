@@ -88,6 +88,8 @@ fn rna_stat_and_keyword_lines() {
         (catalog::charging_war_boar, 3, 1, &[Keyword::Haste]),
         (catalog::dovins_automaton, 3, 3, &[]),
         (catalog::the_haunt_of_hightower, 3, 3, &[Keyword::Flying, Keyword::Lifelink]),
+        (catalog::sharktocrab, 4, 4, &[]),
+        (catalog::growth_chamber_guardian, 2, 2, &[]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -1582,4 +1584,35 @@ fn incubation_incongruity_frog() {
     assert!(g.battlefield_find(victim).is_none(), "creature exiled");
     let frogs = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Frog)).count();
     assert_eq!(frogs, 1, "controller gets a 3/3 Frog Lizard");
+}
+
+/// Sharktocrab taps and stuns an opponent's creature when it adapts.
+#[test]
+fn sharktocrab_taps_on_counter() {
+    let mut g = two_player_game();
+    let shark = g.add_card_to_battlefield(0, catalog::sharktocrab());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(victim)), 0, 0);
+    // Fire the counter-added trigger's effect directly.
+    let eff = catalog::sharktocrab().triggered_abilities[0].effect.clone();
+    let _ = shark;
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.battlefield_find(victim).unwrap().tapped, "opponent creature tapped");
+    assert_eq!(g.battlefield_find(victim).unwrap().counters.get(&CounterType::Stun).copied().unwrap_or(0), 1, "stunned");
+}
+
+/// Growth-Chamber Guardian's counter trigger tutors another copy by name.
+#[test]
+fn growth_chamber_guardian_tutors_copy() {
+    use crabomination::effect::Effect;
+    let card = catalog::growth_chamber_guardian();
+    // The counter trigger searches the library for another copy by name.
+    match &card.triggered_abilities[0].effect {
+        Effect::Search { filter, .. } => assert_eq!(
+            *filter,
+            crabomination::card::SelectionRequirement::HasName("Growth-Chamber Guardian".into()),
+            "searches for another Growth-Chamber Guardian"
+        ),
+        other => panic!("expected a Search effect, got {other:?}"),
+    }
 }

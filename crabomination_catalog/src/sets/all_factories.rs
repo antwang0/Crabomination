@@ -9876,6 +9876,8 @@ static RNA: &[Factory] = &[
     super::rna::bedeck_bedazzle,
     super::rna::incubation_incongruity,
     super::rna::repudiate_replicate,
+    super::rna::sharktocrab,
+    super::rna::growth_chamber_guardian,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

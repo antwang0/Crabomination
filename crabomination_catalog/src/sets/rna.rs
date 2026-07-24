@@ -2502,3 +2502,47 @@ pub fn repudiate_replicate() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sharktocrab — {2}{G}{U} 4/4 Shark Octopus Crab. {2}{G}{U}: Adapt 1. Whenever
+/// one or more +1/+1 counters are put on it, tap target creature an opponent
+/// controls; it doesn't untap during its controller's next untap step.
+pub fn sharktocrab() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g(), u()]),
+            effect: adapt(1),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+                Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+            ]),
+        }],
+        ..body("Sharktocrab", cost(&[generic(2), g(), u()]), 4, 4, vec![CreatureType::Shark, CreatureType::Octopus, CreatureType::Crab], vec![])
+    }
+}
+
+/// Growth-Chamber Guardian — {1}{G} 2/2 Elf Crab Warrior. {2}{G}: Adapt 2.
+/// Whenever one or more +1/+1 counters are put on it, you may search your
+/// library for a card named Growth-Chamber Guardian, reveal it, put it into
+/// your hand, then shuffle.
+pub fn growth_chamber_guardian() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: adapt(2),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasName("Growth-Chamber Guardian".into()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..body("Growth-Chamber Guardian", cost(&[generic(1), g()]), 2, 2, vec![CreatureType::Elf, CreatureType::Crab, CreatureType::Warrior], vec![])
+    }
+}
