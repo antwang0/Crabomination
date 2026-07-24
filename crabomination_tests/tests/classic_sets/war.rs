@@ -1713,6 +1713,24 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Storm the Citadel pumps your creatures +2/+2 and grants the combat trigger.
+#[test]
+fn storm_the_citadel_pumps_team() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::storm_the_citadel());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "your creature got +2/+2");
+    assert_eq!((g.computed_permanent(foe).unwrap().power, g.computed_permanent(foe).unwrap().toughness), (2, 2), "opponent's is unaffected");
+}
+
 /// Interplanar Beacon gains 1 life when you cast a planeswalker spell.
 #[test]
 fn interplanar_beacon_gains_on_walker_cast() {

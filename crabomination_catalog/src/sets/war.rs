@@ -2706,6 +2706,31 @@ pub fn mobilized_district() -> CardDefinition {
     }
 }
 
+/// Storm the Citadel — {4}{G} Sorcery. Until end of turn, creatures you control
+/// get +2/+2 and gain "whenever this creature deals combat damage to a player or
+/// planeswalker, destroy target artifact or enchantment an opponent controls."
+/// (The "defending player controls" restriction is widened to any opponent.)
+pub fn storm_the_citadel() -> CardDefinition {
+    let yours = Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Storm the Citadel",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: yours.clone(), power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+            Effect::GrantTriggeredAbility {
+                what: yours,
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                    effect: Effect::Destroy { what: target_filtered((R::Artifact.or(R::Enchantment)).and(R::ControlledByOpponent)) },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Ashiok, Dream Render — {1}{U/B}{U/B} loyalty 5. Static: opponents' spells and
 /// abilities can't cause their controller to search their library. −1: target
 /// player mills four, then exile each opponent's graveyard.
