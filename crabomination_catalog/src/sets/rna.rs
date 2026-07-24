@@ -3,11 +3,17 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, Subtypes, TriggeredAbility, Value,
+    EventSpec, Keyword, LandType, MayPlayDuration, StaticAbility, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::card::SelectionRequirement as R;
-use crate::effect::shortcut::{deal, draw, etb, spectacle, target_filtered};
-use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, ZoneDest};
+use crate::effect::shortcut::{
+    adapt, afterlife, deal, draw, etb, mentor, on_dies, riot, spectacle, target_any,
+    target_filtered,
+};
+use crate::effect::{
+    Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, StaticEffect, ZoneDest,
+};
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
@@ -293,4 +299,345 @@ pub fn griffin_protector() -> CardDefinition {
         }],
         ..body("Griffin Protector", cost(&[generic(3), w()]), 2, 3, vec![CreatureType::Griffin], vec![Keyword::Flying])
     }
+}
+
+/// A vanilla token creature body of `colors`, P/T, and creature types.
+fn token(name: &'static str, colors: Vec<Color>, p: i32, t: i32, ct: Vec<CreatureType>, kw: Vec<Keyword>) -> TokenDefinition {
+    TokenDefinition {
+        name: name.into(),
+        power: p,
+        toughness: t,
+        keywords: kw,
+        card_types: vec![CardType::Creature],
+        colors,
+        subtypes: creatures(ct),
+        ..Default::default()
+    }
+}
+
+/// Hunted Witness — {W} 1/1 Human. When it dies, create a 1/1 white Soldier
+/// with lifelink.
+pub fn hunted_witness() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: token("Soldier", vec![Color::White], 1, 1, vec![CreatureType::Soldier], vec![Keyword::Lifelink]),
+        })],
+        ..body("Hunted Witness", cost(&[w()]), 1, 1, vec![CreatureType::Human], vec![])
+    }
+}
+
+/// Ministrant of Obligation — {2}{W} 2/1 Human Cleric with Afterlife 2.
+pub fn ministrant_of_obligation() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![afterlife(2)],
+        ..body("Ministrant of Obligation", cost(&[generic(2), w()]), 2, 1, vec![CreatureType::Human, CreatureType::Cleric], vec![])
+    }
+}
+
+/// Imperious Oligarch — {W}{B} 2/1 Human Cleric with vigilance and Afterlife 1.
+pub fn imperious_oligarch() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![afterlife(1)],
+        ..body("Imperious Oligarch", cost(&[w(), b()]), 2, 1, vec![CreatureType::Human, CreatureType::Cleric], vec![Keyword::Vigilance])
+    }
+}
+
+/// Grasping Thrull — {3}{W}{B} 3/3 Thrull with flying. ETB deal 2 to each
+/// opponent and gain 2 life.
+pub fn grasping_thrull() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..body("Grasping Thrull", cost(&[generic(3), w(), b()]), 3, 3, vec![CreatureType::Thrull], vec![Keyword::Flying])
+    }
+}
+
+/// Zhur-Taa Goblin — {R}{G} 2/2 Goblin Berserker with Riot.
+pub fn zhur_taa_goblin() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![riot()],
+        ..body("Zhur-Taa Goblin", cost(&[r(), g()]), 2, 2, vec![CreatureType::Goblin, CreatureType::Berserker], vec![])
+    }
+}
+
+/// Rampaging Rendhorn — {4}{G} 4/4 Beast with Riot.
+pub fn rampaging_rendhorn() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![riot()],
+        ..body("Rampaging Rendhorn", cost(&[generic(4), g()]), 4, 4, vec![CreatureType::Beast], vec![])
+    }
+}
+
+/// Frenzied Arynx — {2}{R}{G} 3/3 Cat Beast with Riot and trample. {4}{R}{G}:
+/// +3/+0 until end of turn.
+pub fn frenzied_arynx() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![riot()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), r(), g()]),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::Const(3), toughness: Value::ZERO, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..body("Frenzied Arynx", cost(&[generic(2), r(), g()]), 3, 3, vec![CreatureType::Cat, CreatureType::Beast], vec![Keyword::Trample])
+    }
+}
+
+/// Sunhome Stalwart — {1}{W} 2/2 Human Soldier with first strike and Mentor.
+pub fn sunhome_stalwart() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![mentor()],
+        ..body("Sunhome Stalwart", cost(&[generic(1), w()]), 2, 2, vec![CreatureType::Human, CreatureType::Soldier], vec![Keyword::FirstStrike])
+    }
+}
+
+/// Skewer the Critics — {2}{R} Sorcery with Spectacle {R}. Deals 3 damage to
+/// any target.
+pub fn skewer_the_critics() -> CardDefinition {
+    CardDefinition {
+        name: "Skewer the Critics",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        alternative_cost: Some(spectacle(cost(&[r()]))),
+        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+/// Light Up the Stage — {2}{R} Sorcery with Spectacle {R}. Exile the top two
+/// cards; until the end of your next turn you may play them.
+pub fn light_up_the_stage() -> CardDefinition {
+    CardDefinition {
+        name: "Light Up the Stage",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        alternative_cost: Some(spectacle(cost(&[r()]))),
+        effect: Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            duration: MayPlayDuration::EndOfControllersNextTurn,
+            pay_any_color: false,
+            pay_own_cost: true,
+            uncast_penalty: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Spear Spewer — {R} 0/2 Goblin Warrior with defender. {T}: deal 1 damage to
+/// each player.
+pub fn spear_spewer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..body("Spear Spewer", cost(&[r()]), 0, 2, vec![CreatureType::Goblin, CreatureType::Warrior], vec![Keyword::Defender])
+    }
+}
+
+/// Vindictive Vampire — {3}{B} 2/3 Vampire. Whenever another creature you
+/// control dies, deal 1 damage to each opponent and gain 1 life.
+pub fn vindictive_vampire() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::OtherThanSource,
+            }),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..body("Vindictive Vampire", cost(&[generic(3), b()]), 2, 3, vec![CreatureType::Vampire], vec![])
+    }
+}
+
+/// Sauroform Hybrid — {1}{G} 2/2 Human Lizard Warrior. {4}{G}{G}: Adapt 4.
+pub fn sauroform_hybrid() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g(), g()]),
+            effect: adapt(4),
+            ..Default::default()
+        }],
+        ..body("Sauroform Hybrid", cost(&[generic(1), g()]), 2, 2, vec![CreatureType::Human, CreatureType::Lizard, CreatureType::Warrior], vec![])
+    }
+}
+
+/// Skitter Eel — {3}{U} 3/3 Fish Crab. {2}{U}: Adapt 2.
+pub fn skitter_eel() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: adapt(2),
+            ..Default::default()
+        }],
+        ..body("Skitter Eel", cost(&[generic(3), u()]), 3, 3, vec![CreatureType::Fish, CreatureType::Crab], vec![])
+    }
+}
+
+/// Gift of Strength — {1}{G} Instant. Target creature gets +3/+3 and gains
+/// reach until end of turn.
+pub fn gift_of_strength() -> CardDefinition {
+    CardDefinition {
+        name: "Gift of Strength",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(3), toughness: Value::Const(3), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Reach, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Titanic Brawl — {1}{G} Instant. Costs {1} less if it targets a creature you
+/// control with a +1/+1 counter. Target creature you control fights a creature
+/// you don't control.
+pub fn titanic_brawl() -> CardDefinition {
+    CardDefinition {
+        name: "Titanic Brawl",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_cost_if_target: Some((
+            R::Creature.and(R::ControlledByYou).and(R::WithCounter(CounterType::PlusOnePlusOne)),
+            cost(&[generic(1)]),
+        )),
+        effect: Effect::Fight {
+            attacker: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            defender: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+        },
+        ..Default::default()
+    }
+}
+
+/// Rakdos Roustabout — {1}{B}{R} 3/2 Ogre Warrior. Whenever it becomes blocked,
+/// it deals 1 damage to the player it's attacking.
+pub fn rakdos_roustabout() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::ONE },
+        }],
+        ..body("Rakdos Roustabout", cost(&[generic(1), b(), r()]), 3, 2, vec![CreatureType::Ogre, CreatureType::Warrior], vec![])
+    }
+}
+
+/// Consign to the Pit — {5}{B} Sorcery. Destroy target creature and deal 2
+/// damage to that creature's controller.
+pub fn consign_to_the_pit() -> CardDefinition {
+    CardDefinition {
+        name: "Consign to the Pit",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))), amount: Value::Const(2) },
+            Effect::Destroy { what: target_filtered(R::Creature) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Scorchmark — {1}{R} Instant. Deal 2 damage to target creature; if it would
+/// die this turn, exile it instead.
+pub fn scorchmark() -> CardDefinition {
+    CardDefinition {
+        name: "Scorchmark",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: target_filtered(R::Creature) },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Senate Guildmage — {W}{U} 2/2 Human Wizard. {W}, {T}: gain 2 life. {U}, {T}:
+/// draw a card, then discard a card.
+pub fn senate_guildmage() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[w()]),
+                tap_cost: true,
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[u()]),
+                tap_cost: true,
+                effect: Effect::Seq(vec![draw(1), Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }]),
+                ..Default::default()
+            },
+        ],
+        ..body("Senate Guildmage", cost(&[w(), u()]), 2, 2, vec![CreatureType::Human, CreatureType::Wizard], vec![])
+    }
+}
+
+/// Undercity Scavenger — {3}{B} 3/3 Ogre Warrior. ETB you may sacrifice another
+/// creature; if you do, put two +1/+1 counters on it, then scry 2.
+pub fn undercity_scavenger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Sacrifice another creature: two +1/+1 counters and scry 2.".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Creature.and(R::OtherThanSource) },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            ])),
+        })],
+        ..body("Undercity Scavenger", cost(&[generic(3), b()]), 3, 3, vec![CreatureType::Ogre, CreatureType::Warrior], vec![])
+    }
+}
+
+/// Gatebreaker Ram — {2}{G} 2/2 Sheep. +1/+1 for each Gate you control; while
+/// you control two or more Gates it has vigilance and trample.
+pub fn gatebreaker_ram() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Gets +1/+1 for each Gate you control.",
+                effect: StaticEffect::PumpSelfByControlledPermanents {
+                    filter: R::HasLandType(LandType::Gate),
+                    per_power: 1,
+                    per_toughness: 1,
+                },
+            },
+            StaticAbility {
+                description: "While you control two or more Gates, has vigilance and trample.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(R::HasLandType(LandType::Gate).and(R::ControlledByYou)),
+                        n: Value::Const(2),
+                    },
+                    power: 0,
+                    toughness: 0,
+                    keywords: vec![Keyword::Vigilance, Keyword::Trample],
+                },
+            },
+        ],
+        ..body("Gatebreaker Ram", cost(&[generic(2), g()]), 2, 2, vec![CreatureType::Sheep], vec![])
+    }
+}
+
+/// Feral Maaka — {1}{R} 2/2 Cat.
+pub fn feral_maaka() -> CardDefinition {
+    body("Feral Maaka", cost(&[generic(1), r()]), 2, 2, vec![CreatureType::Cat], vec![])
+}
+
+/// Wild Ceratok — {3}{G} 4/3 Rhino.
+pub fn wild_ceratok() -> CardDefinition {
+    body("Wild Ceratok", cost(&[generic(3), g()]), 4, 3, vec![CreatureType::Rhino], vec![])
+}
+
+/// Rubble Slinger — {2}{R/G} 2/3 Human Warrior with reach.
+pub fn rubble_slinger() -> CardDefinition {
+    body("Rubble Slinger", cost(&[generic(2), hybrid(Color::Red, Color::Green)]), 2, 3, vec![CreatureType::Human, CreatureType::Warrior], vec![Keyword::Reach])
 }

@@ -1,8 +1,8 @@
 //! Functionality tests for Ravnica Allegiance (RNA) — `catalog::sets::rna`.
 
-use crabomination::card::{CardType, Keyword};
+use crabomination::card::{CardType, CounterType, Keyword};
 use crabomination::catalog;
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -24,6 +24,23 @@ fn rna_stat_and_keyword_lines() {
         (catalog::rakdos_trumpeter, 1, 3, &[Keyword::Menace]),
         (catalog::griffin_protector, 2, 3, &[Keyword::Flying]),
         (catalog::ironshell_beetle, 1, 1, &[]),
+        (catalog::hunted_witness, 1, 1, &[]),
+        (catalog::ministrant_of_obligation, 2, 1, &[]),
+        (catalog::imperious_oligarch, 2, 1, &[Keyword::Vigilance]),
+        (catalog::grasping_thrull, 3, 3, &[Keyword::Flying]),
+        (catalog::zhur_taa_goblin, 2, 2, &[]),
+        (catalog::rampaging_rendhorn, 4, 4, &[]),
+        (catalog::frenzied_arynx, 3, 3, &[Keyword::Trample]),
+        (catalog::sunhome_stalwart, 2, 2, &[Keyword::FirstStrike]),
+        (catalog::spear_spewer, 0, 2, &[Keyword::Defender]),
+        (catalog::vindictive_vampire, 2, 3, &[]),
+        (catalog::sauroform_hybrid, 2, 2, &[]),
+        (catalog::skitter_eel, 3, 3, &[]),
+        (catalog::rakdos_roustabout, 3, 2, &[]),
+        (catalog::gatebreaker_ram, 2, 2, &[]),
+        (catalog::feral_maaka, 2, 2, &[]),
+        (catalog::wild_ceratok, 4, 3, &[]),
+        (catalog::rubble_slinger, 2, 3, &[Keyword::Reach]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -240,4 +257,305 @@ fn griffin_protector_self_pump_on_other_etb() {
     g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bear }]);
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(griffin).unwrap().power, 3, "Griffin gets +1/+1 when another creature enters");
+}
+
+/// Ministrant of Obligation's Afterlife 2 makes two flying Spirit tokens.
+#[test]
+fn ministrant_afterlife_makes_two_spirits() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let m = g.add_card_to_battlefield(0, catalog::ministrant_of_obligation()); // 2/1
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(m), 2, None, &mut evs);
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Spirit" && c.definition.keywords.contains(&Keyword::Flying))
+        .count();
+    assert_eq!(spirits, 2, "Afterlife 2 → two flying Spirits");
+}
+
+/// Hunted Witness dies into a 1/1 Soldier with lifelink.
+#[test]
+fn hunted_witness_makes_lifelink_soldier() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let w = g.add_card_to_battlefield(0, catalog::hunted_witness());
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(w), 1, None, &mut evs);
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter()
+        .any(|c| c.controller == 0 && c.definition.name == "Soldier" && c.definition.keywords.contains(&Keyword::Lifelink)),
+        "lifelink Soldier token minted");
+}
+
+/// Zhur-Taa Goblin's Riot grants haste by default (mode 0).
+#[test]
+fn zhur_taa_goblin_riot_default_haste() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let gob = g.move_card_to_battlefield_for_test(0, catalog::zhur_taa_goblin());
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(gob).unwrap().keywords.contains(&Keyword::Haste), "Riot → haste");
+}
+
+/// Sunhome Stalwart's Mentor puts a +1/+1 counter on a lesser-power attacker.
+#[test]
+fn sunhome_stalwart_mentor_pumps_smaller_attacker() {
+    let mut g = two_player_game();
+    let stalwart = g.add_card_to_battlefield(0, catalog::sunhome_stalwart()); // 2/2
+    let small_def = crabomination::card::TokenDefinition {
+        name: "Goblin".into(), power: 1, toughness: 1,
+        card_types: vec![CardType::Creature], ..Default::default()
+    };
+    let small = g.add_token_to_battlefield(0, &small_def); // 1/1
+    g.clear_sickness(stalwart);
+    g.clear_sickness(small);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![
+        Attack { attacker: stalwart, target: AttackTarget::Player(1) },
+        Attack { attacker: small, target: AttackTarget::Player(1) },
+    ]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(small).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Mentor counter on the lesser attacker");
+}
+
+/// Skewer the Critics deals 3 to any target.
+#[test]
+fn skewer_the_critics_burns_three() {
+    let mut g = two_player_game();
+    let cast = g.add_card_to_hand(0, catalog::skewer_the_critics());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "3 damage to the opponent");
+}
+
+/// Light Up the Stage exiles the top two cards with a may-play grant.
+#[test]
+fn light_up_the_stage_exiles_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::mountain()); }
+    let cast = g.add_card_to_hand(0, catalog::light_up_the_stage());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Mountain").count(), 2, "two cards exiled");
+}
+
+/// Spear Spewer pings each player for 1.
+#[test]
+fn spear_spewer_pings_each_player() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::spear_spewer());
+    g.clear_sickness(s);
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.perform_action(GameAction::ActivateAbility { card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap");
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (l0 - 1, l1 - 1), "1 to each player");
+}
+
+/// Vindictive Vampire drains when another creature you control dies.
+#[test]
+fn vindictive_vampire_drains_on_ally_death() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vindictive_vampire());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let (mine, opp) = (g.players[0].life, g.players[1].life);
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(ally), 2, None, &mut evs);
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "opponent took 1");
+    assert_eq!(g.players[0].life, mine + 1, "gained 1");
+}
+
+/// Sauroform Hybrid's Adapt 4 adds four +1/+1 counters.
+#[test]
+fn sauroform_hybrid_adapt_four() {
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::sauroform_hybrid());
+    g.clear_sickness(h);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility { card_id: h, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("adapt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(h).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+}
+
+/// Titanic Brawl fights and carries the +1/+1-counter cost reduction.
+#[test]
+fn titanic_brawl_fights_and_reduces() {
+    let def = catalog::titanic_brawl();
+    assert!(def.self_cost_reduction_cost_if_target.is_some(), "has counter cost reduction");
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::craw_wurm());   // 6/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let cast = g.add_card_to_hand(0, catalog::titanic_brawl());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(mine)), additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    assert!(g.battlefield_find(theirs).is_none(), "the 2/2 died to the 6/4");
+}
+
+/// Scorchmark exiles a creature it would kill instead of it dying.
+#[test]
+fn scorchmark_exiles_dying_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let cast = g.add_card_to_hand(0, catalog::scorchmark());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled instead of dying");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear), "not in graveyard");
+}
+
+/// Consign to the Pit destroys a creature and burns its controller for 2.
+#[test]
+fn consign_to_the_pit_destroys_and_burns() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cast = g.add_card_to_hand(0, catalog::consign_to_the_pit());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert_eq!(g.players[1].life, life - 2, "controller took 2");
+}
+
+/// Undercity Scavenger's sac payoff adds two counters and scries.
+#[test]
+fn undercity_scavenger_sac_adds_counters() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let scav = catalog::undercity_scavenger();
+    let this = g.add_card_to_battlefield(0, scav.clone());
+    let effect = scav.triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext {
+        source: Some(this),
+        ..crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Cards(vec![fodder]),
+    ]));
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(this).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+}
+
+/// Gatebreaker Ram scales with Gates and gains keywords at two.
+#[test]
+fn gatebreaker_ram_scales_with_gates() {
+    let mut g = two_player_game();
+    let ram = g.add_card_to_battlefield(0, catalog::gatebreaker_ram());
+    g.add_card_to_battlefield(0, catalog::azorius_guildgate());
+    let cp = g.computed_permanent(ram).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 for one Gate");
+    assert!(!cp.keywords.contains(&Keyword::Trample), "no trample with one Gate");
+    g.add_card_to_battlefield(0, catalog::boros_guildgate());
+    let cp = g.computed_permanent(ram).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2 for two Gates");
+    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Trample),
+        "vigilance + trample at two Gates");
+}
+
+/// Senate Guildmage's first ability gains 2 life.
+#[test]
+fn senate_guildmage_gains_life() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::senate_guildmage());
+    g.clear_sickness(mage);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: mage, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("gain");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Rakdos Roustabout pings the defending player when it becomes blocked.
+#[test]
+fn rakdos_roustabout_pings_on_block() {
+    let mut g = two_player_game();
+    let att = g.add_card_to_battlefield(0, catalog::rakdos_roustabout());
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(att);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: att, target: AttackTarget::Player(1) }]).expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let life = g.players[1].life;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, att)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "becomes-blocked ping hit the defending player");
+}
+
+/// Grasping Thrull's ETB drains each opponent for 2.
+#[test]
+fn grasping_thrull_etb_drains() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let (mine, opp) = (g.players[0].life, g.players[1].life);
+    g.move_card_to_battlefield_for_test(0, catalog::grasping_thrull());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "opponent lost 2");
+    assert_eq!(g.players[0].life, mine + 2, "gained 2");
+}
+
+/// Gift of Strength pumps +3/+3 and grants reach.
+#[test]
+fn gift_of_strength_pumps_and_grants_reach() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cast = g.add_card_to_hand(0, catalog::gift_of_strength());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "+3/+3");
+    assert!(cp.keywords.contains(&Keyword::Reach), "gains reach");
 }
