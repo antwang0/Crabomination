@@ -336,6 +336,19 @@ pub fn ministrant_of_obligation() -> CardDefinition {
     }
 }
 
+/// Tithe Taker — {1}{W} 2/1 Human Soldier with Afterlife 1. During your turn,
+/// opponents' spells and non-mana abilities cost {1} more.
+pub fn tithe_taker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![afterlife(1)],
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, opponents' spells and non-mana abilities cost {1} more.",
+            effect: StaticEffect::OpponentActivityCostsMoreOnYourTurn { amount: 1 },
+        }],
+        ..body("Tithe Taker", cost(&[generic(1), w()]), 2, 1, vec![CreatureType::Human, CreatureType::Soldier], vec![])
+    }
+}
+
 /// Imperious Oligarch — {W}{B} 2/1 Human Cleric with vigilance and Afterlife 1.
 pub fn imperious_oligarch() -> CardDefinition {
     CardDefinition {

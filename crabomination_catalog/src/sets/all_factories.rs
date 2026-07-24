@@ -9746,6 +9746,7 @@ static RNA: &[Factory] = &[
     super::rna::rakdos_trumpeter,
     super::rna::griffin_protector,
     super::rna::hunted_witness,
+    super::rna::tithe_taker,
     super::rna::ministrant_of_obligation,
     super::rna::imperious_oligarch,
     super::rna::grasping_thrull,

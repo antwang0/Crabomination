@@ -1146,6 +1146,12 @@ pub enum StaticEffect {
     /// taxers an activating player's opponents control and paid as extra
     /// generic mana at `activate_loyalty_ability`.
     OpponentLoyaltyActivationTax { amount: u32 },
+    /// Tithe Taker — "During your turn, spells your opponents cast cost {amount}
+    /// more and non-mana abilities your opponents activate cost {amount} more."
+    /// Only bites on the source controller's turn and never taxes the
+    /// controller's own spells/abilities. Spell half read in
+    /// `extra_cost_for_spell`; ability half in `effective_ability_mana_cost`.
+    OpponentActivityCostsMoreOnYourTurn { amount: u32 },
     /// "During each of your turns, you may cast a permanent spell of each
     /// permanent type from your graveyard." Muldrotha, the Gravetide
     /// (checked in `cast_spell`; per-type-per-turn tally on the player).

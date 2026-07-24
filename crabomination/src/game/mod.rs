@@ -14134,6 +14134,9 @@ fn static_effect_to_effects(
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::AdditionalCost { .. }
             | StaticEffect::OpponentSpellsCostMore { .. }
+            // Tithe Taker — read at `extra_cost_for_spell` /
+            // `effective_ability_mana_cost`; no continuous-layer effect.
+            | StaticEffect::OpponentActivityCostsMoreOnYourTurn { .. }
             | StaticEffect::ControllerHasHexproof
             // IgnoreOpponentsCreatureHexproof — consulted in
             // `check_target_legality_with_source` (Glaring Spotlight); no

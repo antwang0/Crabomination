@@ -306,6 +306,14 @@ pub fn extra_cost_for_spell(
                 {
                     tax += amount;
                 }
+                // Tithe Taker: on its controller's turn, opponents' spells cost
+                // {amount} more (the controller is exempt).
+                StaticEffect::OpponentActivityCostsMoreOnYourTurn { amount }
+                    if src.controller != caster
+                        && src.controller == state.active_player_idx =>
+                {
+                    tax += amount;
+                }
                 // Defense Grid: each spell costs {amount} more except during its
                 // controller's turn (CR — read off the caster's active status).
                 StaticEffect::SpellsCostMoreExceptOnControllerTurn { amount }
@@ -11258,15 +11266,23 @@ impl GameState {
             }
         }
         // Suppression Field — non-mana activated abilities cost {N} more,
-        // for every player's activations.
+        // for every player's activations. Tithe Taker adds the same tax but
+        // only to opponents' activations on its controller's turn.
         if !is_mana_ability(&ability.effect) {
             let tax: u32 = self
                 .battlefield
                 .iter()
-                .flat_map(|c| c.definition.static_abilities.iter())
-                .map(|sa| match sa.effect {
-                    crate::effect::StaticEffect::ActivationTax { amount } => amount,
-                    _ => 0,
+                .flat_map(|c| {
+                    let opp_your_turn = c.controller != p && c.controller == self.active_player_idx;
+                    c.definition.static_abilities.iter().map(move |sa| match sa.effect {
+                        crate::effect::StaticEffect::ActivationTax { amount } => amount,
+                        crate::effect::StaticEffect::OpponentActivityCostsMoreOnYourTurn { amount }
+                            if opp_your_turn =>
+                        {
+                            amount
+                        }
+                        _ => 0,
+                    })
                 })
                 .sum();
             if tax > 0 {

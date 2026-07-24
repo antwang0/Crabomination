@@ -25,6 +25,7 @@ fn rna_stat_and_keyword_lines() {
         (catalog::griffin_protector, 2, 3, &[Keyword::Flying]),
         (catalog::ironshell_beetle, 1, 1, &[]),
         (catalog::hunted_witness, 1, 1, &[]),
+        (catalog::tithe_taker, 2, 1, &[]),
         (catalog::ministrant_of_obligation, 2, 1, &[]),
         (catalog::imperious_oligarch, 2, 1, &[Keyword::Vigilance]),
         (catalog::grasping_thrull, 3, 3, &[Keyword::Flying]),
@@ -558,4 +559,25 @@ fn gift_of_strength_pumps_and_grants_reach() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "+3/+3");
     assert!(cp.keywords.contains(&Keyword::Reach), "gains reach");
+}
+
+/// Tithe Taker taxes opponents' spells {1} more only on its controller's turn,
+/// and never taxes the controller.
+#[test]
+fn tithe_taker_taxes_opponents_on_your_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tithe_taker());
+    let sid = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let opp_spell = g.players[1].hand.iter().find(|c| c.id == sid).unwrap().clone();
+    // Player 0's turn → opponent (1) is taxed 1.
+    g.active_player_idx = 0;
+    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 1, &opp_spell, None, 0), 1, "taxed on your turn");
+    // Player 1's turn → no tax.
+    g.active_player_idx = 1;
+    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 1, &opp_spell, None, 0), 0, "not taxed off your turn");
+    // The controller's own spell is never taxed, even on their turn.
+    let oid = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let own_spell = g.players[0].hand.iter().find(|c| c.id == oid).unwrap().clone();
+    g.active_player_idx = 0;
+    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &own_spell, None, 0), 0, "controller exempt");
 }
