@@ -574,6 +574,11 @@ pub enum StaticEffect {
     /// `Hexproof` on opponents' *permanents* (any type) *and* on opponent
     /// players when checking target legality.
     IgnoreOpponentsHexproof,
+    /// Tomik, Distinguished Advokist — "Lands you control can't be the targets
+    /// of spells or abilities your opponents control." Read at the targeting
+    /// gate. (The printed rider covering land cards in graveyards and the
+    /// play-from-graveyard lock are omitted — battlefield lands only.)
+    LandsUntargetableByOpponents,
     /// Ashiok, Dream Render — "Spells and abilities your opponents control can't
     /// cause their controller to search their library." While any player
     /// controls this static, that player's opponents' searches of their own

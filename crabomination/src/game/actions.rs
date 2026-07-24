@@ -8273,11 +8273,31 @@ impl GameState {
         {
             return Err(GameError::TargetHasHexproof(*cid));
         }
+        // Tomik — a player's lands can't be targeted by an opponent's spells
+        // or abilities.
+        if card.definition.is_land()
+            && controller != caster
+            && self.player_lands_untargetable_by_opponents(controller)
+        {
+            return Err(GameError::InvalidTarget);
+        }
         // Ward is enforced via triggered abilities on the stack (CR 702.21a),
         // not as a pre-flight targeting restriction. The caster CAN target a
         // Ward creature — the Ward trigger fires and counters the spell unless
         // the caster pays the Ward cost at resolution time.
         Ok(())
+    }
+
+    /// True while `player` controls a `LandsUntargetableByOpponents` source
+    /// (Tomik, Distinguished Advokist).
+    pub(crate) fn player_lands_untargetable_by_opponents(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::LandsUntargetableByOpponents)
+                })
+        })
     }
 
     /// True while `player` controls a `ControllerCantCastPermanentSpells`

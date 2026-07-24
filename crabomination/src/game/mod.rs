@@ -14002,6 +14002,7 @@ fn static_effect_to_effects(
             // layer effect.
             | StaticEffect::IgnoreOpponentsCreatureHexproof
             | StaticEffect::IgnoreOpponentsHexproof
+            | StaticEffect::LandsUntargetableByOpponents
             | StaticEffect::OpponentsCantSearchLibraries
             | StaticEffect::LandsTapColorlessOnly
             // ArtifactActivatedAbilitiesLocked — consulted in

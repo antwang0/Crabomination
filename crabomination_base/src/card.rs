@@ -288,7 +288,7 @@ pub enum PlaneswalkerSubtype {
     Koth, Kaya, Tyvar, Kaito,
     // WAR planeswalkers.
     Tibalt, Teyo, Wanderer, Nixilis, Jaya, Angrath, Huatli, Kiora, Samut, Dovin,
-    Davriel, Arlinn,
+    Davriel, Arlinn, Sarkhan,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

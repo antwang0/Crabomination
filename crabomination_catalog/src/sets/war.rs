@@ -2727,6 +2727,67 @@ pub fn rescuer_sphinx() -> CardDefinition {
     }
 }
 
+/// Sarkhan the Masterless — {3}{R}{R} loyalty 5. When a creature attacks you or
+/// a planeswalker you control, your Dragons deal 1 to it each (modeled as an
+/// aggregate). +1: your planeswalkers become 4/4 red Dragons with flying (EOT).
+/// −3: create a 4/4 red Dragon with flying.
+pub fn sarkhan_the_masterless() -> CardDefinition {
+    let dragon_token = TokenDefinition {
+        name: "Dragon".into(),
+        power: 4,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: creatures(vec![CreatureType::Dragon]),
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+            effect: Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(R::HasCreatureType(CreatureType::Dragon).and(R::ControlledByYou)))),
+            },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::BecomeCreature {
+                    what: Selector::EachPermanent(R::Planeswalker.and(R::ControlledByYou)),
+                    power: Value::Const(4),
+                    toughness: Value::Const(4),
+                    creature_types: vec![CreatureType::Dragon],
+                    keywords: vec![Keyword::Flying],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: dragon_token },
+                ..Default::default()
+            },
+        ],
+        ..walker("Sarkhan the Masterless", cost(&[generic(3), r(), r()]), PlaneswalkerSubtype::Sarkhan, 5)
+    }
+}
+
+/// Tomik, Distinguished Advokist — {W}{W} 2/3 Human Advisor with flying. Your
+/// opponents can't target your lands with spells or abilities. (The graveyard
+/// land-card riders are omitted — battlefield lands only.)
+pub fn tomik_distinguished_advokist() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control can't be the targets of spells or abilities your opponents control.",
+            effect: StaticEffect::LandsUntargetableByOpponents,
+        }],
+        ..vanilla("Tomik, Distinguished Advokist", cost(&[w(), w()]), 2, 3, vec![CreatureType::Human, CreatureType::Advisor])
+    }
+}
+
 /// Arlinn, Voice of the Pack — {4}{G}{G} loyalty 7. Static: each Wolf or
 /// Werewolf you control enters with an additional +1/+1 counter. −2: create a
 /// 2/2 green Wolf.

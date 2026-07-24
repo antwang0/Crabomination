@@ -2416,3 +2416,44 @@ fn arlinn_wolves_enter_bigger() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "non-Wolf unaffected");
 }
+
+/// Tomik makes your lands untargetable by opponents' spells; you can still
+/// target them yourself.
+#[test]
+fn tomik_protects_your_lands() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tomik_distinguished_advokist());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    // An opponent (seat 1) can't target your land.
+    assert!(g.check_target_legality(&Target::Permanent(land), 1).is_err(), "opponent can't target your land");
+    // You (seat 0) still can.
+    assert!(g.check_target_legality(&Target::Permanent(land), 0).is_ok(), "you can target your own land");
+}
+
+/// Sarkhan the Masterless: +1 turns your planeswalkers into 4/4 Dragons, and
+/// the passive pings an attacker once per Dragon you control.
+#[test]
+fn sarkhan_masterless_animates_and_pings() {
+    fn advance_to(g: &mut GameState, step: TurnStep) {
+        while g.step != step { g.perform_action(GameAction::PassPriority).expect("pass"); }
+    }
+    let mut g = two_player_game();
+    let sarkhan = g.add_card_to_battlefield(0, catalog::sarkhan_the_masterless());
+    // +1: Sarkhan (a planeswalker) becomes a 4/4 Dragon.
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: sarkhan, ability_index: 0, target: None, x_value: None }).expect("+1");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(sarkhan).unwrap();
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature) && cp.subtypes.creature_types.contains(&CreatureType::Dragon), "Sarkhan is a Dragon creature");
+    assert_eq!((cp.power, cp.toughness), (4, 4), "4/4");
+    // The passive: an opponent's attacker takes 1 per Dragon you control (1 here).
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(0) }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(attacker).unwrap().damage, 1, "attacker took 1 from the lone Dragon");
+}
