@@ -3507,6 +3507,11 @@ pub enum Effect {
     /// Registers a `(controller, chosen)` entry in `damage_redirect_this_turn`
     /// (CR 614.9), consulted by `damage_redirect_target`.
     RedirectYourDamageToChosen { what: Selector },
+    /// Feather, the Redeemed — mark the selected spell on the stack so that,
+    /// as it resolves, it's exiled instead of going to the graveyard and
+    /// returns to its controller's hand at the next end step. Applied by
+    /// Feather's cast trigger to `Selector::TriggerSource`.
+    MarkExileReturnOnResolve { what: Selector },
     /// Niv-Mizzet Reborn — reveal the top ten cards of your library; for each
     /// of the ten guild color pairs, take one revealed card whose printed
     /// colors are exactly that pair into your hand; put the rest on the bottom

@@ -13145,6 +13145,29 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
+        // Feather, the Redeemed — exile the resolving I/S instead of the
+        // graveyard and schedule its return to the caster's hand at the next
+        // end step (CR 603.7b).
+        if card.feather_exile_return {
+            use crate::game::types::{DelayedKind, DelayedTrigger};
+            let src = card.id;
+            self.players[caster].cards_exiled_this_turn =
+                self.players[caster].cards_exiled_this_turn.saturating_add(1);
+            self.exile.push(card);
+            self.delayed_triggers.push(DelayedTrigger {
+                controller: caster,
+                source: src,
+                kind: DelayedKind::NextEndStep,
+                effect: Effect::Move {
+                    what: crate::effect::Selector::This,
+                    to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(caster)),
+                },
+                target: None,
+                bound_token: None,
+                fires_once: true,
+            });
+            return Ok(events);
+        }
         // CR 702.55 — Haunt. `Effect::HauntCreature` set `haunt_pending` to the
         // creature this resolving instant/sorcery should haunt. Exile the spell
         // card (not the graveyard) and register the death-watch delayed trigger.

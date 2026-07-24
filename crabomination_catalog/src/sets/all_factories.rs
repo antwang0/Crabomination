@@ -14865,6 +14865,7 @@ static WAR: &[Factory] = &[
     super::war::gideons_sacrifice,
     super::war::niv_mizzet_reborn,
     super::war::nissa_who_shakes_the_world,
+    super::war::feather_the_redeemed,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

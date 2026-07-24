@@ -2972,3 +2972,28 @@ fn nissa_shakes_plus_one_animates_land() {
     assert_eq!((cp.power, cp.toughness), (3, 3), "0/0 with three +1/+1 counters");
     assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Haste), "vigilance + haste");
 }
+
+/// Feather exiles an I/S that targets your creature and returns it at the next
+/// end step (instead of it hitting the graveyard).
+#[test]
+fn feather_exiles_and_returns_spell() {
+    fn advance_to(g: &mut GameState, step: TurnStep) {
+        while g.step != step { g.perform_action(GameAction::PassPriority).expect("pass"); }
+    }
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::feather_the_redeemed());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let growth = g.add_card_to_hand(0, catalog::giant_growth());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell { card_id: growth, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == growth), "Giant Growth exiled, not in graveyard");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == growth), "not in graveyard");
+    // At the next end step, it returns to hand.
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == growth), "returned to hand at end step");
+}

@@ -12831,6 +12831,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MarkExileReturnOnResolve { what } => {
+                let spell_id = self.resolve_selector(what, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Card(cid) | EntityRef::Permanent(cid) => Some(cid),
+                    _ => None,
+                });
+                if let Some(spell_id) = spell_id {
+                    for item in self.stack.iter_mut() {
+                        if let StackItem::Spell { card, .. } = item
+                            && card.id == spell_id
+                        {
+                            card.feather_exile_return = true;
+                            break;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::NivMizzetReveal => {
                 use crate::mana::Color::*;
                 let p = ctx.controller;

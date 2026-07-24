@@ -4035,6 +4035,11 @@ pub struct CardInstance {
     /// `kicked` flag so that a card with both Kicker and Flashback can
     /// be disambiguated cleanly.
     pub cast_via_flashback: bool,
+    /// Feather, the Redeemed — when set on a stacked instant/sorcery, the
+    /// resolver exiles it instead of routing to the graveyard, then schedules
+    /// its return to the caster's hand at the next end step. Not serialized;
+    /// cleared off the stack.
+    pub feather_exile_return: bool,
     /// CR 702.187 — true if this card was cast from a graveyard for its Mayhem
     /// cost. Read by `Predicate::SpellWasMayhem` so "if this spell's mayhem cost
     /// was paid" riders (Sandman's Quicksand) can branch. Cleared off the stack.
@@ -4444,6 +4449,7 @@ impl CardInstance {
             cast_target_was_battlefield: false,
             entered_by_cast: false,
             cast_via_flashback: false,
+            feather_exile_return: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,

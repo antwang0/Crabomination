@@ -161,6 +161,7 @@ impl Effect {
             | Effect::AdvanceClassLevel
             | Effect::SignalTheClans
             | Effect::NivMizzetReveal
+            | Effect::MarkExileReturnOnResolve { .. }
             | Effect::UnexpectedResults
             | Effect::PayLifeRevealExileFromHand { .. }
             | Effect::ChannelLifeForMana

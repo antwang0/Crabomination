@@ -4051,3 +4051,25 @@ pub fn nissa_who_shakes_the_world() -> CardDefinition {
         ..walker("Nissa, Who Shakes the World", cost(&[generic(3), g(), g()]), PlaneswalkerSubtype::Nissa, 5)
     }
 }
+
+/// Feather, the Redeemed — {R}{W}{W} 3/4 Angel with flying. Whenever you cast an
+/// instant or sorcery targeting a creature you control, exile it as it resolves
+/// instead of putting it in your graveyard; return it to your hand at the next
+/// end step.
+pub fn feather_the_redeemed() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    cast_is_instant_or_sorcery(),
+                    Predicate::CastSpellTargetsMatch(R::Creature.and(R::ControlledByYou)),
+                ]),
+            ),
+            effect: Effect::MarkExileReturnOnResolve { what: Selector::TriggerSource },
+        }],
+        ..vanilla("Feather, the Redeemed", cost(&[r(), w(), w()]), 3, 4, vec![CreatureType::Angel])
+    }
+}
