@@ -25,31 +25,36 @@ Items are grouped by area and roughly ordered by impact within each group.
   planeswalkers (Jace AoT, Vraska the Unseen, Gideon CoJ, Domri already done).
 
 **Remaining WAR (War of the Spark) gap cards** — `catalog::sets::war`.
-Still open, grouped by primitive:
-- **"Becomes a creature with P/T = loyalty" planeswalkers** (Gideon Blackblade,
-  Gideon the Oathsworn, Sarkhan the Masterless) — need loyalty-as-P/T animation
-  + loyalty-add-per-count.
-- **Devouring Hellion** — "enters with twice that many +1/+1 counters" (may sac
-  any number of creatures/PWs as-enters, ×2); needs an as-enters reflexive-sac
-  replacement feeding `enters_with_counters`. **Rescuer Sphinx** shares the
-  as-enters-reflexive shape (may bounce a nonland permanent → +1/+1 counter).
-- The hybrid uncommon cycle: **Angrath/Huatli/Kiora/Samut/Kaya/Ashiok shipped**;
-  still open Dovin Hand of Control (artifact/I/S tax + prevent-all-damage-to/by
-  target), Nahiri Storm of Stone (during-your-turn first-strike +
-  equip-cost-reduction + −X to tapped), Vraska Swarm's Eminence (deathtouch-damage
-  → counter; Assassin token with destroy-PW-on-damage).
-- The many WAR planeswalkers (Liliana Dreadhorde General, Nissa Who Shakes the
-  World, Nicol Bolas Dragon-God, the uncommon 3-ability walkers) and remaining
-  legends (God-Eternal Kefnet — reveal-first-draw-copy; Ilharg, Neheb, Massacre
-  Girl). Recently shipped: God-Eternal Rhonas, Parhelion II, Dreadhorde Invasion,
-  Enter the God-Eternals, Tolsimir, Role Reversal, Heartwarming Redemption,
-  Emergence Zone, Mobilized District, Vivien's Arkbow, Oath of Kaya, Interplanar
-  Beacon, Storm the Citadel. Sweep `scripts/set_diff.py war` for the live list.
-  Still-hard remainders need new primitives: as-enters reflexive-sac (Devouring
-  Hellion, Rescuer Sphinx), persistent mana (Neheb), reveal-first-draw-copy
-  (God-Eternal Kefnet), delayed repeating -1/-1 (Massacre Girl), variable-target
-  destroy + per-destroyed loyalty (The Elderspell), the X-Finales, Bolas's
-  Citadel (cast-from-top-pay-life), Niv-Mizzet Reborn (WUBRG reveal).
+The hybrid uncommon walker cycle is complete (Dovin/Nahiri/Vraska shipped this
+run alongside Angrath/Huatli/Kiora/Samut/Kaya/Ashiok). Also shipped this run:
+Gideon Blackblade, Jace Arcane Strategist, Ajani the Greathearted, Sorin
+Vengeful Bloodlord, Vivien Champion of the Wilds, Arlinn Voice of the Pack,
+Sarkhan the Masterless, Davriel Rogue Shadowmage, Devouring Hellion, Mizzium
+Tank, Tomik, Gideon's Triumph, Narset's Reversal, Jace's Ruse, The Elderspell,
+Widespread Brutality, Awakening of Vitu-Ghazi. Sweep `scripts/set_diff.py war`
+for the live list. Still open (each needs a new primitive):
+- **Gideon the Oathsworn / Nissa Who Shakes the World** — loyalty-as-P/T
+  animation and per-Forest extra-mana + land-animate-with-counters.
+- **God-Eternal Kefnet** (reveal-first-draw-copy), **Ilharg** (put-from-hand
+  attacking + return EOT), **Neheb** (persistent mana), **Massacre Girl**
+  (delayed repeating −1/−1 death chain).
+- **Ral Storm Conduit** / **Chandra Fire Artisan** — cast/copy-triggered ping;
+  loyalty-removed punisher; "copy your next I/S this turn" delayed trigger.
+- **Domri Anarch of Bolas** (your creature spells uncounterable this turn +
+  mana-of-choice), **Ugin the Ineffable** (colorless cost-reduction + linked
+  face-down token), **Tezzeret Master of the Bridge** (grant affinity-for-
+  artifacts to your creature/PW spells), **Jiang Yanggu** (grant a mana ability
+  to counter-bearing creatures).
+- **Gideon's Sacrifice** (redirect-all-damage-to-chosen this turn), **Single
+  Combat** (sacrifice-all-but-one + creature/PW spell lock), **Deliver Unto
+  Evil** (opponent chooses which gy cards stay), the X-**Finales**, **Bolas's
+  Citadel** (cast-from-top-pay-life), **Niv-Mizzet Reborn** (WUBRG reveal),
+  **Nicol Bolas Dragon-God**, **Liliana Dreadhorde General**.
+- Follow-up engine gap noticed: loyalty `x_cost` abilities don't stamp X into
+  *target-legality* filters (only resolution-time `CardsInZone` picks now do —
+  fixed this run), so a genuinely targeted "target … with mana value X" loyalty
+  ability still can't gate on X at activation. Sorin's −X works around it with a
+  resolution-time pick.
 
 **Remaining DGM (Dragon's Maze) gap cards** — `catalog::sets::dgm`. The
 `dgm::gaps`/`gaps2` waves shipped the guild legends/mythics and easy commons

@@ -16,6 +16,24 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **WAR walker/spell wave (this run, 20 cards):** the hybrid uncommon walker
+  cycle is complete (Dovin, Nahiri, Vraska) plus Gideon Blackblade, Jace Arcane
+  Strategist, Ajani the Greathearted, Sorin Vengeful Bloodlord, Vivien Champion
+  of the Wilds, Arlinn Voice of the Pack, Sarkhan the Masterless, Davriel,
+  Devouring Hellion, Mizzium Tank, Tomik, Gideon's Triumph, Narset's Reversal,
+  Jace's Ruse, The Elderspell, Widespread Brutality, Awakening of Vitu-Ghazi.
+  New engine: `blocked_this_turn` + `R::BlockedThisTurn`; `StaticEffect::
+  PreventAllDamageToThis` (combat+noncombat, `WhileYourTurn`-aware);
+  `EventKind::DealsCombatDamageToPlaneswalker` (fired at the combat loyalty
+  site, routed through `fire_combat_damage_triggers`); `StaticEffect::
+  TypedCreaturesEnterWithExtraCounter` (Arlinn); `StaticEffect::
+  LandsUntargetableByOpponents` (Tomik). Correctness: `Selector::CardsInZone`
+  now substitutes the resolving ability's X into its filter (`resolve_x`), and
+  `mint_token_onto_battlefield` now applies typed ETB-counter statics (Metallic
+  Mimic / Cathars' Crusade / Arlinn on **tokens**). Server/UI: PW-combat-damage
+  trigger labels; `pt_modified` keys on the computed type so animated
+  non-creatures (Awakening land, manlands) draw their P/T box. CR conformance
+  (`cr_recent28`): 306.9, 509.1, 615.
 - **WAR gap waves 6–8 (this run, 21 cards):** Bioessence Hydra, Charmed Stray,
   Jaya Venerated Firemage, Kaya's Ghostform, Command the Dreadhorde, Vivien's
   Grizzly, Mowu, Band Together, Ugin's Conjurant, Arlinn's Wolf, Domri's Ambush,
@@ -1092,8 +1110,8 @@ Each unblocks a large swath of cards.
    Counter-placement replacements (Hardened Scales, Doubling Season, Mowu's
    self-scoped `ExtraPlusOneCounterOnSelf`) now also apply on the **proliferate**
    path (CR 614.16), via `scaled_counter_count_on`. Still to generalize:
-   as-a-copy ETB, draw replacement breadth, an as-enters reflexive-sacrifice
-   replacement (Devouring Hellion, Rescuer Sphinx).
+   as-a-copy ETB, draw replacement breadth. (Devouring Hellion / Rescuer Sphinx's
+   as-enters reflexive shape now ship via `devour` / a reflexive ETB.)
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes`;
    pick-from-revealed via `Effect::LookPickToHand` (Impulse, Strategic Planning).
 3. ✅ **Player-chosen combat damage assignment order.**
