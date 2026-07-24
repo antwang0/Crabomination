@@ -1491,9 +1491,11 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
     match (&event.kind, event.scope) {
         (EventKind::EntersBattlefield, EventScope::SelfSource) => "ETB",
         (EventKind::EntersBattlefield, EventScope::AnotherOfYours) => "Another ETB",
+        (EventKind::EntersBattlefield, EventScope::YourControl) => "Your ETB",
         (EventKind::EntersBattlefield, EventScope::AnyPlayer) => "Any ETB",
         (EventKind::CreatureDied, EventScope::SelfSource) => "Dies",
         (EventKind::CreatureDied, EventScope::AnotherOfYours) => "Other dies",
+        (EventKind::CreatureDied, EventScope::YourControl) => "Your creature dies",
         (EventKind::CreatureDied, EventScope::AnyPlayer) => "Creature dies",
         (EventKind::CreatureSacrificed, EventScope::SelfSource) => "Sacrificed",
         (EventKind::CreatureSacrificed, EventScope::YourControl) => "You sacrifice",
@@ -2908,6 +2910,24 @@ mod tests {
             "static_ability_labels should mention Prepared: {:?}",
             perm.static_ability_labels,
         );
+    }
+
+    #[test]
+    fn permanent_view_labels_your_control_death_and_etb_triggers() {
+        // Vindictive Xborg fires on "another creature you control dies"
+        // (CreatureDied/YourControl) and Griffin Protector on "another creature
+        // you control enters" (EntersBattlefield/YourControl). Both scopes now
+        // carry a human event label rather than a bare effect string.
+        let mut state = two_player_game();
+        let vamp = state.add_card_to_battlefield(0, catalog::vindictive_vampire());
+        let griffin = state.add_card_to_battlefield(0, catalog::griffin_protector());
+        let view = project(&state, 0);
+        let vp = view.battlefield.iter().find(|p| p.id == vamp).unwrap();
+        assert!(vp.triggered_ability_labels.iter().any(|s| s.starts_with("Your creature dies:")),
+            "death-of-ally trigger labelled: {:?}", vp.triggered_ability_labels);
+        let gp = view.battlefield.iter().find(|p| p.id == griffin).unwrap();
+        assert!(gp.triggered_ability_labels.iter().any(|s| s.starts_with("Your ETB:")),
+            "ally-ETB trigger labelled: {:?}", gp.triggered_ability_labels);
     }
 
     #[test]

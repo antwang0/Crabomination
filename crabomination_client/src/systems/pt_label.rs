@@ -43,6 +43,33 @@ const PT_OFFSET_Y: f32 = 22.0;
 #[derive(Component)]
 pub struct PtLabel(pub CardId);
 
+/// Tone for a modified-P/T badge: a buff reads green, a debuff red, a true
+/// no-op neutral black.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum PtTone {
+    Buff,
+    Debuff,
+    Neutral,
+}
+
+/// Pick the badge tone from a creature's base vs. computed P/T. A net stat
+/// gain reads as a buff and a net loss as a debuff. When the totals tie (a
+/// swap like +1/-1), the *power* delta breaks the tie — combat cares more
+/// about attack size — so an aggressive swap still reads green and a
+/// defensive one red; only a genuine no-op stays neutral.
+fn pt_tone(base_power: i32, base_toughness: i32, power: i32, toughness: i32) -> PtTone {
+    use std::cmp::Ordering::{Equal, Greater, Less};
+    match ((power + toughness) - (base_power + base_toughness)).cmp(&0) {
+        Greater => PtTone::Buff,
+        Less => PtTone::Debuff,
+        Equal => match (power - base_power).cmp(&0) {
+            Greater => PtTone::Buff,
+            Less => PtTone::Debuff,
+            Equal => PtTone::Neutral,
+        },
+    }
+}
+
 /// Reconcile P/T badges with the engine view. Runs every frame in
 /// `AppState::InGame`.
 #[allow(clippy::type_complexity)]
@@ -75,8 +102,8 @@ pub fn sync_pt_labels(
 
     // Badge colours: a buffed creature reads green, a shrunk one red, so the
     // player can tell a pump from a debuff at a glance without doing the
-    // subtraction. Net-neutral swaps (e.g. +1/-1) and planeswalker loyalty
-    // stay neutral black.
+    // subtraction (see `pt_tone` — a net-neutral swap breaks by power).
+    // Planeswalker loyalty and true no-op modifications stay neutral black.
     const BUFF: Color = Color::srgb(0.10, 0.55, 0.12);
     const DEBUFF: Color = Color::srgb(0.72, 0.10, 0.10);
     const NEUTRAL: Color = Color::BLACK;
@@ -91,11 +118,10 @@ pub fn sync_pt_labels(
         }
         if p.is_creature() {
             if p.power != p.base_power || p.toughness != p.base_toughness {
-                let delta = (p.power + p.toughness) - (p.base_power + p.base_toughness);
-                let color = match delta.cmp(&0) {
-                    std::cmp::Ordering::Greater => BUFF,
-                    std::cmp::Ordering::Less => DEBUFF,
-                    std::cmp::Ordering::Equal => NEUTRAL,
+                let color = match pt_tone(p.base_power, p.base_toughness, p.power, p.toughness) {
+                    PtTone::Buff => BUFF,
+                    PtTone::Debuff => DEBUFF,
+                    PtTone::Neutral => NEUTRAL,
                 };
                 desired.insert(p.id, (format!("{}/{}", p.power, p.toughness), color));
             }
@@ -194,5 +220,23 @@ pub fn sync_pt_labels(
             GlobalZIndex(PT_Z),
             InGameRoot,
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{pt_tone, PtTone};
+
+    #[test]
+    fn net_gain_is_a_buff_and_net_loss_a_debuff() {
+        assert_eq!(pt_tone(2, 2, 3, 3), PtTone::Buff);   // +1/+1
+        assert_eq!(pt_tone(2, 2, 1, 1), PtTone::Debuff);  // -1/-1
+        assert_eq!(pt_tone(2, 2, 4, 2), PtTone::Buff);    // +2/+0
+    }
+
+    #[test]
+    fn net_neutral_swap_breaks_by_power() {
+        assert_eq!(pt_tone(2, 2, 3, 1), PtTone::Buff);    // +1/-1 reads aggressive
+        assert_eq!(pt_tone(2, 2, 1, 3), PtTone::Debuff);  // -1/+1 reads defensive
     }
 }
