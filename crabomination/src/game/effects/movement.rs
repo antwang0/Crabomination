@@ -569,7 +569,19 @@ impl GameState {
         // deathtouch damage flags the creature for the destroy SBA.
         let source_has_wither =
             source_has_infect || src_kws.contains(&crate::card::Keyword::Wither);
-        let source_has_deathtouch = src_kws.contains(&crate::card::Keyword::Deathtouch);
+        let mut source_has_deathtouch = src_kws.contains(&crate::card::Keyword::Deathtouch);
+        // Pestilent Spirit — "instant and sorcery spells you control have
+        // deathtouch." The resolving I/S caster's seat is stamped in
+        // `resolve_top_of_stack`; damage from that same spell is deathtouch.
+        if !source_has_deathtouch
+            && self.resolving_spell_deathtouch_seat.is_some()
+            && match (source, &self.resolving_source) {
+                (Some(s), Some((rid, _, _))) => *rid == s,
+                _ => false,
+            }
+        {
+            source_has_deathtouch = true;
+        }
         // Kumano / Frostwielder: a creature this source damages is exiled
         // instead of dying for the rest of the turn (source-bound CR 614
         // replacement). Registered after the damage lands below.
@@ -874,6 +886,18 @@ impl GameState {
             c.controller == seat
                 && c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, StaticEffect::YourInstantSorcerySpellsHaveLifelink)
+                })
+        })
+    }
+
+    /// True if `seat` controls a permanent granting
+    /// `StaticEffect::YourISSpellsHaveDeathtouch` (Pestilent Spirit).
+    pub(crate) fn controller_grants_spell_deathtouch(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::YourISSpellsHaveDeathtouch)
                 })
         })
     }

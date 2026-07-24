@@ -2546,3 +2546,454 @@ pub fn growth_chamber_guardian() -> CardDefinition {
         ..body("Growth-Chamber Guardian", cost(&[generic(1), g()]), 2, 2, vec![CreatureType::Elf, CreatureType::Crab, CreatureType::Warrior], vec![])
     }
 }
+
+// ── Batch 9 (2026-07-24): spectacle payoffs, threaten, wraths, targeting/──────
+//    deathtouch statics, addendum, defender-adapt, modal bounce. ──────────────
+
+/// Rix Maadi Reveler — {1}{R} 2/2 Human Shaman with Spectacle {2}{B}{R}. ETB:
+/// discard a card, then draw a card; if the spectacle cost was paid, instead
+/// discard your hand, then draw three.
+pub fn rix_maadi_reveler() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            marks_kicked: true,
+            ..spectacle(cost(&[generic(2), b(), r()]))
+        }),
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::HandSizeOf(PlayerRef::You), random: false },
+                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            ])),
+            else_: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ])),
+        })],
+        ..body("Rix Maadi Reveler", cost(&[generic(1), r()]), 2, 2, vec![CreatureType::Human, CreatureType::Shaman], vec![])
+    }
+}
+
+/// Rafter Demon — {2}{B}{R} 4/2 Demon with Spectacle {3}{B}{R}. ETB, if the
+/// spectacle cost was paid, each opponent discards a card.
+pub fn rafter_demon() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            marks_kicked: true,
+            ..spectacle(cost(&[generic(3), b(), r()]))
+        }),
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Discard { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE, random: false }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..body("Rafter Demon", cost(&[generic(2), b(), r()]), 4, 2, vec![CreatureType::Demon], vec![])
+    }
+}
+
+/// Hackrobat — {1}{B}{R} 2/3 Human Rogue with Spectacle {B}{R}. {B}: gains
+/// deathtouch until end of turn. {R}: +2/-2 until end of turn.
+pub fn hackrobat() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(spectacle(cost(&[b(), r()]))),
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[r()]),
+                effect: Effect::PumpPT { what: Selector::This, power: Value::Const(2), toughness: Value::Const(-2), duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+        ],
+        ..body("Hackrobat", cost(&[generic(1), b(), r()]), 2, 3, vec![CreatureType::Human, CreatureType::Rogue], vec![])
+    }
+}
+
+/// Gruul Spellbreaker — {1}{R}{G} 3/3 Ogre Warrior with Riot and trample.
+/// During your turn, you and this creature have hexproof.
+pub fn gruul_spellbreaker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![riot()],
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, you have hexproof.",
+                effect: StaticEffect::WhileYourTurn { inner: Box::new(StaticEffect::ControllerHasHexproof) },
+            },
+            StaticAbility {
+                description: "During your turn, this creature has hexproof.",
+                effect: StaticEffect::WhileYourTurn {
+                    inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: Keyword::Hexproof }),
+                },
+            },
+        ],
+        ..body("Gruul Spellbreaker", cost(&[generic(1), r(), g()]), 3, 3, vec![CreatureType::Ogre, CreatureType::Warrior], vec![Keyword::Trample])
+    }
+}
+
+/// Smelt-Ward Ignus — {1}{R} 2/1 Elemental. {2}{R}, Sacrifice this creature:
+/// Gain control of target creature with power 3 or less until end of turn,
+/// untap it, it gains haste. Activate only as a sorcery.
+pub fn smelt_ward_ignus() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::GainControl { what: target_filtered(R::Creature.and(R::PowerAtMost(3))), to: None, duration: Duration::EndOfTurn },
+                Effect::Untap { what: Selector::Target(0), up_to: None },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..body("Smelt-Ward Ignus", cost(&[generic(1), r()]), 2, 1, vec![CreatureType::Elemental], vec![])
+    }
+}
+
+/// Sphinx of New Prahv — {W}{W}{U}{U} 4/3 Sphinx with flying and vigilance.
+/// Spells your opponents cast that target it cost {2} more.
+pub fn sphinx_of_new_prahv() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Spells your opponents cast that target this creature cost {2} more to cast.",
+            effect: StaticEffect::TaxOpponentSpellsTargetingThis { amount: 2 },
+        }],
+        ..body("Sphinx of New Prahv", cost(&[w(), w(), u(), u()]), 4, 3, vec![CreatureType::Sphinx], vec![Keyword::Flying, Keyword::Vigilance])
+    }
+}
+
+/// Pestilent Spirit — {2}{B} 3/2 Spirit with menace and deathtouch. Instant and
+/// sorcery spells you control have deathtouch.
+pub fn pestilent_spirit() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you control have deathtouch.",
+            effect: StaticEffect::YourISSpellsHaveDeathtouch,
+        }],
+        ..body("Pestilent Spirit", cost(&[generic(2), b()]), 3, 2, vec![CreatureType::Spirit], vec![Keyword::Menace, Keyword::Deathtouch])
+    }
+}
+
+/// Scuttlegator — {4}{G/U}{G/U} 6/6 Crab Turtle Crocodile with defender.
+/// {6}{G/U}{G/U}: Adapt 3. As long as it has a +1/+1 counter, it can attack as
+/// though it didn't have defender.
+pub fn scuttlegator() -> CardDefinition {
+    let gu = || hybrid(Color::Green, Color::Blue);
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), gu(), gu()]),
+            effect: adapt(3),
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature has a +1/+1 counter on it, it can attack as though it didn't have defender.",
+            effect: StaticEffect::CanAttackIgnoringDefenderWhile {
+                condition: Predicate::SourceHasCountersAtLeast { counter: CounterType::PlusOnePlusOne, n: 1 },
+            },
+        }],
+        ..body("Scuttlegator", cost(&[generic(4), gu(), gu()]), 6, 6, vec![CreatureType::Crab, CreatureType::Turtle, CreatureType::Crocodile], vec![Keyword::Defender])
+    }
+}
+
+/// Angelic Exaltation — {3}{W} Enchantment. Whenever a creature you control
+/// attacks alone, it gets +X/+X until end of turn, where X is the number of
+/// creatures you control.
+pub fn angelic_exaltation() -> CardDefinition {
+    CardDefinition {
+        name: "Angelic Exaltation",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::AttackingAlone),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::CreatureCountControlledBy(PlayerRef::You),
+                toughness: Value::CreatureCountControlledBy(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ethereal Absolution — {4}{W}{B} Enchantment. Creatures you control get
+/// +1/+1; creatures your opponents control get -1/-1. {2}{W}{B}: Exile target
+/// card from an opponent's graveyard; if it was a creature card, create a 1/1
+/// W/B Spirit with flying.
+pub fn ethereal_absolution() -> CardDefinition {
+    CardDefinition {
+        name: "Ethereal Absolution",
+        cost: cost(&[generic(4), w(), b()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Creatures your opponents control get -1/-1.",
+                effect: StaticEffect::PumpPT { applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)), power: -1, toughness: -1 },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w(), b()]),
+            effect: Effect::Seq(vec![
+                Effect::Move { what: target_filtered(R::InGraveyard.and(R::ControlledByOpponent)), to: ZoneDest::Exile },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::CountMatching { sel: Box::new(Selector::LastMoved), filter: R::Creature }, Value::ONE),
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: TokenDefinition {
+                            name: "Spirit".into(),
+                            power: 1,
+                            toughness: 1,
+                            colors: vec![Color::White, Color::Black],
+                            card_types: vec![CardType::Creature],
+                            subtypes: creatures(vec![CreatureType::Spirit]),
+                            keywords: vec![Keyword::Flying],
+                            ..Default::default()
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cry of the Carnarium — {1}{B}{B} Sorcery. All creatures get -2/-2 until end
+/// of turn. If a creature would die this turn, exile it instead. (The exile of
+/// creatures already in graveyards this turn is elided.)
+pub fn cry_of_the_carnarium() -> CardDefinition {
+    CardDefinition {
+        name: "Cry of the Carnarium",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: Selector::EachPermanent(R::Creature), power: Value::Const(-2), toughness: Value::Const(-2), duration: Duration::EndOfTurn },
+            Effect::ExileIfWouldDieThisTurn { what: Selector::EachPermanent(R::Creature) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Pitiless Pontiff — {W}{B} 2/2 Vampire Cleric. {1}, Sacrifice another
+/// creature: This creature gains deathtouch and indestructible until end of
+/// turn.
+pub fn pitiless_pontiff() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..body("Pitiless Pontiff", cost(&[w(), b()]), 2, 2, vec![CreatureType::Vampire, CreatureType::Cleric], vec![])
+    }
+}
+
+/// Unbreakable Formation — {2}{W} Instant. Creatures you control gain
+/// indestructible until end of turn. Addendum — if cast during your main
+/// phase, put a +1/+1 counter on each of those creatures and they gain
+/// vigilance until end of turn.
+pub fn unbreakable_formation() -> CardDefinition {
+    CardDefinition {
+        name: "Unbreakable Formation",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword { what: each_your_creature(), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            Effect::If {
+                cond: Predicate::YourMainPhase,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter { what: each_your_creature(), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                    Effect::GrantKeyword { what: each_your_creature(), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flames of the Raze-Boar — {5}{R} Instant. Deals 4 damage to target creature
+/// an opponent controls. Then deals 2 damage to each other creature that
+/// player controls if you control a creature with power 4 or greater. (The
+/// second wave hits all that player's creatures; the "other" exclusion of the
+/// 4-damage target — usually already dead — is elided.)
+pub fn flames_of_the_raze_boar() -> CardDefinition {
+    CardDefinition {
+        name: "Flames of the Raze-Boar",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature.and(R::ControlledByOpponent)), amount: Value::Const(4) },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)), Value::Const(4)),
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::ControlledBy { who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))), filter: R::Creature },
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Swirling Torrent — {5}{U} Sorcery. Choose one or both — put target creature
+/// on top of its owner's library; and/or return target creature to its owner's
+/// hand.
+pub fn swirling_torrent() -> CardDefinition {
+    CardDefinition {
+        name: "Swirling Torrent",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseModesCast {
+            modes: vec![
+                Effect::Move { what: target_filtered(R::Creature), to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top } },
+                Effect::Move { what: target_filtered(R::Creature), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            ],
+            min: 1,
+            max: 2,
+            allow_repeats: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Mesmerizing Benthid — {3}{U}{U} 4/5 Octopus. ETB create two 0/2 blue Illusion
+/// tokens whose block stuns the blocked creature. It has hexproof as long as
+/// you control an Illusion.
+pub fn mesmerizing_benthid() -> CardDefinition {
+    let illusion = || TokenDefinition {
+        name: "Illusion".into(),
+        power: 0,
+        toughness: 2,
+        colors: vec![Color::Blue],
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Illusion]),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+            effect: Effect::AddCounter { what: Selector::BlockedAttacker, kind: CounterType::Stun, amount: Value::ONE },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: illusion() },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: illusion() },
+        ]))],
+        static_abilities: vec![StaticAbility {
+            description: "This creature has hexproof as long as you control an Illusion.",
+            effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Hexproof,
+                condition: Predicate::ValueAtLeast(
+                    Value::count(Selector::EachPermanent(R::HasCreatureType(CreatureType::Illusion).and(R::ControlledByYou))),
+                    Value::Const(1),
+                ),
+            },
+        }],
+        ..body("Mesmerizing Benthid", cost(&[generic(3), u(), u()]), 4, 5, vec![CreatureType::Octopus], vec![])
+    }
+}
+
+/// Immolation Shaman — {1}{R} 1/3 Lizard Shaman. Whenever an opponent activates
+/// a non-mana ability of an artifact, creature, or land, deal 1 to that player.
+/// {3}{R}{R}: +3/+3 and menace until end of turn.
+pub fn immolation_shaman() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AbilityActivated, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact.or(R::Creature).or(R::Land),
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r(), r()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: Selector::This, power: Value::Const(3), toughness: Value::Const(3), duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Menace, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..body("Immolation Shaman", cost(&[generic(1), r()]), 1, 3, vec![CreatureType::Lizard, CreatureType::Shaman], vec![])
+    }
+}
+
+/// Screaming Shield — {1} Equipment. Equipped creature gets +0/+3 and has
+/// "{2}, {T}: Target player mills three cards." Equip {3}.
+pub fn screaming_shield() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Screaming Shield",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 0,
+            toughness: 3,
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                effect: Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(3) },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Clear the Stage — {4}{B} Instant. Target creature gets -3/-3 until end of
+/// turn. If you control a creature with power 4 or greater, you may return up
+/// to one creature card from your graveyard to your hand. (The return is a
+/// resolution-time pick rather than a chosen target.)
+pub fn clear_the_stage() -> CardDefinition {
+    CardDefinition {
+        name: "Clear the Stage",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(-3), toughness: Value::Const(-3), duration: Duration::EndOfTurn },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)), Value::Const(4)),
+                then: Box::new(Effect::ReturnGraveyardCardsToHand { filter: R::Creature, max: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Domri's Nodorog — {3}{R}{G} 5/2 Beast with Riot. ETB you may search your
+/// library for a card named Domri, City Smasher, reveal it, and put it into
+/// your hand, then shuffle. (The graveyard half is elided.)
+pub fn domris_nodorog() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            riot(),
+            etb(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasName("Domri, City Smasher".into()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        ],
+        ..body("Domri's Nodorog", cost(&[generic(3), r(), g()]), 5, 2, vec![CreatureType::Beast], vec![Keyword::Trample])
+    }
+}

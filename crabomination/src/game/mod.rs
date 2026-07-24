@@ -1108,6 +1108,11 @@ pub struct GameState {
     /// `EventKind::YourInstantOrSorceryDealtDamage` (Blaze Commando). Transient.
     #[serde(skip)]
     pub(crate) resolving_spell_caster: Option<usize>,
+    /// Seat whose resolving instant/sorcery has deathtouch (Pestilent Spirit —
+    /// `YourISSpellsHaveDeathtouch`). Stamped around the spell's resolution and
+    /// cleared after; read in `deal_damage_to_from`. Transient.
+    #[serde(skip)]
+    pub(crate) resolving_spell_deathtouch_seat: Option<usize>,
     /// One-shot guard so a spell dealing damage to several objects at once
     /// fires the "your instant or sorcery deals damage" trigger a single time.
     #[serde(skip)]
@@ -1394,6 +1399,7 @@ impl Clone for GameState {
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
             resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
             resolving_spell_caster: self.resolving_spell_caster,
+            resolving_spell_deathtouch_seat: self.resolving_spell_deathtouch_seat,
             spell_damage_trigger_fired: self.spell_damage_trigger_fired,
             in_draw_double: self.in_draw_double,
             in_turn_based_draw: self.in_turn_based_draw,
@@ -1584,6 +1590,7 @@ impl GameState {
             dies_to_exile_eot: std::collections::HashSet::new(),
             resolving_spell_lifelink_seat: None,
             resolving_spell_caster: None,
+            resolving_spell_deathtouch_seat: None,
             spell_damage_trigger_fired: false,
             in_draw_double: false,
             in_turn_based_draw: false,
@@ -14207,6 +14214,9 @@ fn static_effect_to_effects(
             // GrantStormToISSpells — read at cast time by `cast_spell`'s
             // intrinsic-storm branch; no layer effect.
             | StaticEffect::GrantStormToISSpells
+            // YourISSpellsHaveDeathtouch — read in `deal_damage_to_from`; no
+            // layer effect.
+            | StaticEffect::YourISSpellsHaveDeathtouch
             // PreventNoncombatDamageToSelfAddCounters — read in the noncombat
             // damage funnel (`deal_damage_to_from`); no layer effect.
             | StaticEffect::PreventNoncombatDamageToSelfAddCounters
@@ -14613,6 +14623,7 @@ fn static_effect_to_effects(
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower { .. }
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
+            | StaticEffect::TaxOpponentSpellsTargetingThis { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
             | StaticEffect::OpponentsCantActDuringYourTurn
             // Void Winnower — cast gate + block-legality gate; no layer effect.

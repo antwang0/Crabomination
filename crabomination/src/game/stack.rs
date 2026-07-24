@@ -1521,6 +1521,10 @@ impl GameState {
                     });
                     self.resolving_spell_lifelink_seat =
                         (is_is && self.controller_grants_spell_lifelink(caster)).then_some(caster);
+                    // Pestilent Spirit — the resolving I/S has deathtouch while
+                    // its controller has the granting static.
+                    self.resolving_spell_deathtouch_seat =
+                        (is_is && self.controller_grants_spell_deathtouch(caster)).then_some(caster);
                     // Track the I/S caster so damage the spell deals can fire
                     // "whenever an instant or sorcery you control deals damage"
                     // (Blaze Commando), once per resolution.
@@ -1538,6 +1542,7 @@ impl GameState {
                         None,
                     )?;
                     self.resolving_spell_lifelink_seat = None;
+                    self.resolving_spell_deathtouch_seat = None;
                     self.resolving_spell_caster = None;
                     events.append(&mut spell_events);
                     if self.pending_decision.is_some() {

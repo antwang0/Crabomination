@@ -409,6 +409,11 @@ pub enum StaticEffect {
     /// `extra_cost_for_spell` against the spell's chosen target; the tax only
     /// applies to spells cast by an opponent of the source's controller.
     TaxOpponentSpellsTargeting { target_filter: SelectionRequirement, amount: u32 },
+    /// "Spells your opponents cast that target this creature cost `amount` more
+    /// to cast" (Sphinx of New Prahv). The self-scoped sibling of
+    /// `TaxOpponentSpellsTargeting`: the tax applies only when the chosen
+    /// target is the source permanent itself. Read in `extra_cost_for_spell`.
+    TaxOpponentSpellsTargetingThis { amount: u32 },
     /// Card-intrinsic "This spell costs {X} less to cast, where X is the
     /// greatest power among creatures you control" (The Great Henge). Read by
     /// `cost_reduction_for_spell` off the *spell being cast* (not battlefield
@@ -1287,6 +1292,12 @@ pub enum StaticEffect {
     /// (unlike a resolution-time `Value::StormCount` trigger). Powers
     /// Prismari, the Inspiration.
     GrantStormToISSpells,
+    /// "Instant and sorcery spells you control have deathtouch" (Pestilent
+    /// Spirit, Tainted Strike-style). Read in `deal_damage_to_from`: damage a
+    /// controller's resolving instant/sorcery deals to a creature is treated
+    /// as deathtouch damage. No continuous-layer effect (spells aren't
+    /// permanents).
+    YourISSpellsHaveDeathtouch,
     /// "Whenever you cast a creature spell, that creature enters with
     /// N additional counters of `kind` on it." Read at creature-spell
     /// resolution time (`stack.rs::resolve_spell`'s ETB-counter path)

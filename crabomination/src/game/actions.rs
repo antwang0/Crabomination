@@ -334,6 +334,17 @@ pub fn extra_cost_for_spell(
                         tax += amount;
                     }
                 }
+                // Sphinx of New Prahv: opponents' spells targeting the Sphinx
+                // itself cost {amount} more.
+                StaticEffect::TaxOpponentSpellsTargetingThis { amount }
+                    if src.controller != caster =>
+                {
+                    if let Some(crate::game::Target::Permanent(pid)) = target
+                        && *pid == src.id
+                    {
+                        tax += amount;
+                    }
+                }
                 _ => {}
             }
         }

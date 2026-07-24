@@ -90,6 +90,18 @@ fn rna_stat_and_keyword_lines() {
         (catalog::the_haunt_of_hightower, 3, 3, &[Keyword::Flying, Keyword::Lifelink]),
         (catalog::sharktocrab, 4, 4, &[]),
         (catalog::growth_chamber_guardian, 2, 2, &[]),
+        (catalog::rix_maadi_reveler, 2, 2, &[]),
+        (catalog::rafter_demon, 4, 2, &[]),
+        (catalog::hackrobat, 2, 3, &[]),
+        (catalog::gruul_spellbreaker, 3, 3, &[Keyword::Trample]),
+        (catalog::smelt_ward_ignus, 2, 1, &[]),
+        (catalog::sphinx_of_new_prahv, 4, 3, &[Keyword::Flying, Keyword::Vigilance]),
+        (catalog::pestilent_spirit, 3, 2, &[Keyword::Menace, Keyword::Deathtouch]),
+        (catalog::scuttlegator, 6, 6, &[Keyword::Defender]),
+        (catalog::pitiless_pontiff, 2, 2, &[]),
+        (catalog::mesmerizing_benthid, 4, 5, &[]),
+        (catalog::immolation_shaman, 1, 3, &[]),
+        (catalog::domris_nodorog, 5, 2, &[Keyword::Trample]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -1614,5 +1626,336 @@ fn growth_chamber_guardian_tutors_copy() {
             "searches for another Growth-Chamber Guardian"
         ),
         other => panic!("expected a Search effect, got {other:?}"),
+    }
+}
+
+// ── Batch 9 tests (2026-07-24) ───────────────────────────────────────────────
+
+/// Rix Maadi Reveler's spectacle marks the cast so its ETB rider fires; the
+/// non-spectacle ETB discards one and draws one.
+#[test]
+fn rix_maadi_reveler_etb_discard_draw() {
+    let def = catalog::rix_maadi_reveler();
+    let alt = def.alternative_cost.clone().expect("spectacle");
+    assert!(alt.marks_kicked, "spectacle marks the cast for the 'if paid' rider");
+
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let gy = g.players[0].graveyard.len();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), 2, "discard one, draw one → net unchanged");
+    assert_eq!(g.players[0].graveyard.len(), gy + 1, "one card discarded");
+}
+
+/// Rafter Demon, if its spectacle cost was paid, makes each opponent discard.
+#[test]
+fn rafter_demon_spectacle_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.kicked = true;
+    g.resolve_effect(&catalog::rafter_demon().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.players[1].hand.is_empty(), "opponent discarded under spectacle");
+}
+
+/// Hackrobat's {R} ability gives +2/-2 until end of turn.
+#[test]
+fn hackrobat_red_pump() {
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::hackrobat());
+    g.clear_sickness(h);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility { card_id: h, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(h).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 1), "+2/-2");
+}
+
+/// Gruul Spellbreaker has hexproof only during its controller's turn.
+#[test]
+fn gruul_spellbreaker_turn_gated_hexproof() {
+    let mut g = two_player_game();
+    let gs = g.add_card_to_battlefield(0, catalog::gruul_spellbreaker());
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(gs).unwrap().keywords.contains(&Keyword::Hexproof), "hexproof on your turn");
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(gs).unwrap().keywords.contains(&Keyword::Hexproof), "no hexproof off your turn");
+}
+
+/// Smelt-Ward Ignus steals a small creature: sacrifice it to gain control of a
+/// power-3-or-less creature, untapped and hasty.
+#[test]
+fn smelt_ward_ignus_steals() {
+    let mut g = two_player_game();
+    let ignus = g.add_card_to_battlefield(0, catalog::smelt_ward_ignus());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().tapped = true;
+    g.clear_sickness(ignus);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility { card_id: ignus, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None }).expect("steal");
+    drain_stack(&mut g);
+    let v = g.battlefield_find(victim).unwrap();
+    assert_eq!(v.controller, 0, "gained control");
+    assert!(!v.tapped, "untapped");
+    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Haste), "has haste");
+}
+
+/// A spell an opponent casts targeting Sphinx of New Prahv costs {2} more.
+#[test]
+fn sphinx_of_new_prahv_target_tax() {
+    let mut g = two_player_game();
+    let sphinx = g.add_card_to_battlefield(0, catalog::sphinx_of_new_prahv());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    // Only {R} available — the {2} tax makes the cast illegal.
+    g.players[1].mana_pool.add(Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(sphinx)), additional_targets: vec![], mode: None, x_value: None }).is_err(), "untaxed cast rejected");
+    // Add the {2} and it resolves.
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(sphinx)), additional_targets: vec![], mode: None, x_value: None }).expect("taxed cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sphinx).is_none(), "3 damage killed the 4/3 Sphinx");
+}
+
+/// Pestilent Spirit gives its controller's instant/sorcery spells deathtouch.
+#[test]
+fn pestilent_spirit_grants_spell_deathtouch() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pestilent_spirit());
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(wurm).is_none(), "3 deathtouch damage destroys the 6/4");
+}
+
+/// Without Pestilent Spirit a 3-damage bolt leaves a 6/4 alive (control case).
+#[test]
+fn bolt_without_deathtouch_leaves_wurm() {
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(wurm).is_some(), "6/4 survives 3 non-deathtouch damage");
+}
+
+/// Scuttlegator can attack despite defender only while it carries a +1/+1
+/// counter (from adapt).
+#[test]
+fn scuttlegator_attacks_with_counter() {
+    // No counter → the defender can't attack.
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::scuttlegator());
+    g.clear_sickness(s);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(g.declare_attackers(vec![Attack { attacker: s, target: AttackTarget::Player(1) }]).is_err(), "defender can't attack");
+
+    // With a +1/+1 counter → it may attack.
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::scuttlegator());
+    g.battlefield_find_mut(s).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.clear_sickness(s);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: s, target: AttackTarget::Player(1) }]).expect("adapted → can attack");
+}
+
+/// Angelic Exaltation pumps a lone attacker by the number of creatures you
+/// control.
+#[test]
+fn angelic_exaltation_lone_attacker_pump() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::angelic_exaltation());
+    let att = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // second creature, doesn't attack
+    g.clear_sickness(att);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let events = g.declare_attackers(vec![Attack { attacker: att, target: AttackTarget::Player(1) }]).expect("attack");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    // X = 2 creatures you control → +2/+2 on the 2/2 attacker.
+    assert_eq!(g.computed_permanent(att).unwrap().power, 4, "lone attacker pumped by creature count");
+}
+
+/// Ethereal Absolution's twin anthems buff your creatures and shrink theirs.
+#[test]
+fn ethereal_absolution_anthems() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ethereal_absolution());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3, "your creatures +1/+1");
+    assert_eq!(g.computed_permanent(theirs).unwrap().toughness, 1, "opponents' creatures -1/-1");
+}
+
+/// Cry of the Carnarium's -2/-2 sweep kills small creatures, big ones survive.
+#[test]
+fn cry_of_the_carnarium_sweep() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::cry_of_the_carnarium().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "2/2 dies to -2/-2");
+    let w = g.computed_permanent(wurm).expect("wurm alive");
+    assert_eq!((w.power, w.toughness), (4, 2), "6/4 shrinks to 4/2");
+}
+
+/// Pitiless Pontiff's sacrifice payoff grants deathtouch and indestructible.
+#[test]
+fn pitiless_pontiff_payoff() {
+    let mut g = two_player_game();
+    let pontiff = g.add_card_to_battlefield(0, catalog::pitiless_pontiff());
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(pontiff);
+    g.resolve_effect(&catalog::pitiless_pontiff().activated_abilities[0].effect, &ctx).unwrap();
+    let cp = g.computed_permanent(pontiff).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Deathtouch) && cp.keywords.contains(&Keyword::Indestructible), "gains deathtouch + indestructible");
+}
+
+/// Unbreakable Formation's Addendum adds a +1/+1 counter and vigilance on your
+/// main phase (indestructible always).
+#[test]
+fn unbreakable_formation_addendum() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(bear);
+    g.resolve_effect(&catalog::unbreakable_formation().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "indestructible");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "Addendum vigilance");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "Addendum +1/+1 counter");
+}
+
+/// Flames of the Raze-Boar deals 4 to a creature, then 2 to that player's board
+/// when you control a power-4+ creature.
+#[test]
+fn flames_of_the_raze_boar_sweeps() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::craw_wurm()); // your power-6 creature
+    let main = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4 → takes 4
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → takes 2
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(main)), 0, 0);
+    g.resolve_effect(&catalog::flames_of_the_raze_boar().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    // Target took 4 (+2 from the elided-"other" sweep) → 6 ≥ 4 toughness, dies;
+    // the 2/2 also dies to the second wave.
+    assert!(g.battlefield_find(main).is_none(), "4-damage target dies");
+    assert!(g.battlefield_find(other).is_none(), "2 to that player's board");
+}
+
+/// Swirling Torrent is a one-or-both modal bounce/topdeck.
+#[test]
+fn swirling_torrent_modal() {
+    let def = catalog::swirling_torrent();
+    match &def.effect {
+        crabomination::effect::Effect::ChooseModesCast { min, max, .. } => {
+            assert_eq!((*min, *max), (1, 2), "choose one or both");
+        }
+        other => panic!("expected ChooseModesCast, got {other:?}"),
+    }
+}
+
+/// Mesmerizing Benthid makes two Illusions and is hexproof while you control one.
+#[test]
+fn mesmerizing_benthid_tokens_and_hexproof() {
+    let mut g = two_player_game();
+    let benthid = g.add_card_to_battlefield(0, catalog::mesmerizing_benthid());
+    // No Illusions yet (ETB not run) → no hexproof.
+    assert!(!g.computed_permanent(benthid).unwrap().keywords.contains(&Keyword::Hexproof), "no hexproof without an Illusion");
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(benthid);
+    g.resolve_effect(&catalog::mesmerizing_benthid().triggered_abilities[0].effect, &ctx).unwrap();
+    let illusions = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Illusion)).count();
+    assert_eq!(illusions, 2, "two Illusion tokens");
+    assert!(g.computed_permanent(benthid).unwrap().keywords.contains(&Keyword::Hexproof), "hexproof while you control an Illusion");
+}
+
+/// Immolation Shaman pings a player who activates a creature's non-mana ability.
+#[test]
+fn immolation_shaman_pings_ability_user() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::immolation_shaman());
+    let hack = g.add_card_to_battlefield(1, catalog::hackrobat()); // {B}: deathtouch
+    g.clear_sickness(hack);
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Black, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: hack, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "Shaman pinged the activator");
+}
+
+/// Screaming Shield grants +0/+3 and a mill ability.
+#[test]
+fn screaming_shield_bonus_and_mill() {
+    let def = catalog::screaming_shield();
+    let bonus = def.equipped_bonus.clone().expect("equip bonus");
+    assert_eq!((bonus.power, bonus.toughness), (0, 3), "+0/+3");
+    assert_eq!(bonus.activated_abilities.len(), 1, "granted mill ability");
+    // The granted mill puts three cards into the target player's graveyard.
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let lib = g.players[1].library.len();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
+    g.resolve_effect(&bonus.activated_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.players[1].library.len(), lib - 3, "milled three");
+}
+
+/// Clear the Stage shrinks a creature and, with a power-4+ creature, returns one
+/// from your graveyard.
+#[test]
+fn clear_the_stage_shrink_and_return() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::craw_wurm()); // your power-6 creature
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(victim)), 0, 0);
+    g.resolve_effect(&catalog::clear_the_stage().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none(), "-3/-3 kills the 2/2");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "returned a creature from graveyard");
+}
+
+/// Domri's Nodorog has riot and an ETB tutor for Domri, City Smasher.
+#[test]
+fn domris_nodorog_shape() {
+    use crabomination::effect::Effect;
+    let def = catalog::domris_nodorog();
+    assert!(def.keywords.contains(&Keyword::Trample) && def.triggered_abilities.len() == 2, "riot trigger + ETB tutor");
+    match &def.triggered_abilities[1].effect {
+        Effect::Search { filter, .. } => assert_eq!(*filter, crabomination::card::SelectionRequirement::HasName("Domri, City Smasher".into())),
+        other => panic!("expected Search, got {other:?}"),
     }
 }
