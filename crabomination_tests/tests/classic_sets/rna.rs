@@ -2013,3 +2013,22 @@ fn eyes_everywhere_exchange_control() {
     assert_eq!(g.battlefield_find(foe).unwrap().controller, 0, "gained the creature");
     assert_eq!(g.battlefield_find(eyes).unwrap().controller, 1, "gave up the enchantment");
 }
+
+/// Nikya of the Old Ways locks its controller out of noncreature spells but not
+/// creature spells, and doubles land mana.
+#[test]
+fn nikya_noncreature_lock() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nikya_of_the_old_ways());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).is_err(), "noncreature spell locked");
+    // A creature spell is unaffected.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).is_ok(), "creature spell allowed");
+}

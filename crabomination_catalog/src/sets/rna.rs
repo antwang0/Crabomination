@@ -3089,3 +3089,29 @@ pub fn eyes_everywhere() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nikya of the Old Ways — {3}{R}{G} 5/5 Centaur Druid. You can't cast
+/// noncreature spells. Whenever you tap a land for mana, add one mana of any
+/// type that land produced.
+pub fn nikya_of_the_old_ways() -> CardDefinition {
+    use crate::effect::ExtraManaKind;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You can't cast noncreature spells.",
+                effect: StaticEffect::ControllerCantCastNoncreatureSpells,
+            },
+            StaticAbility {
+                description: "Whenever you tap a land for mana, add one mana of any type that land produced.",
+                effect: StaticEffect::ExtraManaOnLandTap {
+                    enchanted_only: false,
+                    filter: crate::card::SelectionRequirement::Land,
+                    extra: ExtraManaKind::Mirror,
+                    while_monarch: false,
+                },
+            },
+        ],
+        ..body("Nikya of the Old Ways", cost(&[generic(3), r(), g()]), 5, 5, vec![CreatureType::Centaur, CreatureType::Druid], vec![])
+    }
+}

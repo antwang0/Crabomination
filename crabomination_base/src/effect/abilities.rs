@@ -680,6 +680,11 @@ pub enum StaticEffect {
     /// (creature/artifact/enchantment/planeswalker). Checked at the main
     /// cast gate in `cast_spell`.
     ControllerCantCastPermanentSpells,
+    /// "You can't cast noncreature spells" (Nikya of the Old Ways). The
+    /// controller-scoped sibling of `ControllerCantCastPermanentSpells`;
+    /// checked at the cast site against the caster only (opponents are
+    /// unaffected, unlike the global `NoncreatureSpellsCantBeCastIf`).
+    ControllerCantCastNoncreatureSpells,
     /// "Noncreature spells with mana value `min_mana_value` or greater can't be
     /// cast" and (when `or_has_x`) "noncreature spells with {X} in their mana
     /// costs can't be cast." Global — locks every player while any permanent

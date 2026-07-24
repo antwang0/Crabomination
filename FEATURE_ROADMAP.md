@@ -16,18 +16,20 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **RNA wave (modern_decks, this run, 99 cards):** Locket cycle, adapt/riot/
+- **RNA wave (modern_decks, this run, 100 cards):** Locket cycle, adapt/riot/
   spectacle/afterlife/addendum commons + uncommons, flash Auras, guildmages,
   the RNA split cycle (Depose/Consecrate/Warrant/Thrash/Collision/Carnival),
   wraths (Kaya's Wrath), Gate/Domri/Dovin payoffs, High Alert.
-  Batch 9 (+24): Rix Maadi Reveler, Rafter Demon, Hackrobat, Gruul Spellbreaker,
+  Batch 9 (+25): Rix Maadi Reveler, Rafter Demon, Hackrobat, Gruul Spellbreaker,
   Smelt-Ward Ignus, Sphinx of New Prahv, Pestilent Spirit, Scuttlegator,
   Angelic Exaltation, Ethereal Absolution, Cry of the Carnarium, Pitiless
   Pontiff, Unbreakable Formation, Flames of the Raze-Boar, Swirling Torrent,
   Mesmerizing Benthid, Immolation Shaman, Screaming Shield, Clear the Stage,
   Domri's Nodorog, Bolrac-Clan Crusher, Dovin's Acuity, Dovin's Dismissal,
-  Eyes Everywhere. New engine:
+  Eyes Everywhere, Nikya of the Old Ways. New engine:
   `StaticEffect::TaxOpponentSpellsTargetingThis` (Sphinx of New Prahv) and
+  `StaticEffect::ControllerCantCastNoncreatureSpells` (Nikya, a
+  controller-scoped cast lock) and
   `StaticEffect::YourISSpellsHaveDeathtouch` (Pestilent Spirit — resolving I/S
   routes its damage through the deathtouch SBA via `resolving_spell_deathtouch_seat`,
   mirroring the lifelink-seat path). CR conformance in `core_rules/cr_recent33`

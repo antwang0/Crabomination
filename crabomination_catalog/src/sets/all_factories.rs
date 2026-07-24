@@ -9902,6 +9902,7 @@ static RNA: &[Factory] = &[
     super::rna::dovins_acuity,
     super::rna::dovins_dismissal,
     super::rna::eyes_everywhere,
+    super::rna::nikya_of_the_old_ways,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

@@ -722,9 +722,7 @@ factory doc comment:
   number of counters from among your creatures, put twice that many on this"
   (a remove-and-double effect); Combine Guildmage — a *this-turn* "creatures you
   control enter with an extra +1/+1 counter" (turn-scoped enters-with
-  replacement); Nikya of the Old Ways — a land-mana doubler ("whenever you tap a
-  land for mana, add one mana of any type it produced") + `ControllerCantCastNoncreatureSpells`;
-  Forbidding Spirit — an until-your-next-turn Propaganda tax (turn-scoped
+  replacement); Forbidding Spirit — an until-your-next-turn Propaganda tax (turn-scoped
   `AttackTaxToController`); Font of Agonies — blood counters + a "whenever you
   pay life" trigger; Verity Circle — a "creature an opponent controls becomes
   tapped (not as an attacker)" event; Angel of Grace — install a damage-to-1
