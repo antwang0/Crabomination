@@ -856,6 +856,20 @@ exercising each) was elided in a compaction pass; recover it from
   `event_phrase` now names ~10 more trigger events (opponent-life-gain/loss,
   you-attack, unblocked, combat-damage-to-creature, enrage, scry/surveil,
   counter-added) instead of the generic "Triggered ability:".
+- **WAR bomb primitives (modern_decks, this run):**
+  `Effect::WheneverCreatureDiesThisTurn` (any-creature death-chain delayed
+  trigger — Massacre Girl); `Effect::DeployCreatureFromHandAttacking`
+  (Kaalia/Ilharg put-from-hand tapped-and-attacking + optional EOT return);
+  `Effect::LockCreatureAndPlaneswalkerCasts` (Single Combat's "until end of your
+  next turn" cast lock, surfaced as `SpellCastLock.creature_pw_locked`);
+  `SelectionRequirement::ToughnessAtMostXFromCost` (Finale of Eternity);
+  `Effect::GrantCreatureSpellsUncounterableThisTurn` (Domri); `EventKind::
+  CounterRemoved(kind)` + `GameEvent::CounterRemoved` at every loyalty-removal
+  chokepoint (Chandra, Fire Artisan's "loyalty counters removed" punisher);
+  `EventKind::SpellCopied` hooking `GameEvent::SpellsCopied` (now carrying the
+  copier) for "cast **or copy**" triggers (Ral, Storm Conduit);
+  `Effect::ExileTopFaceDownTokenReturns` (Ugin, the Ineffable's +1 — a token
+  whose departure returns the linked exiled card).
 - **Toxic / oil / targeting primitives (modern_decks — ONE, this run):**
   `Keyword::HexproofExceptColors(Vec<Color>)` ("can't be targeted by nongreen
   spells/abilities opponents control" — Thrun, Breaker of Silence; enforced at
