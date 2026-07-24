@@ -918,7 +918,6 @@ fn dead_revels_returns_creatures() {
     let mut g = two_player_game();
     g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.add_card_to_graveyard(0, catalog::craw_wurm());
-    g.decider = Box::new(crabomination::decision::AutoDecider::default());
     let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
     let effect = catalog::dead_revels().effect.clone();
     let hand = g.players[0].hand.len();
