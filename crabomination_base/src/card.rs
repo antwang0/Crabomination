@@ -288,7 +288,7 @@ pub enum PlaneswalkerSubtype {
     Koth, Kaya, Tyvar, Kaito,
     // WAR planeswalkers.
     Tibalt, Teyo, Wanderer, Nixilis, Jaya, Angrath, Huatli, Kiora, Samut, Dovin,
-    Davriel, Arlinn, Sarkhan,
+    Davriel, Arlinn, Sarkhan, Yanggu,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -1550,6 +1550,10 @@ pub enum SelectionRequirement {
     /// a concrete `PowerAtMost(x)` by `resolve_x` (Entrancing Lyre's "tap
     /// target creature with power X or less"); unresolved instances eval false.
     PowerAtMostXFromCost,
+    /// Toughness ≤ the X paid into the resolving spell/ability's cost. Resolved
+    /// to a concrete `ToughnessAtMost(x)` by `resolve_x` (Finale of Eternity's
+    /// "destroy up to three target creatures with toughness X or less").
+    ToughnessAtMostXFromCost,
     /// Mana value ≤ the resolving spell's converge count (distinct colors of
     /// mana spent — CR 702.86). Resolved to a concrete `ManaValueAtMost(n)`
     /// by `resolve_converge` at search-resolution time (Bring to Light);
@@ -1773,6 +1777,7 @@ impl SelectionRequirement {
             Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),
             Self::ManaValueExactlyXFromCost => Self::ManaValueExactly(x),
             Self::PowerAtMostXFromCost => Self::PowerAtMost(x as i32),
+            Self::ToughnessAtMostXFromCost => Self::ToughnessAtMost(x as i32),
             Self::And(a, b) => Self::And(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Or(a, b) => Self::Or(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Not(inner) => Self::Not(Box::new(inner.resolve_x(x))),

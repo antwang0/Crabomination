@@ -14851,6 +14851,8 @@ static WAR: &[Factory] = &[
     super::war::massacre_girl,
     super::war::ilharg_the_raze_boar,
     super::war::single_combat,
+    super::war::jiang_yanggu_wildcrafter,
+    super::war::finale_of_eternity,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

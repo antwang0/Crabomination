@@ -2471,7 +2471,7 @@ impl GameState {
                         card.definition.cost.cmc() <= n
                     }
                     // Unresolved X-relative filter (no X in scope here).
-                    R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ManaValueAtMostConverged => false,
+                    R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ToughnessAtMostXFromCost | R::ManaValueAtMostConverged => false,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
                     R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
                     R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,
@@ -2788,7 +2788,7 @@ impl GameState {
             }
             // Unresolved X-relative filter (callers concretize via `resolve_x`).
             // `CastManaSpent` is source-relative; no source here, so vacuous.
-            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent | R::ManaValueAtMostSourcePower => false,
+            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ToughnessAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent | R::ManaValueAtMostSourcePower => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
             R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,

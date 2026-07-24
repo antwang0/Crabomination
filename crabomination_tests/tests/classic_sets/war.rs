@@ -2526,3 +2526,57 @@ fn single_combat_keeps_one_and_locks_casts() {
     let r = g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None });
     assert!(r.is_err(), "creature spell is locked out");
 }
+
+/// Jiang Yanggu's −1 adds a +1/+1 counter, and his static grants your
+/// counter-bearing creatures a mana ability.
+#[test]
+fn jiang_yanggu_counter_grants_mana_ability() {
+    let mut g = two_player_game();
+    let jy = g.add_card_to_battlefield(0, catalog::jiang_yanggu_wildcrafter());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // No counter yet — no granted ability.
+    assert!(g.granted_abilities_for(bear).is_empty(), "no counter, no mana ability");
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: jy, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None }).expect("-1");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(!g.granted_abilities_for(bear).is_empty(), "counter-bearing creature gained the mana ability");
+}
+
+/// Finale of Eternity (X=2) destroys creatures with toughness 2 or less.
+#[test]
+fn finale_of_eternity_destroys_small_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(1, catalog::primordial_wurm()); // 7/7 — survives
+    let fin = g.add_card_to_hand(0, catalog::finale_of_eternity());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: fin, target: Some(Target::Permanent(a)), additional_targets: vec![Target::Permanent(b)], mode: None, x_value: Some(2) }).expect("cast X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both 2/2s destroyed");
+    assert!(g.battlefield_find(big).is_some(), "the 7/7 was not a legal target");
+}
+
+/// Finale of Eternity (X=10) also reanimates all creatures from your graveyard.
+#[test]
+fn finale_of_eternity_x10_reanimates() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::primordial_wurm());
+    let fin = g.add_card_to_hand(0, catalog::finale_of_eternity());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastSpell { card_id: fin, target: None, additional_targets: vec![], mode: None, x_value: Some(10) }).expect("cast X=10");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears"), "Grizzly Bears reanimated");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Primordial Wurm"), "Primordial Wurm reanimated");
+}

@@ -3504,6 +3504,69 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
     }
 }
 
+/// Finale of Eternity — {X}{B}{B} Sorcery. Destroy up to three target creatures
+/// with toughness X or less. If X is 10 or more, return all creature cards from
+/// your graveyard to the battlefield.
+pub fn finale_of_eternity() -> CardDefinition {
+    CardDefinition {
+        name: "Finale of Eternity",
+        cost: cost(&[x(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 3,
+                min_targets: 0,
+                filter: R::Creature.and(R::ToughnessAtMostXFromCost),
+                effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(10)),
+                then: Box::new(Effect::Move {
+                    what: Selector::EachMatching {
+                        zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                        filter: R::Creature,
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Jiang Yanggu, Wildcrafter — {2}{G} loyalty 3. Static: each creature you
+/// control with a +1/+1 counter has "{T}: Add one mana of any color."
+/// −1: put a +1/+1 counter on target creature.
+pub fn jiang_yanggu_wildcrafter() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control with a +1/+1 counter on it has \"{T}: Add one mana of any color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -1,
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..walker("Jiang Yanggu, Wildcrafter", cost(&[generic(2), g()]), PlaneswalkerSubtype::Yanggu, 3)
+    }
+}
+
 /// Single Combat — {3}{W}{W} Sorcery. Each player keeps one creature or
 /// planeswalker they control and sacrifices the rest; then no player can cast
 /// creature or planeswalker spells until the end of your next turn.
