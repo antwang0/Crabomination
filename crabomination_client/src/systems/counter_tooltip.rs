@@ -1388,6 +1388,7 @@ mod tests {
             station_next_threshold: None,
             crewed_count: 0,
             modified: false,
+            can_attack_despite_defender: false,
         }
     }
 
