@@ -14839,6 +14839,7 @@ static WAR: &[Factory] = &[
     super::war::vivien_champion_of_the_wilds,
     super::war::the_elderspell,
     super::war::widespread_brutality,
+    super::war::arlinn_voice_of_the_pack,
     super::war::jaces_ruse,
     super::war::davriel_rogue_shadowmage,
     super::war::awakening_of_vitu_ghazi,

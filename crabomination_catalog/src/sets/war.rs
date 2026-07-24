@@ -2727,6 +2727,37 @@ pub fn rescuer_sphinx() -> CardDefinition {
     }
 }
 
+/// Arlinn, Voice of the Pack — {4}{G}{G} loyalty 7. Static: each Wolf or
+/// Werewolf you control enters with an additional +1/+1 counter. −2: create a
+/// 2/2 green Wolf.
+pub fn arlinn_voice_of_the_pack() -> CardDefinition {
+    let wolf = TokenDefinition {
+        name: "Wolf".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: creatures(vec![CreatureType::Wolf]),
+        ..Default::default()
+    };
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Each Wolf or Werewolf you control enters with an additional +1/+1 counter on it.",
+            effect: StaticEffect::TypedCreaturesEnterWithExtraCounter {
+                types: vec![CreatureType::Wolf, CreatureType::Werewolf],
+                kind: CounterType::PlusOnePlusOne,
+                amount: 1,
+            },
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: wolf },
+            ..Default::default()
+        }],
+        ..walker("Arlinn, Voice of the Pack", cost(&[generic(4), g(), g()]), PlaneswalkerSubtype::Arlinn, 7)
+    }
+}
+
 /// Widespread Brutality — {1}{B}{R}{R} Sorcery. Amass Zombies 2, then the Army
 /// you amassed deals damage equal to its power to each non-Army creature.
 pub fn widespread_brutality() -> CardDefinition {

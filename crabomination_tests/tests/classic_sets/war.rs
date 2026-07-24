@@ -2397,3 +2397,22 @@ fn widespread_brutality_amasses_and_burns() {
     assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 2, "amassed 2");
     assert!(g.battlefield_find(foe).is_none(), "non-Army creature took 2 and died");
 }
+
+/// Arlinn, Voice of the Pack makes Wolf tokens enter with an extra +1/+1
+/// counter (a 2/2 base becomes 3/3), and non-Wolves are unaffected.
+#[test]
+fn arlinn_wolves_enter_bigger() {
+    let mut g = two_player_game();
+    let arlinn = g.add_card_to_battlefield(0, catalog::arlinn_voice_of_the_pack());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: arlinn, ability_index: 0, target: None, x_value: None }).expect("-2");
+    drain_stack(&mut g);
+    let wolf = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Wolf").expect("Wolf token");
+    assert_eq!(wolf.counter_count(CounterType::PlusOnePlusOne), 1, "Wolf entered with an extra counter");
+    assert_eq!((g.computed_permanent(wolf.id).unwrap().power, g.computed_permanent(wolf.id).unwrap().toughness), (3, 3), "2/2 + counter = 3/3");
+    // A non-Wolf enters normally.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "non-Wolf unaffected");
+}

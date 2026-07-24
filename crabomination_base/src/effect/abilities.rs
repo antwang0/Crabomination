@@ -1315,6 +1315,15 @@ pub enum StaticEffect {
         kind: CounterType,
         per: crate::card::SelectionRequirement,
     },
+    /// "Each creature you control that's one of `types` enters with `amount`
+    /// additional `kind` counters on it" (Arlinn, Voice of the Pack — Wolves
+    /// and Werewolves enter with an extra +1/+1). A flat per-entry bonus, read
+    /// at the same ETB-counter sites.
+    TypedCreaturesEnterWithExtraCounter {
+        types: Vec<crate::card::CreatureType>,
+        kind: CounterType,
+        amount: u32,
+    },
     /// "Each other creature you control enters with a number of additional
     /// `kind` counters equal to this creature's power" (Master Biomancer). Read
     /// at the same ETB-counter sites as `TypeEntersWithCounter` via

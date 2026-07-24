@@ -2749,6 +2749,13 @@ impl GameState {
                             specs.push((*kind, n));
                         }
                     }
+                    // Arlinn — each Wolf/Werewolf you control enters with an
+                    // additional flat +1/+1 counter.
+                    StaticEffect::TypedCreaturesEnterWithExtraCounter { types, kind, amount }
+                        if *amount > 0 && (changeling || types.iter().any(|t| entering_types.contains(t))) =>
+                    {
+                        specs.push((*kind, *amount));
+                    }
                     // Master Biomancer — any other creature you control enters
                     // with additional counters equal to the source's live power.
                     StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower { kind } => {
@@ -4053,6 +4060,29 @@ impl GameState {
                 }
             }
             c.definition = std::sync::Arc::new(def);
+        }
+        // CR 122.1 — Metallic Mimic / Cathars' Crusade / Arlinn-style typed
+        // ETB counters apply to minted tokens too (they enter as normal
+        // creatures). Skipped while counters are locked (Solemnity).
+        if !self.counters_locked() {
+            for (kind, n) in self.chosen_type_etb_counter_specs(id, ctrl) {
+                let scaled = if kind == crate::card::CounterType::PlusOnePlusOne {
+                    self.scaled_counter_count(ctrl, kind, n, true)
+                } else {
+                    n
+                };
+                if scaled > 0 {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.add_counters(kind, scaled);
+                    }
+                    events.push(crate::game::GameEvent::CounterAdded {
+                        card_id: id,
+                        counter_type: kind,
+                        count: scaled,
+                    });
+                    self.permanents_gained_counter_this_turn.insert(id);
+                }
+            }
         }
         events.push(crate::game::GameEvent::TokenCreated { card_id: id });
         events.push(crate::game::GameEvent::PermanentEntered { card_id: id });
@@ -14420,6 +14450,7 @@ fn static_effect_to_effects(
             // ETB-counter replacement, read at `chosen_type_etb_counter_specs`.
             | StaticEffect::TypeEntersWithCounter { .. }
             | StaticEffect::TypeEntersWithCountersPerControlled { .. }
+            | StaticEffect::TypedCreaturesEnterWithExtraCounter { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower { .. }
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
