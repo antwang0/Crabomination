@@ -41,7 +41,9 @@ Still open, grouped by primitive:
 - The many WAR planeswalkers (Liliana Dreadhorde General, Nissa Who Shakes the
   World, Nicol Bolas Dragon-God, the uncommon 3-ability walkers) and remaining
   legends (God-Eternal Kefnet — reveal-first-draw-copy; Ilharg, Neheb, Massacre
-  Girl). **God-Eternal Rhonas, Parhelion II, Dreadhorde Invasion shipped.** Sweep `scripts/set_diff.py war` for the live
+  Girl). **God-Eternal Rhonas, Parhelion II, Dreadhorde Invasion, Enter the
+  God-Eternals, Tolsimir, Role Reversal, Heartwarming Redemption, Emergence Zone,
+  Mobilized District, Vivien's Arkbow shipped.** Sweep `scripts/set_diff.py war` for the live
   list (~65 remain).
 
 **Remaining DGM (Dragon's Maze) gap cards** — `catalog::sets::dgm`. The

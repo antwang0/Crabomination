@@ -12641,6 +12641,9 @@ impl GameState {
                 if looked.is_empty() {
                     return Ok(());
                 }
+                // Concretize X-dependent filters against the paid X (Vivien's
+                // Arkbow — "creature card with mana value X or less").
+                let filter = filter.resolve_x(ctx.x_value).resolve_converge(ctx.converged_value);
                 let mut picks: Vec<crate::card::CardId> = looked
                     .iter()
                     .copied()
@@ -12649,7 +12652,7 @@ impl GameState {
                             .library
                             .iter()
                             .find(|c| c.id == *id)
-                            .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, p))
+                            .is_some_and(|c| self.evaluate_requirement_on_card(&filter, c, p))
                     })
                     .collect();
                 if let Some(m) = max {

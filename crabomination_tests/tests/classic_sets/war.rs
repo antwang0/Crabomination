@@ -1713,6 +1713,22 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Vivien's Arkbow digs X and deploys a small creature onto the battlefield.
+#[test]
+fn viviens_arkbow_deploys_creature() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bow = g.add_card_to_battlefield(0, catalog::viviens_arkbow());
+    // Top of library: a 2/2 (MV 2, within X=2) plus a filler land.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(bow, 0, None);
+    ctx.x_value = 2;
+    g.resolve_effect(&catalog::viviens_arkbow().activated_abilities[0].effect.clone(), &ctx).unwrap();
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears"), "deployed the 2/2 within X");
+}
+
 /// Mobilized District animates into a 3/3 vigilant Citizen that's still a land.
 #[test]
 fn mobilized_district_animates() {

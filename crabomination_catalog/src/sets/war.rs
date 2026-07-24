@@ -2574,6 +2574,32 @@ pub fn heartwarming_redemption() -> CardDefinition {
     }
 }
 
+/// Vivien's Arkbow — {1}{G} legendary Artifact. {X}, {T}, Discard a card: look
+/// at the top X cards; you may put a creature with mana value X or less onto the
+/// battlefield; bottom the rest in a random order.
+pub fn viviens_arkbow() -> CardDefinition {
+    CardDefinition {
+        name: "Vivien's Arkbow",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[x()]),
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::LookTopPutMatchingOntoBattlefield {
+                count: Value::XFromCost,
+                filter: R::Creature.and(R::ManaValueAtMostXFromCost),
+                then: None,
+                max: Some(1),
+                tapped: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Emergence Zone — Land. {T}: Add {C}. {1}, {T}, Sacrifice: you may cast
 /// spells this turn as though they had flash.
 pub fn emergence_zone() -> CardDefinition {
