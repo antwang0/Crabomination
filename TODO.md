@@ -24,38 +24,25 @@ Items are grouped by area and roughly ordered by impact within each group.
   Determined, Odds // Ends, Research // Development), and the block of
   planeswalkers (Jace AoT, Vraska the Unseen, Gideon CoJ, Domri already done).
 
-**Remaining WAR (War of the Spark) gap cards** — `catalog::sets::war`.
-The hybrid uncommon walker cycle is complete (Dovin/Nahiri/Vraska shipped this
-run alongside Angrath/Huatli/Kiora/Samut/Kaya/Ashiok). Also shipped this run:
-Gideon Blackblade, Jace Arcane Strategist, Ajani the Greathearted, Sorin
-Vengeful Bloodlord, Vivien Champion of the Wilds, Arlinn Voice of the Pack,
-Sarkhan the Masterless, Davriel Rogue Shadowmage, Devouring Hellion, Mizzium
-Tank, Tomik, Gideon's Triumph, Narset's Reversal, Jace's Ruse, The Elderspell,
-Widespread Brutality, Awakening of Vitu-Ghazi. The `modern_decks` run shipped
-Massacre Girl (death-chain), Ilharg (deploy-attacking), Single Combat
-(creature/PW cast lock), Jiang Yanggu, Finale of Eternity + Finale of
-Revelation, Domri Anarch of Bolas, Liliana Dreadhorde General, Chandra Fire
-Artisan (loyalty-removed trigger), Ral Storm Conduit (`EventKind::SpellCopied`),
-Ugin the Ineffable (`ExileTopFaceDownTokenReturns`), Ral Storm Conduit
-(`EventKind::SpellCopied`), and Neheb (`AddManaKeptThisTurnCount` +
-`DiscardAnyNumber`). Sweep `scripts/set_gaps.py war` for the live list. Still
-open (each needs a new primitive):
-- **Nissa Who Shakes the World** — per-Forest extra-mana (`ExtraManaOnLandTap`)
-  is easy; the +1 land-animate-with-counters and −8 emblem+multi-Forest-search
-  are the work.
-- **God-Eternal Kefnet** (reveal-first-draw-each-turn → copy I/S for {2} less),
-  **Tezzeret Master of the Bridge** (grant affinity-for-artifacts to your
-  creature/PW spells + life-loss ultimate).
-- **Gideon's Sacrifice** (redirect-all-damage-to-chosen this turn), **Deliver
-  Unto Evil** (opponent chooses which gy cards stay), **Finale of Promise**
-  (cast I/S from gy free), **Bolas's Citadel** (cast-from-top-pay-life),
-  **Niv-Mizzet Reborn** (WUBRG reveal), **Nicol Bolas Dragon-God**, **Feather,
-  the Redeemed** (exile-instead-return I/S targeting your creature).
-- Follow-up engine gap noticed: loyalty `x_cost` abilities don't stamp X into
-  *target-legality* filters (only resolution-time `CardsInZone` picks now do —
-  fixed this run), so a genuinely targeted "target … with mana value X" loyalty
-  ability still can't gate on X at activation. Sorin's −X works around it with a
-  resolution-time pick.
+**WAR (War of the Spark) — COMPLETE.** `scripts/set_gaps.py war` → 0. The final
+ten bombs shipped in `modern_decks` (Tezzeret Master of the Bridge, God-Eternal
+Kefnet, Nissa Who Shakes the World, Nicol Bolas Dragon-God, Bolas's Citadel,
+Feather, Finale of Promise, Deliver Unto Evil, Gideon's Sacrifice, Niv-Mizzet
+Reborn). Residual nuances left as follow-ups:
+- **Kefnet's drawn-I/S copy is cast free rather than for {2} less** — needs a
+  paid-with-discount copy-cast path (`cast_card_for_free` is free-only; the
+  copy would want a granted alt-cost = `card_cost.reduce_generic(2)`).
+- **Bolas's Citadel's sac-ten** uses `sac_other_filter (Nonland, 10)`, so the
+  Citadel itself can't be one of the ten (real card allows it).
+- Loyalty `x_cost` abilities still don't stamp X into *target-legality* filters
+  (resolution-time `CardsInZone` picks do); a genuinely targeted "target … with
+  mana value X" loyalty ability can't gate on X at activation.
+
+**Addendum (RNA) mechanic** — "If you cast this spell during your main phase,
+[bonus]." No primitive today (would need a `Predicate::CastDuringYourMainPhase`
+read from the cast context). Unblocks Arrester's Zeal/Admonition, Sphinx's
+Insight, Warrant // Warden, etc. RNA's `catalog::sets::rna` opened this run with
+12 non-Addendum cards; sweep `scripts/set_gaps.py rna` for the rest.
 
 **Remaining DGM (Dragon's Maze) gap cards** — `catalog::sets::dgm`. The
 `dgm::gaps`/`gaps2` waves shipped the guild legends/mythics and easy commons
