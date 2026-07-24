@@ -687,7 +687,14 @@ pub fn update_player_stats_chips(
         // CR 401.5 — a revealed (or owner-peekable) library top is public
         // info; show it right next to the deck count.
         if let Some(top) = p.library.known_top.first() {
-            spawn_stat_chip(row, &ui_fonts, StatChipKind::TopCard, format!("▲ {}", top.name));
+            // Show the mana value on a nonland top card — it's the life a
+            // Bolas's Citadel controller pays to cast it off the top.
+            let label = if top.card_types.contains(&crabomination::card::CardType::Land) {
+                format!("▲ {}", top.name)
+            } else {
+                format!("▲ {} · {}", top.name, top.cost.cmc())
+            };
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::TopCard, label);
         }
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
         // Poison is a hidden lose condition (lethal at 10) — only surface
