@@ -219,6 +219,10 @@ fn event_primary_card(ev: &crabomination::net::GameEventWire) -> Option<crabomin
         | E::CreatureSacrificed { card_id, .. }
         | E::PermanentSacrificed { card_id, .. } => Some(*card_id),
         E::BecameTarget { target, .. } => Some(*target),
+        // Ability activations are high-traffic — preview the source permanent
+        // (e.g. the adapt/pump creature or the activated planeswalker).
+        E::AbilityActivated { source, .. } => Some(*source),
+        E::LoyaltyAbilityActivated { planeswalker, .. } => Some(*planeswalker),
         _ => None,
     }
 }
