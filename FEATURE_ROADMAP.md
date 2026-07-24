@@ -16,13 +16,20 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **RNA wave (modern_decks, this run, 34 cards):** Locket cycle, adapt/riot/
-  spectacle/afterlife/addendum commons + uncommons, flash Auras, guildmages.
+- **RNA wave (modern_decks, this run, 63 cards):** Locket cycle, adapt/riot/
+  spectacle/afterlife/addendum commons + uncommons, flash Auras, guildmages,
+  the RNA split cycle (Depose/Consecrate/Warrant/Thrash/Collision/Carnival),
+  wraths (Kaya's Wrath), Gate/Domri/Dovin payoffs, High Alert.
   New engine: `EventKind::AdaptAbilityActivated` (CR 702.108c — adapt-ability
   activation event, `Effect::is_adapt` shape detector; finishes Gyre Engineer),
-  `EquipBonus.remove_keywords` (CR 613.1f "loses flying" Auras — Sky Tether).
-  Bot now activates adapt abilities. Tests in `classic_sets/rna`,
-  `core_rules/cr_recent31`.
+  `EquipBonus.remove_keywords` (CR 613.1f "loses flying" Auras — Sky Tether),
+  a milled card now satisfies "put into a graveyard from anywhere" triggers
+  (CR 701.15b — The Haunt of Hightower/Emrakul), and
+  `StaticEffect::YourCreaturesCanAttackAsThoughNoDefender` (CR 508.1a team
+  attack-despite-defender — High Alert, Assault Formation), wired through the
+  bot planner and the client Attack-All panel. Bot now activates adapt
+  abilities and weighs toughness-attackers by their real damage. Tests in
+  `classic_sets/rna`, `core_rules/cr_recent31`, `core_rules/cr_recent32`.
 
 - **WAR set complete (modern_decks, this run, 10 bombs):** Tezzeret Master of
   the Bridge, God-Eternal Kefnet, Nissa Who Shakes the World, Nicol Bolas

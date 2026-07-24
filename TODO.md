@@ -709,6 +709,16 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
+- **RNA batch-7 leftovers (each needs one primitive):** Knight of Sorrows /
+  Lumbering Battlement "can block an additional creature" (the multi-block item
+  below); Pestilent Spirit's "instant and sorcery spells you control have
+  deathtouch" (a controller-scoped damage-source static, wire into
+  `deal_damage_to_from` lethality); Persistent Petitioners' "tap four untapped
+  Advisors: mill 12" (a tap-N-other-of-a-type activation cost); Rakdos, the
+  Showstopper (per-creature coin-flip destroy filtered by type); Teysa Karlov
+  (extra death-trigger + token vigilance/lifelink static). Opponent-threat
+  displays in `player_stats.rs` still value a High Alert/Doran wall by power
+  (0), not toughness — refine when convenient.
 - **Multi-block ("can block any number of creatures", CR 509.1g).** `block_map`
   is `HashMap<CardId, CardId>` (one attacker per blocker); the declare-blockers
   `seen_blockers` gate rejects a blocker appearing twice. Supporting Guardian of
