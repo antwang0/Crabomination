@@ -19,6 +19,11 @@ fn rna_stat_and_keyword_lines() {
         (catalog::passwall_adept, 1, 3, &[]),
         (catalog::rakdos_firewheeler, 4, 3, &[]),
         (catalog::gyre_engineer, 1, 1, &[]),
+        (catalog::vizkopa_vampire, 3, 1, &[Keyword::Lifelink]),
+        (catalog::rubblebelt_recluse, 6, 5, &[Keyword::MustAttack]),
+        (catalog::rakdos_trumpeter, 1, 3, &[Keyword::Menace]),
+        (catalog::griffin_protector, 2, 3, &[Keyword::Flying]),
+        (catalog::ironshell_beetle, 1, 1, &[]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -213,4 +218,26 @@ fn arresters_admonition_addendum_draw() {
     assert!(g.battlefield_find(foe).is_none(), "creature bounced");
     // Spent one card (the spell) but drew one via Addendum → net hand unchanged.
     assert_eq!(g.players[0].hand.len(), hand, "Addendum drew a card");
+}
+
+/// Ironshell Beetle puts a +1/+1 counter on a creature when it enters.
+#[test]
+fn ironshell_beetle_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    let effect = catalog::ironshell_beetle().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+}
+
+/// Griffin Protector pumps itself when another creature you control enters.
+#[test]
+fn griffin_protector_self_pump_on_other_etb() {
+    let mut g = two_player_game();
+    let griffin = g.add_card_to_battlefield(0, catalog::griffin_protector());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bear }]);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(griffin).unwrap().power, 3, "Griffin gets +1/+1 when another creature enters");
 }

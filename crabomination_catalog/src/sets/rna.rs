@@ -2,12 +2,13 @@
 //! Tests in `classic_sets/rna`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
+    EventSpec, Keyword, Subtypes, TriggeredAbility, Value,
 };
 use crate::card::SelectionRequirement as R;
 use crate::effect::shortcut::{deal, draw, etb, spectacle, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
     Subtypes { creature_types: t, ..Default::default() }
@@ -239,5 +240,57 @@ pub fn arresters_admonition() -> CardDefinition {
             },
         ]),
         ..Default::default()
+    }
+}
+
+/// Ironshell Beetle — {1}{G} 1/1 Insect. ETB put a +1/+1 counter on target
+/// creature.
+pub fn ironshell_beetle() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(R::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..body("Ironshell Beetle", cost(&[generic(1), g()]), 1, 1, vec![CreatureType::Insect], vec![])
+    }
+}
+
+/// Vizkopa Vampire — {2}{W/B} 3/1 Vampire with lifelink.
+pub fn vizkopa_vampire() -> CardDefinition {
+    body("Vizkopa Vampire", cost(&[generic(2), hybrid(Color::White, Color::Black)]), 3, 1, vec![CreatureType::Vampire], vec![Keyword::Lifelink])
+}
+
+/// Rubblebelt Recluse — {4}{R} 6/5 Ogre Berserker that attacks each combat if
+/// able.
+pub fn rubblebelt_recluse() -> CardDefinition {
+    body("Rubblebelt Recluse", cost(&[generic(4), r()]), 6, 5, vec![CreatureType::Ogre, CreatureType::Berserker], vec![Keyword::MustAttack])
+}
+
+/// Rakdos Trumpeter — {1}{B} 1/3 Human Shaman with menace. {3}{R}: +2/+0 until
+/// end of turn.
+pub fn rakdos_trumpeter() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r()]),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::Const(2), toughness: Value::ZERO, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..body("Rakdos Trumpeter", cost(&[generic(1), b()]), 1, 3, vec![CreatureType::Human, CreatureType::Shaman], vec![Keyword::Menace])
+    }
+}
+
+/// Griffin Protector — {3}{W} 2/3 Griffin with flying. Whenever another creature
+/// you control enters, it gets +1/+1 until end of turn.
+pub fn griffin_protector() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::OtherThanSource),
+            }),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+        }],
+        ..body("Griffin Protector", cost(&[generic(3), w()]), 2, 3, vec![CreatureType::Griffin], vec![Keyword::Flying])
     }
 }
