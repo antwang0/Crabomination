@@ -102,6 +102,7 @@ fn rna_stat_and_keyword_lines() {
         (catalog::mesmerizing_benthid, 4, 5, &[]),
         (catalog::immolation_shaman, 1, 3, &[]),
         (catalog::domris_nodorog, 5, 2, &[Keyword::Trample]),
+        (catalog::bolrac_clan_crusher, 4, 4, &[]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -1958,4 +1959,57 @@ fn domris_nodorog_shape() {
         Effect::Search { filter, .. } => assert_eq!(*filter, crabomination::card::SelectionRequirement::HasName("Domri, City Smasher".into())),
         other => panic!("expected Search, got {other:?}"),
     }
+}
+
+/// Bolrac-Clan Crusher removes a +1/+1 counter to deal 2 to any target.
+#[test]
+fn bolrac_clan_crusher_ping() {
+    let mut g = two_player_game();
+    let crusher = g.add_card_to_battlefield(0, catalog::bolrac_clan_crusher());
+    let fuel = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(fuel).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.clear_sickness(crusher);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: crusher, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "dealt 2");
+    assert_eq!(g.battlefield_find(fuel).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "counter removed as a cost");
+}
+
+/// Dovin's Acuity's ETB gains 2 life and draws a card.
+#[test]
+fn dovins_acuity_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::dovins_acuity().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.players[0].life, life + 2, "gained 2");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Dovin's Dismissal puts a tapped creature on top of its owner's library.
+#[test]
+fn dovins_dismissal_topdecks() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    let lib = g.players[1].library.len();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(foe)), 0, 0);
+    g.resolve_effect(&catalog::dovins_dismissal().effect, &ctx).unwrap();
+    assert!(g.battlefield_find(foe).is_none(), "tapped creature left the battlefield");
+    assert_eq!(g.players[1].library.len(), lib + 1, "put on top of owner's library");
+}
+
+/// Eyes Everywhere swaps control of itself and a target nonland permanent.
+#[test]
+fn eyes_everywhere_exchange_control() {
+    let mut g = two_player_game();
+    let eyes = g.add_card_to_battlefield(0, catalog::eyes_everywhere());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(foe)), 0, 0);
+    ctx.source = Some(eyes);
+    g.resolve_effect(&catalog::eyes_everywhere().activated_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(foe).unwrap().controller, 0, "gained the creature");
+    assert_eq!(g.battlefield_find(eyes).unwrap().controller, 1, "gave up the enchantment");
 }

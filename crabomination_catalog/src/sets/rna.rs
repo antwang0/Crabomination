@@ -9,7 +9,7 @@ use crate::card::{
 use crate::card::SelectionRequirement as R;
 use crate::effect::shortcut::{
     adapt, afterlife, deal, draw, each_creature, each_your_creature, etb, etb_scry, on_attack, riot,
-    spectacle, target_filtered,
+    spectacle, target_any, target_filtered,
 };
 use crate::effect::{
     Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, RevealMissDest, Selector,
@@ -2995,5 +2995,97 @@ pub fn domris_nodorog() -> CardDefinition {
             }),
         ],
         ..body("Domri's Nodorog", cost(&[generic(3), r(), g()]), 5, 2, vec![CreatureType::Beast], vec![Keyword::Trample])
+    }
+}
+
+/// Bolrac-Clan Crusher — {3}{R}{G} 4/4 Ogre Warrior. {T}, Remove a +1/+1
+/// counter from a creature you control: deal 2 damage to any target.
+pub fn bolrac_clan_crusher() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            remove_counter_among_filter: Some((Some(CounterType::PlusOnePlusOne), 1, R::Creature.and(R::ControlledByYou))),
+            effect: deal(2, target_any()),
+            ..Default::default()
+        }],
+        ..body("Bolrac-Clan Crusher", cost(&[generic(3), r(), g()]), 4, 4, vec![CreatureType::Ogre, CreatureType::Warrior], vec![])
+    }
+}
+
+/// Dovin's Acuity — {1}{W}{U} Enchantment. ETB gain 2 life and draw a card.
+/// Whenever you cast an instant spell during your main phase, you may return
+/// this to its owner's hand.
+pub fn dovins_acuity() -> CardDefinition {
+    CardDefinition {
+        name: "Dovin's Acuity",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasCardType(CardType::Instant) }),
+                effect: Effect::If {
+                    cond: Predicate::YourMainPhase,
+                    then: Box::new(Effect::MayDo {
+                        description: "Return Dovin's Acuity to its owner's hand.".into(),
+                        body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) }),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dovin's Dismissal — {2}{W}{U} Instant. Put up to one target tapped creature
+/// on top of its owner's library. You may search your library for a card named
+/// Dovin, Architect of Law and put it into your hand, then shuffle. (The
+/// graveyard half is elided.)
+pub fn dovins_dismissal() -> CardDefinition {
+    CardDefinition {
+        name: "Dovin's Dismissal",
+        cost: cost(&[generic(2), w(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Move {
+                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::Tapped) },
+                    to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+                }),
+            },
+            Effect::Search { who: PlayerRef::You, filter: R::HasName("Dovin, Architect of Law".into()), to: ZoneDest::Hand(PlayerRef::You) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Eyes Everywhere — {2}{U} Enchantment. At the beginning of your upkeep, scry
+/// 1. {5}{U}: Exchange control of this enchantment and target nonland
+/// permanent. Activate only as a sorcery.
+pub fn eyes_everywhere() -> CardDefinition {
+    CardDefinition {
+        name: "Eyes Everywhere",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), u()]),
+            sorcery_speed: true,
+            effect: Effect::ExchangeControl {
+                a: Selector::This,
+                b: Selector::TargetFiltered { slot: 0, filter: R::Nonland },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
     }
 }

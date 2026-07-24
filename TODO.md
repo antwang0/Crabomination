@@ -718,9 +718,7 @@ factory doc comment:
   displays in `player_stats.rs` still value a High Alert/Doran wall by power
   (0), not toughness — refine when convenient. (Pestilent Spirit's I/S-spell
   deathtouch shipped in batch 9 via `StaticEffect::YourISSpellsHaveDeathtouch`.)
-- **RNA batch-9 deferrals (each needs one primitive):** Bolrac-Clan Crusher —
-  "remove a +1/+1 counter from a creature you control" as an activation cost
-  (`remove_counter_cost` on `ActivatedAbility`); Galloping Lizrog — "remove any
+- **RNA batch-9 deferrals (each needs one primitive):** Galloping Lizrog — "remove any
   number of counters from among your creatures, put twice that many on this"
   (a remove-and-double effect); Combine Guildmage — a *this-turn* "creatures you
   control enter with an extra +1/+1 counter" (turn-scoped enters-with
@@ -733,7 +731,12 @@ factory doc comment:
   static until end of turn (`DamageWontReduceControllerLifeBelowOne` as a
   one-shot); Rhythm of the Wild — "nontoken creatures you control have riot" (a
   riot-granting anthem); Ravager Wurm mode 2 — "destroy a land with a non-mana
-  activated ability" (a land-with-nonmana-ability target filter).
+  activated ability" (a land-with-nonmana-ability target filter); Lumbering
+  Battlement — "exile any number of other creatures you control until this
+  leaves" (a choose-any-number-you-control selector for
+  `ExileUntilSourceLeaves`) + a self-pump static scaled by
+  `Value::CardsExiledWithSourceCount`; Rumbling Ruin — an ETB "opponents'
+  creatures with power ≤ N can't block" (dynamic power-threshold block gate).
 - **Multi-block ("can block any number of creatures", CR 509.1g).** `block_map`
   is `HashMap<CardId, CardId>` (one attacker per blocker); the declare-blockers
   `seen_blockers` gate rejects a blocker appearing twice. Supporting Guardian of

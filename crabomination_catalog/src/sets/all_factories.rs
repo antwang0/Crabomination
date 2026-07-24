@@ -9898,6 +9898,10 @@ static RNA: &[Factory] = &[
     super::rna::screaming_shield,
     super::rna::clear_the_stage,
     super::rna::domris_nodorog,
+    super::rna::bolrac_clan_crusher,
+    super::rna::dovins_acuity,
+    super::rna::dovins_dismissal,
+    super::rna::eyes_everywhere,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,
