@@ -36,16 +36,16 @@ Massacre Girl (death-chain), Ilharg (deploy-attacking), Single Combat
 (creature/PW cast lock), Jiang Yanggu, Finale of Eternity + Finale of
 Revelation, Domri Anarch of Bolas, Liliana Dreadhorde General, Chandra Fire
 Artisan (loyalty-removed trigger), Ral Storm Conduit (`EventKind::SpellCopied`),
-and Ugin the Ineffable (`ExileTopFaceDownTokenReturns`). Sweep
-`scripts/set_gaps.py war` for the live list. Still open (each needs a new
-primitive):
+Ugin the Ineffable (`ExileTopFaceDownTokenReturns`), Ral Storm Conduit
+(`EventKind::SpellCopied`), and Neheb (`AddManaKeptThisTurnCount` +
+`DiscardAnyNumber`). Sweep `scripts/set_gaps.py war` for the live list. Still
+open (each needs a new primitive):
 - **Nissa Who Shakes the World** — per-Forest extra-mana (`ExtraManaOnLandTap`)
   is easy; the +1 land-animate-with-counters and −8 emblem+multi-Forest-search
   are the work.
 - **God-Eternal Kefnet** (reveal-first-draw-each-turn → copy I/S for {2} less),
-  **Neheb** (combat-damage discard/draw + persistent {R}), **Tezzeret Master of
-  the Bridge** (grant affinity-for-artifacts to your creature/PW spells +
-  life-loss ultimate).
+  **Tezzeret Master of the Bridge** (grant affinity-for-artifacts to your
+  creature/PW spells + life-loss ultimate).
 - **Gideon's Sacrifice** (redirect-all-damage-to-chosen this turn), **Deliver
   Unto Evil** (opponent chooses which gy cards stay), **Finale of Promise**
   (cast I/S from gy free), **Bolas's Citadel** (cast-from-top-pay-life),
