@@ -4486,6 +4486,22 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Opponent activates a nonmana ability of an artifact/creature/land →
     ping** — Immolation Shaman. `EventKind::AbilityActivated` exists but there
     is no scope/filter for "source is an artifact/creature/land, nonmana."
+  - **Tap N untapped creatures of a type as a cost** — Persistent Petitioners'
+    "Tap four untapped Advisors you control: target player mills twelve" (only
+    its `{1},{T}: mill 1` half would ship without this). Also its
+    "any number of copies in a deck" deckbuild waiver.
+  - **Land animation with haste that stays a land** — Clan Guildmage's second
+    mode ("target land becomes a 4/4 Elemental with haste; still a land").
+  - **Move a +1/+1 counter between your creatures** — Combine Guildmage's
+    second ability + its "creatures enter with an extra counter this turn."
+  - **Riot as a granted static** (Rhythm of the Wild) — riot currently only
+    ships as an intrinsic ETB trigger, not a "nontoken creatures you control
+    have riot" anthem; plus its "creature spells can't be countered."
+  - **Opening-hand reveal → first-upkeep bonus** (Sphinx of Foresight) —
+    approximated as a recurring upkeep scry 1; the reveal-from-opening-hand
+    path (an `OpeningHandEffect`) isn't wired for the scry-3 rider.
+  - **Spells targeting this cost {2} more for opponents** (Sphinx of New Prahv)
+    — a self-referential targeted-spell tax static.
 - ⏳ **Newly-noticed primitives (discovered during the DSK/BLB gap batch):**
   - **Gift on a permanent (creature/artifact)** — the gift's `gifted_effect`
     resolves only on the instant/sorcery spell path; a Gift *creature*

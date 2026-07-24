@@ -16,6 +16,14 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **RNA wave (modern_decks, this run, 34 cards):** Locket cycle, adapt/riot/
+  spectacle/afterlife/addendum commons + uncommons, flash Auras, guildmages.
+  New engine: `EventKind::AdaptAbilityActivated` (CR 702.108c — adapt-ability
+  activation event, `Effect::is_adapt` shape detector; finishes Gyre Engineer),
+  `EquipBonus.remove_keywords` (CR 613.1f "loses flying" Auras — Sky Tether).
+  Bot now activates adapt abilities. Tests in `classic_sets/rna`,
+  `core_rules/cr_recent31`.
+
 - **WAR set complete (modern_decks, this run, 10 bombs):** Tezzeret Master of
   the Bridge, God-Eternal Kefnet, Nissa Who Shakes the World, Nicol Bolas
   Dragon-God, Bolas's Citadel, Feather the Redeemed, Finale of Promise, Deliver
