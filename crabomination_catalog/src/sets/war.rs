@@ -2600,6 +2600,33 @@ pub fn viviens_arkbow() -> CardDefinition {
     }
 }
 
+/// Oath of Kaya — {1}{W}{B} legendary Enchantment. ETB deal 3 to any target and
+/// gain 3. Whenever an opponent attacks a planeswalker you control, deal 2 to
+/// that player and gain 2. (The attack trigger over-fires on attacks against
+/// you, mirroring `ControllerAttackedByOpponent`.)
+pub fn oath_of_kaya() -> CardDefinition {
+    CardDefinition {
+        name: "Oath of Kaya",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                deal(3, target_any()),
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(2) },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Emergence Zone — Land. {T}: Add {C}. {1}, {T}, Sacrifice: you may cast
 /// spells this turn as though they had flash.
 pub fn emergence_zone() -> CardDefinition {

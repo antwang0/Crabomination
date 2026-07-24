@@ -1713,6 +1713,28 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Oath of Kaya's ETB burns any target for 3 and gains 3 life.
+#[test]
+fn oath_of_kaya_etb_burns_and_gains() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let (life, opp) = (g.players[0].life, g.players[1].life);
+    let oath = g.add_card_to_hand(0, catalog::oath_of_kaya());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: oath, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // ETB gains 3 unconditionally and deals 3 to the auto-chosen target.
+    assert_eq!(g.players[0].life, life + 3, "gained 3");
+    let dealt = g.battlefield_find(bear).is_none() || g.players[1].life <= opp - 3;
+    assert!(dealt, "3 damage was dealt to some target");
+}
+
 /// Vivien's Arkbow digs X and deploys a small creature onto the battlefield.
 #[test]
 fn viviens_arkbow_deploys_creature() {

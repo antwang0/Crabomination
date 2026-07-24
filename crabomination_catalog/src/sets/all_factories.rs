@@ -14817,6 +14817,7 @@ static WAR: &[Factory] = &[
     super::war::emergence_zone,
     super::war::mobilized_district,
     super::war::viviens_arkbow,
+    super::war::oath_of_kaya,
     super::war::parhelion_ii,
     super::war::dreadhorde_invasion,
     super::war::god_eternal_rhonas,
