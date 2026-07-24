@@ -538,6 +538,7 @@ fn project_player(
                 && any_static(&|e| matches!(e, StaticEffect::OneNoncreatureSpellPerTurn)),
             nonartifact_reached: player.nonartifact_spells_cast_this_game_turn >= 1
                 && any_static(&|e| matches!(e, StaticEffect::OneNonartifactSpellPerTurn)),
+            creature_pw_locked: !state.creature_pw_cast_locks.is_empty(),
         }
     };
     // CR 601.3e — an opponent's Void Winnower locks this player's even-MV casts.
@@ -3689,6 +3690,23 @@ mod tests {
         let after = project(&g, 0).players[0].spell_cast_lock.clone();
         assert!(after.noncreature_reached, "noncreature lock reached after a noncreature cast");
         assert!(!after.any_reached, "no Rule of Law in play → the any-spell lock stays clear");
+    }
+
+    #[test]
+    fn single_combat_creature_pw_lock_surfaces_in_view() {
+        let mut g = two_player_game();
+        assert!(!project(&g, 0).players[0].spell_cast_lock.creature_pw_locked);
+        let sc = g.add_card_to_hand(0, catalog::single_combat());
+        g.step = crate::game::TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+        g.players[0].mana_pool.add_colorless(3);
+        g.perform_action(crate::game::GameAction::CastSpell {
+            card_id: sc, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Single Combat");
+        crate::game::drain_stack(&mut g);
+        assert!(project(&g, 0).players[0].spell_cast_lock.creature_pw_locked, "lock surfaces for every seat");
+        assert!(project(&g, 1).players[1].spell_cast_lock.creature_pw_locked);
     }
 
     #[test]

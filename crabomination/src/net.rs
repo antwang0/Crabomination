@@ -522,6 +522,10 @@ pub struct SpellCastLock {
     pub noncreature_reached: bool,
     /// Ethersworn Canonist — any nonartifact spell after the first is barred.
     pub nonartifact_reached: bool,
+    /// Single Combat — creature and planeswalker spells are barred until the
+    /// end of the lock owner's next turn.
+    #[serde(default)]
+    pub creature_pw_locked: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

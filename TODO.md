@@ -31,25 +31,29 @@ Gideon Blackblade, Jace Arcane Strategist, Ajani the Greathearted, Sorin
 Vengeful Bloodlord, Vivien Champion of the Wilds, Arlinn Voice of the Pack,
 Sarkhan the Masterless, Davriel Rogue Shadowmage, Devouring Hellion, Mizzium
 Tank, Tomik, Gideon's Triumph, Narset's Reversal, Jace's Ruse, The Elderspell,
-Widespread Brutality, Awakening of Vitu-Ghazi. Sweep `scripts/set_diff.py war`
-for the live list. Still open (each needs a new primitive):
-- **Gideon the Oathsworn / Nissa Who Shakes the World** — loyalty-as-P/T
-  animation and per-Forest extra-mana + land-animate-with-counters.
-- **God-Eternal Kefnet** (reveal-first-draw-copy), **Ilharg** (put-from-hand
-  attacking + return EOT), **Neheb** (persistent mana), **Massacre Girl**
-  (delayed repeating −1/−1 death chain).
-- **Ral Storm Conduit** / **Chandra Fire Artisan** — cast/copy-triggered ping;
-  loyalty-removed punisher; "copy your next I/S this turn" delayed trigger.
-- **Domri Anarch of Bolas** (your creature spells uncounterable this turn +
-  mana-of-choice), **Ugin the Ineffable** (colorless cost-reduction + linked
-  face-down token), **Tezzeret Master of the Bridge** (grant affinity-for-
-  artifacts to your creature/PW spells), **Jiang Yanggu** (grant a mana ability
-  to counter-bearing creatures).
-- **Gideon's Sacrifice** (redirect-all-damage-to-chosen this turn), **Single
-  Combat** (sacrifice-all-but-one + creature/PW spell lock), **Deliver Unto
-  Evil** (opponent chooses which gy cards stay), the X-**Finales**, **Bolas's
-  Citadel** (cast-from-top-pay-life), **Niv-Mizzet Reborn** (WUBRG reveal),
-  **Nicol Bolas Dragon-God**, **Liliana Dreadhorde General**.
+Widespread Brutality, Awakening of Vitu-Ghazi. The `modern_decks` run shipped
+Massacre Girl (death-chain), Ilharg (deploy-attacking), Single Combat
+(creature/PW cast lock), Jiang Yanggu, Finale of Eternity + Finale of
+Revelation, Domri Anarch of Bolas, Liliana Dreadhorde General, and Chandra
+Fire Artisan (loyalty-removed trigger). Sweep `scripts/set_gaps.py war` for the
+live list. Still open (each needs a new primitive):
+- **Nissa Who Shakes the World** — per-Forest extra-mana (`ExtraManaOnLandTap`)
+  is easy; the +1 land-animate-with-counters and −8 emblem+multi-Forest-search
+  are the work.
+- **God-Eternal Kefnet** (reveal-first-draw-each-turn → copy I/S for {2} less),
+  **Neheb** (combat-damage discard/draw + persistent {R}).
+- **Ral Storm Conduit** — needs an `EventKind::SpellCopied` to hook the existing
+  `GameEvent::SpellsCopied` for the "cast or copy" ping; −2 reuses
+  `YourNextInstantSorceryCastThisTurn`.
+- **Ugin the Ineffable** (colorless cost-reduction ✅ via `CostReduction`; +1 is
+  an exile-face-down token linked to a return-to-hand-on-leave), **Tezzeret
+  Master of the Bridge** (grant affinity-for-artifacts to your creature/PW
+  spells + life-loss ultimate).
+- **Gideon's Sacrifice** (redirect-all-damage-to-chosen this turn), **Deliver
+  Unto Evil** (opponent chooses which gy cards stay), **Finale of Promise**
+  (cast I/S from gy free), **Bolas's Citadel** (cast-from-top-pay-life),
+  **Niv-Mizzet Reborn** (WUBRG reveal), **Nicol Bolas Dragon-God**, **Feather,
+  the Redeemed** (exile-instead-return I/S targeting your creature).
 - Follow-up engine gap noticed: loyalty `x_cost` abilities don't stamp X into
   *target-legality* filters (only resolution-time `CardsInZone` picks now do —
   fixed this run), so a genuinely targeted "target … with mana value X" loyalty

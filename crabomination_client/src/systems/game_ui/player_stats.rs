@@ -759,6 +759,11 @@ pub fn update_player_stats_chips(
             if let Some(label) = label {
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, label.to_string());
             }
+            // Single Combat — creature/planeswalker casts barred until end of
+            // the lock owner's next turn.
+            if lock.creature_pw_locked {
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ creature/pw".to_string());
+            }
         }
         // CR 601.3e — Void Winnower locks this player's even-mana-value casts.
         if p.even_mv_cast_locked {
