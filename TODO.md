@@ -38,11 +38,12 @@ Reborn). Residual nuances left as follow-ups:
   (resolution-time `CardsInZone` picks do); a genuinely targeted "target … with
   mana value X" loyalty ability can't gate on X at activation.
 
-**Addendum (RNA) mechanic** — "If you cast this spell during your main phase,
-[bonus]." No primitive today (would need a `Predicate::CastDuringYourMainPhase`
-read from the cast context). Unblocks Arrester's Zeal/Admonition, Sphinx's
-Insight, Warrant // Warden, etc. RNA's `catalog::sets::rna` opened this run with
-12 non-Addendum cards; sweep `scripts/set_gaps.py rna` for the rest.
+**Addendum (RNA) mechanic** — SHIPPED via `Predicate::YourMainPhase` (an
+instant resolves in the step it was cast, so a resolution-time "your main
+phase" check faithfully captures the Addendum trigger). Arrester's Zeal /
+Arrester's Admonition ride it. RNA's `catalog::sets::rna` opened this run with
+14 cards; sweep `scripts/set_gaps.py rna` for the rest (many need bespoke work
+— Riot, Afterlife, Spectacle payoffs, the guild-mechanic uncommons).
 
 **Remaining DGM (Dragon's Maze) gap cards** — `catalog::sets::dgm`. The
 `dgm::gaps`/`gaps2` waves shipped the guild legends/mythics and easy commons

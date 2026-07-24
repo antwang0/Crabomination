@@ -907,6 +907,11 @@ pub enum Predicate {
     ChoseModesAtLeast(u8),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
+    /// True during the controller's main phase (CR — RNA Addendum). Read at an
+    /// instant's resolution, which for these cards is the same step it was cast
+    /// in (the stack can't advance a step mid-resolution), so it faithfully
+    /// captures "if you cast this spell during your main phase."
+    YourMainPhase,
     /// The active player (whose turn it is) controls at least one permanent the
     /// selector resolves to. Gates "at the beginning of the upkeep of enchanted
     /// [permanent]'s controller, …" Aura triggers (Warp Artifact, Cursed Land,

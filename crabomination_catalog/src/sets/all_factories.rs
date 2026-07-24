@@ -9738,6 +9738,8 @@ static RNA: &[Factory] = &[
     super::rna::bring_to_trial,
     super::rna::burn_bright,
     super::rna::applied_biomancy,
+    super::rna::arresters_zeal,
+    super::rna::arresters_admonition,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

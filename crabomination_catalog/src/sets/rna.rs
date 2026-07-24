@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::card::SelectionRequirement as R;
 use crate::effect::shortcut::{deal, draw, etb, spectacle, target_filtered};
-use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
@@ -200,6 +200,44 @@ pub fn applied_biomancy() -> CardDefinition {
             max: 2,
             allow_repeats: false,
         },
+        ..Default::default()
+    }
+}
+
+/// Arrester's Zeal — {W} Instant. Target creature gets +2/+2 until end of turn.
+/// Addendum — if cast during your main phase, it also gains flying.
+pub fn arresters_zeal() -> CardDefinition {
+    CardDefinition {
+        name: "Arrester's Zeal",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+            Effect::If {
+                cond: Predicate::YourMainPhase,
+                then: Box::new(Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Flying, duration: Duration::EndOfTurn }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Arrester's Admonition — {2}{U} Instant. Return target creature to its owner's
+/// hand. Addendum — if cast during your main phase, draw a card.
+pub fn arresters_admonition() -> CardDefinition {
+    CardDefinition {
+        name: "Arrester's Admonition",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move { what: target_filtered(R::Creature), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            Effect::If {
+                cond: Predicate::YourMainPhase,
+                then: Box::new(draw(1)),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

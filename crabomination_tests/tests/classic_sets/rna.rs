@@ -160,3 +160,57 @@ fn blade_juggler_has_spectacle() {
     assert!(def.alternative_cost.is_some(), "Blade Juggler has a Spectacle alt-cost");
     assert!(def.card_types.contains(&CardType::Creature));
 }
+
+/// Arrester's Zeal grants flying when cast during your main phase (Addendum),
+/// but not when cast at instant speed off your main phase.
+#[test]
+fn arresters_zeal_addendum_flying() {
+    use crabomination::card::Keyword;
+    // On your main phase → +2/+2 and flying.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cast = g.add_card_to_hand(0, catalog::arresters_zeal());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(cp.keywords.contains(&Keyword::Flying), "Addendum grants flying on your main phase");
+
+    // On the opponent's turn → +2/+2 only, no flying.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cast = g.add_card_to_hand(0, catalog::arresters_zeal());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "no Addendum off your main phase");
+}
+
+/// Arrester's Admonition bounces a creature and draws under its Addendum.
+#[test]
+fn arresters_admonition_addendum_draw() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cast = g.add_card_to_hand(0, catalog::arresters_admonition());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature bounced");
+    // Spent one card (the spell) but drew one via Addendum → net hand unchanged.
+    assert_eq!(g.players[0].hand.len(), hand, "Addendum drew a card");
+}
