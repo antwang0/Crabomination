@@ -14820,6 +14820,7 @@ static WAR: &[Factory] = &[
     super::war::oath_of_kaya,
     super::war::interplanar_beacon,
     super::war::storm_the_citadel,
+    super::war::rescuer_sphinx,
     super::war::parhelion_ii,
     super::war::dreadhorde_invasion,
     super::war::god_eternal_rhonas,

@@ -2706,6 +2706,27 @@ pub fn mobilized_district() -> CardDefinition {
     }
 }
 
+/// Rescuer Sphinx — {2}{U}{U} 3/2 flying Sphinx. As it enters, you may return a
+/// nonland permanent you control to its owner's hand; if you do, it gets a
+/// +1/+1 counter. (Modeled as a reflexive ETB rather than an as-enters
+/// replacement, so the counter lands just after it enters.)
+pub fn rescuer_sphinx() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Return a nonland permanent you control to its owner's hand?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Nonland.and(R::ControlledByYou).and(R::OtherThanSource)),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ])),
+        })],
+        ..vanilla("Rescuer Sphinx", cost(&[generic(2), u(), u()]), 3, 2, vec![CreatureType::Sphinx])
+    }
+}
+
 /// Storm the Citadel — {4}{G} Sorcery. Until end of turn, creatures you control
 /// get +2/+2 and gain "whenever this creature deals combat damage to a player or
 /// planeswalker, destroy target artifact or enchantment an opponent controls."

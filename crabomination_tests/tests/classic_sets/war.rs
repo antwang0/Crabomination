@@ -1713,6 +1713,19 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Rescuer Sphinx's ETB is a reflexive bounce-then-grow (the bot declines the
+/// downside of bouncing its own permanent, so assert the wiring).
+#[test]
+fn rescuer_sphinx_reflexive_shape() {
+    use crabomination::effect::Effect;
+    let def = catalog::rescuer_sphinx();
+    assert_eq!((def.power, def.toughness), (3, 2));
+    assert!(def.keywords.contains(&Keyword::Flying));
+    let Effect::MayDo { body, .. } = &def.triggered_abilities[0].effect else { panic!("ETB is a MayDo") };
+    let Effect::Seq(steps) = &**body else { panic!("body is a Seq") };
+    assert!(matches!(steps.last(), Some(Effect::AddCounter { kind: CounterType::PlusOnePlusOne, .. })), "grows on success");
+}
+
 /// Storm the Citadel pumps your creatures +2/+2 and grants the combat trigger.
 #[test]
 fn storm_the_citadel_pumps_team() {
