@@ -41,10 +41,15 @@ Still open, grouped by primitive:
 - The many WAR planeswalkers (Liliana Dreadhorde General, Nissa Who Shakes the
   World, Nicol Bolas Dragon-God, the uncommon 3-ability walkers) and remaining
   legends (God-Eternal Kefnet — reveal-first-draw-copy; Ilharg, Neheb, Massacre
-  Girl). **God-Eternal Rhonas, Parhelion II, Dreadhorde Invasion, Enter the
-  God-Eternals, Tolsimir, Role Reversal, Heartwarming Redemption, Emergence Zone,
-  Mobilized District, Vivien's Arkbow shipped.** Sweep `scripts/set_diff.py war` for the live
-  list (~65 remain).
+  Girl). Recently shipped: God-Eternal Rhonas, Parhelion II, Dreadhorde Invasion,
+  Enter the God-Eternals, Tolsimir, Role Reversal, Heartwarming Redemption,
+  Emergence Zone, Mobilized District, Vivien's Arkbow, Oath of Kaya, Interplanar
+  Beacon, Storm the Citadel. Sweep `scripts/set_diff.py war` for the live list.
+  Still-hard remainders need new primitives: as-enters reflexive-sac (Devouring
+  Hellion, Rescuer Sphinx), persistent mana (Neheb), reveal-first-draw-copy
+  (God-Eternal Kefnet), delayed repeating -1/-1 (Massacre Girl), variable-target
+  destroy + per-destroyed loyalty (The Elderspell), the X-Finales, Bolas's
+  Citadel (cast-from-top-pay-life), Niv-Mizzet Reborn (WUBRG reveal).
 
 **Remaining DGM (Dragon's Maze) gap cards** — `catalog::sets::dgm`. The
 `dgm::gaps`/`gaps2` waves shipped the guild legends/mythics and easy commons
