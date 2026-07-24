@@ -2539,6 +2539,14 @@ impl GameState {
                         new_loyalty: new_loyalty as i32,
                     });
                 }
+                if amount > 0 {
+                    self.fire_combat_damage_triggers(
+                        atk.id,
+                        EventKind::DealsCombatDamageToPlaneswalker,
+                        Target::Permanent(pw_id),
+                        amount,
+                    );
+                }
                 if let Some(p) = spill_to
                     && spill > 0
                 {

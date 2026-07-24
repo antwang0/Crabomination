@@ -2148,3 +2148,95 @@ fn gideons_triumph_two_with_gideon() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Grizzly Bears").count(), 0, "both attacker and blocker sacrificed");
 }
+
+/// Jace, Arcane Strategist puts a +1/+1 counter on your creature on the second
+/// draw each turn (not the first), and only once.
+#[test]
+fn jace_arcane_strategist_second_draw_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::jace_arcane_strategist());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev); // first draw — no counter
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "no counter on first draw");
+    let mut ev2 = vec![];
+    g.draw_one(0, &mut ev2); // second draw — counter
+    g.dispatch_triggers_for_events(&ev2);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "counter on second draw");
+    let mut ev3 = vec![];
+    g.draw_one(0, &mut ev3); // third draw — no additional counter (once per turn)
+    g.dispatch_triggers_for_events(&ev3);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "still one — once per turn");
+}
+
+/// Vraska, Swarm's Eminence grows a deathtouch attacker that connects.
+#[test]
+fn vraska_grows_deathtouch_attacker() {
+    fn advance_to(g: &mut GameState, step: TurnStep) {
+        while g.step != step { g.perform_action(GameAction::PassPriority).expect("pass"); }
+    }
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vraska_swarms_eminence());
+    let mut dt = catalog::grizzly_bears();
+    dt.keywords.push(Keyword::Deathtouch);
+    let biter = g.add_card_to_battlefield(0, dt);
+    g.clear_sickness(biter);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: biter, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(biter).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "grew from connecting");
+}
+
+/// Vraska's Assassin token destroys a planeswalker it deals combat damage to.
+#[test]
+fn vraska_assassin_destroys_planeswalker() {
+    fn advance_to(g: &mut GameState, step: TurnStep) {
+        while g.step != step { g.perform_action(GameAction::PassPriority).expect("pass"); }
+    }
+    let mut g = two_player_game();
+    let vraska = g.add_card_to_battlefield(0, catalog::vraska_swarms_eminence());
+    let walker = g.add_card_to_battlefield(1, catalog::jace_arcane_strategist());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: vraska, ability_index: 0, target: None, x_value: None }).expect("-2");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Assassin").expect("token").id;
+    g.clear_sickness(token);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: token, target: AttackTarget::Planeswalker(walker) }])).expect("attack pw");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(walker).is_none(), "planeswalker destroyed by the Assassin");
+}
+
+/// Dovin taxes opponents' artifact/instant/sorcery spells by {1}; creature
+/// spells are untaxed.
+#[test]
+fn dovin_taxes_noncreature_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dovin_hand_of_control());
+    g.step = TurnStep::PreCombatMain;
+    // Opponent's instant now costs {1}{R}; only {R} available → unaffordable.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None }).is_err(), "the {{1}} tax makes the bolt unaffordable");
+    // A creature spell of the same base cost is untaxed and casts fine (on
+    // the caster's own turn, for sorcery timing).
+    g.active_player_idx = 1;
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).is_ok(), "creature spell untaxed");
+}

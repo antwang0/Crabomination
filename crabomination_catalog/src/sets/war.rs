@@ -2727,6 +2727,104 @@ pub fn rescuer_sphinx() -> CardDefinition {
     }
 }
 
+/// Dovin, Hand of Control — {2}{W/U} loyalty 5. Static: opponents' artifact,
+/// instant, and sorcery spells cost {1} more. −1: neutralize an opponent's
+/// permanent. (The −1's prevention is modeled combat-only for the turn.)
+pub fn dovin_hand_of_control() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Artifact, instant, and sorcery spells your opponents cast cost {1} more.",
+            effect: StaticEffect::OpponentSpellsCostMore {
+                filter: R::Artifact.or(R::HasCardType(CardType::Instant)).or(R::HasCardType(CardType::Sorcery)),
+                amount: 1,
+            },
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -1,
+            effect: Effect::PreventAllCombatDamageInvolving { target: target_filtered(R::Permanent.and(R::ControlledByOpponent)) },
+            ..Default::default()
+        }],
+        ..walker("Dovin, Hand of Control", cost(&[generic(2), hybrid(Color::White, Color::Blue)]), PlaneswalkerSubtype::Dovin, 5)
+    }
+}
+
+/// 1/1 black Assassin with deathtouch that destroys any planeswalker it damages
+/// (Vraska, Swarm's Eminence −2).
+fn vraska_assassin_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Assassin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Assassin], ..Default::default() },
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource),
+            effect: Effect::Destroy { what: Selector::Target(0) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vraska, Swarm's Eminence — {2}{B/G}{B/G} loyalty 5. Whenever a creature you
+/// control with deathtouch deals combat damage to a player or planeswalker, put
+/// a +1/+1 counter on it. −2: make a deathtouch Assassin that destroys the
+/// planeswalkers it damages.
+pub fn vraska_swarms_eminence() -> CardDefinition {
+    let deathtouch_dealer = || Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasKeyword(Keyword::Deathtouch) };
+    let grow = || Effect::AddCounter { what: Selector::TriggerSource, kind: CounterType::PlusOnePlusOne, amount: Value::ONE };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).with_filter(deathtouch_dealer()),
+                effect: grow(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::YourControl).with_filter(deathtouch_dealer()),
+                effect: grow(),
+            },
+        ],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: vraska_assassin_token() },
+            ..Default::default()
+        }],
+        ..walker("Vraska, Swarm's Eminence", cost(&[generic(2), hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]), PlaneswalkerSubtype::Vraska, 5)
+    }
+}
+
+/// Jace, Arcane Strategist — {4}{U}{U} loyalty 4. Whenever you draw your second
+/// card each turn, put a +1/+1 counter on target creature you control. +1: draw
+/// a card. −7: creatures you control can't be blocked this turn.
+pub fn jace_arcane_strategist() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::Triggerer, n: 2 })
+                .once_per_turn(),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility { loyalty_cost: 1, effect: draw(1), ..Default::default() },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::GrantKeyword {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..walker("Jace, Arcane Strategist", cost(&[generic(4), u(), u()]), PlaneswalkerSubtype::Jace, 4)
+    }
+}
+
 /// Gideon Blackblade — {1}{W}{W} loyalty 4. During your turn he's a 4/4 Human
 /// Soldier with indestructible (still a planeswalker) and takes no damage. +1:
 /// up to one other creature you control gains vigilance, lifelink, or

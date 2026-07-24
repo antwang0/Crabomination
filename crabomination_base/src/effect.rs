@@ -1820,6 +1820,11 @@ pub enum EventKind {
     AttacksAndIsntBlocked,
     /// Combat damage was dealt to a player by a creature.
     DealsCombatDamageToPlayer,
+    /// Combat damage was dealt to a planeswalker by a creature (keyed on the
+    /// dealer). Pair with `EventScope::SelfSource`/`YourControl`; the damaged
+    /// planeswalker is the default target slot (Vraska's Assassin token
+    /// destroys it; Vraska, Swarm's Eminence grows the dealer).
+    DealsCombatDamageToPlaneswalker,
     /// The listening permanent's controller was dealt combat damage (keyed on
     /// the *recipient*, not the dealer). Pair with `EventScope::SelfSource` for
     /// "whenever combat damage is dealt to you" downsides (Risona removes an
