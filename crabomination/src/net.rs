@@ -1621,6 +1621,14 @@ pub struct PermanentView {
     /// Expanding Ooze) read this. Populated by `project_permanent`.
     #[serde(default)]
     pub modified: bool,
+    /// CR 508.1a — true when this creature may attack even though it has
+    /// Defender, because its controller has a permission-granting effect
+    /// (High Alert / Assault Formation's team static, or a per-card grant).
+    /// Surfaced so the client's attacker-eligibility checks and Attack-All
+    /// panel offer Walls that can legally swing. Populated by
+    /// `project_permanent`.
+    #[serde(default)]
+    pub can_attack_despite_defender: bool,
 }
 
 impl PermanentView {

@@ -3548,7 +3548,8 @@ pub fn handle_game_input(
                                     && !c.tapped
                                     && (!c.summoning_sick
                                         || c.keywords.contains(&Keyword::Haste))
-                                    && !c.keywords.contains(&Keyword::Defender)
+                                    && (!c.keywords.contains(&Keyword::Defender)
+                                        || c.can_attack_despite_defender)
                             })
                             .unwrap_or(false);
                         if eligible {
@@ -4275,7 +4276,8 @@ pub fn handle_game_input(
                             && c.is_creature()
                             && !c.tapped
                             && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
-                            && !c.keywords.contains(&Keyword::Defender)
+                            && (!c.keywords.contains(&Keyword::Defender)
+                                || c.can_attack_despite_defender)
                     })
                     .map(|c| Attack {
                         attacker: c.id,

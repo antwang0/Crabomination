@@ -209,14 +209,22 @@ impl Bot for RandomBot {
                         .iter()
                         .filter(|c| {
                             c.controller == seat
-                                && c.can_attack()
+                                // `can_attack()`'s components minus its printed-
+                                // Defender gate, which is re-checked below against
+                                // the computed keyword set so a team "attack as
+                                // though no defender" grant (High Alert) applies.
+                                && c.definition.is_creature()
+                                && !c.tapped
+                                && (!c.summoning_sick || c.has_keyword(&Keyword::Haste))
+                                && !c.has_keyword(&Keyword::CantAttack)
                                 // Honor layer-granted Defender / can't-attack
                                 // (Pacifism, crewed-Vehicle states) — can_attack
                                 // only sees printed keywords.
                                 && state
                                     .computed_permanent(c.id)
                                     .map(|cp| {
-                                        !cp.keywords.contains(&Keyword::Defender)
+                                        (!cp.keywords.contains(&Keyword::Defender)
+                                            || state.ignores_defender_for_attack(c))
                                             && !cp.keywords.contains(&Keyword::CantAttack)
                                             // CR 508.1a — "can attack only if
                                             // defending player controls [X]"
@@ -279,7 +287,10 @@ impl Bot for RandomBot {
                                     .unwrap_or(true)
                         })
                         .collect();
-                    let total_raw_power: i32 = raw_attackers.iter().map(|c| c.power()).sum();
+                    // Use the damage-aware value so toughness-attackers (Doran,
+                    // High Alert) are weighed by what they actually deal.
+                    let total_raw_power: i32 =
+                        raw_attackers.iter().map(|c| attacker_damage_value(state, c.id)).sum();
                     let lethal_swing = total_raw_power >= opp_life;
                     let opp_blockers: Vec<&crate::card::CardInstance> = state
                         .battlefield
@@ -3150,7 +3161,8 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
         state
             .computed_permanent(c.id)
             .map(|cp| {
-                !cp.keywords.contains(&Keyword::Defender)
+                (!cp.keywords.contains(&Keyword::Defender)
+                    || state.ignores_defender_for_attack(c))
                     && !cp.keywords.contains(&Keyword::CantAttack)
             })
             .unwrap_or(true)
@@ -5089,6 +5101,28 @@ mod tests {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.iter().any(|atk_decl| atk_decl.attacker == atk),
                     "menace attacker should swing past a lone blocker");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
+    }
+
+    /// Under High Alert (team "attack as though no defender"), the bot declares
+    /// a Wall as an attacker instead of leaving it home.
+    #[test]
+    fn bot_attacks_with_wall_under_high_alert() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.add_card_to_battlefield(0, catalog::high_alert());
+        let wall = g.add_card_to_battlefield(0, catalog::wall_of_lost_thoughts()); // 0/4 Defender
+        g.clear_sickness(wall);
+        g.players[1].life = 3; // the Wall's 4 toughness-damage is lethal
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => {
+                assert!(a.iter().any(|d| d.attacker == wall),
+                    "Wall should attack (deals its toughness) under High Alert");
             }
             other => panic!("expected DeclareAttackers, got {:?}", other),
         }

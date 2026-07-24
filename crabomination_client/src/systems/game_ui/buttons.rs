@@ -100,7 +100,7 @@ pub fn update_attack_all_visibility(
             && c.is_creature()
             && !c.tapped
             && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
-            && !c.keywords.contains(&Keyword::Defender)
+            && (!c.keywords.contains(&Keyword::Defender) || c.can_attack_despite_defender)
     });
     node.display = if has_attackers { Display::Flex } else { Display::None };
 }

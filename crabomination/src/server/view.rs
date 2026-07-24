@@ -1336,6 +1336,7 @@ fn project_permanent(
                     && (o.definition.is_artifact()
                         || (o.definition.is_enchantment() && o.controller == card.controller))
             }),
+        can_attack_despite_defender: state.ignores_defender_for_attack(card),
     }
 }
 
