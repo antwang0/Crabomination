@@ -41,6 +41,16 @@ fn rna_stat_and_keyword_lines() {
         (catalog::windstorm_drake, 3, 3, &[Keyword::Flying]),
         (catalog::burning_tree_vandal, 2, 1, &[]),
         (catalog::ghor_clan_wrecker, 2, 2, &[Keyword::Menace]),
+        (catalog::haazda_officer, 3, 2, &[]),
+        (catalog::twilight_panther, 1, 2, &[]),
+        (catalog::vedalken_mesmerist, 2, 1, &[]),
+        (catalog::chillbringer, 3, 3, &[Keyword::Flying]),
+        (catalog::noxious_groodion, 2, 2, &[Keyword::Deathtouch]),
+        (catalog::steeple_creeper, 4, 2, &[]),
+        (catalog::gruul_beastmaster, 2, 2, &[]),
+        (catalog::trollbred_guardian, 5, 5, &[]),
+        (catalog::loxodon_restorer, 3, 4, &[Keyword::Convoke]),
+        (catalog::syndicate_messenger, 2, 3, &[Keyword::Flying]),
     ];
     for (f, p, t, kws) in table {
         let c = f();
@@ -550,4 +560,157 @@ fn sprouting_renewal_is_convoke_modal() {
         }
         _ => panic!("expected ChooseModesCast"),
     }
+}
+
+/// Summary Judgment deals 5 to a tapped creature under Addendum, 3 otherwise.
+#[test]
+fn summary_judgment_addendum_damage() {
+    // Cast during your main phase → 5 damage.
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    let cast = g.add_card_to_hand(0, catalog::summary_judgment());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    assert!(g.battlefield_find(foe).is_none(), "6/4 took 5 and died under Addendum");
+}
+
+/// Grotesque Demise exiles a small creature (and can't hit a big one).
+#[test]
+fn grotesque_demise_exiles_small() {
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // power 2
+    let cast = g.add_card_to_hand(0, catalog::grotesque_demise());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(small)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == small), "power-2 creature exiled");
+}
+
+/// Chillbringer taps an opponent's creature and stuns it.
+#[test]
+fn chillbringer_taps_and_stuns() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(foe)), 0, 0);
+    let effect = catalog::chillbringer().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let c = g.battlefield_find(foe).unwrap();
+    assert!(c.tapped, "opponent creature tapped");
+    assert_eq!(c.counter_count(CounterType::Stun), 1, "gets a stun counter");
+}
+
+/// Haazda Officer pumps a creature you control on entry.
+#[test]
+fn haazda_officer_pumps_ally() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    let effect = catalog::haazda_officer().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1");
+}
+
+/// Rubble Reading destroys a land and scries.
+#[test]
+fn rubble_reading_destroys_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::mountain());
+    let cast = g.add_card_to_hand(0, catalog::rubble_reading());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(land)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land destroyed");
+}
+
+/// Regenesis returns up to two permanent cards from the graveyard to hand.
+#[test]
+fn regenesis_returns_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let ctx = crabomination::game::effects::EffectContext {
+        targets: vec![Target::Permanent(a), Target::Permanent(b)],
+        ..crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)
+    };
+    let effect = catalog::regenesis().effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert!(g.players[0].hand.iter().any(|c| c.id == a) && g.players[0].hand.iter().any(|c| c.id == b), "both returned to hand");
+}
+
+/// Gruul Beastmaster pumps another creature by its power when it attacks.
+#[test]
+fn gruul_beastmaster_attack_pump() {
+    let mut g = two_player_game();
+    let boss = g.add_card_to_battlefield(0, catalog::gruul_beastmaster()); // 2/2
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(boss);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: boss, target: AttackTarget::Player(1) }]).expect("attack");
+    // Beastmaster power 2 → ally gets +2/+0. Resolve the attack trigger onto the ally.
+    let ctx = crabomination::game::effects::EffectContext {
+        source: Some(boss),
+        targets: vec![Target::Permanent(ally)],
+        ..crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(ally)), 0, 0)
+    };
+    let effect = catalog::gruul_beastmaster().triggered_abilities[1].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 4, "+2/+0 from Beastmaster's power");
+}
+
+/// Trollbred Guardian grants trample to your +1/+1-countered creatures.
+#[test]
+fn trollbred_guardian_trample_anthem() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::trollbred_guardian());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample), "no counter → no trample");
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample), "counter → trample");
+}
+
+/// Loxodon Restorer gains 4 life on entry and has convoke.
+#[test]
+fn loxodon_restorer_gains_four() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let life = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::loxodon_restorer());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4, "ETB gained 4");
+}
+
+/// Prying Eyes draws four and discards two.
+#[test]
+fn prying_eyes_draw_four_discard_two() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let cast = g.add_card_to_hand(0, catalog::prying_eyes());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    // -1 spell, +4 draw, -2 discard = net +1.
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 4 - 2, "net +1 card");
 }

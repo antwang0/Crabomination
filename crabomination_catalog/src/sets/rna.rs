@@ -702,3 +702,228 @@ pub fn cindervines() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Summary Judgment — {1}{W} Instant. Deal 3 damage to target tapped creature;
+/// Addendum — 5 damage instead if cast during your main phase.
+pub fn summary_judgment() -> CardDefinition {
+    CardDefinition {
+        name: "Summary Judgment",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::YourMainPhase,
+            then: Box::new(Effect::DealDamage { to: target_filtered(R::Creature.and(R::Tapped)), amount: Value::Const(5) }),
+            else_: Box::new(Effect::DealDamage { to: target_filtered(R::Creature.and(R::Tapped)), amount: Value::Const(3) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Haazda Officer — {2}{W} 3/2 Human Soldier. ETB target creature you control
+/// gets +1/+1 until end of turn.
+pub fn haazda_officer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            power: Value::ONE,
+            toughness: Value::ONE,
+            duration: Duration::EndOfTurn,
+        })],
+        ..body("Haazda Officer", cost(&[generic(2), w()]), 3, 2, vec![CreatureType::Human, CreatureType::Soldier], vec![])
+    }
+}
+
+/// Twilight Panther — {W} 1/2 Cat Spirit. {B}: gains deathtouch until end of turn.
+pub fn twilight_panther() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..body("Twilight Panther", cost(&[w()]), 1, 2, vec![CreatureType::Cat, CreatureType::Spirit], vec![])
+    }
+}
+
+/// Vedalken Mesmerist — {1}{U} 2/1 Vedalken Wizard. Whenever it attacks, target
+/// creature an opponent controls gets -2/-0 until end of turn.
+pub fn vedalken_mesmerist() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                power: Value::Const(-2),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..body("Vedalken Mesmerist", cost(&[generic(1), u()]), 2, 1, vec![CreatureType::Vedalken, CreatureType::Wizard], vec![])
+    }
+}
+
+/// Chillbringer — {4}{U} 3/3 Elemental with flying. ETB tap target creature an
+/// opponent controls; it doesn't untap during its controller's next untap step.
+pub fn chillbringer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+            Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+        ]))],
+        ..body("Chillbringer", cost(&[generic(4), u()]), 3, 3, vec![CreatureType::Elemental], vec![Keyword::Flying])
+    }
+}
+
+/// Grotesque Demise — {2}{B} Instant. Exile target creature with power 3 or less.
+pub fn grotesque_demise() -> CardDefinition {
+    CardDefinition {
+        name: "Grotesque Demise",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move { what: target_filtered(R::Creature.and(R::PowerAtMost(3))), to: ZoneDest::Exile },
+        ..Default::default()
+    }
+}
+
+/// Noxious Groodion — {2}{B} 2/2 Beast with deathtouch.
+pub fn noxious_groodion() -> CardDefinition {
+    body("Noxious Groodion", cost(&[generic(2), b()]), 2, 2, vec![CreatureType::Beast], vec![Keyword::Deathtouch])
+}
+
+/// Cavalcade of Calamity — {1}{R} Enchantment. Whenever a creature you control
+/// with power 1 or less attacks, deal 1 damage to the player it's attacking.
+pub fn cavalcade_of_calamity() -> CardDefinition {
+    CardDefinition {
+        name: "Cavalcade of Calamity",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::PowerAtMost(1)),
+            }),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rubble Reading — {3}{R} Sorcery. Destroy target land, then scry 2.
+pub fn rubble_reading() -> CardDefinition {
+    CardDefinition {
+        name: "Rubble Reading",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Land) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Regenesis — {3}{G}{G} Instant. Return up to two target permanent cards from
+/// your graveyard to your hand.
+pub fn regenesis() -> CardDefinition {
+    CardDefinition {
+        name: "Regenesis",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::InGraveyard.and(R::Not(Box::new(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))))),
+            effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Steeple Creeper — {2}{G} 4/2 Frog Snake. {3}{U}: gains flying until end of turn.
+pub fn steeple_creeper() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..body("Steeple Creeper", cost(&[generic(2), g()]), 4, 2, vec![CreatureType::Frog, CreatureType::Snake], vec![])
+    }
+}
+
+/// Gruul Beastmaster — {3}{G} 2/2 Human Shaman with Riot. Whenever it attacks,
+/// another target creature you control gets +X/+0 until end of turn, where X is
+/// this creature's power.
+pub fn gruul_beastmaster() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            riot(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                    power: Value::PowerOf(Box::new(Selector::This)),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..body("Gruul Beastmaster", cost(&[generic(3), g()]), 2, 2, vec![CreatureType::Human, CreatureType::Shaman], vec![])
+    }
+}
+
+/// Trollbred Guardian — {4}{G} 5/5 Troll Frog Warrior. {2}{G}: Adapt 2. Each
+/// creature you control with a +1/+1 counter has trample.
+pub fn trollbred_guardian() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: adapt(2),
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control with a +1/+1 counter has trample.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::WithCounter(CounterType::PlusOnePlusOne),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Trample],
+                opponents: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..body("Trollbred Guardian", cost(&[generic(4), g()]), 5, 5, vec![CreatureType::Troll, CreatureType::Frog, CreatureType::Warrior], vec![])
+    }
+}
+
+/// Loxodon Restorer — {4}{W}{W} 3/4 Elephant Cleric with convoke. ETB gain 4 life.
+pub fn loxodon_restorer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Convoke],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(4) })],
+        ..body("Loxodon Restorer", cost(&[generic(4), w(), w()]), 3, 4, vec![CreatureType::Elephant, CreatureType::Cleric], vec![])
+    }
+}
+
+/// Syndicate Messenger — {3}{W} 2/3 Bird with flying and Afterlife 1.
+pub fn syndicate_messenger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![afterlife(1)],
+        ..body("Syndicate Messenger", cost(&[generic(3), w()]), 2, 3, vec![CreatureType::Bird], vec![Keyword::Flying])
+    }
+}
+
+/// Prying Eyes — {4}{U}{U} Instant. Draw four cards, then discard two cards.
+pub fn prying_eyes() -> CardDefinition {
+    CardDefinition {
+        name: "Prying Eyes",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            draw(4),
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+        ]),
+        ..Default::default()
+    }
+}
