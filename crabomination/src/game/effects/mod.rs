@@ -10897,6 +10897,11 @@ impl GameState {
                 if self.no_search_this_turn {
                     return Ok(());
                 }
+                // Ashiok, Dream Render — an opponent's `OpponentsCantSearchLibraries`
+                // static stops `p` from searching their own library.
+                if self.player_search_locked_by_opponent(p) {
+                    return Ok(());
+                }
                 // CR 701.19a — the picker (when distinct) makes the pick;
                 // the searched library is still `p`'s.
                 let picker = picker_ref

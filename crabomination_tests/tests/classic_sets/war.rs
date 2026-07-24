@@ -1713,6 +1713,35 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Ashiok's static stops an opponent from searching their library; her −1 mills
+/// a target player four and exiles opponents' graveyards.
+#[test]
+fn ashiok_locks_search_and_mills() {
+    use crabomination::effect::{Effect, PlayerRef};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ashiok_dream_render());
+    // Player 1 (Ashiok's opponent) can't find a land in their own library.
+    g.add_card_to_library(1, catalog::forest());
+    let src = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = EffectContext::for_ability(src, 1, None);
+    let hand1 = g.players[1].hand.len();
+    g.resolve_effect(&Effect::Search { who: PlayerRef::You, filter: crabomination::card::SelectionRequirement::Land, to: crabomination::effect::ZoneDest::Hand(PlayerRef::You) }, &ctx).unwrap();
+    assert_eq!(g.players[1].hand.len(), hand1, "search found nothing under Ashiok");
+    // −1: target player 1 mills 4 and their graveyard is exiled.
+    for _ in 0..6 { g.add_card_to_library(1, catalog::forest()); }
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let ashiok = g.battlefield.iter().find(|c| c.definition.name == "Ashiok, Dream Render").unwrap().id;
+    let lib1 = g.players[1].library.len();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: ashiok, ability_index: 0, target: Some(Target::Player(1)), x_value: None }).expect("-1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib1 - 4, "milled 4");
+    assert!(g.players[1].graveyard.is_empty(), "opponent graveyard exiled");
+}
+
 /// Parhelion II is a Crew-4 Vehicle that makes two attacking Angels on attack.
 #[test]
 fn parhelion_ii_makes_two_attacking_angels() {

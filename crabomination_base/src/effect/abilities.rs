@@ -574,6 +574,12 @@ pub enum StaticEffect {
     /// `Hexproof` on opponents' *permanents* (any type) *and* on opponent
     /// players when checking target legality.
     IgnoreOpponentsHexproof,
+    /// Ashiok, Dream Render — "Spells and abilities your opponents control can't
+    /// cause their controller to search their library." While any player
+    /// controls this static, that player's opponents' searches of their own
+    /// library find nothing (CR 701.19 "can't search"). Checked in the
+    /// `Effect::Search` resolver alongside Shadow of Doubt's turn-wide lock.
+    OpponentsCantSearchLibraries,
     /// CR 119.7 — Targeted players can't gain life while this static is
     /// active. The `applies_to` selector resolves to one or more
     /// `PlayerView`-style entries; each matching player has their

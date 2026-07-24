@@ -8471,6 +8471,20 @@ impl GameState {
             })
     }
 
+    /// True if an *opponent* of `player` controls an
+    /// `OpponentsCantSearchLibraries` static (Ashiok, Dream Render) — `player`
+    /// can't search their own library (CR 701.19).
+    pub(crate) fn player_search_locked_by_opponent(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            !self.same_team(c.controller, player)
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::OpponentsCantSearchLibraries))
+        })
+    }
+
     /// True if `player` controls a permanent granting the broad "ignore
     /// opponents' hexproof" static (Kaya, Bane of the Dead) — plain `Hexproof`
     /// on opponents' permanents *and* opponent players no longer shields them.

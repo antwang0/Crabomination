@@ -33,11 +33,11 @@ Still open, grouped by primitive:
   any number of creatures/PWs as-enters, ×2); needs an as-enters reflexive-sac
   replacement feeding `enters_with_counters`. **Rescuer Sphinx** shares the
   as-enters-reflexive shape (may bounce a nonland permanent → +1/+1 counter).
-- The hybrid uncommon cycle: **Angrath/Huatli/Kiora/Samut/Kaya shipped**; still
-  open Ashiok Dream Render (opponents-can't-search static), Dovin Hand of Control
-  (artifact/I/S tax + prevent-all-damage-to/by target), Nahiri Storm of Stone (during-your-turn
-  first-strike + equip-cost-reduction + −X to tapped), Vraska Swarm's Eminence
-  (deathtouch-damage → counter; Assassin token with destroy-PW-on-damage).
+- The hybrid uncommon cycle: **Angrath/Huatli/Kiora/Samut/Kaya/Ashiok shipped**;
+  still open Dovin Hand of Control (artifact/I/S tax + prevent-all-damage-to/by
+  target), Nahiri Storm of Stone (during-your-turn first-strike +
+  equip-cost-reduction + −X to tapped), Vraska Swarm's Eminence (deathtouch-damage
+  → counter; Assassin token with destroy-PW-on-damage).
 - The many WAR planeswalkers (Liliana Dreadhorde General, Nissa Who Shakes the
   World, Nicol Bolas Dragon-God, the uncommon 3-ability walkers) and remaining
   legends (God-Eternal Kefnet — reveal-first-draw-copy; Ilharg, Neheb, Massacre

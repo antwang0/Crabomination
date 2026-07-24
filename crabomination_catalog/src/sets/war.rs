@@ -2486,6 +2486,27 @@ pub fn god_eternal_rhonas() -> CardDefinition {
     }
 }
 
+/// Ashiok, Dream Render — {1}{U/B}{U/B} loyalty 5. Static: opponents' spells and
+/// abilities can't cause their controller to search their library. −1: target
+/// player mills four, then exile each opponent's graveyard.
+pub fn ashiok_dream_render() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Spells and abilities your opponents control can't cause their controller to search their library.",
+            effect: StaticEffect::OpponentsCantSearchLibraries,
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -1,
+            effect: Effect::Seq(vec![
+                Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(4) },
+                Effect::ExileAllGraveyards { filter: None, opponents_only: true },
+            ]),
+            ..Default::default()
+        }],
+        ..walker("Ashiok, Dream Render", cost(&[generic(1), hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black)]), PlaneswalkerSubtype::Ashiok, 5)
+    }
+}
+
 /// Parhelion II — {6}{W}{W} legendary Vehicle 5/5 with flying, first strike,
 /// vigilance. Crew 4. When it attacks, make two 4/4 flying-vigilance Angels
 /// attacking (they stay).
