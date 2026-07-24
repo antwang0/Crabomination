@@ -16,6 +16,22 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **WAR set complete (modern_decks, this run, 10 bombs):** Tezzeret Master of
+  the Bridge, God-Eternal Kefnet, Nissa Who Shakes the World, Nicol Bolas
+  Dragon-God, Bolas's Citadel, Feather the Redeemed, Finale of Promise, Deliver
+  Unto Evil, Gideon's Sacrifice, Niv-Mizzet Reborn — WAR now has zero
+  `set_gaps.py` gaps. New engine: `StaticEffect::GrantAffinityToSpells`
+  (generalized affinity), `LookTopPutMatchingOntoBattlefield.exile_rest`,
+  `EventKind::FirstCardDrawnThisTurn` + SelfSource `CardExiled` triggers from
+  LKI (God-Eternal recur now covers exile), `damage_redirect_this_turn` +
+  `Effect::RedirectYourDamageToChosen`, `Effect::NivMizzetReveal`,
+  `CardInstance.feather_exile_return` + `Effect::MarkExileReturnOnResolve`,
+  `Effect::DeliverUntoEvil` (opponent-choose split),
+  `StaticEffect::HasAllOtherPlaneswalkerLoyaltyAbilities`,
+  `Effect::EachOpponentExilesHandCardOrPermanent`,
+  `Effect::EachOpponentWithoutLegendaryLoses`,
+  `StaticEffect::PlayFromLibraryTopPayLife` (Bolas's Citadel),
+  `Effect::FinaleOfPromise`. Tests in `classic_sets/war`.
 - **WAR walker/spell wave (this run, 20 cards):** the hybrid uncommon walker
   cycle is complete (Dovin, Nahiri, Vraska) plus Gideon Blackblade, Jace Arcane
   Strategist, Ajani the Greathearted, Sorin Vengeful Bloodlord, Vivien Champion

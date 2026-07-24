@@ -10018,3 +10018,66 @@ fn cr_608_2h_sacrificed_mana_value_read_via_lki() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, foe_life - 6, "damage equals the departed permanent's LKI mana value");
 }
+
+// ── CR 606.3 — borrowed loyalty abilities share the once-per-turn budget ──────
+/// Nicol Bolas, Dragon-God gains every other planeswalker's loyalty abilities,
+/// but CR 606.3's "only once each turn" is per *permanent*: activating one
+/// (even a borrowed) ability spends Bolas's activation for the turn.
+#[test]
+fn cr_606_3_borrowed_loyalty_shares_once_per_turn() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bolas = g.add_card_to_battlefield(0, catalog::nicol_bolas_dragon_god());
+    g.battlefield_find_mut(bolas).unwrap().counters.insert(CounterType::Loyalty, 8);
+    g.add_card_to_battlefield(0, catalog::chandra_fire_artisan());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Activate a borrowed ability (Chandra's +1 at index 3).
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: bolas, ability_index: 3, target: None, x_value: None }).expect("first activation");
+    drain_stack(&mut g);
+    // A second activation the same turn — even Bolas's own −3 — is rejected.
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let err = g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: bolas, ability_index: 1, target: Some(Target::Permanent(foe)), x_value: None }).unwrap_err();
+    assert!(matches!(err, GameError::LoyaltyAbilityAlreadyUsed(id) if id == bolas), "one loyalty activation per turn per permanent");
+}
+
+// ── CR 601.2h — an unpayable life cost blocks the cast ────────────────────────
+/// A spell cast off Bolas's Citadel pays life equal to its mana value; if the
+/// player can't pay that life, the cast is illegal (CR 601.2h).
+#[test]
+fn cr_601_2h_bolass_citadel_unpayable_life() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bolass_citadel());
+    // A high-MV spell on top; life too low to pay it.
+    let wurm = g.add_card_to_library(0, catalog::craw_wurm()); // MV 6
+    g.players[0].life = 3;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let err = g.perform_action(GameAction::CastSpell { card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None }).unwrap_err();
+    assert!(matches!(err, GameError::InsufficientLife), "can't pay 6 life at 3 life");
+    assert!(g.players[0].library.first().is_some_and(|c| c.id == wurm), "spell stays on top of library");
+}
+
+// ── CR 706 — Finale of Promise copies each free-cast spell twice at X ≥ 10 ─────
+/// With X ≥ 10, Finale of Promise copies the instant and sorcery it casts twice
+/// each; the copies are new objects on the stack (CR 707.10).
+#[test]
+fn cr_707_10_finale_of_promise_copies_at_ten() {
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let opp_life = g.players[1].life;
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(bolt)],
+        ..EffectContext::for_spell(0, None, 0, 10) // X = 10
+    };
+    g.resolve_effect(&catalog::finale_of_promise().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    // Original Bolt + two copies = 9 damage to the opponent.
+    assert_eq!(g.players[1].life, opp_life - 9, "Bolt plus two copies dealt 9");
+}
