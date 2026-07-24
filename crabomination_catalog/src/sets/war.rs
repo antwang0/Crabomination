@@ -3973,3 +3973,81 @@ pub fn gideons_sacrifice() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Niv-Mizzet Reborn — {W}{U}{B}{R}{G} 6/6 Dragon Avatar with flying. ETB:
+/// reveal the top ten; for each guild color pair take a card that's exactly
+/// those colors to hand, rest bottomed at random.
+pub fn niv_mizzet_reborn() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::NivMizzetReveal)],
+        ..vanilla("Niv-Mizzet Reborn", cost(&[w(), u(), b(), r(), g()]), 6, 6, vec![CreatureType::Dragon, CreatureType::Avatar])
+    }
+}
+
+/// Nissa, Who Shakes the World — {3}{G}{G} loyalty 5. Static: whenever you tap
+/// a Forest for mana, add an extra {G}. +1: three +1/+1 counters on a
+/// noncreature land you control, untap it, it becomes a 0/0 Elemental with
+/// vigilance and haste that's still a land. −8: emblem "Lands you control have
+/// indestructible" and search out any number of Forests tapped.
+pub fn nissa_who_shakes_the_world() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Whenever you tap a Forest for mana, add an additional {G}.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: false,
+                filter: R::HasLandType(crate::card::LandType::Forest).and(R::ControlledByYou),
+                extra: crate::effect::ExtraManaKind::Fixed(Color::Green),
+                while_monarch: false,
+            },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(R::Land.and(R::Noncreature).and(R::ControlledByYou)),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(3),
+                    },
+                    Effect::Untap { what: Selector::Target(0), up_to: None },
+                    Effect::BecomeCreature {
+                        what: Selector::Target(0),
+                        power: Value::ZERO,
+                        toughness: Value::ZERO,
+                        creature_types: vec![CreatureType::Elemental],
+                        keywords: vec![Keyword::Vigilance, Keyword::Haste],
+                        duration: Duration::Permanent,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::Seq(vec![
+                    Effect::CreateEmblem {
+                        who: PlayerRef::You,
+                        name: "Nissa, Who Shakes the World".into(),
+                        triggered: vec![],
+                        statics: vec![StaticAbility {
+                            description: "Lands you control have indestructible.",
+                            effect: StaticEffect::GrantKeyword {
+                                applies_to: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+                                keyword: Keyword::Indestructible,
+                            },
+                        }],
+                    },
+                    Effect::SearchUpToN {
+                        who: PlayerRef::You,
+                        filter: R::HasLandType(crate::card::LandType::Forest),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                        count: Value::Const(10),
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..walker("Nissa, Who Shakes the World", cost(&[generic(3), g(), g()]), PlaneswalkerSubtype::Nissa, 5)
+    }
+}

@@ -14863,6 +14863,8 @@ static WAR: &[Factory] = &[
     super::war::tezzeret_master_of_the_bridge,
     super::war::god_eternal_kefnet,
     super::war::gideons_sacrifice,
+    super::war::niv_mizzet_reborn,
+    super::war::nissa_who_shakes_the_world,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

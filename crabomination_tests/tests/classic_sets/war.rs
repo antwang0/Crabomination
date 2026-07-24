@@ -2922,3 +2922,53 @@ fn gideons_sacrifice_redirects_damage() {
     assert_eq!(g.players[0].life, life, "player took no damage");
     assert!(g.battlefield_find(bear).is_none(), "the bear soaked lethal and died");
 }
+
+/// Niv-Mizzet Reborn takes one card of each guild pair from the top ten.
+#[test]
+fn niv_mizzet_reborn_grabs_guild_cards() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::lightning_helix()); // W/R
+    g.add_card_to_library(0, catalog::terminate());       // B/R
+    g.add_card_to_library(0, catalog::grizzly_bears());   // mono-G
+    let hand_before = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::niv_mizzet_reborn());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Helix"), "W/R card taken");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Terminate"), "B/R card taken");
+    assert!(!g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "mono-color not taken");
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "exactly two guild cards");
+}
+
+/// Nissa, Who Shakes the World: tapping your Forest for mana yields an extra
+/// {G}; her +1 animates a land into a 3/3 Elemental.
+#[test]
+fn nissa_shakes_extra_green_and_land_animation() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nissa_who_shakes_the_world());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    // Tap the Forest for mana → base {G} + Nissa's extra {G}.
+    let (idx, _) = g.effective_mana_abilities(forest).into_iter().next().expect("mana ability");
+    g.perform_action(GameAction::ActivateAbility { card_id: forest, ability_index: idx, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "Forest {{G}} + Nissa's extra {{G}}");
+}
+
+/// Nissa's +1 puts three +1/+1 counters on a noncreature land and animates it.
+#[test]
+fn nissa_shakes_plus_one_animates_land() {
+    let mut g = two_player_game();
+    let nissa = g.add_card_to_battlefield(0, catalog::nissa_who_shakes_the_world());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: nissa, ability_index: 0, target: Some(Target::Permanent(land)), x_value: None }).expect("+1");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "land untapped");
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne), 3, "three +1/+1 counters");
+    let cp = g.computed_permanent(land).unwrap();
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "0/0 with three +1/+1 counters");
+    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Haste), "vigilance + haste");
+}

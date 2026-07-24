@@ -12831,6 +12831,48 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NivMizzetReveal => {
+                use crate::mana::Color::*;
+                let p = ctx.controller;
+                let looked: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(10).map(|c| c.id).collect();
+                if looked.is_empty() {
+                    return Ok(());
+                }
+                const PAIRS: [[crate::mana::Color; 2]; 10] = [
+                    [White, Blue], [White, Black], [White, Red], [White, Green],
+                    [Blue, Black], [Blue, Red], [Blue, Green],
+                    [Black, Red], [Black, Green], [Red, Green],
+                ];
+                let mut taken: Vec<crate::card::CardId> = Vec::new();
+                for pair in PAIRS {
+                    if let Some(id) = looked.iter().copied().find(|id| {
+                        !taken.contains(id)
+                            && self.players[p].library.iter().find(|c| c.id == *id).is_some_and(|c| {
+                                let cols = c.definition.printed_colors();
+                                cols.len() == 2 && pair.iter().all(|c| cols.contains(c))
+                            })
+                    }) {
+                        taken.push(id);
+                    }
+                }
+                for id in &taken {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, *id) {
+                        self.players[p].hand.push(card);
+                    }
+                }
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<crate::card::CardId> =
+                    looked.iter().copied().filter(|id| !taken.contains(id)).collect();
+                rest.shuffle(&mut rand::rng());
+                for id in rest {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileLibraryExceptBottom { who, keep } => {
                 let keep = self.evaluate_value(keep, ctx).max(0) as usize;
                 for p in self.resolve_players(who, ctx) {

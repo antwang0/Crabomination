@@ -160,6 +160,7 @@ impl Effect {
             Effect::Noop
             | Effect::AdvanceClassLevel
             | Effect::SignalTheClans
+            | Effect::NivMizzetReveal
             | Effect::UnexpectedResults
             | Effect::PayLifeRevealExileFromHand { .. }
             | Effect::ChannelLifeForMana

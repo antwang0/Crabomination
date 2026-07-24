@@ -3507,6 +3507,12 @@ pub enum Effect {
     /// Registers a `(controller, chosen)` entry in `damage_redirect_this_turn`
     /// (CR 614.9), consulted by `damage_redirect_target`.
     RedirectYourDamageToChosen { what: Selector },
+    /// Niv-Mizzet Reborn — reveal the top ten cards of your library; for each
+    /// of the ten guild color pairs, take one revealed card whose printed
+    /// colors are exactly that pair into your hand; put the rest on the bottom
+    /// of your library in a random order. (When a pair has several matches the
+    /// first revealed is taken.)
+    NivMizzetReveal,
     /// Gifts Ungiven — search up to `count` library cards with different
     /// names and reveal them; the targeted opponent chooses `opponent_picks`
     /// of them, which go to `chosen_to`; the rest go to `rest_to`; shuffle.
