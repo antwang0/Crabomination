@@ -2762,6 +2762,10 @@ pub enum Effect {
     /// "spells you control can't be countered for the rest of this turn"
     /// (Veil of Summer). Cleared at the next untap.
     GrantSpellsUncounterableThisTurn { who: Selector },
+    /// Like `GrantSpellsUncounterableThisTurn` but only for *creature* spells
+    /// (Domri, Anarch of Bolas's "Creature spells you cast this turn can't be
+    /// countered"). Cleared at the next untap.
+    GrantCreatureSpellsUncounterableThisTurn { who: Selector },
     /// Add `colors` to each resolved player's
     /// `hexproof_from_colors_this_turn` — "you and permanents you control
     /// gain hexproof from [colors] until end of turn" (Veil of Summer's

@@ -2580,3 +2580,35 @@ fn finale_of_eternity_x10_reanimates() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears"), "Grizzly Bears reanimated");
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Primordial Wurm"), "Primordial Wurm reanimated");
 }
+
+/// Domri's anthem pumps your creatures and his −2 makes them fight.
+#[test]
+fn domri_anarch_anthem_and_fight() {
+    let mut g = two_player_game();
+    let domri = g.add_card_to_battlefield(0, catalog::domri_anarch_of_bolas());
+    let wurm = g.add_card_to_battlefield(0, catalog::primordial_wurm()); // 7/7 -> 8/7
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    assert_eq!(g.computed_permanent(wurm).unwrap().power, 8, "anthem gives +1/+0");
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Slot 0 = your fighter; the engine auto-picks the lone enemy for slot 1.
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: domri, ability_index: 1, target: Some(Target::Permanent(wurm)), x_value: None }).expect("-2 fight");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prey).is_none(), "the enemy 2/2 died to the 8-power fighter");
+    assert!(g.battlefield_find(wurm).is_some(), "the 8/7 survived the 2 damage back");
+}
+
+/// Domri's +1 adds R or G and shields your creature spells from counters.
+#[test]
+fn domri_anarch_plus_one_mana_and_uncounterable() {
+    let mut g = two_player_game();
+    let domri = g.add_card_to_battlefield(0, catalog::domri_anarch_of_bolas());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: domri, ability_index: 0, target: None, x_value: None }).expect("+1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "added one red (decider default)");
+    assert!(g.players[0].creature_spells_uncounterable_this_turn, "creature spells shielded this turn");
+}

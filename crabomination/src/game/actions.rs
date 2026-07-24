@@ -1300,6 +1300,12 @@ impl crate::game::GameState {
         if self.players[caster].spells_uncounterable_this_turn {
             return true;
         }
+        // Creature-spell-only grant (Domri, Anarch of Bolas's +1).
+        if self.players[caster].creature_spells_uncounterable_this_turn
+            && card.definition.is_creature()
+        {
+            return true;
+        }
         // Conditional "if X is N or more, this spell can't be countered"
         // rider (Banefire-style). Threshold lives on the card's printed
         // keywords as `CantBeCounteredIfXAtLeast(threshold)`; checked

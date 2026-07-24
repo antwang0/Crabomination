@@ -3583,6 +3583,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantCreatureSpellsUncounterableThisTurn { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].creature_spells_uncounterable_this_turn = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GainHexproofUntilYourNextTurn { who } => {
                 for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
                     if let EntityRef::Player(p) = ent {

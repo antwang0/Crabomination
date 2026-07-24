@@ -3504,6 +3504,44 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
     }
 }
 
+/// Domri, Anarch of Bolas — {1}{R}{G} loyalty 3. Static: creatures you control
+/// get +1/+0. +1: add {R} or {G}; creature spells you cast this turn can't be
+/// countered. −2: a creature you control fights a creature you don't control.
+pub fn domri_anarch_of_bolas() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::OfColors(vec![Color::Red, Color::Green], Value::ONE),
+                    },
+                    Effect::GrantCreatureSpellsUncounterableThisTurn { who: Selector::You },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Fight {
+                    attacker: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                    defender: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                },
+                ..Default::default()
+            },
+        ],
+        ..walker("Domri, Anarch of Bolas", cost(&[generic(1), r(), g()]), PlaneswalkerSubtype::Domri, 3)
+    }
+}
+
 /// Finale of Eternity — {X}{B}{B} Sorcery. Destroy up to three target creatures
 /// with toughness X or less. If X is 10 or more, return all creature cards from
 /// your graveyard to the battlefield.

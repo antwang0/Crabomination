@@ -656,6 +656,10 @@ pub struct Player {
     /// snapshot back-compat.
     #[serde(default)]
     pub spells_uncounterable_this_turn: bool,
+    /// Like `spells_uncounterable_this_turn` but only for *creature* spells
+    /// (Domri, Anarch of Bolas's +1). Reset alongside it at untap.
+    #[serde(default)]
+    pub creature_spells_uncounterable_this_turn: bool,
     /// Colors this player (and their permanents) have hexproof from for the
     /// rest of the turn (Veil of Summer's "you and permanents you control
     /// gain hexproof from blue and from black until end of turn"). Set by
@@ -802,6 +806,7 @@ impl Player {
             cannot_gain_life_this_turn: false,
             life_locked_this_turn: false,
             spells_uncounterable_this_turn: false,
+            creature_spells_uncounterable_this_turn: false,
             hexproof_from_colors_this_turn: Vec::new(),
             hexproof_until_next_turn: false,
             cast_blue_or_black_this_turn: false,

@@ -861,7 +861,8 @@ impl Effect {
             }
             Effect::LifeGainLockThisTurn { who } | Effect::LifeLockThisTurn { who } => sel_has_target(who),
             Effect::LifeGainLockGame { who } => sel_has_target(who),
-            Effect::GrantSpellsUncounterableThisTurn { who } => sel_has_target(who),
+            Effect::GrantSpellsUncounterableThisTurn { who }
+            | Effect::GrantCreatureSpellsUncounterableThisTurn { who } => sel_has_target(who),
             Effect::GrantHexproofFromColorThisTurn { who, .. } => sel_has_target(who),
             Effect::GainHexproofUntilYourNextTurn { who } => player_has_target(who),
             Effect::CantCastNoncreatureThisTurn { who } => sel_has_target(who),
@@ -2243,6 +2244,7 @@ impl Effect {
                 Effect::LifeGainLockThisTurn { who }
                 | Effect::LifeLockThisTurn { who }
                 | Effect::GrantSpellsUncounterableThisTurn { who }
+                | Effect::GrantCreatureSpellsUncounterableThisTurn { who }
                 | Effect::GrantHexproofFromColorThisTurn { who, .. }
                 | Effect::CantCastNoncreatureThisTurn { who } => sel_find(who, slot),
                 Effect::ExchangeLifeTotals { a, b } => {
