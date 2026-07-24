@@ -2486,6 +2486,24 @@ pub fn god_eternal_rhonas() -> CardDefinition {
     }
 }
 
+/// Kaya, Bane of the Dead — {3}{W/B}{W/B}{W/B} loyalty 7. Static: you may target
+/// opponents' hexproof permanents and players as though they lacked hexproof.
+/// −3: exile target creature.
+pub fn kaya_bane_of_the_dead() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Your opponents and permanents your opponents control with hexproof can be the targets of spells and abilities you control as though they didn't have hexproof.",
+            effect: StaticEffect::IgnoreOpponentsHexproof,
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -3,
+            effect: Effect::Exile { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..walker("Kaya, Bane of the Dead", cost(&[generic(3), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]), PlaneswalkerSubtype::Kaya, 7)
+    }
+}
+
 /// Tamiyo's Epiphany — {3}{U} Sorcery. Scry 4, then draw two cards.
 pub fn tamiyos_epiphany() -> CardDefinition {
     CardDefinition {

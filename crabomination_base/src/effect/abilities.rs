@@ -567,6 +567,13 @@ pub enum StaticEffect {
     /// have hexproof." The source's controller ignores plain `Hexproof` on
     /// opponents' creatures when checking target legality.
     IgnoreOpponentsCreatureHexproof,
+    /// Kaya, Bane of the Dead — "Your opponents and permanents your opponents
+    /// control with hexproof can be the targets of spells and abilities you
+    /// control as though they didn't have hexproof." The broad sibling of
+    /// `IgnoreOpponentsCreatureHexproof`: the source's controller ignores plain
+    /// `Hexproof` on opponents' *permanents* (any type) *and* on opponent
+    /// players when checking target legality.
+    IgnoreOpponentsHexproof,
     /// CR 119.7 — Targeted players can't gain life while this static is
     /// active. The `applies_to` selector resolves to one or more
     /// `PlayerView`-style entries; each matching player has their

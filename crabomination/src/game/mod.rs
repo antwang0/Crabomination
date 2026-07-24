@@ -13936,6 +13936,7 @@ fn static_effect_to_effects(
             // `check_target_legality_with_source` (Glaring Spotlight); no
             // layer effect.
             | StaticEffect::IgnoreOpponentsCreatureHexproof
+            | StaticEffect::IgnoreOpponentsHexproof
             | StaticEffect::LandsTapColorlessOnly
             // ArtifactActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Collector Ouphe); no layer effect.

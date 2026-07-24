@@ -8235,7 +8235,7 @@ impl GameState {
     ) -> Result<(), GameError> {
         let cid = match target {
             Target::Player(p) => {
-                if *p != caster && self.player_has_static_hexproof(*p) {
+                if *p != caster && self.player_has_static_hexproof(*p) && !self.player_ignores_hexproof(caster) {
                     return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
                 }
                 // Protection from everything (The One Ring) — can't be
@@ -8461,12 +8461,27 @@ impl GameState {
     /// creatures no longer shields them from `player`'s spells and abilities.
     pub(crate) fn player_ignores_creature_hexproof(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
+        self.player_ignores_hexproof(player)
+            || self.battlefield.iter().any(|c| {
+                c.controller == player
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::IgnoreOpponentsCreatureHexproof))
+            })
+    }
+
+    /// True if `player` controls a permanent granting the broad "ignore
+    /// opponents' hexproof" static (Kaya, Bane of the Dead) — plain `Hexproof`
+    /// on opponents' permanents *and* opponent players no longer shields them.
+    pub(crate) fn player_ignores_hexproof(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
             c.controller == player
                 && c.definition
                     .static_abilities
                     .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::IgnoreOpponentsCreatureHexproof))
+                    .any(|sa| matches!(sa.effect, StaticEffect::IgnoreOpponentsHexproof))
         })
     }
 

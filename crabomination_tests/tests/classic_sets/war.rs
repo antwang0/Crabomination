@@ -1713,6 +1713,29 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Kaya lets her controller target an opponent's hexproof creature and the
+/// hexproof opponent, and exiles a creature for −3.
+#[test]
+fn kaya_ignores_opponent_hexproof() {
+    let mut g = two_player_game();
+    let kaya = g.add_card_to_battlefield(0, catalog::kaya_bane_of_the_dead());
+    // An opponent's hexproof creature is normally untargetable...
+    let mut hex = catalog::grizzly_bears();
+    hex.keywords.push(Keyword::Hexproof);
+    let foe = g.add_card_to_battlefield(1, hex);
+    assert!(g.check_target_legality(&Target::Permanent(foe), 0).is_ok(), "Kaya ignores creature hexproof");
+    // ...and a hexproof opponent player becomes targetable.
+    g.players[1].hexproof_until_next_turn = true;
+    assert!(g.check_target_legality(&Target::Player(1), 0).is_ok(), "Kaya ignores player hexproof");
+    // −3 exiles a creature.
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: kaya, ability_index: 0, target: Some(Target::Permanent(foe)), x_value: None }).expect("-3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "exiled");
+}
+
 /// Planewide Celebration is a choose-four-with-repeats modal sorcery.
 #[test]
 fn planewide_celebration_is_choose_four() {
