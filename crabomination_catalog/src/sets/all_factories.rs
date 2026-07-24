@@ -14860,6 +14860,9 @@ static WAR: &[Factory] = &[
     super::war::ral_storm_conduit,
     super::war::ugin_the_ineffable,
     super::war::neheb_dreadhorde_champion,
+    super::war::tezzeret_master_of_the_bridge,
+    super::war::god_eternal_kefnet,
+    super::war::gideons_sacrifice,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,

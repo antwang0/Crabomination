@@ -2240,6 +2240,7 @@ pub fn united_battlefront() -> CardDefinition {
             then: None,
             max: Some(2),
             tapped: false,
+            exile_rest: false,
         },
         ..Default::default()
     }

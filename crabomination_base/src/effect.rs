@@ -1791,6 +1791,10 @@ pub enum EventKind {
     CreatureLeavesBattlefieldNotDying,
     /// A card was drawn.
     CardDrawn,
+    /// The turn's first card drawn (CR 121). Fired once per turn per player;
+    /// the trigger subject is the drawn card. "The first time each turn you
+    /// draw a card" (God-Eternal Kefnet).
+    FirstCardDrawnThisTurn,
     /// A card was discarded.
     CardDiscarded,
     /// A land was played.
@@ -3353,6 +3357,11 @@ pub enum Effect {
         /// Deployed cards enter tapped.
         #[serde(default)]
         tapped: bool,
+        /// The non-deployed remainder is exiled rather than left on the
+        /// library bottom — "Exile the top N cards. Put all [filter] from
+        /// among them onto the battlefield" (Tezzeret, Master of the Bridge).
+        #[serde(default)]
+        exile_rest: bool,
     },
     /// "Reveal the top `count` cards of your library. For each card type, you
     /// may put a card of that type from among them into your hand. Put the
@@ -3493,6 +3502,11 @@ pub enum Effect {
     /// Spellskite — change the primary target of the selected stack spell
     /// to this permanent, if it's a legal target for that spell (CR 115.7).
     RedirectSpellTargetToSelf { what: Selector },
+    /// Gideon's Sacrifice — "All damage that would be dealt this turn to you
+    /// and permanents you control is dealt to the chosen permanent instead."
+    /// Registers a `(controller, chosen)` entry in `damage_redirect_this_turn`
+    /// (CR 614.9), consulted by `damage_redirect_target`.
+    RedirectYourDamageToChosen { what: Selector },
     /// Gifts Ungiven — search up to `count` library cards with different
     /// names and reveal them; the targeted opponent chooses `opponent_picks`
     /// of them, which go to `chosen_to`; the rest go to `rest_to`; shuffle.

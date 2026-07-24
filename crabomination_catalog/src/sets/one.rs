@@ -6388,6 +6388,7 @@ pub fn green_suns_twilight() -> CardDefinition {
                 then: None,
                 max: Some(2),
                 tapped: false,
+                exile_rest: false,
             }),
             else_: Box::new(Effect::LookPickToHand {
                 who: PlayerRef::You,
@@ -6739,6 +6740,7 @@ pub fn expand_the_sphere() -> CardDefinition {
                 then: None,
                 max: Some(2),
                 tapped: true,
+                exile_rest: false,
             },
         ]),
         ..Default::default()

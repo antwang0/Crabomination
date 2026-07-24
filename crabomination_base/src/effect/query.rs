@@ -565,6 +565,7 @@ impl Effect {
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),
+            Effect::RedirectYourDamageToChosen { what } => sel_has_target(what),
             Effect::AddManaKeptThisTurn { who, .. }
             | Effect::AddManaKeptThisTurnCount { who, .. } => player_has_target(who),
             Effect::AddManaEqualToPermanentCost { .. } => false,
@@ -1070,6 +1071,7 @@ impl Effect {
             Effect::BottomChosenFromHandAndDraw { from, .. } => sel_filter(from),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_filter(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
+            Effect::RedirectYourDamageToChosen { what } => sel_filter(what),
             Effect::ManaClash { opponent } => sel_filter(opponent),
             // Edict-class effects: "target player sacrifices a permanent."
             // The `who` selector usually carries a `target_filtered(Player)`
@@ -2107,6 +2109,7 @@ impl Effect {
                 Effect::BottomChosenFromHandAndDraw { from, .. } => sel_find(from, slot),
                 Effect::SearchSplitOpponentChooses { opponent, .. } => sel_find(opponent, slot),
                 Effect::RedirectSpellTargetToSelf { what } => sel_find(what, slot),
+                Effect::RedirectYourDamageToChosen { what } => sel_find(what, slot),
                 Effect::ManaClash { opponent } => sel_find(opponent, slot),
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
                 Effect::SetMaxHandSize { who, .. } => sel_find(who, slot),

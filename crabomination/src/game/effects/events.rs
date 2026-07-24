@@ -31,6 +31,7 @@ pub(crate) fn event_matches_spec(
             GameEvent::CreatureLeftWithoutDying { .. },
         ) => true,
         (EventKind::CardDrawn, GameEvent::CardDrawn { .. }) => true,
+        (EventKind::FirstCardDrawnThisTurn, GameEvent::FirstCardDrawnThisTurn { .. }) => true,
         (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. }) => true,
         (EventKind::LandPlayed, GameEvent::LandPlayed { .. }) => true,
         (EventKind::SpellCast, GameEvent::SpellCast { .. }) => true,
@@ -184,6 +185,11 @@ pub(crate) fn event_matches_spec(
         ) || matches!(
             event,
             GameEvent::PermanentSacrificed { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // "When this is put into exile from the battlefield" — fires from
+            // LKI off the exiled card itself (God-Eternal Kefnet/Bontu recur).
+            event,
+            GameEvent::PermanentExiled { card_id } if *card_id == source.id
         ) || (
             // `Blocks` vs `BecomesBlocked` look at different sides of
             // the same BlockerDeclared event:
@@ -498,6 +504,7 @@ pub(crate) fn event_actor(state: &GameState, event: &GameEvent) -> Option<usize>
 fn event_player(event: &GameEvent) -> Option<usize> {
     match event {
         GameEvent::CardDrawn { player, .. }
+        | GameEvent::FirstCardDrawnThisTurn { player, .. }
         | GameEvent::CardDiscarded { player, .. }
         | GameEvent::DiscardedBatch { player, .. }
         | GameEvent::LandPlayed { player, .. }
@@ -624,6 +631,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // filter: IS }` can introspect the drawn/discarded card.
         // Lorehold the Historian's miracle grant relies on this.
         GameEvent::CardDrawn { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::FirstCardDrawnThisTurn { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardDiscarded { card_id, .. } => Some(EntityRef::Card(*card_id)),
         // Bind TriggerSource to the milled card (now in a graveyard) so filter
         // predicates can introspect it ("a creature card put into a graveyard
@@ -701,6 +709,7 @@ pub(crate) fn emblem_event_matches(
         (EventKind::LifeGained, GameEvent::LifeGained { .. })
             | (EventKind::LifeLost, GameEvent::LifeLost { .. })
             | (EventKind::CardDrawn, GameEvent::CardDrawn { .. })
+            | (EventKind::FirstCardDrawnThisTurn, GameEvent::FirstCardDrawnThisTurn { .. })
             | (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. })
             | (EventKind::SpellCast, GameEvent::SpellCast { .. })
             | (EventKind::LandPlayed, GameEvent::LandPlayed { .. })

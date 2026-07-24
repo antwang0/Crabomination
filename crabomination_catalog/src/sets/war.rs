@@ -1627,22 +1627,34 @@ pub fn jaya_venerated_firemage() -> CardDefinition {
 
 // ── Batch 3 (2026-07-23): legends, Bonds, and modal spells ────────────────────
 
-/// "When this dies, you may put it into its owner's library third from the top."
-/// (The God-Eternal recursion clause; the "or is exiled from the battlefield"
-/// half is approximated as death-only.)
-fn god_eternal_recur() -> TriggeredAbility {
-    on_dies(Effect::MayDo {
+/// The God-Eternal recursion clause's body: "you may put it into its owner's
+/// library third from the top."
+fn god_eternal_recur_effect() -> Effect {
+    Effect::MayDo {
         description: "Put it into its owner's library third from the top.".into(),
         body: Box::new(Effect::Move {
             what: Selector::TriggerSource,
             to: ZoneDest::Library { who: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)), pos: LibraryPosition::FromTop(2) },
         }),
-    })
+    }
+}
+
+/// "When this dies **or is put into exile from the battlefield**, you may put it
+/// into its owner's library third from the top." Both halves fire (CR 603.6d).
+fn god_eternal_recur() -> [TriggeredAbility; 2] {
+    [
+        on_dies(god_eternal_recur_effect()),
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::CardExiled, EventScope::SelfSource),
+            effect: god_eternal_recur_effect(),
+        },
+    ]
 }
 
 /// God-Eternal Bontu — {3}{B}{B} 5/6 Zombie God with menace. ETB sacrifice any
 /// number of other permanents, then draw that many. Death → library third.
 pub fn god_eternal_bontu() -> CardDefinition {
+    let [dies, exiled] = god_eternal_recur();
     CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![
@@ -1651,7 +1663,8 @@ pub fn god_eternal_bontu() -> CardDefinition {
                 filter: R::OtherThanSource.and(R::ControlledByYou),
                 per_each: Box::new(draw(1)),
             }),
-            god_eternal_recur(),
+            dies,
+            exiled,
         ],
         ..vanilla("God-Eternal Bontu", cost(&[generic(3), b(), b()]), 5, 6, vec![CreatureType::Zombie, CreatureType::God])
     }
@@ -1661,6 +1674,7 @@ pub fn god_eternal_bontu() -> CardDefinition {
 /// you cast a creature spell, make a 4/4 black Zombie Warrior with vigilance.
 /// Death → library third.
 pub fn god_eternal_oketra() -> CardDefinition {
+    let [dies, exiled] = god_eternal_recur();
     CardDefinition {
         keywords: vec![Keyword::DoubleStrike],
         triggered_abilities: vec![
@@ -1684,7 +1698,8 @@ pub fn god_eternal_oketra() -> CardDefinition {
                     },
                 },
             },
-            god_eternal_recur(),
+            dies,
+            exiled,
         ],
         ..vanilla("God-Eternal Oketra", cost(&[generic(3), w(), w()]), 3, 6, vec![CreatureType::Zombie, CreatureType::God])
     }
@@ -2465,6 +2480,7 @@ pub fn samut_tyrant_smasher() -> CardDefinition {
 /// the power of each other creature you control and grant vigilance (EOT).
 /// Death → library third.
 pub fn god_eternal_rhonas() -> CardDefinition {
+    let [dies, exiled] = god_eternal_recur();
     CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![
@@ -2480,7 +2496,8 @@ pub fn god_eternal_rhonas() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
             ])),
-            god_eternal_recur(),
+            dies,
+            exiled,
         ],
         ..vanilla("God-Eternal Rhonas", cost(&[generic(3), g(), g()]), 5, 5, vec![CreatureType::Zombie, CreatureType::God])
     }
@@ -2593,6 +2610,7 @@ pub fn viviens_arkbow() -> CardDefinition {
                 then: None,
                 max: Some(1),
                 tapped: false,
+                exile_rest: false,
             },
             ..Default::default()
         }],
@@ -3490,6 +3508,7 @@ pub fn massacre_girl() -> CardDefinition {
 /// Attack: may put a creature from hand onto the battlefield tapped and
 /// attacking, returned to hand next end step. Death/exile → library third.
 pub fn ilharg_the_raze_boar() -> CardDefinition {
+    let [dies, exiled] = god_eternal_recur();
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Trample],
@@ -3498,7 +3517,8 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
                 filter: R::Any,
                 return_to_hand_eot: true,
             }),
-            god_eternal_recur(),
+            dies,
+            exiled,
         ],
         ..vanilla("Ilharg, the Raze-Boar", cost(&[generic(3), r(), r()]), 6, 6, vec![CreatureType::Boar, CreatureType::God])
     }
@@ -3854,6 +3874,101 @@ pub fn planewide_celebration() -> CardDefinition {
             min: 4,
             max: 4,
             allow_repeats: true,
+        },
+        ..Default::default()
+    }
+}
+
+// ── Batch 4 (2026-07-24): the WAR bombs (mythics + planeswalkers) ─────────────
+
+/// Tezzeret, Master of the Bridge — {4}{U}{B} loyalty 5. Creature and
+/// planeswalker spells you cast have affinity for artifacts. +2: deal X to each
+/// opponent and gain X life (X = artifacts you control). −3: return an artifact
+/// card from your graveyard to hand. −8: exile the top ten, put all artifacts
+/// among them onto the battlefield.
+pub fn tezzeret_master_of_the_bridge() -> CardDefinition {
+    let artifacts = || Value::count(Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)));
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creature and planeswalker spells you cast have affinity for artifacts.",
+            effect: StaticEffect::GrantAffinityToSpells {
+                spell_filter: R::Creature.or(R::HasCardType(CardType::Planeswalker)),
+                permanent_filter: R::Artifact,
+            },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: artifacts() },
+                    Effect::GainLife { who: Selector::You, amount: artifacts() },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Move {
+                    what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::LookTopPutMatchingOntoBattlefield {
+                    count: Value::Const(10),
+                    filter: R::Artifact,
+                    then: None,
+                    max: None,
+                    tapped: false,
+                    exile_rest: true,
+                },
+                ..Default::default()
+            },
+        ],
+        ..walker("Tezzeret, Master of the Bridge", cost(&[generic(4), u(), b()]), PlaneswalkerSubtype::Tezzeret, 5)
+    }
+}
+
+/// God-Eternal Kefnet — {2}{U}{U} 4/5 Zombie God with flying. The first card
+/// you draw each turn: if it's an instant or sorcery, copy it and you may cast
+/// the copy. Dies or is exiled → third from the top. (Residual: the copy is
+/// cast free rather than for {2} less.)
+pub fn god_eternal_kefnet() -> CardDefinition {
+    let [dies, exiled] = god_eternal_recur();
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::FirstCardDrawnThisTurn, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: instant_or_sorcery(),
+                    }),
+                effect: Effect::CastWithoutPayingImmediate {
+                    what: Selector::TriggerSource,
+                    source_zone: crate::card::Zone::Hand,
+                    exile_after: false,
+                    copy: true,
+                },
+            },
+            dies,
+            exiled,
+        ],
+        ..vanilla("God-Eternal Kefnet", cost(&[generic(2), u(), u()]), 4, 5, vec![CreatureType::Zombie, CreatureType::God])
+    }
+}
+
+/// Gideon's Sacrifice — {W} Instant. Choose a creature or planeswalker you
+/// control; all damage that would be dealt this turn to you and permanents you
+/// control is dealt to it instead (CR 614.9).
+pub fn gideons_sacrifice() -> CardDefinition {
+    CardDefinition {
+        name: "Gideon's Sacrifice",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::RedirectYourDamageToChosen {
+            what: target_filtered((R::Creature.or(R::HasCardType(CardType::Planeswalker))).and(R::ControlledByYou)),
         },
         ..Default::default()
     }

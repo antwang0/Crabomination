@@ -543,6 +543,22 @@ pub fn cost_reduction_for_spell_full(
                         .count();
                     reduction = reduction.saturating_add(count as u32);
                 }
+                StaticEffect::GrantAffinityToSpells { spell_filter, permanent_filter } => {
+                    // "[spell_filter] spells you cast have Affinity for
+                    // [permanent_filter]" (Tezzeret, Master of the Bridge).
+                    if src.controller != caster {
+                        continue;
+                    }
+                    if !state.evaluate_requirement_on_card(spell_filter, card, caster) {
+                        continue;
+                    }
+                    let count = state
+                        .battlefield
+                        .iter()
+                        .filter(|c| state.evaluate_requirement_on_card(permanent_filter, c, caster))
+                        .count();
+                    reduction = reduction.saturating_add(count as u32);
+                }
                 _ => {}
             }
         }

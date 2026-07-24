@@ -1256,6 +1256,15 @@ pub enum StaticEffect {
     GrantAffinityToISSpells {
         permanent_filter: SelectionRequirement,
     },
+    /// "`spell_filter` spells you cast have Affinity for `permanent_filter`"
+    /// (CR 702.40) — the general sibling of `GrantAffinityToISSpells` whose
+    /// spell scope isn't fixed to instants/sorceries. Tezzeret, Master of the
+    /// Bridge grants creature and planeswalker spells affinity for artifacts.
+    /// Generic-only via the `ManaCost::reduce_generic` clamp.
+    GrantAffinityToSpells {
+        spell_filter: SelectionRequirement,
+        permanent_filter: SelectionRequirement,
+    },
     /// "Instant and sorcery spells you cast have storm." (CR 702.40.)
     /// Read at CAST time in `cast_spell`'s intrinsic-storm branch, so the
     /// copy count is the true storm count — spells cast before this one

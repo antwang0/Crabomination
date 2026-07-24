@@ -2037,6 +2037,9 @@ pub enum GameEventWire {
     StepChanged(TurnStep),
     TurnStarted { player: usize, turn: u32 },
     CardDrawn { player: usize, card_id: CardId },
+    /// Internal "turn's first draw" trigger signal — the concrete `CardDrawn`
+    /// row already narrates it, so this renders blank.
+    FirstCardDrawnThisTurn { player: usize },
     CardDiscarded { player: usize, card_id: CardId },
     LandPlayed { player: usize, card_id: CardId },
     /// `face` lets replays / spectator UIs distinguish a back-face MDFC
@@ -2491,6 +2494,9 @@ impl From<&GameEvent> for GameEventWire {
                 }
             }
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
+            GameEvent::FirstCardDrawnThisTurn { player, .. } => {
+                GameEventWire::FirstCardDrawnThisTurn { player: *player }
+            }
         }
     }
 }
@@ -2550,6 +2556,7 @@ impl GameEventWire {
             // ScryPerformed/SurveilPerformed line already covers the log, so
             // this one renders blank (and the client skips blank rows).
             E::ScriedOrSurveiled { .. } => String::new(),
+            E::FirstCardDrawnThisTurn { .. } => String::new(),
             E::Proliferated { player } => format!("{} proliferates", pn(*player)),
             E::Foraged { player } => format!("{} forages", pn(*player)),
             E::EvidenceCollected { player } => format!("{} collects evidence", pn(*player)),

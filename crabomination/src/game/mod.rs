@@ -965,6 +965,12 @@ pub struct GameState {
     /// Cleared at cleanup.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// CR 614.9 — one-shot "all damage to you and your permanents this turn is
+    /// dealt to the chosen permanent instead" (Gideon's Sacrifice). Each entry
+    /// is `(protected_player, redirect_target)`; consulted in
+    /// `damage_redirect_target` and cleared at cleanup.
+    #[serde(default)]
+    pub damage_redirect_this_turn: Vec<(usize, CardId)>,
     /// CR — Shadow of Doubt: no player may search a library this turn.
     pub no_search_this_turn: bool,
     /// Registered replacement effects (Phase H — Commander prerequisite).
@@ -1370,6 +1376,7 @@ impl Clone for GameState {
             attack_despite_defender_this_turn: self.attack_despite_defender_this_turn.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
+            damage_redirect_this_turn: self.damage_redirect_this_turn.clone(),
             no_search_this_turn: self.no_search_this_turn,
             replacement_effects: self.replacement_effects.clone(),
             next_replacement_id: self.next_replacement_id,
@@ -1559,6 +1566,7 @@ impl GameState {
             attack_despite_defender_this_turn: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
+            damage_redirect_this_turn: Vec::new(),
             no_search_this_turn: false,
             replacement_effects: Vec::new(),
             next_replacement_id: 1,
@@ -8840,6 +8848,9 @@ impl GameState {
         let drew = match self.players[p].draw_top() {
             Some(id) => {
                 events.push(GameEvent::CardDrawn { player: p, card_id: id });
+                if self.players[p].cards_drawn_this_turn == 1 {
+                    events.push(GameEvent::FirstCardDrawnThisTurn { player: p, card_id: id });
+                }
                 self.maybe_grant_miracle(p, id);
                 true
             }
@@ -10147,6 +10158,36 @@ impl GameState {
                             source: snap.id,
                             effect: ta.effect.clone(),
                             controller: snap.controller,
+                            filter: ta.event.filter.clone(),
+                            subject: crate::game::effects::event_subject(ev, &ta.event.kind),
+                            event_amount: self.event_amount_for(ev),
+                            triggered_by_etb: false,
+                            triggered_by_death: false,
+                            triggered_by_attack: false,
+                        });
+                    }
+                }
+            }
+        }
+        // "When this permanent is put into exile from the battlefield" — a
+        // SelfSource `CardExiled` trigger fires from LKI: the source sits in
+        // the exile zone by dispatch time (God-Eternal Kefnet/Bontu's recur).
+        // `event_matches_spec`'s SelfSource id-check confines this to the
+        // card actually exiled in this batch, so already-exiled cards don't
+        // re-fire.
+        for card in &self.exile {
+            for ta in &card.definition.triggered_abilities {
+                if ta.event.kind != crate::effect::EventKind::CardExiled
+                    || ta.event.scope != crate::effect::EventScope::SelfSource
+                {
+                    continue;
+                }
+                for ev in events {
+                    if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                        candidates.push(TriggerCandidate {
+                            source: card.id,
+                            effect: ta.effect.clone(),
+                            controller: card.controller,
                             filter: ta.event.filter.clone(),
                             subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                             event_amount: self.event_amount_for(ev),
@@ -14106,9 +14147,10 @@ fn static_effect_to_effects(
             | StaticEffect::YourColorSourcesDealExtraDamage { .. }
             | StaticEffect::ControlledCreatureTypesDealExtraDamage { .. }
             | StaticEffect::OpponentMillDoubled
-            // GrantAffinityToISSpells — read at cast time by
-            // `cost_reduction_for_spell` directly; no layer effect.
+            // GrantAffinityToISSpells / GrantAffinityToSpells — read at cast
+            // time by `cost_reduction_for_spell` directly; no layer effect.
             | StaticEffect::GrantAffinityToISSpells { .. }
+            | StaticEffect::GrantAffinityToSpells { .. }
             // GrantStormToISSpells — read at cast time by `cast_spell`'s
             // intrinsic-storm branch; no layer effect.
             | StaticEffect::GrantStormToISSpells

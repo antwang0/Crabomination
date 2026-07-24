@@ -41,7 +41,7 @@ impl GameState {
         {
             return Some(cid);
         }
-        self.battlefield.iter().find_map(|c| {
+        if let Some(cid) = self.battlefield.iter().find_map(|c| {
             (c.controller == protected
                 && Some(c.id) != aimed_at
                 && c.definition
@@ -49,6 +49,15 @@ impl GameState {
                     .iter()
                     .any(|sa| matches!(sa.effect, StaticEffect::RedirectDamageToSelf)))
             .then_some(c.id)
+        }) {
+            return Some(cid);
+        }
+        // Gideon's Sacrifice — a one-shot "all damage to you and your
+        // permanents this turn goes to the chosen permanent instead", so long
+        // as it's still on the battlefield and isn't itself the aimed-at card.
+        self.damage_redirect_this_turn.iter().find_map(|(p, to)| {
+            (*p == protected && Some(*to) != aimed_at && self.battlefield_find(*to).is_some())
+                .then_some(*to)
         })
     }
 

@@ -2801,3 +2801,124 @@ fn neheb_dreadhorde_discard_draw_and_banks_red() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2, "banked two red");
     assert_eq!(g.players[0].kept_mana_this_turn.amount(Color::Red), 2, "the red doesn't empty this turn");
 }
+
+// ── Batch 4: WAR bombs ────────────────────────────────────────────────────────
+
+/// Tezzeret, Master of the Bridge grants creature/planeswalker spells affinity
+/// for artifacts and its −8 deploys artifacts off the top ten.
+#[test]
+fn tezzeret_master_bridge_affinity_and_ult() {
+    use crabomination::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tezzeret_master_of_the_bridge());
+    // A creature spell in hand gets {1} off per artifact.
+    let creature = crabomination::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &creature, None), 0, "no artifacts → no discount");
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &creature, None), 2, "two artifacts → {{2}} off");
+    // A noncreature/nonplaneswalker spell is unaffected.
+    let bolt = crabomination::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &bolt, None), 0, "instant unaffected");
+}
+
+/// Tezzeret's −8 exiles the top ten and deploys the artifacts among them.
+#[test]
+fn tezzeret_ult_deploys_artifacts() {
+    let mut g = two_player_game();
+    let tez = g.add_card_to_battlefield(0, catalog::tezzeret_master_of_the_bridge());
+    // Stack the library: two artifacts and a nonartifact within the top ten.
+    g.add_card_to_library(0, catalog::ornithopter());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::mind_stone());
+    g.battlefield_find_mut(tez).unwrap().counters.insert(CounterType::Loyalty, 8);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: tez, ability_index: 2, target: None, x_value: None }).expect("-8");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Ornithopter"), "Ornithopter deployed");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Mind Stone"), "Mind Stone deployed");
+    assert!(g.exile.iter().any(|c| c.definition.name == "Grizzly Bears"), "nonartifact exiled");
+}
+
+/// God-Eternal Kefnet copies the first instant/sorcery drawn each turn; you may
+/// cast the (free) copy.
+#[test]
+fn kefnet_copies_first_drawn_instant() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::god_eternal_kefnet());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].cards_drawn_this_turn = 0;
+    let opp_life = g.players[1].life;
+    // Accept the copy cast (OptionalTrigger).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 3, "the free Bolt copy hit the opponent");
+    // The drawn Bolt itself is still in hand (only a copy was cast).
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"), "original stays in hand");
+}
+
+/// The second draw of the turn doesn't retrigger Kefnet.
+#[test]
+fn kefnet_only_first_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::god_eternal_kefnet());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].cards_drawn_this_turn = 1; // pretend one already drawn
+    let opp_life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life, "no copy — not the turn's first draw");
+}
+
+/// God-Eternal recursion now fires on exile, not just death (Bontu et al.).
+#[test]
+fn god_eternal_recurs_on_exile() {
+    use crabomination::effect::{Effect, ZoneDest};
+    let mut g = two_player_game();
+    let bontu = g.add_card_to_battlefield(0, catalog::god_eternal_bontu());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(bontu)), 0, 0);
+    let evs = g
+        .resolve_effect(&Effect::Move { what: crabomination::effect::Selector::Target(0), to: ZoneDest::Exile }, &ctx)
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].library.iter().any(|c| c.definition.name == "God-Eternal Bontu"),
+        "Bontu recurred into the library on exile",
+    );
+}
+
+/// Gideon's Sacrifice redirects damage aimed at you to the chosen permanent for
+/// the turn.
+#[test]
+fn gideons_sacrifice_redirects_damage() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cast = g.add_card_to_hand(0, catalog::gideons_sacrifice());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    // 2 damage aimed at player 0 → redirected to the bear (a 2/2 → dies).
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 2, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    assert_eq!(g.players[0].life, life, "player took no damage");
+    assert!(g.battlefield_find(bear).is_none(), "the bear soaked lethal and died");
+}

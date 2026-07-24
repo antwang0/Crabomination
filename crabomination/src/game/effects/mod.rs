@@ -11270,6 +11270,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RedirectYourDamageToChosen { what } => {
+                let chosen = self.resolve_selector(what, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Card(cid) | EntityRef::Permanent(cid) => Some(cid),
+                    _ => None,
+                });
+                if let Some(cid) = chosen {
+                    self.damage_redirect_this_turn.push((ctx.controller, cid));
+                }
+                Ok(())
+            }
+
             Effect::SearchSplitOpponentChooses {
                 opponent, count, opponent_picks, chosen_to, rest_to,
             } => {
@@ -12761,7 +12772,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopPutMatchingOntoBattlefield { count, filter, then, max, tapped } => {
+            Effect::LookTopPutMatchingOntoBattlefield { count, filter, then, max, tapped, exile_rest } => {
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let looked: Vec<crate::card::CardId> =
@@ -12799,10 +12810,17 @@ impl GameState {
                 use rand::seq::SliceRandom;
                 let mut rest: Vec<crate::card::CardId> =
                     looked.iter().copied().filter(|id| !picks.contains(id)).collect();
-                rest.shuffle(&mut rand::rng());
-                for id in rest {
-                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
-                        self.players[p].library.push(card);
+                if *exile_rest {
+                    // Tezzeret's −8: the unmatched remainder is exiled.
+                    for id in rest {
+                        self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    }
+                } else {
+                    rest.shuffle(&mut rand::rng());
+                    for id in rest {
+                        if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                            self.players[p].library.push(card);
+                        }
                     }
                 }
                 if !picks.is_empty()

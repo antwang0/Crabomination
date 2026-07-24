@@ -1542,6 +1542,11 @@ pub enum GameEvent {
     StepChanged(TurnStep),
     TurnStarted { player: usize, turn: u32 },
     CardDrawn { player: usize, card_id: CardId },
+    /// CR 121 — the turn's first card drawn by `player` (fired once per turn,
+    /// when `cards_drawn_this_turn` reaches 1). Carries the drawn card so
+    /// "the first time each turn you draw a card" triggers (God-Eternal
+    /// Kefnet) can inspect and act on it.
+    FirstCardDrawnThisTurn { player: usize, card_id: CardId },
     CardDiscarded { player: usize, card_id: CardId },
     /// CR 701.9 batch — a player discarded one or more cards in a single
     /// effect resolution. Fired once per resolution alongside the per-card

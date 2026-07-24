@@ -2518,6 +2518,7 @@ impl GameState {
         // are "this turn" effects; they expire at cleanup too.
         self.prevention_shields.clear();
         self.damage_cant_be_prevented_this_turn = false;
+        self.damage_redirect_this_turn.clear();
         self.no_search_this_turn = false;
         self.block_poison_this_turn = 0;
         // CR 500.4 — "kept this turn" mana (Savage Ventmaw) expires now, so the
