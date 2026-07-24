@@ -137,8 +137,9 @@ pub fn rakdos_firewheeler() -> CardDefinition {
     }
 }
 
-/// Gyre Engineer — {1}{G}{U} 1/1 Vedalken Wizard. {T}: Add {G}{U}. (The adapt
-/// payoff rider is engine-supported but omitted here.)
+/// Gyre Engineer — {1}{G}{U} 1/1 Vedalken Wizard. {T}: Add {G}{U}. (Its
+/// "untap when you activate an adapt ability" rider needs an adapt-tagged
+/// activation trigger — tracked in TODO.md.)
 pub fn gyre_engineer() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
