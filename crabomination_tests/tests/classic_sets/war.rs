@@ -1573,3 +1573,155 @@ fn gideons_battle_cry_counters_your_team() {
     assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "not opponents' creatures");
 }
+
+// ── Batch 9 (2026-07-24): hybrid walkers, God-Eternal Rhonas, modal spells ────
+
+/// Angrath gives your creatures menace and amasses Zombies 2 for −2.
+#[test]
+fn angrath_menace_anthem_and_amass() {
+    let mut g = two_player_game();
+    let angrath = g.add_card_to_battlefield(0, catalog::angrath_captain_of_chaos());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Menace), "creatures you control have menace");
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: angrath, ability_index: 0, target: None, x_value: None }).expect("-2");
+    drain_stack(&mut g);
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army");
+    assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 2, "amass 2");
+    assert!(army.definition.subtypes.creature_types.contains(&CreatureType::Zombie));
+}
+
+/// Huatli's static grants toughness-damage; −3 gains life = greatest toughness.
+#[test]
+fn huatli_toughness_damage_and_lifegain() {
+    let mut g = two_player_game();
+    let huatli = g.add_card_to_battlefield(0, catalog::huatli_the_suns_heart());
+    let griffin = g.add_card_to_battlefield(0, catalog::enforcer_griffin()); // 3/4
+    assert!(g.computed_permanent(griffin).unwrap().keywords.contains(&Keyword::AssignsCombatDamageByToughness));
+    let life = g.players[0].life;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: huatli, ability_index: 0, target: None, x_value: None }).expect("-3");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4, "gained life = greatest toughness (4)");
+}
+
+/// Kiora draws when a power-4+ creature enters, and untaps for −1.
+#[test]
+fn kiora_draws_on_big_creature_and_untaps() {
+    let mut g = two_player_game();
+    let kiora = g.add_card_to_battlefield(0, catalog::kiora_behemoth_beckoner());
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    let wurm = g.add_card_to_battlefield(0, catalog::primordial_wurm()); // 7/6
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: wurm }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew for the power-4+ enter");
+    // −1 untaps a tapped permanent.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: kiora, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None }).expect("-1");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
+}
+
+/// Samut's static grants haste; −1 pumps +2/+1, grants haste, scries.
+#[test]
+fn samut_haste_anthem_and_pump() {
+    let mut g = two_player_game();
+    let samut = g.add_card_to_battlefield(0, catalog::samut_tyrant_smasher());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "creatures you control have haste");
+    g.add_card_to_library(0, catalog::forest());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: samut, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None }).expect("-1");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1");
+}
+
+/// God-Eternal Rhonas doubles other creatures' power and grants vigilance.
+#[test]
+fn god_eternal_rhonas_doubles_power() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.move_card_to_battlefield_for_test(0, catalog::god_eternal_rhonas());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "power doubled");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "gained vigilance");
+    assert!(catalog::god_eternal_rhonas().keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Tamiyo's Epiphany scries 4, then draws two.
+#[test]
+fn tamiyos_epiphany_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::forest()); }
+    let spell = g.add_card_to_hand(0, catalog::tamiyos_epiphany());
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "spell left hand, drew 2");
+}
+
+/// Commence the Endgame draws two, then amasses Zombies X = cards in hand.
+#[test]
+fn commence_the_endgame_amasses_hand_size() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    let spell = g.add_card_to_hand(0, catalog::commence_the_endgame());
+    g.add_card_to_hand(0, catalog::forest()); // one extra card so hand at resolve is deterministic
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    // After casting: hand had {spell, forest} → spell leaves → 1 card, draw 2 → 3 cards. Amass X=3.
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army");
+    assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 3, "amass = cards in hand at resolution");
+    assert!(catalog::commence_the_endgame().keywords.contains(&Keyword::CantBeCountered));
+}
+
+/// Teferi's Time Twist exiles a permanent, which returns at the next end step
+/// with an extra +1/+1 counter if it's a creature.
+#[test]
+fn teferis_time_twist_flickers_with_counter() {
+    fn advance_to(g: &mut GameState, step: TurnStep) {
+        while g.step != step { g.perform_action(GameAction::PassPriority).expect("pass"); }
+    }
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_at_target(&mut g, catalog::teferis_time_twist(), Target::Permanent(bear), &[(Color::Blue, 1)], 1);
+    assert!(g.battlefield_find(bear).is_none(), "exiled");
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    let returned = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Grizzly Bears").expect("returned");
+    assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
+}
+
+/// Planewide Celebration is a choose-four-with-repeats modal sorcery.
+#[test]
+fn planewide_celebration_is_choose_four() {
+    let def = catalog::planewide_celebration();
+    match def.effect {
+        crabomination::effect::Effect::ChooseModesCast { ref modes, min, max, allow_repeats } => {
+            assert_eq!((min, max, allow_repeats), (4, 4, true));
+            assert_eq!(modes.len(), 4, "four printed modes");
+        }
+        _ => panic!("expected ChooseModesCast"),
+    }
+}

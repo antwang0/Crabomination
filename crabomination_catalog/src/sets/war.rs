@@ -10,7 +10,7 @@ use crate::card::SelectionRequirement as R;
 use crate::effect::shortcut::{cast_is_noncreature, deal, draw, etb, on_attack, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, LoyaltyAbility, ManaPayload, PlayerRef, PlayerStaticTarget, Predicate, Selector, StaticEffect, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
     Subtypes { creature_types: t, ..Default::default() }
@@ -2371,6 +2371,191 @@ pub fn kayas_ghostform() -> CardDefinition {
                 effect: recur(),
             },
         ],
+        ..Default::default()
+    }
+}
+
+// ── Batch 9 (2026-07-24): the hybrid planeswalker cycle, God-Eternal Rhonas,
+//    and modal/utility spells ───────────────────────────────────────────────
+
+/// "Creatures you control have [keyword]." — the hybrid-cycle static anthem.
+fn your_creatures_have(keyword: Keyword, description: &'static str) -> StaticAbility {
+    StaticAbility {
+        description,
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            keyword,
+        },
+    }
+}
+
+/// Angrath, Captain of Chaos — {2}{B/R}{B/R} loyalty 5. Static: creatures you
+/// control have menace. −2: Amass Zombies 2.
+pub fn angrath_captain_of_chaos() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![your_creatures_have(Keyword::Menace, "Creatures you control have menace.")],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Zombie) },
+            ..Default::default()
+        }],
+        ..walker("Angrath, Captain of Chaos", cost(&[generic(2), hybrid(Color::Black, Color::Red), hybrid(Color::Black, Color::Red)]), PlaneswalkerSubtype::Angrath, 5)
+    }
+}
+
+/// Huatli, the Sun's Heart — {2}{G/W} loyalty 7. Static: your creatures assign
+/// combat damage by toughness. −3: gain life = greatest toughness you control.
+pub fn huatli_the_suns_heart() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![your_creatures_have(
+            Keyword::AssignsCombatDamageByToughness,
+            "Each creature you control assigns combat damage equal to its toughness rather than its power.",
+        )],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -3,
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ToughnessOf(Box::new(Selector::GreatestToughnessYouControl)),
+            },
+            ..Default::default()
+        }],
+        ..walker("Huatli, the Sun's Heart", cost(&[generic(2), hybrid(Color::Green, Color::White)]), PlaneswalkerSubtype::Huatli, 7)
+    }
+}
+
+/// Kiora, Behemoth Beckoner — {2}{G/U} loyalty 7. Whenever a power-4+ creature
+/// you control enters, draw. −1: untap target permanent.
+pub fn kiora_behemoth_beckoner() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::PowerAtLeast(4)),
+            }),
+            effect: draw(1),
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -1,
+            effect: Effect::Untap { what: target_filtered(R::Permanent), up_to: None },
+            ..Default::default()
+        }],
+        ..walker("Kiora, Behemoth Beckoner", cost(&[generic(2), hybrid(Color::Green, Color::Blue)]), PlaneswalkerSubtype::Kiora, 7)
+    }
+}
+
+/// Samut, Tyrant Smasher — {2}{R/G}{R/G} loyalty 5. Static: creatures you
+/// control have haste. −1: target creature gets +2/+1 and gains haste; scry 1.
+pub fn samut_tyrant_smasher() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![your_creatures_have(Keyword::Haste, "Creatures you control have haste.")],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -1,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(2), toughness: Value::Const(1), duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..walker("Samut, Tyrant Smasher", cost(&[generic(2), hybrid(Color::Red, Color::Green), hybrid(Color::Red, Color::Green)]), PlaneswalkerSubtype::Samut, 5)
+    }
+}
+
+/// God-Eternal Rhonas — {3}{G}{G} 5/5 Zombie God with deathtouch. ETB double
+/// the power of each other creature you control and grant vigilance (EOT).
+/// Death → library third.
+pub fn god_eternal_rhonas() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::DoublePower {
+                    what: Selector::EachPermanent(R::OtherThanSource.and(R::Creature).and(R::ControlledByYou)),
+                    times: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(R::OtherThanSource.and(R::Creature).and(R::ControlledByYou)),
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+            god_eternal_recur(),
+        ],
+        ..vanilla("God-Eternal Rhonas", cost(&[generic(3), g(), g()]), 5, 5, vec![CreatureType::Zombie, CreatureType::God])
+    }
+}
+
+/// Tamiyo's Epiphany — {3}{U} Sorcery. Scry 4, then draw two cards.
+pub fn tamiyos_epiphany() -> CardDefinition {
+    CardDefinition {
+        name: "Tamiyo's Epiphany",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(4) },
+            draw(2),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Commence the Endgame — {4}{U}{U} Instant. Can't be countered. Draw two, then
+/// Amass Zombies X where X = cards in your hand.
+pub fn commence_the_endgame() -> CardDefinition {
+    CardDefinition {
+        name: "Commence the Endgame",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::Seq(vec![
+            draw(2),
+            Effect::Amass { who: PlayerRef::You, count: Value::HandSizeOf(PlayerRef::You), extra_type: Some(CreatureType::Zombie) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Teferi's Time Twist — {1}{U} Instant. Exile target permanent you control;
+/// return it at the next end step with an extra +1/+1 counter if it's a creature.
+pub fn teferis_time_twist() -> CardDefinition {
+    CardDefinition {
+        name: "Teferi's Time Twist",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExileReturnNextEndStep { what: target_filtered(R::Permanent.and(R::ControlledByYou)) },
+        ..Default::default()
+    }
+}
+
+/// Planewide Celebration — {5}{G}{G} Sorcery. Choose four (repeats allowed):
+/// make an all-color 2/2 Citizen; return a permanent card from your graveyard
+/// to hand; proliferate; gain 4 life.
+pub fn planewide_celebration() -> CardDefinition {
+    let citizen = TokenDefinition {
+        name: "Citizen".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+        subtypes: creatures(vec![CreatureType::Citizen]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Planewide Celebration",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseModesCast {
+            modes: vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: citizen },
+                Effect::Move { what: target_filtered(R::PermanentCard.and(R::InYourGraveyard)), to: ZoneDest::Hand(PlayerRef::You) },
+                Effect::Proliferate,
+                Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            ],
+            min: 4,
+            max: 4,
+            allow_repeats: true,
+        },
         ..Default::default()
     }
 }

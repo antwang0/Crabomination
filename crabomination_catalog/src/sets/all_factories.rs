@@ -14804,6 +14804,15 @@ static WAR: &[Factory] = &[
     super::war::nissas_triumph,
     super::war::desperate_lunge,
     super::war::gideons_battle_cry,
+    super::war::angrath_captain_of_chaos,
+    super::war::huatli_the_suns_heart,
+    super::war::kiora_behemoth_beckoner,
+    super::war::samut_tyrant_smasher,
+    super::war::god_eternal_rhonas,
+    super::war::tamiyos_epiphany,
+    super::war::commence_the_endgame,
+    super::war::teferis_time_twist,
+    super::war::planewide_celebration,
 ];
 static ZEN: &[Factory] = &[
     super::zen::goblin_guide,
