@@ -2486,6 +2486,66 @@ pub fn god_eternal_rhonas() -> CardDefinition {
     }
 }
 
+/// Parhelion II — {6}{W}{W} legendary Vehicle 5/5 with flying, first strike,
+/// vigilance. Crew 4. When it attacks, make two 4/4 flying-vigilance Angels
+/// attacking (they stay).
+pub fn parhelion_ii() -> CardDefinition {
+    CardDefinition {
+        name: "Parhelion II",
+        cost: cost(&[generic(6), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Vigilance, Keyword::Crew(4)],
+        triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Angel".into(),
+                power: 4,
+                toughness: 4,
+                keywords: vec![Keyword::Flying, Keyword::Vigilance],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: creatures(vec![CreatureType::Angel]),
+                ..Default::default()
+            },
+            cleanup: crate::effect::AttackingTokenCleanup::None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dreadhorde Invasion — {1}{B} Enchantment. Upkeep: lose 1 life and Amass
+/// Zombies 1. Whenever a Zombie token you control with power 6+ attacks, it
+/// gains lifelink until end of turn.
+pub fn dreadhorde_invasion() -> CardDefinition {
+    CardDefinition {
+        name: "Dreadhorde Invasion",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                    Effect::Amass { who: PlayerRef::You, count: Value::ONE, extra_type: Some(CreatureType::Zombie) },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::IsToken.and(R::HasCreatureType(CreatureType::Zombie)).and(R::PowerAtLeast(6)),
+                }),
+                effect: Effect::GrantKeyword { what: Selector::TriggerSource, keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Kaya, Bane of the Dead — {3}{W/B}{W/B}{W/B} loyalty 7. Static: you may target
 /// opponents' hexproof permanents and players as though they lacked hexproof.
 /// −3: exile target creature.

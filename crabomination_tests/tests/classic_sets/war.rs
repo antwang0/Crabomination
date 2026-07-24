@@ -1713,6 +1713,48 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Parhelion II is a Crew-4 Vehicle that makes two attacking Angels on attack.
+#[test]
+fn parhelion_ii_makes_two_attacking_angels() {
+    let mut g = two_player_game();
+    let def = catalog::parhelion_ii();
+    assert!(def.keywords.contains(&Keyword::Crew(4)));
+    assert!(def.keywords.contains(&Keyword::Flying) && def.keywords.contains(&Keyword::Vigilance));
+    let par = g.add_card_to_battlefield(0, catalog::parhelion_ii());
+    let c1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c2 = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // total power 4 to crew
+    g.clear_sickness(c1);
+    g.clear_sickness(c2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: par, crew_creatures: vec![c1, c2] }).expect("crew");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: par, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    let angels: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Angel))
+        .collect();
+    assert_eq!(angels.len(), 2, "two Angels");
+    assert!(angels.iter().all(|a| g.attacking_ids().contains(&a.id)), "the Angels are attacking");
+}
+
+/// Dreadhorde Invasion's upkeep trigger loses 1 life and amasses Zombies 1.
+#[test]
+fn dreadhorde_invasion_upkeep_amasses() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dreadhorde_invasion());
+    g.active_player_idx = 0;
+    let life = g.players[0].life;
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep { g.perform_action(GameAction::PassPriority).expect("pass"); }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "lost 1 life");
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army");
+    assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 1, "amass 1");
+}
+
 /// Kaya lets her controller target an opponent's hexproof creature and the
 /// hexproof opponent, and exiles a creature for −3.
 #[test]

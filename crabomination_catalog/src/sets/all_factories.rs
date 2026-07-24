@@ -14809,6 +14809,8 @@ static WAR: &[Factory] = &[
     super::war::kiora_behemoth_beckoner,
     super::war::samut_tyrant_smasher,
     super::war::kaya_bane_of_the_dead,
+    super::war::parhelion_ii,
+    super::war::dreadhorde_invasion,
     super::war::god_eternal_rhonas,
     super::war::tamiyos_epiphany,
     super::war::commence_the_endgame,
