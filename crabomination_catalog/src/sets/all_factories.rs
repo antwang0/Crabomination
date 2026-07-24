@@ -14829,6 +14829,8 @@ static WAR: &[Factory] = &[
     super::war::teferis_time_twist,
     super::war::planewide_celebration,
     super::war::devouring_hellion,
+    super::war::gideons_triumph,
+    super::war::gideon_blackblade,
     super::war::nahiri_storm_of_stone,
     super::war::mizzium_tank,
     super::war::narsets_reversal,

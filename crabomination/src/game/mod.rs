@@ -3414,10 +3414,45 @@ impl GameState {
     pub fn permanent_prevents_all_combat_damage_to_self(&self, tgt: crate::card::CardId) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield_find(tgt).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, StaticEffect::PreventAllCombatDamageToThis)
+                    || self.self_static_prevents_all_damage_active(&sa.effect, c.controller)
+            })
+        })
+    }
+
+    /// True when a self-static (possibly `WhileYourTurn`-wrapped and thus
+    /// gated on the active player) prevents *all* damage to its source
+    /// (`StaticEffect::PreventAllDamageToThis`). Consulted on both funnels so
+    /// Gideon Blackblade takes no damage — and loses no loyalty — during your
+    /// turn.
+    pub(crate) fn self_static_prevents_all_damage_active(
+        &self,
+        e: &crate::effect::StaticEffect,
+        controller: usize,
+    ) -> bool {
+        use crate::effect::StaticEffect;
+        match e {
+            StaticEffect::PreventAllDamageToThis => true,
+            StaticEffect::WhileYourTurn { inner } => {
+                self.active_player_idx == controller
+                    && self.self_static_prevents_all_damage_active(inner, controller)
+            }
+            _ => false,
+        }
+    }
+
+    /// True when `tgt` prevents all damage to itself (combat or noncombat) via
+    /// an active `PreventAllDamageToThis` self-static and prevention isn't off.
+    pub(crate) fn permanent_prevents_all_damage_to_self(&self, tgt: crate::card::CardId) -> bool {
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        self.battlefield_find(tgt).is_some_and(|c| {
             c.definition
                 .static_abilities
                 .iter()
-                .any(|sa| matches!(sa.effect, StaticEffect::PreventAllCombatDamageToThis))
+                .any(|sa| self.self_static_prevents_all_damage_active(&sa.effect, c.controller))
         })
     }
 
@@ -13967,6 +14002,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleDamageDealt
             | StaticEffect::HalveDamageDealt
             | StaticEffect::PreventAllCombatDamageToThis
+            | StaticEffect::PreventAllDamageToThis
             | StaticEffect::PreventAllCombatDamageToThisFromBlockers
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn

@@ -865,6 +865,11 @@ pub enum StaticEffect {
     /// the permanent) unless combat damage can't be prevented this turn (615.12).
     /// Fog Bank, Guard Gomazoa.
     PreventAllCombatDamageToThis,
+    /// "Prevent all damage that would be dealt to this permanent" — the
+    /// combat+noncombat superset of `PreventAllCombatDamageToThis`, consulted
+    /// on both damage funnels. Wrap in `WhileYourTurn` for turn-gated
+    /// protection (Gideon Blackblade during your turn).
+    PreventAllDamageToThis,
     /// "Prevent all combat damage that would be dealt to this creature by
     /// creatures blocking it." The narrower sibling of
     /// `PreventAllCombatDamageToThis` — only strikes-back from this creature's

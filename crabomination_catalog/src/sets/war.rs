@@ -2727,6 +2727,85 @@ pub fn rescuer_sphinx() -> CardDefinition {
     }
 }
 
+/// Gideon Blackblade — {1}{W}{W} loyalty 4. During your turn he's a 4/4 Human
+/// Soldier with indestructible (still a planeswalker) and takes no damage. +1:
+/// up to one other creature you control gains vigilance, lifelink, or
+/// indestructible (EOT). −6: exile target nonland permanent.
+pub fn gideon_blackblade() -> CardDefinition {
+    let your_turn = Predicate::IsTurnOf(PlayerRef::You);
+    CardDefinition {
+        power: 4,
+        toughness: 4,
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Gideon],
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, Gideon Blackblade is a 4/4 Human Soldier creature that's still a planeswalker.",
+                effect: StaticEffect::SelfIsCreatureIf { condition: your_turn.clone() },
+            },
+            StaticAbility {
+                description: "As a creature, Gideon Blackblade is 4/4.",
+                effect: StaticEffect::SetBasePtIf { condition: your_turn.clone(), power: 4, toughness: 4 },
+            },
+            StaticAbility {
+                description: "During your turn, Gideon Blackblade has indestructible.",
+                effect: StaticEffect::SelfHasKeywordIf { keyword: Keyword::Indestructible, condition: your_turn },
+            },
+            StaticAbility {
+                description: "Prevent all damage that would be dealt to Gideon Blackblade during your turn.",
+                effect: StaticEffect::WhileYourTurn { inner: Box::new(StaticEffect::PreventAllDamageToThis) },
+            },
+        ],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                    effect: Box::new(Effect::ChooseMode(vec![
+                        Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                        Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+                        Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+                    ])),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::Move { what: target_filtered(R::Nonland), to: ZoneDest::Exile },
+                ..Default::default()
+            },
+        ],
+        ..walker("Gideon Blackblade", cost(&[generic(1), w(), w()]), PlaneswalkerSubtype::Gideon, 4)
+    }
+}
+
+/// Gideon's Triumph — {1}{W} Instant. Target opponent sacrifices a creature
+/// that attacked or blocked this turn; if you control a Gideon planeswalker,
+/// they sacrifice two of those creatures instead.
+pub fn gideons_triumph() -> CardDefinition {
+    let attacked_or_blocked = R::Creature.and(R::AttackedThisTurn.or(R::BlockedThisTurn));
+    CardDefinition {
+        name: "Gideon's Triumph",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(R::HasPlaneswalkerType(PlaneswalkerSubtype::Gideon).and(R::ControlledByYou)),
+                n: Value::ONE,
+            },
+            // Declares the opponent-player target slot; the else branch reuses it.
+            then: Box::new(Effect::Sacrifice { who: target_filtered(R::OpponentPlayer), count: Value::Const(2), filter: attacked_or_blocked.clone() }),
+            else_: Box::new(Effect::Sacrifice { who: Selector::Target(0), count: Value::ONE, filter: attacked_or_blocked }),
+        },
+        ..Default::default()
+    }
+}
+
 /// Devouring Hellion — {2}{R} 2/2 Hellion. Devour-style: as it enters, you may
 /// sacrifice any number of creatures and/or planeswalkers; it enters with twice
 /// that many +1/+1 counters (`SacrificeAnyNumber` over creatures/PWs, ×2).

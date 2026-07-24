@@ -443,6 +443,14 @@ impl GameState {
                 }
             }
         }
+        // CR 615 — self-static "prevent all damage to this permanent"
+        // (Gideon Blackblade during your turn); the combat half is gated in
+        // the combat resolver.
+        if let EntityRef::Permanent(tgt) = ent
+            && self.permanent_prevents_all_damage_to_self(tgt)
+        {
+            return;
+        }
         // CR 615 — Mark-of-Asylum-style "prevent all noncombat damage to
         // creatures you control" (this funnel only carries noncombat damage to
         // permanents; combat damage is marked elsewhere).

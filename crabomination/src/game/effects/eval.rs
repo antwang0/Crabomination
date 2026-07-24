@@ -2380,6 +2380,7 @@ impl GameState {
                     R::IsBlocked => self.blocked_attackers.contains(&card.id),
                     R::IsBlocking => self.block_map.contains_key(&card.id),
                     R::AttackedThisTurn => card.attacked_this_turn,
+                    R::BlockedThisTurn => card.blocked_this_turn,
                     R::FaceDown => card.face_down,
                     // CR 603.4 — entered this turn (stamped on every ETB).
                     R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
@@ -2902,6 +2903,7 @@ impl GameState {
             // A battlefield instance carries this flag directly (Rowdy Research's
             // "{1} less for each creature that attacked this turn" affinity).
             R::AttackedThisTurn => card.attacked_this_turn,
+            R::BlockedThisTurn => card.blocked_this_turn,
             // CR 701.60 — the suspected flag lives on the instance.
             R::IsSuspected => card.suspected,
             // Battlefield-state predicates can't be evaluated for library cards.

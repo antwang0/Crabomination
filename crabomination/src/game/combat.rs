@@ -1252,6 +1252,9 @@ impl GameState {
         let mut events = vec![];
         for (blocker_id, attacker_id) in assignments {
             self.block_map.insert(blocker_id, attacker_id);
+            if let Some(b) = self.battlefield_find_mut(blocker_id) {
+                b.blocked_this_turn = true;
+            }
             // CR 510.1c — once blocked, the attacker stays blocked for this
             // combat even if every blocker later leaves combat.
             if !self.blocked_attackers.contains(&attacker_id) {

@@ -2088,3 +2088,63 @@ fn narsets_reversal_copies_and_returns() {
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "bolt returned to owner's hand");
 }
+
+/// Gideon's Triumph edicts one attacker/blocker, or two with a Gideon in play.
+#[test]
+fn gideons_triumph_edicts_attackers() {
+    // Without a Gideon: sacrifices one creature that attacked this turn.
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(atk).unwrap().attacked_this_turn = true;
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // never attacked — safe
+    let tri = g.add_card_to_hand(0, catalog::gideons_triumph());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: tri, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(atk).is_none(), "the attacker was sacrificed");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Grizzly Bears").count(), 1, "the non-attacker survives");
+}
+
+/// Gideon Blackblade is a 4/4 indestructible creature during your turn only,
+/// and takes no damage while it's your turn.
+#[test]
+fn gideon_blackblade_animates_and_is_protected() {
+    let mut g = two_player_game();
+    let gid = g.add_card_to_battlefield(0, catalog::gideon_blackblade());
+    g.active_player_idx = 0;
+    let cp = g.computed_permanent(gid).unwrap();
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "creature on your turn");
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Planeswalker), "still a planeswalker");
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "indestructible on your turn");
+    assert_eq!((cp.power, cp.toughness), (4, 4), "4/4");
+    // Damage during your turn is prevented (no loyalty loss).
+    let before = g.battlefield_find(gid).unwrap().counter_count(CounterType::Loyalty);
+    let mut evs = vec![];
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(gid), 3, None, &mut evs);
+    assert_eq!(g.battlefield_find(gid).unwrap().counter_count(CounterType::Loyalty), before, "no loyalty removed during your turn");
+    // On the opponent's turn it's just a planeswalker again.
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(gid).unwrap().card_types.contains(&crabomination::card::CardType::Creature), "not a creature on opp turn");
+}
+
+/// With a Gideon in play, Gideon's Triumph makes the opponent sacrifice two.
+#[test]
+fn gideons_triumph_two_with_gideon() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gideon_blackblade());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(a).unwrap().attacked_this_turn = true;
+    g.battlefield_find_mut(b).unwrap().blocked_this_turn = true;
+    let tri = g.add_card_to_hand(0, catalog::gideons_triumph());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: tri, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Grizzly Bears").count(), 0, "both attacker and blocker sacrificed");
+}

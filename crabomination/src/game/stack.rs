@@ -2155,6 +2155,7 @@ impl GameState {
             }
             // CR 702.142 — "attacked this turn" (Boast gate) resets each turn.
             card.attacked_this_turn = false;
+            card.blocked_this_turn = false;
         }
         self.players[p].lands_played_this_turn = 0;
         self.players[p].graveyard_cast_types_this_turn.clear();

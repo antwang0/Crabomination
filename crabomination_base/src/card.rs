@@ -1433,6 +1433,10 @@ pub enum SelectionRequirement {
     /// point this turn (`CardInstance.attacked_this_turn`). Relentless
     /// Assault's "untap all creatures that attacked this turn".
     AttackedThisTurn,
+    /// True when the candidate creature was declared as a blocker at any point
+    /// this turn (`CardInstance.blocked_this_turn`) — for "creature that
+    /// attacked or blocked this turn" filters (Gideon's Triumph).
+    BlockedThisTurn,
     /// CR 708 — true when the candidate permanent is face down (a manifested /
     /// morphed / cloaked / disguised permanent showing a 2/2 vanilla). Powers
     /// DSK "face-down permanent you control" matters (Cryptid Inspector).
@@ -4176,6 +4180,10 @@ pub struct CardInstance {
     /// this turn"). Cleared in per-turn cleanup. Transient — not
     /// serialized (defaults to false on snapshot reload).
     pub attacked_this_turn: bool,
+    /// Set when this creature is declared as a blocker; powers "creature that
+    /// attacked or blocked this turn" filters (Gideon's Triumph). Cleared in
+    /// per-turn cleanup. Transient — not serialized (defaults false on reload).
+    pub blocked_this_turn: bool,
     /// CR 702.39 — Provoke: the attacker this creature must block this
     /// combat if able. Set when an attacker provokes it (untap + force
     /// block); cleared at end of combat. Transient — not serialized.
@@ -4460,6 +4468,7 @@ impl CardInstance {
             skip_next_untap: false,
             untap_locked_by: None,
             attacked_this_turn: false,
+            blocked_this_turn: false,
             must_block: None,
             exiled_by: None,
             exiled_with: None,
