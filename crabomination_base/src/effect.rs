@@ -3507,6 +3507,12 @@ pub enum Effect {
     /// Registers a `(controller, chosen)` entry in `damage_redirect_this_turn`
     /// (CR 614.9), consulted by `damage_redirect_target`.
     RedirectYourDamageToChosen { what: Selector },
+    /// Deliver Unto Evil — up to `max_targets` target cards in your graveyard
+    /// (slots `0..max_targets`, filter `filter`). On resolution: if you control
+    /// a Bolas planeswalker, return them all to your hand; otherwise an
+    /// opponent chooses two of them to leave in your graveyard and the rest go
+    /// to your hand.
+    DeliverUntoEvil { max_targets: u8, filter: SelectionRequirement },
     /// Feather, the Redeemed — mark the selected spell on the stack so that,
     /// as it resolves, it's exiled instead of going to the graveyard and
     /// returns to its controller's hand at the next end step. Applied by

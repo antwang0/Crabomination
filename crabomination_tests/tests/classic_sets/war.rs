@@ -2997,3 +2997,24 @@ fn feather_exiles_and_returns_spell() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == growth), "returned to hand at end step");
 }
+
+/// Deliver Unto Evil: without a Bolas planeswalker, an opponent leaves two of
+/// the chosen cards and the rest return to hand; the sorcery exiles itself.
+#[test]
+fn deliver_unto_evil_opponent_leaves_two() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let c = g.add_card_to_graveyard(0, catalog::forest());
+    // Opponent leaves a and b in the graveyard → only c returns.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a, b])]));
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(a), Target::Permanent(b), Target::Permanent(c)],
+        ..EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.resolve_effect(&catalog::deliver_unto_evil().effect, &ctx).unwrap();
+    assert!(g.players[0].hand.iter().any(|x| x.id == c), "unchosen card returned to hand");
+    assert!(g.players[0].graveyard.iter().any(|x| x.id == a), "chosen card stays in graveyard");
+    assert!(g.players[0].graveyard.iter().any(|x| x.id == b), "chosen card stays in graveyard");
+}

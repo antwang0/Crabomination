@@ -458,6 +458,7 @@ impl Effect {
             Effect::SupportCounters { .. } => true,
             Effect::DistributeCounters { .. } => true,
             Effect::ApplyToTargets { .. } => true,
+            Effect::DeliverUntoEvil { .. } => true,
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
@@ -930,6 +931,7 @@ impl Effect {
             | Effect::DistributeCounters { filter, .. }
             | Effect::DestroyTargetsPolymorph { filter }
             | Effect::ApplyToTargets { filter, .. }
+            | Effect::DeliverUntoEvil { filter, .. }
             | Effect::DestroyTargets { filter } => Some(filter),
             Effect::PayAnyEnergyDealDamage { to } => sel_filter(to),
             // Fight surfaces the *defender's* filter (the opp creature
@@ -1706,6 +1708,7 @@ impl Effect {
             Effect::DealDamageDivided { filter, .. }
             | Effect::DealDamageDividedEvenly { filter, .. } => filter.can_match_player(),
             Effect::ApplyToTargets { filter, .. } => filter.can_match_player(),
+            Effect::DeliverUntoEvil { filter, .. } => filter.can_match_player(),
             // Support / distribute put counters on creatures only — never players.
             Effect::SupportCounters { .. } => false,
             Effect::DistributeCounters { .. } => false,
@@ -2055,7 +2058,8 @@ impl Effect {
                 Effect::SupportCounters { filter, max_targets } => {
                     if slot < *max_targets { Some(filter) } else { None }
                 }
-                Effect::ApplyToTargets { filter, max_targets, .. } => {
+                Effect::ApplyToTargets { filter, max_targets, .. }
+                | Effect::DeliverUntoEvil { filter, max_targets, .. } => {
                     if slot < *max_targets { Some(filter) } else { None }
                 }
                 Effect::PreventNextDamage { target, .. }
@@ -2314,6 +2318,8 @@ impl Effect {
     pub fn min_targets_in_mode(&self, mode: Option<usize>) -> Option<u8> {
         match self {
             Effect::ApplyToTargets { min_targets, .. } => Some(*min_targets),
+            // "up to four target cards" — every slot optional.
+            Effect::DeliverUntoEvil { .. } => Some(0),
             Effect::OptionalTargets { min, .. } => Some(*min),
             Effect::Seq(v) => v.iter().find_map(|e| e.min_targets_in_mode(None)),
             Effect::ChooseMode(modes) => match mode {
@@ -2348,6 +2354,7 @@ impl Effect {
             | Effect::DealDamageDividedEvenly { max_targets, .. }
             | Effect::SupportCounters { max_targets, .. }
             | Effect::ApplyToTargets { max_targets, .. }
+            | Effect::DeliverUntoEvil { max_targets, .. }
             | Effect::DistributeCounters { max_targets, .. } => Some(*max_targets),
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes.get(m).and_then(|e| e.distinct_target_count(None)),

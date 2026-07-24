@@ -4073,3 +4073,18 @@ pub fn feather_the_redeemed() -> CardDefinition {
         ..vanilla("Feather, the Redeemed", cost(&[r(), w(), w()]), 3, 4, vec![CreatureType::Angel])
     }
 }
+
+/// Deliver Unto Evil — {2}{B} Sorcery. Choose up to four target cards in your
+/// graveyard. If you control a Bolas planeswalker, return them all to hand;
+/// otherwise an opponent chooses two to leave and the rest go to your hand.
+/// Then exile Deliver Unto Evil.
+pub fn deliver_unto_evil() -> CardDefinition {
+    CardDefinition {
+        name: "Deliver Unto Evil",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        exile_on_resolve: true,
+        effect: Effect::DeliverUntoEvil { max_targets: 4, filter: R::InYourGraveyard },
+        ..Default::default()
+    }
+}

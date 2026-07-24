@@ -12831,6 +12831,70 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DeliverUntoEvil { max_targets, .. } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                // Collect the (still-present) targeted graveyard cards.
+                let targeted: Vec<crate::card::CardId> = (0..*max_targets as usize)
+                    .filter_map(|i| match ctx.targets.get(i) {
+                        Some(crate::game::types::Target::Permanent(cid)) => Some(*cid),
+                        _ => None,
+                    })
+                    .filter(|cid| self.players[p].graveyard.iter().any(|c| c.id == *cid))
+                    .collect();
+                if targeted.is_empty() {
+                    return Ok(());
+                }
+                // "If you control a Bolas planeswalker, return them all."
+                let controls_bolas = self.battlefield.iter().any(|c| {
+                    c.controller == p
+                        && c.definition.card_types.contains(&crate::card::CardType::Planeswalker)
+                        && c.definition.subtypes.planeswalker_subtypes
+                            .contains(&crate::card::PlaneswalkerSubtype::Bolas)
+                });
+                let leave: Vec<crate::card::CardId> = if controls_bolas {
+                    Vec::new()
+                } else {
+                    // An opponent chooses two of them to leave in the graveyard.
+                    let n = 2usize.min(targeted.len());
+                    let cands: Vec<(crate::card::CardId, String)> = targeted
+                        .iter()
+                        .filter_map(|id| {
+                            self.players[p].graveyard.iter().find(|c| c.id == *id)
+                                .map(|c| (*id, c.definition.name.to_string()))
+                        })
+                        .collect();
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: format!("Opponent: choose {n} card(s) to leave in the graveyard"),
+                        candidates: cands,
+                        min: n as u32,
+                        max: n as u32,
+                    });
+                    let mut chosen: Vec<crate::card::CardId> = match answer {
+                        DecisionAnswer::Cards(ids) => {
+                            ids.into_iter().filter(|id| targeted.contains(id)).take(n).collect()
+                        }
+                        _ => Vec::new(),
+                    };
+                    // Fill to n deterministically if the decider under-picked.
+                    while chosen.len() < n {
+                        if let Some(id) = targeted.iter().find(|id| !chosen.contains(id)).copied() {
+                            chosen.push(id);
+                        } else {
+                            break;
+                        }
+                    }
+                    chosen
+                };
+                for id in targeted.iter().filter(|id| !leave.contains(id)) {
+                    if let Some(card) = Self::take_card(&mut self.players[p].graveyard, *id) {
+                        self.players[p].hand.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::MarkExileReturnOnResolve { what } => {
                 let spell_id = self.resolve_selector(what, ctx).into_iter().find_map(|e| match e {
                     EntityRef::Card(cid) | EntityRef::Permanent(cid) => Some(cid),
