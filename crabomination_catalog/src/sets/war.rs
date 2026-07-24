@@ -2727,6 +2727,44 @@ pub fn rescuer_sphinx() -> CardDefinition {
     }
 }
 
+/// Vivien, Champion of the Wilds — {2}{G} loyalty 4. Static: cast creature
+/// spells as though they had flash. +1: up to one target creature gains
+/// vigilance and reach until your next turn. −2: impulse the top card (may cast
+/// it while exiled). (The look-3/creature-only nuances of the −2 are approximated.)
+pub fn vivien_champion_of_the_wilds() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "You may cast creature spells as though they had flash.",
+            effect: StaticEffect::ControllerSpellsHaveFlash { filter: R::HasCardType(CardType::Creature) },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::GrantKeywords { what: Selector::Target(0), keywords: vec![Keyword::Vigilance, Keyword::Reach], duration: Duration::UntilNextTurn }),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: crate::card::MayPlayDuration::WhileExiled,
+                    pay_any_color: false,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+                ..Default::default()
+            },
+        ],
+        ..walker("Vivien, Champion of the Wilds", cost(&[generic(2), g()]), PlaneswalkerSubtype::Vivien, 4)
+    }
+}
+
 /// Sorin, Vengeful Bloodlord — {2}{W}{B} loyalty 4. During your turn, your
 /// creatures and planeswalkers have lifelink. +2: 1 damage to target player or
 /// planeswalker. −X: reanimate a creature card with mana value X from your

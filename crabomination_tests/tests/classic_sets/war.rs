@@ -2332,3 +2332,29 @@ fn jaces_ruse_bounces_two() {
     assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both bounced");
     assert_eq!(g.players[1].hand.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 2, "both in owner's hand");
 }
+
+/// Vivien, Champion of the Wilds lets you cast creature spells at flash speed
+/// and her +1 grants vigilance + reach.
+#[test]
+fn vivien_champion_flash_and_grant() {
+    let mut g = two_player_game();
+    let vivien = g.add_card_to_battlefield(0, catalog::vivien_champion_of_the_wilds());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Cast a creature at instant speed on the opponent's turn (flash).
+    g.active_player_idx = 1;
+    let flasher = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastSpell { card_id: flasher, target: None, additional_targets: vec![], mode: None, x_value: None }).is_ok(), "creature cast at flash speed");
+    drain_stack(&mut g);
+    // +1 grants vigilance + reach.
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: vivien, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None }).expect("+1");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Reach), "granted vigilance + reach");
+}

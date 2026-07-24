@@ -14836,6 +14836,7 @@ static WAR: &[Factory] = &[
     super::war::dovin_hand_of_control,
     super::war::ajani_the_greathearted,
     super::war::sorin_vengeful_bloodlord,
+    super::war::vivien_champion_of_the_wilds,
     super::war::jaces_ruse,
     super::war::davriel_rogue_shadowmage,
     super::war::awakening_of_vitu_ghazi,
