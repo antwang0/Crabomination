@@ -956,3 +956,22 @@ fn silhana_wayfinder_stacks_top() {
     let top = g.players[0].library.last().unwrap();
     assert!(top.definition.card_types.contains(&CardType::Creature) || top.definition.card_types.contains(&CardType::Land), "top is a creature or land");
 }
+
+/// Gyre Engineer untaps whenever you activate an adapt ability (CR 702.108).
+#[test]
+fn gyre_engineer_untaps_on_adapt() {
+    let mut g = two_player_game();
+    let eng = g.add_card_to_battlefield(0, catalog::gyre_engineer());
+    let munc = g.add_card_to_battlefield(0, catalog::aeromunculus());
+    g.clear_sickness(eng);
+    // Tap Gyre Engineer for mana (so we can observe it untapping).
+    g.perform_action(GameAction::ActivateAbility { card_id: eng, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("mana");
+    assert!(g.battlefield_find(eng).unwrap().tapped, "engineer tapped for mana");
+    // Activate Aeromunculus's adapt ability.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility { card_id: munc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("adapt");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(eng).unwrap().tapped, "engineer untapped by adapt trigger");
+}

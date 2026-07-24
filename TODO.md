@@ -4486,9 +4486,6 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Opponent activates a nonmana ability of an artifact/creature/land →
     ping** — Immolation Shaman. `EventKind::AbilityActivated` exists but there
     is no scope/filter for "source is an artifact/creature/land, nonmana."
-  - **Adapt-activation trigger** — Gyre Engineer ("Whenever you activate an
-    adapt ability, untap this"); needs an adapt-tagged `AbilityActivated`
-    hook. (Its `{T}: Add {G}{U}` mana ability already ships.)
 - ⏳ **Newly-noticed primitives (discovered during the DSK/BLB gap batch):**
   - **Gift on a permanent (creature/artifact)** — the gift's `gifted_effect`
     resolves only on the instant/sorcery spell path; a Gift *creature*

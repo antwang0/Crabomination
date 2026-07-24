@@ -1945,6 +1945,10 @@ pub enum EventKind {
     /// CR 702.177 — an exhaust ability was activated ("whenever you activate an
     /// exhaust ability" — Adrenaline Jockey).
     ExhaustAbilityActivated,
+    /// CR 702.108 — an adapt ability was activated ("whenever you activate an
+    /// adapt ability" — Gyre Engineer). Detected structurally from the
+    /// activated ability's counter-check effect shape (see `Effect::is_adapt`).
+    AdaptAbilityActivated,
     /// One or more cards left a player's graveyard (returned to hand /
     /// battlefield, exiled from graveyard, etc.). Used by Strixhaven
     /// "cards leave your graveyard" payoffs (Garrison Excavator, Living

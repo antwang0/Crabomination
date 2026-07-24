@@ -79,6 +79,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::AnyCounterAdded, GameEvent::CounterAdded { .. }) => true,
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
         (EventKind::ExhaustAbilityActivated, GameEvent::AbilityActivated { exhaust: true, .. }) => true,
+        (EventKind::AdaptAbilityActivated, GameEvent::AbilityActivated { adapt: true, .. }) => true,
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land: true, .. }) => true,
         (EventKind::PutIntoGraveyard, GameEvent::CardPutIntoGraveyard { .. }) => true,

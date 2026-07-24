@@ -93,6 +93,37 @@ fn implicit_creature_for_slot(what: &Selector, slot: u8) -> Option<&'static Sele
 impl Effect {
     pub const NOOP: Effect = Effect::Noop;
 
+    /// True if this effect is an *adapt* effect (CR 702.108) — the
+    /// counter-check shape produced by `shortcut::adapt`: "if this creature
+    /// has no +1/+1 counters, put N +1/+1 counters on it." Recognizes the
+    /// bare effect and the same shape as the head of a `Seq` (adapt cards that
+    /// bundle a rider). Used to flag `AbilityActivated` events as adapt-ability
+    /// activations without tagging every adapt card by hand.
+    pub fn is_adapt(&self) -> bool {
+        use crate::card::{CounterType, SelectionRequirement};
+        match self {
+            Effect::If { cond, then, .. } => {
+                let counter_check = matches!(
+                    cond,
+                    Predicate::Not(inner) if matches!(
+                        &**inner,
+                        Predicate::EntityMatches {
+                            what: Selector::This,
+                            filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                        }
+                    )
+                );
+                let adds_counter = matches!(
+                    &**then,
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, .. }
+                );
+                counter_check && adds_counter
+            }
+            Effect::Seq(effects) => effects.first().is_some_and(Effect::is_adapt),
+            _ => false,
+        }
+    }
+
     pub fn seq(effects: Vec<Effect>) -> Self {
         if effects.is_empty() { Effect::Noop }
         else if effects.len() == 1 { effects.into_iter().next().unwrap() }

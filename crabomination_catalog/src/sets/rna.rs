@@ -140,15 +140,18 @@ pub fn rakdos_firewheeler() -> CardDefinition {
     }
 }
 
-/// Gyre Engineer — {1}{G}{U} 1/1 Vedalken Wizard. {T}: Add {G}{U}. (Its
-/// "untap when you activate an adapt ability" rider needs an adapt-tagged
-/// activation trigger — tracked in TODO.md.)
+/// Gyre Engineer — {1}{G}{U} 1/1 Vedalken Wizard. {T}: Add {G}{U}. Whenever you
+/// activate an adapt ability, untap Gyre Engineer.
 pub fn gyre_engineer() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Green, Color::Blue]) },
             ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AdaptAbilityActivated, EventScope::YourControl),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
         }],
         ..body("Gyre Engineer", cost(&[generic(1), g(), u()]), 1, 1, vec![CreatureType::Vedalken, CreatureType::Wizard], vec![])
     }

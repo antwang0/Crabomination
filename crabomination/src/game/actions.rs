@@ -11437,7 +11437,7 @@ impl GameState {
         // out (Flamescroll Celebrant, CR 605.1), and the log skips the
         // tap-for-mana spam.
         if !is_mana_ability(&ability.effect) {
-            events.push(GameEvent::AbilityActivated { source: card_id, exhaust: ability.exhaust });
+            events.push(GameEvent::AbilityActivated { source: card_id, exhaust: ability.exhaust, adapt: ability.effect.is_adapt() });
         }
 
         // Mark the ability as used for the once-per-turn budget. (After

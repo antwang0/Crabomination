@@ -1562,7 +1562,9 @@ pub enum GameEvent {
     SpellCast { player: usize, card_id: CardId, face: CastFace },
     /// `exhaust` is true when the activated ability carried CR 702.177 Exhaust
     /// (drives "whenever you activate an exhaust ability" — Adrenaline Jockey).
-    AbilityActivated { source: CardId, exhaust: bool },
+    /// `adapt` is true for CR 702.108 adapt abilities (drives "whenever you
+    /// activate an adapt ability" — Gyre Engineer).
+    AbilityActivated { source: CardId, exhaust: bool, adapt: bool },
     /// `source` is the permanent that produced the mana (a tapped land, a mana
     /// rock, …) when known, so clients can anchor mana-flow visuals to it.
     /// `None` for mana with no single permanent source (rituals, X-cost /
