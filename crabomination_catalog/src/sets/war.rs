@@ -2727,6 +2727,51 @@ pub fn rescuer_sphinx() -> CardDefinition {
     }
 }
 
+/// Widespread Brutality — {1}{B}{R}{R} Sorcery. Amass Zombies 2, then the Army
+/// you amassed deals damage equal to its power to each non-Army creature.
+pub fn widespread_brutality() -> CardDefinition {
+    let army = || R::HasCreatureType(CreatureType::Army);
+    CardDefinition {
+        name: "Widespread Brutality",
+        cost: cost(&[generic(1), b(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Zombie) },
+            Effect::DealDamageEqualToPowerToEach {
+                source: Selector::EachPermanent(army().and(R::ControlledByYou)),
+                targets: Selector::EachPermanent(R::Creature.and(army().negate())),
+                each_opponent: false,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// The Elderspell — {B}{B} Sorcery. Destroy any number of target planeswalkers,
+/// then put two loyalty counters on a planeswalker you control for each one
+/// destroyed this way.
+pub fn the_elderspell() -> CardDefinition {
+    CardDefinition {
+        name: "The Elderspell",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 20,
+                min_targets: 0,
+                filter: R::Planeswalker,
+                effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+            },
+            Effect::AddCounter {
+                what: Selector::one_of(Selector::EachPermanent(R::Planeswalker.and(R::ControlledByYou))),
+                kind: CounterType::Loyalty,
+                amount: Value::Times(Box::new(Value::Const(2)), Box::new(Value::PermanentsDestroyedThisResolution)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Vivien, Champion of the Wilds — {2}{G} loyalty 4. Static: cast creature
 /// spells as though they had flash. +1: up to one target creature gains
 /// vigilance and reach until your next turn. −2: impulse the top card (may cast

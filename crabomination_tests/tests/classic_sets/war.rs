@@ -2358,3 +2358,42 @@ fn vivien_champion_flash_and_grant() {
     let cp = g.computed_permanent(bear).unwrap();
     assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Reach), "granted vigilance + reach");
 }
+
+/// The Elderspell destroys planeswalkers and pumps your own two loyalty each.
+#[test]
+fn the_elderspell_destroys_and_pumps() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::jace_arcane_strategist()); // loyalty 4
+    let foe1 = g.add_card_to_battlefield(1, catalog::jace_arcane_strategist());
+    let foe2 = g.add_card_to_battlefield(1, catalog::jace_arcane_strategist());
+    let spell = g.add_card_to_hand(0, catalog::the_elderspell());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: Some(Target::Permanent(foe1)), additional_targets: vec![Target::Permanent(foe2)], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe1).is_none() && g.battlefield_find(foe2).is_none(), "both opposing walkers destroyed");
+    assert_eq!(g.battlefield_find(mine).unwrap().counter_count(CounterType::Loyalty), 4 + 4, "two loyalty per destroyed (2×2)");
+}
+
+/// Widespread Brutality amasses a 2/2 Army and it burns each non-Army creature
+/// for 2.
+#[test]
+fn widespread_brutality_amasses_and_burns() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 non-Army
+    let spell = g.add_card_to_hand(0, catalog::widespread_brutality());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    // A 2/2 Army was amassed; it dealt 2 to the opposing 2/2, killing it.
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army");
+    assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 2, "amassed 2");
+    assert!(g.battlefield_find(foe).is_none(), "non-Army creature took 2 and died");
+}
