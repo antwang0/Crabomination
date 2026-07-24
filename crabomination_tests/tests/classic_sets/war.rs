@@ -1713,6 +1713,46 @@ fn teferis_time_twist_flickers_with_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1, "returned with a +1/+1 counter");
 }
 
+/// Role Reversal exchanges control of two target permanents.
+#[test]
+fn role_reversal_swaps_control() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::role_reversal());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(mine)), additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1, "my bear now theirs");
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "their giant now mine");
+}
+
+/// Heartwarming Redemption wheels the hand for one extra and gains that much life.
+#[test]
+fn heartwarming_redemption_wheels_plus_one() {
+    let mut g = two_player_game();
+    for _ in 0..10 { g.add_card_to_library(0, catalog::forest()); }
+    let spell = g.add_card_to_hand(0, catalog::heartwarming_redemption());
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::forest()); // hand (besides the spell) = 2 cards
+    let life = g.players[0].life;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    // Discarded 2, drew 2 + 1 = 3 in hand; gained 3 life.
+    assert_eq!(g.players[0].hand.len(), 3, "drew discarded count + 1");
+    assert_eq!(g.players[0].life, life + 3, "gained life = new hand size");
+}
+
 /// Ashiok's static stops an opponent from searching their library; her −1 mills
 /// a target player four and exiles opponents' graveyards.
 #[test]

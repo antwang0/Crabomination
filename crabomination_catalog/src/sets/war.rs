@@ -2486,6 +2486,38 @@ pub fn god_eternal_rhonas() -> CardDefinition {
     }
 }
 
+/// Role Reversal — {U}{U}{R} Sorcery. Exchange control of two target permanents.
+/// (The printed "that share a permanent type" restriction is not enforced at
+/// cast time.)
+pub fn role_reversal() -> CardDefinition {
+    CardDefinition {
+        name: "Role Reversal",
+        cost: cost(&[u(), u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ExchangeControl {
+            a: Selector::TargetFiltered { slot: 0, filter: R::Permanent },
+            b: Selector::TargetFiltered { slot: 1, filter: R::Permanent },
+        },
+        ..Default::default()
+    }
+}
+
+/// Heartwarming Redemption — {2}{R}{W} Instant. Discard your hand, draw that
+/// many cards plus one, then gain life equal to the number of cards in hand.
+pub fn heartwarming_redemption() -> CardDefinition {
+    CardDefinition {
+        name: "Heartwarming Redemption",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DiscardHandDrawThatMany { who: Selector::You },
+            draw(1),
+            Effect::GainLife { who: Selector::You, amount: Value::HandSizeOf(PlayerRef::You) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Ashiok, Dream Render — {1}{U/B}{U/B} loyalty 5. Static: opponents' spells and
 /// abilities can't cause their controller to search their library. −1: target
 /// player mills four, then exile each opponent's graveyard.

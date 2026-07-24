@@ -14810,6 +14810,8 @@ static WAR: &[Factory] = &[
     super::war::samut_tyrant_smasher,
     super::war::kaya_bane_of_the_dead,
     super::war::ashiok_dream_render,
+    super::war::role_reversal,
+    super::war::heartwarming_redemption,
     super::war::parhelion_ii,
     super::war::dreadhorde_invasion,
     super::war::god_eternal_rhonas,
