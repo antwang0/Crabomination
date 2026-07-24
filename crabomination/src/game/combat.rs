@@ -2538,6 +2538,16 @@ impl GameState {
                         card_id: pw_id,
                         new_loyalty: new_loyalty as i32,
                     });
+                    // Combat damage removes loyalty counters (Chandra, Fire
+                    // Artisan's removal trigger).
+                    let removed = current.saturating_sub(new_loyalty);
+                    if removed > 0 {
+                        events.push(GameEvent::CounterRemoved {
+                            card_id: pw_id,
+                            counter_type: crate::card::CounterType::Loyalty,
+                            count: removed,
+                        });
+                    }
                 }
                 if amount > 0 {
                     self.fire_combat_damage_triggers(

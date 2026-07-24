@@ -73,6 +73,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
         (EventKind::TurnBegins, GameEvent::TurnStarted { .. }) => true,
         (EventKind::CounterAdded(k), GameEvent::CounterAdded { counter_type, .. }) => counter_type == k,
+        (EventKind::CounterRemoved(k), GameEvent::CounterRemoved { counter_type, .. }) => counter_type == k,
         (EventKind::AnyCounterAdded, GameEvent::CounterAdded { .. }) => true,
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
         (EventKind::ExhaustAbilityActivated, GameEvent::AbilityActivated { exhaust: true, .. }) => true,
@@ -199,6 +200,9 @@ pub(crate) fn event_matches_spec(
         ) || matches!(
             event,
             GameEvent::CounterAdded { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            event,
+            GameEvent::CounterRemoved { card_id, .. } if *card_id == source.id
         ) || matches!(
             // Enrage: "Whenever this creature is dealt damage." Source
             // must equal the damaged card.
@@ -647,6 +651,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // payoffs can introspect it / its controller (Auntie Ool's draw-or-drain
         // off her own Ward—Blight; CR 122 / 603.6).
         GameEvent::CounterAdded { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::CounterRemoved { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         // CR 701.54 — the Ring-bearer chosen this temptation is the subject,
         // so "whenever you choose a Ring-bearer" payoffs can reference it.
         GameEvent::RingTempted { bearer, player, .. } => bearer
@@ -742,6 +747,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::Mutated { card_id }
         | GameEvent::TokenCreated { card_id }
         | GameEvent::CounterAdded { card_id, .. }
+        | GameEvent::CounterRemoved { card_id, .. }
         | GameEvent::TurnedFaceUp { card_id }
         | GameEvent::AttackerDeclared(card_id) => Some(*card_id),
         GameEvent::BlockerDeclared { blocker, .. } => Some(*blocker),

@@ -3504,6 +3504,34 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
     }
 }
 
+/// Chandra, Fire Artisan — {2}{R}{R} loyalty 4. Whenever loyalty counters are
+/// removed from her, she deals that much damage to target opponent or
+/// planeswalker. +1: impulse one. −7: impulse seven.
+pub fn chandra_fire_artisan() -> CardDefinition {
+    let impulse = |count: i32| Effect::ExileTopAndGrantMayPlay {
+        who: PlayerRef::You,
+        count: Value::Const(count),
+        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+        pay_any_color: false,
+        pay_own_cost: true,
+        uncast_penalty: None,
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterRemoved(CounterType::Loyalty), EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(R::OpponentPlayer.or(R::Planeswalker)),
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility { loyalty_cost: 1, effect: impulse(1), ..Default::default() },
+            LoyaltyAbility { loyalty_cost: -7, effect: impulse(7), ..Default::default() },
+        ],
+        ..walker("Chandra, Fire Artisan", cost(&[generic(2), r(), r()]), PlaneswalkerSubtype::Chandra, 4)
+    }
+}
+
 /// Liliana, Dreadhorde General — {4}{B}{B} loyalty 6. Whenever a creature you
 /// control dies, draw a card. +1: make two 2/2 black Zombies. −4: each player
 /// sacrifices two creatures. −9: each opponent keeps one permanent of each type

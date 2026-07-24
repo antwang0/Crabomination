@@ -679,6 +679,14 @@ impl GameState {
                             card_id: cid,
                             new_loyalty: new_loyalty as i32,
                         });
+                        let removed = current.saturating_sub(new_loyalty);
+                        if removed > 0 {
+                            events.push(GameEvent::CounterRemoved {
+                                card_id: cid,
+                                counter_type: CounterType::Loyalty,
+                                count: removed,
+                            });
+                        }
                     }
                 } else if is_battle {
                     if let Some(c) = self.battlefield_find_mut(cid) {

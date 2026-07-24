@@ -1918,6 +1918,11 @@ pub enum EventKind {
     TurnBegins,
     /// A counter was added to a permanent/player.
     CounterAdded(CounterType),
+    /// One or more counters of the given kind were removed from a permanent
+    /// (a single event carries the total removed as its amount). Scope by
+    /// `SelfSource` for "whenever counters are removed from this" — Chandra,
+    /// Fire Artisan's loyalty-removal trigger.
+    CounterRemoved(CounterType),
     /// A counter of *any* kind was added to a permanent (CR 122). Fires once
     /// per `CounterAdded` event regardless of counter type — "whenever one or
     /// more counters are put on a creature you control" (Stalwart Successor).

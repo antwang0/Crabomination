@@ -11270,6 +11270,15 @@ impl GameState {
                 new_loyalty,
             },
         ];
+        // "Whenever one or more loyalty counters are removed" (Chandra, Fire
+        // Artisan) — a minus ability pays loyalty as a removal.
+        if loyalty_change < 0 {
+            events.push(GameEvent::CounterRemoved {
+                card_id,
+                counter_type: crate::card::CounterType::Loyalty,
+                count: (-loyalty_change) as u32,
+            });
+        }
 
         // Push ability effects onto the stack. Auto-fill additional target
         // slots (Domri Rade's −2 "target creature you control fights another
@@ -13607,6 +13616,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         | GameEvent::EnergyGained { amount, .. } => *amount,
         GameEvent::DiscardedBatch { count, .. } => *count,
         GameEvent::CounterAdded { count, .. } => *count,
+        GameEvent::CounterRemoved { count, .. } => *count,
         GameEvent::Discovered { value, .. } => *value,
         GameEvent::Expended { total, .. } => *total,
         // CR 706.4 — the greatest result rolled, for "roll a 5 or higher"

@@ -2691,3 +2691,18 @@ fn liliana_dreadhorde_minus_four_sacrifices_two_each() {
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count(), 1, "player 0 sacrificed two of three");
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_creature()).count(), 1, "player 1 sacrificed two of three");
 }
+
+/// Chandra, Fire Artisan pings when combat damage removes her loyalty.
+#[test]
+fn chandra_fire_artisan_pings_on_loyalty_loss() {
+    let mut g = two_player_game();
+    let chandra = g.add_card_to_battlefield(0, catalog::chandra_fire_artisan());
+    let opp_life = g.players[1].life;
+    // 3 damage to Chandra removes 3 loyalty; her trigger deals 3 to the opponent.
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(chandra), 3, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(chandra).unwrap().counter_count(CounterType::Loyalty), 1, "lost 3 loyalty");
+    assert_eq!(g.players[1].life, opp_life - 3, "Chandra dealt 3 to the opponent");
+}
