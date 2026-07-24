@@ -2783,3 +2783,21 @@ fn ugin_ineffable_minus_three_destroys_colored() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(colored).is_none(), "colored permanent destroyed");
 }
+
+/// Neheb, Dreadhorde Champion: combat damage lets you discard-then-draw and
+/// bank that much {R} that survives step/phase emptying.
+#[test]
+fn neheb_dreadhorde_discard_draw_and_banks_red() {
+    let mut g = two_player_game();
+    let neheb = g.add_card_to_battlefield(0, catalog::neheb_dreadhorde_champion());
+    let c1 = g.add_card_to_hand(0, catalog::forest());
+    let c2 = g.add_card_to_hand(0, catalog::forest());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![c1, c2])]));
+    g.fire_combat_damage_to_player_triggers(neheb, 1, 5);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "discarded two, drew two");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2, "banked two red");
+    assert_eq!(g.players[0].kept_mana_this_turn.amount(Color::Red), 2, "the red doesn't empty this turn");
+}

@@ -3504,6 +3504,36 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
     }
 }
 
+/// Neheb, Dreadhorde Champion — {2}{R}{R} 5/4 legendary Zombie Minotaur
+/// Warrior with trample. Combat damage to a player/planeswalker: discard any
+/// number, draw that many, and add that much {R} that doesn't empty this turn.
+pub fn neheb_dreadhorde_champion() -> CardDefinition {
+    let body = || Effect::Seq(vec![
+        Effect::DiscardAnyNumber { who: Selector::You },
+        Effect::Draw { who: Selector::You, amount: Value::CardsDiscardedThisEffect },
+        Effect::AddManaKeptThisTurnCount {
+            who: PlayerRef::You,
+            color: Color::Red,
+            amount: Value::CardsDiscardedThisEffect,
+        },
+    ]);
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: body(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource),
+                effect: body(),
+            },
+        ],
+        ..vanilla("Neheb, Dreadhorde Champion", cost(&[generic(2), r(), r()]), 5, 4, vec![CreatureType::Zombie, CreatureType::Minotaur, CreatureType::Warrior])
+    }
+}
+
 /// Ugin, the Ineffable — {6} loyalty 4. Colorless spells you cast cost {2}
 /// less. +1: exile top face down, make a 2/2 Spirit; when it leaves, return the
 /// exiled card to hand. −3: destroy target permanent that's one or more colors.

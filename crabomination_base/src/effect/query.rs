@@ -565,7 +565,8 @@ impl Effect {
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),
-            Effect::AddManaKeptThisTurn { who, .. } => player_has_target(who),
+            Effect::AddManaKeptThisTurn { who, .. }
+            | Effect::AddManaKeptThisTurnCount { who, .. } => player_has_target(who),
             Effect::AddManaEqualToPermanentCost { .. } => false,
             Effect::AddMana { who, pool } => {
                 player_has_target(who) || match pool {

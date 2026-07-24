@@ -3550,6 +3550,10 @@ pub enum Effect {
     /// phases end" (Savage Ventmaw's attack trigger). The mana survives every
     /// step/phase empty this turn and clears at cleanup.
     AddManaKeptThisTurn { who: PlayerRef, colors: Vec<Color> },
+    /// Like `AddManaKeptThisTurn` but adds `amount` mana of a single `color`
+    /// (Neheb, Dreadhorde Champion — "add that much {R}", where the amount is
+    /// the number of cards discarded this resolution).
+    AddManaKeptThisTurnCount { who: PlayerRef, color: Color, amount: Value },
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },

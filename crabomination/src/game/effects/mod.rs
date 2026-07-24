@@ -5488,6 +5488,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddManaKeptThisTurnCount { who, color, amount } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let mult = self.mana_production_multiplier.max(1);
+                for _ in 0..(n * mult) {
+                    self.players[p].mana_pool.add(*color, 1);
+                    self.players[p].kept_mana_this_turn.add(*color, 1);
+                    events.push(GameEvent::ManaAdded { player: p, color: *color, source: ctx.source });
+                }
+                Ok(())
+            }
+
             Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
                 // CR 701.15g — `DestroyNoRegen` ("can't be regenerated")
                 // bypasses regeneration shields; everything else (the
