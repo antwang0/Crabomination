@@ -1315,3 +1315,56 @@ fn multiple_choice_casts_and_resolves() {
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Multiple Choice"),
         "Multiple Choice resolved to the graveyard");
 }
+
+/// Professor Onyx −8 — seven Punisher rounds: the opponent discards a
+/// card per round while able, then loses 3 per round they can't cover.
+/// With 3 cards in hand: 3 discards + 4 × 3 life lost.
+#[test]
+fn professor_onyx_ultimate_discard_or_lose_three_seven_times() {
+    let mut g = two_player_game();
+    let onyx = g.add_card_to_battlefield(0, catalog::professor_onyx());
+    g.battlefield_find_mut(onyx).unwrap().add_counters(CounterType::Loyalty, 3); // 5+3=8
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::island()); }
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        x_value: None,
+        card_id: onyx, ability_index: 2, target: None,
+    }).expect("Onyx -8 activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "all three cards discarded");
+    assert_eq!(g.players[1].life, p1 - 12, "loses 3 for each of the 4 uncovered rounds");
+}
+
+/// Mila's loyalty trigger fires only when a PLANESWALKER you control is
+/// attacked — attacks on the player don't add loyalty (audit fix).
+#[test]
+fn mila_loyalty_only_on_planeswalker_attacks() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mila_crafty_companion());
+    let onyx = g.add_card_to_battlefield(0, catalog::professor_onyx());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+
+    // Attack the PLAYER: no loyalty trigger.
+    let before = g.battlefield_find(onyx).unwrap().counter_count(CounterType::Loyalty);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(0),
+    }])).expect("attack player");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(onyx).unwrap().counter_count(CounterType::Loyalty),
+        before, "no loyalty from an attack on the player");
+
+    // New combat: attack the planeswalker — loyalty trigger fires.
+    g.set_attacking(vec![]);
+    g.battlefield_find_mut(bear).unwrap().tapped = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Planeswalker(onyx),
+    }])).expect("attack planeswalker");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(onyx).unwrap().counter_count(CounterType::Loyalty),
+        before + 1, "each planeswalker you control gets a loyalty counter");
+}

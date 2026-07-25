@@ -1639,18 +1639,24 @@ pub fn catalog_draw() -> CardDefinition {
 
 /// Teferi's Protection — {2}{W} Instant. "Until your next turn: your life total
 /// can't change; you have protection from everything; phase out all permanents
-/// you control." The phase-out is now faithful (`Effect::PhaseOut` — your
-/// permanents leave until your next untap step); "you have protection /
-/// life can't change" is approximated as preventing all damage to you this turn
-/// (the non-damage life-lock is the only remaining simplification).
+/// you control. Exile Teferi's Protection." The phase-out is faithful
+/// (`Effect::PhaseOut` — your permanents leave until your next untap step);
+/// "life total can't change" rides `Effect::LifeLockThisTurn` (gain AND loss
+/// dropped); "protection from everything" is approximated as preventing all
+/// damage to you this turn (the non-damage protection riders — can't be
+/// targeted etc. — are moot with every permanent phased out). Self-exiles on
+/// resolution (`exile_on_resolve`). Remaining drift: the locks are
+/// turn-scoped rather than "until your next turn".
 pub fn teferis_protection() -> CardDefinition {
     CardDefinition {
         name: "Teferi's Protection",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
+        exile_on_resolve: true,
         effect: Effect::Seq(vec![
             Effect::PreventAllCombatDamageThisTurn,
             Effect::PreventAllDamageThisTurn { target: Selector::You },
+            Effect::LifeLockThisTurn { who: Selector::You },
             Effect::PhaseOut {
                 what: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
                 until_source_leaves: false,

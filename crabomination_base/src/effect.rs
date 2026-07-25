@@ -2180,6 +2180,12 @@ pub enum EventScope {
     /// trigger's target slot (so "that creature's controller gains control"
     /// resolves via `PlayerRef::Target(0)` — Coveted Jewel).
     ControllerAttackedByOpponent,
+    /// A creature an **opponent** controls attacks a *planeswalker* the
+    /// source's controller controls (only — attacks on the player don't
+    /// fire it). Mila, Crafty Companion's "whenever an opponent attacks
+    /// one or more planeswalkers you control". Same dispatcher as
+    /// `ControllerAttackedByOpponent`, gated on the attack target.
+    ControllerPlaneswalkerAttackedByOpponent,
     /// The creature the source Aura was attached to has died (left the
     /// battlefield). Matches a `CreatureDied` event whose subject is recorded
     /// in `GameState.auras_at_death` as having carried the source Aura.

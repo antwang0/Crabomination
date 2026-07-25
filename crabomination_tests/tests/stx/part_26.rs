@@ -692,3 +692,29 @@ fn thrilling_discovery_gains_life_and_optionally_loots_two_for_three() {
         "discarded both bears (Thrilling Discovery itself also in the bin)");
     assert_eq!(g.players[0].hand.len(), 3, "drew three cards");
 }
+
+/// Team Pennant's cheaper "Equip creature token {1}" (audit fix): a
+/// token target equips for {1}; a nontoken still needs the full {3}.
+#[test]
+fn team_pennant_token_equip_costs_one() {
+    let mut g = two_player_game();
+    let eq = g.add_card_to_battlefield(0, catalog::team_pennant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
+        c.is_token = true;
+    }
+    // {1} suffices against a token.
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: eq, target: bear })
+        .expect("token equip for {1}");
+
+    // A nontoken target still needs {3} — {1} floated is rejected.
+    let mut g = two_player_game();
+    let eq = g.add_card_to_battlefield(0, catalog::team_pennant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::Equip { equipment: eq, target: bear }).is_err(),
+        "nontoken equip still costs the full {{3}}"
+    );
+}

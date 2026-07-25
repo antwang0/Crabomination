@@ -610,10 +610,11 @@ pub fn mila_crafty_companion() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![
-            // Over-fires slightly: ControllerAttackedByOpponent also covers
-            // attacks on the player, not just their planeswalkers.
+            // "Whenever an opponent attacks one or more planeswalkers you
+            // control" — planeswalker-attack-only scope (attacks on the
+            // player don't fire it).
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerPlaneswalkerAttackedByOpponent),
                 effect: Effect::AddCounter {
                     what: Selector::EachPermanent(
                         SelectionRequirement::Planeswalker

@@ -9121,6 +9121,15 @@ impl GameState {
                 .cloned()
                 .ok_or(GameError::NotEquipment(equipment))?,
         };
+        // "Equip creature token {N}" (Team Pennant): a cheaper alternate
+        // cost when the target is a token. Take it whenever it applies —
+        // it's strictly cheaper on the printed cards.
+        if fortify.is_none()
+            && let Some(tok_cost) = &self.battlefield[equip_pos].definition.equip_token_cost
+            && self.battlefield.iter().any(|c| c.id == target && c.is_token)
+        {
+            equip_cost = tok_cost.clone();
+        }
         // CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper).
         let reduction = self.equip_cost_reduction_for(p);
         if reduction > 0 {

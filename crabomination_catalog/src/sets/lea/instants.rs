@@ -1,6 +1,6 @@
 use crate::card::{CardDefinition, CardType, SelectionRequirement, Selector, Value};
 use crate::effect::shortcut::{
-    add_mana, counter_target_spell, deal, exile_target, pump_target, target, target_filtered,
+    add_mana, counter_target_spell, deal, pump_target, target, target_filtered,
 };
 use crate::effect::Effect;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};

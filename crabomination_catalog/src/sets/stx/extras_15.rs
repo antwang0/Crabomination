@@ -35,8 +35,7 @@ pub fn poets_quill() -> CardDefinition {
 }
 
 /// Team Pennant — {1} Equipment. Equipped creature gets +1/+1 and has
-/// vigilance and trample. Equip {3}. (The cheaper "Equip creature token
-/// {1}" clause collapses to the flat equip cost.)
+/// vigilance and trample. Equip creature token {1}. Equip {3}.
 pub fn team_pennant() -> CardDefinition {
     CardDefinition {
         name: "Team Pennant",
@@ -44,6 +43,7 @@ pub fn team_pennant() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equip_token_cost: Some(cost(&[generic(1)])),
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,

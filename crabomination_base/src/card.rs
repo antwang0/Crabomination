@@ -2334,6 +2334,12 @@ pub struct CardDefinition {
     /// energy pool during `equip`. Defaults to 0 via `#[serde(default)]`.
     #[serde(default)]
     pub equip_energy_cost: u32,
+    /// Cheaper alternate equip cost usable when the equip target is a
+    /// creature *token* — "Equip creature token {1}" (Team Pennant, the
+    /// STX mascot-equipment cycle). Consulted in `equip` before the
+    /// regular `Keyword::Equip` cost. Defaults to `None`.
+    #[serde(default)]
+    pub equip_token_cost: Option<crate::mana::ManaCost>,
     /// CR 702.95 — Soulbond bonus. When `Some`, this card carries the Soulbond
     /// keyword and, while paired (`CardInstance.soulbond_partner`), confers
     /// this bonus on BOTH itself and its partner. Defaults to `None`.

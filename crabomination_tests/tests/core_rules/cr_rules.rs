@@ -10101,3 +10101,28 @@ fn swords_to_plowshares_controller_gains_power_in_life() {
     assert_eq!(g.players[1].life, p1 + 4,
         "its controller gains life equal to its power (4)");
 }
+
+/// Teferi's Protection (audit fix): the life-lock drops both loss and
+/// gain this turn, and the spell exiles itself on resolution.
+#[test]
+fn teferis_protection_locks_life_and_self_exiles() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::teferis_protection());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("TP castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == id), "exiles itself");
+    // Life is locked: a Lightning Bolt-style life loss is dropped.
+    let before = g.players[0].life;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before, "life total can't change");
+}

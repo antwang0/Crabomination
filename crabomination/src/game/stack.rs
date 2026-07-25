@@ -536,7 +536,8 @@ impl GameState {
             | EventScope::EnchantedBySource
             | EventScope::YourSourceDamagedOpponent
             | EventScope::YouTapped => false, // event-based
-            EventScope::ControllerAttackedByOpponent => false, // combat-based
+            EventScope::ControllerAttackedByOpponent
+            | EventScope::ControllerPlaneswalkerAttackedByOpponent => false, // combat-based
         };
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
             .battlefield

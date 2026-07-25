@@ -622,6 +622,10 @@ impl GameState {
             if let Some(defender) = self.defender_for(atk.target)
                 && defender != p
             {
+                // The planeswalker-only sibling scope fires only when the
+                // attack is aimed at a planeswalker (Mila) — not the player.
+                let is_pw_attack =
+                    matches!(atk.target, crate::game::types::AttackTarget::Planeswalker(_));
                 let listeners: Vec<(CardId, Effect)> = self
                     .battlefield
                     .iter()
@@ -632,8 +636,11 @@ impl GameState {
                             .iter()
                             .filter(|t| {
                                 t.event.kind == EventKind::Attacks
-                                    && t.event.scope
+                                    && (t.event.scope
                                         == crate::effect::EventScope::ControllerAttackedByOpponent
+                                        || (is_pw_attack
+                                            && t.event.scope
+                                                == crate::effect::EventScope::ControllerPlaneswalkerAttackedByOpponent))
                             })
                             .map(move |t| (c.id, t.effect.clone()))
                     })

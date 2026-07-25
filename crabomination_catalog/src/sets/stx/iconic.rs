@@ -1387,12 +1387,10 @@ pub fn silverquill_inkpact() -> CardDefinition {
 /// life. Repeat this process six more times."
 ///
 /// The −3 uses `HasGreatestPowerAmongControlled(Creature)` so the
-/// forced sacrifice can only take a max-power creature. The −8 is
-/// approximated: `MayDiscard` decisions can only be asked of the
-/// ability's controller (no per-opponent decision rebinding primitive),
-/// so we collapse to the "opponent always discards when able" line —
-/// each opponent discards up to 7 cards, then loses 3 life per
-/// iteration they couldn't cover: LoseLife 3 × (7 − discarded).
+/// forced sacrifice can only take a max-power creature. The −8 runs
+/// seven independent `Punisher` rounds — each opponent discards a card
+/// when able, else loses 3 (the punisher heuristic always covers when
+/// affordable; a per-opponent UI "may" is the remaining nicety).
 pub fn professor_onyx() -> CardDefinition {
     CardDefinition {
         name: "Professor Onyx",
@@ -1450,27 +1448,27 @@ pub fn professor_onyx() -> CardDefinition {
             },
             // −8: "Each opponent may discard a card. If they don't, they
             // lose 3 life. Repeat this process six more times."
-            // Approximated as the always-discard line (see doc above).
+            // Seven independent Punisher rounds: each opponent discards
+            // when able (the punisher heuristic), and a decliner is
+            // singled out via `PlayerRef::Triggerer` for the 3 loss.
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: -8,
-                effect: Effect::Seq(vec![
-                    Effect::Discard {
-                        who: Selector::Player(PlayerRef::EachOpponent),
-                        amount: Value::Const(7),
-                        random: false,
-                    },
-                    Effect::LoseLife {
-                        who: Selector::Player(PlayerRef::EachOpponent),
-                        amount: Value::Times(
-                            Box::new(Value::Const(3)),
-                            Box::new(Value::Diff(
-                                Box::new(Value::Const(7)),
-                                Box::new(Value::CardsDiscardedThisEffect),
-                            )),
-                        ),
-                    },
-                ]),
+                effect: Effect::Repeat {
+                    count: Value::Const(7),
+                    body: Box::new(Effect::Punisher {
+                        chooser: Selector::Player(PlayerRef::EachOpponent),
+                        options: vec![Effect::Discard {
+                            who: Selector::Player(PlayerRef::You),
+                            amount: Value::Const(1),
+                            random: false,
+                        }],
+                        otherwise: Box::new(Effect::LoseLife {
+                            who: Selector::Player(PlayerRef::Triggerer),
+                            amount: Value::Const(3),
+                        }),
+                    }),
+                },
             },
         ],
         ..Default::default()
