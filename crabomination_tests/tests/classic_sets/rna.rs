@@ -2394,3 +2394,22 @@ fn revival_revenge_split() {
     assert_eq!(g.players[1].life, 10, "opponent lost half of 20");
     assert_eq!(g.players[0].life, my_life + 10, "gained the 10 lost");
 }
+
+/// Rakdos, the Showstopper flips for each non-Demon/Devil/Imp creature and
+/// destroys the tails.
+#[test]
+fn rakdos_showstopper_coinflip_wipe() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // Bear, flip first
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());     // Beast, flip second
+    // tails for the bear (dies), heads for the wurm (survives).
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(false),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::rakdos_the_showstopper());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear flipped tails -> destroyed");
+    assert!(g.battlefield_find(wurm).is_some(), "wurm flipped heads -> survived");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Rakdos, the Showstopper"), "Rakdos (a Demon) is not flipped for");
+}

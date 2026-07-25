@@ -4152,6 +4152,10 @@ pub enum Effect {
     /// Dromedary). Capped by the source's live count; no-ops when `from`
     /// and `to` resolve to the same permanent.
     MoveCounters { from: Selector, to: Selector, counter: crate::card::CounterType, amount: Value },
+    /// Rakdos, the Showstopper — "flip a coin for each creature that isn't one
+    /// of `exclude_types`; destroy each creature whose coin comes up tails."
+    /// The controller flips (honoring coin-flip advantage).
+    CoinFlipEachCreatureDestroyOnTails { exclude_types: Vec<crate::card::CreatureType> },
     /// Awaken the Erstwhile — "each player discards all the cards in their
     /// hand, then creates that many `token` tokens." Resolved in turn order.
     EachPlayerDiscardsHandMakeTokens { token: crate::card::TokenDefinition },

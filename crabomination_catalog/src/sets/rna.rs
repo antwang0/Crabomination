@@ -3226,6 +3226,19 @@ pub fn hydroid_krasis() -> CardDefinition {
     }
 }
 
+/// Rakdos, the Showstopper — {4}{B}{R} 6/6 Demon with flying + trample. ETB:
+/// flip a coin for each creature that isn't a Demon, Devil, or Imp; destroy
+/// each whose coin comes up tails.
+pub fn rakdos_the_showstopper() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::CoinFlipEachCreatureDestroyOnTails {
+            exclude_types: vec![CreatureType::Demon, CreatureType::Devil, CreatureType::Imp],
+        })],
+        ..body("Rakdos, the Showstopper", cost(&[generic(4), b(), r()]), 6, 6, vec![CreatureType::Demon], vec![Keyword::Flying, Keyword::Trample])
+    }
+}
+
 /// Deputy of Detention — {1}{W}{U} 1/3 Vedalken Wizard. ETB: exile target
 /// nonland permanent an opponent controls until Deputy leaves. (Same-name
 /// grouping is approximated to the single target, as with Detention Sphere.)

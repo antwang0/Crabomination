@@ -260,6 +260,8 @@ impl Effect {
             Effect::OpponentWeakCreaturesCantBlockByYourCounters => false,
             // Symmetric discard-and-make-tokens — untargeted.
             Effect::EachPlayerDiscardsHandMakeTokens { .. } => false,
+            // Coin-flip board wipe — untargeted.
+            Effect::CoinFlipEachCreatureDestroyOnTails { .. } => false,
             // Installs a player-scoped attack tax; no cast-time target.
             Effect::TaxAttackersUntilYourNextTurn { .. } => false,
             // Player-scoped ETB-counter grant; no cast-time target.

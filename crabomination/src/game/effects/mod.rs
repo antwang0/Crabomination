@@ -8488,6 +8488,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CoinFlipEachCreatureDestroyOnTails { exclude_types } => {
+                let flipper = ctx.controller;
+                let ids: Vec<crate::card::CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.definition.is_creature()
+                            && !exclude_types.iter().any(|t| c.definition.has_creature_type(*t))
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                let mut doomed = Vec::new();
+                for cid in ids {
+                    if self.battlefield_find(cid).is_none() {
+                        continue;
+                    }
+                    if !self.flip_one_coin(flipper) {
+                        doomed.push(cid);
+                    }
+                }
+                for cid in doomed {
+                    self.destroy_permanent(cid, false, events);
+                }
+                Ok(())
+            }
+
             Effect::EachPlayerDiscardsHandMakeTokens { token } => {
                 let n_players = self.players.len();
                 let def = token_to_card_definition(token);
