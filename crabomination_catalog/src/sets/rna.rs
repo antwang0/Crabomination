@@ -3090,6 +3090,47 @@ pub fn eyes_everywhere() -> CardDefinition {
     }
 }
 
+/// Deputy of Detention — {1}{W}{U} 1/3 Vedalken Wizard. ETB: exile target
+/// nonland permanent an opponent controls until Deputy leaves. (Same-name
+/// grouping is approximated to the single target, as with Detention Sphere.)
+pub fn deputy_of_detention() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(R::Nonland.and(R::ControlledByOpponent)),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..body("Deputy of Detention", cost(&[generic(1), w(), u()]), 1, 3, vec![CreatureType::Vedalken, CreatureType::Wizard], vec![])
+    }
+}
+
+/// Prime Speaker Vannifar — {2}{G}{U} 2/4 Elf Ooze Wizard. {T}, sacrifice
+/// another creature (sorcery speed): search your library for a creature with
+/// mana value 1 greater, put it onto the battlefield, then shuffle.
+pub fn prime_speaker_vannifar() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::SacrificeAndRemember {
+                    who: PlayerRef::You,
+                    filter: R::Creature.and(R::OtherThanSource),
+                },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Creature.and(R::ManaValueEqualsSacrificedPlus(1)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..body("Prime Speaker Vannifar", cost(&[generic(2), g(), u()]), 2, 4, vec![CreatureType::Elf, CreatureType::Ooze, CreatureType::Wizard], vec![])
+    }
+}
+
 /// Font of Agonies — {B} Enchantment. Whenever you pay life, put that many
 /// blood counters on it. {1}{B}, remove four blood counters: destroy target
 /// creature.

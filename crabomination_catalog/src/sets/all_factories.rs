@@ -9911,6 +9911,8 @@ static RNA: &[Factory] = &[
     super::rna::verity_circle,
     super::rna::rumbling_ruin,
     super::rna::font_of_agonies,
+    super::rna::deputy_of_detention,
+    super::rna::prime_speaker_vannifar,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

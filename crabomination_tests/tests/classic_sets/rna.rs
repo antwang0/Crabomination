@@ -2228,3 +2228,44 @@ fn font_of_agonies_banks_and_kills() {
     assert!(g.battlefield_find(foe).is_none(), "creature destroyed");
     assert_eq!(g.battlefield_find(font).unwrap().counter_count(CounterType::Blood), 0, "four blood counters removed");
 }
+
+/// Deputy of Detention exiles an opponent's permanent until it leaves, then
+/// returns it.
+#[test]
+fn deputy_of_detention_exiles_until_leaves() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dep = g.move_card_to_battlefield_for_test(0, catalog::deputy_of_detention());
+    // resolve the ETB against the foe
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Target(Target::Permanent(foe)),
+    ]));
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == foe), "foe exiled");
+    // Deputy leaving returns it.
+    let mut evs = Vec::new();
+    g.destroy_permanent(dep, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_some(), "returned when Deputy left");
+}
+
+/// Prime Speaker Vannifar pods a sacrificed creature into one costing one more.
+#[test]
+fn prime_speaker_vannifar_pods() {
+    let mut g = two_player_game();
+    let van = g.add_card_to_battlefield(0, catalog::prime_speaker_vannifar());
+    g.clear_sickness(van);
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // MV 2
+    let target = g.add_card_to_library(0, catalog::rakdos_roustabout()); // MV 3
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Search(Some(target)),
+    ]));
+    g.perform_action(GameAction::ActivateAbility { card_id: van, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("pod");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.id == target && c.controller == 0), "MV-3 creature onto battlefield");
+}
