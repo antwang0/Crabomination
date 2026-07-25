@@ -258,6 +258,8 @@ impl Effect {
             Effect::DoubleP1P1CountersFromYourCreatures => false,
             // Locks opponents' weak creatures out of blocking — untargeted.
             Effect::OpponentWeakCreaturesCantBlockByYourCounters => false,
+            // Symmetric discard-and-make-tokens — untargeted.
+            Effect::EachPlayerDiscardsHandMakeTokens { .. } => false,
             // Installs a player-scoped attack tax; no cast-time target.
             Effect::TaxAttackersUntilYourNextTurn { .. } => false,
             // Player-scoped ETB-counter grant; no cast-time target.

@@ -3090,6 +3090,20 @@ pub fn eyes_everywhere() -> CardDefinition {
     }
 }
 
+/// Awaken the Erstwhile — {3}{B}{B} Sorcery. Each player discards their hand,
+/// then creates that many 2/2 black Zombie tokens.
+pub fn awaken_the_erstwhile() -> CardDefinition {
+    CardDefinition {
+        name: "Awaken the Erstwhile",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::EachPlayerDiscardsHandMakeTokens {
+            token: token("Zombie", vec![Color::Black], 2, 2, vec![CreatureType::Zombie], vec![]),
+        },
+        ..Default::default()
+    }
+}
+
 /// Hydroid Krasis — {X}{G}{U} 0/0 Jellyfish Hydra Beast with flying + trample.
 /// Enters with X +1/+1 counters. When you cast it, gain half X life and draw
 /// half X cards (rounded down), even if it's countered.

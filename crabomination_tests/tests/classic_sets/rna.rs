@@ -2292,3 +2292,29 @@ fn hydroid_krasis_cast_trigger_scales_with_x() {
     let body = g.battlefield.iter().find(|c| c.definition.name == "Hydroid Krasis").expect("on battlefield");
     assert_eq!(body.counter_count(CounterType::PlusOnePlusOne), 4, "entered with 4 counters");
 }
+
+/// Awaken the Erstwhile: each player discards their hand and makes that many
+/// 2/2 Zombies.
+#[test]
+fn awaken_the_erstwhile_discards_and_zombifies() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::awaken_the_erstwhile());
+    // Caster keeps only the spell in hand (1 card left after cast -> 0 discarded
+    // from the caster besides). Give the caster 2 extra + opponent 3.
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    // Caster had 2 cards after the spell left the hand; opponent had 3.
+    let zombies0 = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Zombie").count();
+    let zombies1 = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Zombie").count();
+    assert_eq!(zombies0, 2, "caster made 2 zombies");
+    assert_eq!(zombies1, 3, "opponent made 3 zombies");
+    assert!(g.players[0].hand.is_empty() && g.players[1].hand.is_empty(), "both hands emptied");
+}

@@ -8488,6 +8488,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachPlayerDiscardsHandMakeTokens { token } => {
+                let n_players = self.players.len();
+                let def = token_to_card_definition(token);
+                for i in 0..n_players {
+                    let p = (self.active_player_idx + i) % n_players;
+                    let hand: Vec<crate::card::CardId> =
+                        self.players[p].hand.iter().map(|c| c.id).collect();
+                    let count = hand.len();
+                    for cid in hand {
+                        self.discard_card(p, cid, events);
+                    }
+                    for _ in 0..count {
+                        self.mint_token_onto_battlefield(def.clone(), p, false, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::OpponentWeakCreaturesCantBlockByYourCounters => {
                 let ctrl = ctx.controller;
                 let n: u32 = self

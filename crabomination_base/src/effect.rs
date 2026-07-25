@@ -4152,6 +4152,9 @@ pub enum Effect {
     /// Dromedary). Capped by the source's live count; no-ops when `from`
     /// and `to` resolve to the same permanent.
     MoveCounters { from: Selector, to: Selector, counter: crate::card::CounterType, amount: Value },
+    /// Awaken the Erstwhile — "each player discards all the cards in their
+    /// hand, then creates that many `token` tokens." Resolved in turn order.
+    EachPlayerDiscardsHandMakeTokens { token: crate::card::TokenDefinition },
     /// Rumbling Ruin — "count the +1/+1 counters on creatures you control;
     /// creatures your opponents control with power ≤ that number can't block
     /// this turn." The affected set is locked in at resolution (computed power).
