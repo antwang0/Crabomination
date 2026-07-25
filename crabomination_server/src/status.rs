@@ -236,6 +236,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("win_life_delta_p90", "gauge", "90th-percentile life margin of victory (blowout tail).", st.win_life_delta_percentile(0.9).to_string());
     m("win_life_delta_stddev", "gauge", "Standard deviation of the win-by-life margin.", format!("{:.2}", st.win_life_delta_stddev()));
     m("win_life_delta_iqr", "gauge", "Interquartile range (p75-p25) of the win-by-life margin.", st.win_life_delta_iqr().to_string());
+    m("win_life_delta_cv_pct", "gauge", "Coefficient of variation (σ/μ %) of the win-by-life margin — pace-independent blowout consistency, mirroring turn_cv_pct and winner_board_cv_pct.", st.win_life_delta_cv_pct().to_string());
     m("close_win_pct", "gauge", "Percent of wins decided by a final life margin of 3 or less (nail-biters).", st.close_win_pct().to_string());
     m("blowout_win_pct", "gauge", "Percent of wins decided by a final life margin above 15 (blowouts).", st.blowout_win_pct().to_string());
     // Split the refusals by cause so operators can tell "server at capacity"

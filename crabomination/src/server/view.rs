@@ -1921,6 +1921,12 @@ fn counter_kind_label(kind: &crate::card::CounterType) -> &'static str {
         C::MinusOneMinusOne => "-1/-1",
         C::Charge => "charge",
         C::Loyalty => "loyalty",
+        C::Blood => "blood",
+        C::Oil => "oil",
+        C::Time => "time",
+        C::Fade => "fade",
+        C::Fuse => "fuse",
+        C::Stun => "stun",
         _ => "",
     }
 }
