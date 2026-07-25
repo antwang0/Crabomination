@@ -6,7 +6,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, LandType, Predicate, Selector, SelectionRequirement, Subtypes,
+    EventScope, EventSpec, Keyword, Predicate, Selector, SelectionRequirement, Subtypes,
     TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{
@@ -21,13 +21,7 @@ use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Build a Strixhaven Campus land: enters tapped, taps for one of two
 /// colors, and `{4}, {T}: Scry 1`.
-fn campus_land(
-    name: &'static str,
-    type_a: LandType,
-    type_b: LandType,
-    color_a: Color,
-    color_b: Color,
-) -> CardDefinition {
+fn campus_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
     use super::super::{etb_tap, tap_add};
     let scry = ActivatedAbility {
         tap_cost: true,
@@ -38,7 +32,6 @@ fn campus_land(
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![type_a, type_b], ..Default::default() },
         activated_abilities: vec![tap_add(color_a), tap_add(color_b), scry],
         triggered_abilities: vec![etb_tap()],
         ..Default::default()
@@ -47,23 +40,23 @@ fn campus_land(
 
 /// Lorehold Campus — R/W Campus land.
 pub fn lorehold_campus() -> CardDefinition {
-    campus_land("Lorehold Campus", LandType::Mountain, LandType::Plains, Color::Red, Color::White)
+    campus_land("Lorehold Campus", Color::Red, Color::White)
 }
 /// Prismari Campus — U/R Campus land.
 pub fn prismari_campus() -> CardDefinition {
-    campus_land("Prismari Campus", LandType::Island, LandType::Mountain, Color::Blue, Color::Red)
+    campus_land("Prismari Campus", Color::Blue, Color::Red)
 }
 /// Quandrix Campus — G/U Campus land.
 pub fn quandrix_campus() -> CardDefinition {
-    campus_land("Quandrix Campus", LandType::Forest, LandType::Island, Color::Green, Color::Blue)
+    campus_land("Quandrix Campus", Color::Green, Color::Blue)
 }
 /// Silverquill Campus — W/B Campus land.
 pub fn silverquill_campus() -> CardDefinition {
-    campus_land("Silverquill Campus", LandType::Plains, LandType::Swamp, Color::White, Color::Black)
+    campus_land("Silverquill Campus", Color::White, Color::Black)
 }
 /// Witherbloom Campus — B/G Campus land.
 pub fn witherbloom_campus() -> CardDefinition {
-    campus_land("Witherbloom Campus", LandType::Swamp, LandType::Forest, Color::Black, Color::Green)
+    campus_land("Witherbloom Campus", Color::Black, Color::Green)
 }
 
 /// Access Tunnel — `{T}: Add {C}.` `{3}, {T}: Target creature with power
@@ -271,14 +264,26 @@ pub fn mage_hunter() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
         power: 3,
         toughness: 4,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
-                .with_filter(cast_is_instant_or_sorcery()),
-            effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::Triggerer),
-                amount: Value::Const(1),
+        triggered_abilities: vec![
+            // "...casts OR COPIES an instant or sorcery spell" — both the
+            // cast and the copy events drain 1.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                    .with_filter(cast_is_instant_or_sorcery()),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(1),
+                },
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCopied, EventScope::OpponentControl)
+                    .with_filter(cast_is_instant_or_sorcery()),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(1),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

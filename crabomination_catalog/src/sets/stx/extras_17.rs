@@ -105,8 +105,10 @@ pub fn thunderous_orator() -> CardDefinition {
 /// Combat damage to a player: you may return a creature card with mana value 3
 /// or less from your graveyard to the battlefield.
 ///
-/// The printed X equals the damage dealt; with a base 3/3 (and no easy way to
-/// read combat damage as a `Value` here) the mana-value gate is fixed at 3.
+/// The printed X equals the damage dealt: the combat-damage trigger push
+/// stamps the hit as the trigger's X, and `ManaValueAtMostXFromCost`
+/// concretizes against it at target-pick time — so pumped/deficient hits
+/// scale the reanimation gate correctly.
 pub fn venerable_warsinger() -> CardDefinition {
     CardDefinition {
         name: "Venerable Warsinger",
@@ -127,7 +129,7 @@ pub fn venerable_warsinger() -> CardDefinition {
                     what: target_filtered(
                         SelectionRequirement::InGraveyard
                             .and(SelectionRequirement::HasCardType(CardType::Creature))
-                            .and(SelectionRequirement::ManaValueAtMost(3)),
+                            .and(SelectionRequirement::ManaValueAtMostXFromCost),
                     ),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,

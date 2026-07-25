@@ -3027,8 +3027,16 @@ impl GameState {
             let target = if !slot0_accepts_player
                 && (effect.prefers_graveyard_target() || slot0_rejects_player)
             {
-                self.auto_target_for_effect_avoiding(&effect, controller, Some(trig_source))
-                    .or(Some(default_target.clone()))
+                // Concretize any X-from-cost gate against the damage dealt
+                // (Venerable Warsinger's "mana value X or less, where X is
+                // the damage this creature dealt to that player").
+                self.auto_target_for_effect_avoiding_set_x(
+                    &effect,
+                    controller,
+                    &[trig_source],
+                    damage_amount,
+                )
+                .or(Some(default_target.clone()))
             } else {
                 Some(default_target.clone())
             };
@@ -3038,6 +3046,9 @@ impl GameState {
                 TriggerPush::new(trig_source, controller, effect)
                     .target(target)
                     .trigger_source(dealer)
+                    // The damage dealt doubles as the trigger's X so
+                    // `…XFromCost` filters read the hit at resolution too.
+                    .x_value(damage_amount)
                     // CR 119.3 — the damage dealt, so Value::TriggerEventAmount
                     // riders scale by the hit (Visions of Brutality).
                     .event_amount(damage_amount)

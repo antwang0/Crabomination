@@ -48,7 +48,11 @@ pub fn pest_summoning() -> CardDefinition {
     let pest = stx_pest_token();
     CardDefinition {
         name: "Pest Summoning",
-        cost: cost(&[generic(2), b(), g()]),
+        cost: cost(&[
+            generic(1),
+            crate::mana::hybrid(Color::Black, Color::Green),
+            crate::mana::hybrid(Color::Black, Color::Green),
+        ]),
         card_types: vec![CardType::Sorcery],
         // Lesson is a sorcery sub-type. Add to the spell subtype list so
         // future Lesson-based mechanics (Mascot Exhibition, "search your

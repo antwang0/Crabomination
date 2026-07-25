@@ -2783,15 +2783,15 @@ fn cast_spell_back_emits_back_face_event() {
     // preparation cards no longer carry a back face.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::pestilent_cauldron());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
     let events = g.perform_action(GameAction::CastSpellBack {
         card_id: id,
         target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
-    }).expect("Restorative Burst castable for {2}{B}");
+    }).expect("Restorative Burst castable for {3}{G}{G}");
     let face = events.iter().find_map(|e| match e {
         GameEvent::SpellCast { face, .. } => Some(*face),
         _ => None,

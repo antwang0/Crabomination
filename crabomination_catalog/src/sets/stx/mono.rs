@@ -296,22 +296,16 @@ pub fn bury_in_books() -> CardDefinition {
 /// That player shuffles, then draws a card for each card exiled from
 /// their hand this way."
 ///
-/// ✅ The Cancel-shaped counter-target-IS body fully ships the printed
-/// primary effect — a hard counter on any IS spell. The follow-up
-/// search-and-exile-by-name rider (and its "draws a card for each card
-/// exiled from their hand this way" compensation) is engine-wide
-/// blocked: no "same name as the countered spell" selection primitive
-/// and no "search all three zones" multi-zone search yet. The rider
-/// only matters when the countered spell has 2+ copies across the
-/// opponent's zones, which is rare outside dedicated combo decks; the
-/// counter half is the headline effect and plays correctly. Tracked in
-/// TODO.md.
+/// ✅ Fully wired via `Effect::CounterSpellExileSameNamed`: hard-counter
+/// the IS spell, exile every same-named card from its owner's
+/// graveyard/hand/library (including the countered copy, which hits the
+/// graveyard first), shuffle, and that player draws per hand-exile.
 pub fn test_of_talents() -> CardDefinition {
     CardDefinition {
         name: "Test of Talents",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CounterSpell {
+        effect: Effect::CounterSpellExileSameNamed {
             what: target_filtered(
                 SelectionRequirement::IsSpellOnStack
                     .and(
@@ -380,16 +374,19 @@ pub fn multiple_choice() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             },
             // "If X is 2, you may choose a player. They return a creature
-            // they control to its owner's hand."
+            // they control to its owner's hand." The chosen player picks
+            // their own creature (`PlayerReturnsPermanentsToHand`);
+            // approximation: the choose-a-player step defaults to the
+            // opponent (the overwhelmingly common pick in 1v1).
             Effect::If {
                 cond: x_is(2),
                 then: Box::new(Effect::MayDo {
-                    description: "Choose a player to return a creature they control to its owner's hand?".into(),
-                    body: Box::new(Effect::Move {
-                        what: Selector::one_of(Selector::EachPermanent(
-                            SelectionRequirement::Creature,
-                        )),
-                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    description: "Have the opponent return a creature they control to its owner's hand?".into(),
+                    body: Box::new(Effect::PlayerReturnsPermanentsToHand {
+                        who: PlayerRef::EachOpponent,
+                        count: Value::Const(1),
+                        filter: SelectionRequirement::Creature,
+                        up_to: false,
                     }),
                 }),
                 else_: Box::new(Effect::Noop),

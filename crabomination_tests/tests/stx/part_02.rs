@@ -138,14 +138,12 @@ fn increasing_vengeance_copies_target_instant() {
 /// twice instead" rider. The printed card has an implicit "exile from
 /// anywhere" replacement so the only way to cast it from a graveyard
 /// is via a granted Flashback (Past in Flames, Yawgmoth's Will-style
-/// effect). We synthesize the scenario by adding a Flashback {R}{R}
-/// cost to the card definition for the test, then casting via
-/// `GameAction::CastFlashback`. The cast_from_hand flag is false for
-/// flashback casts → `Predicate::CastFromGraveyard` evaluates true →
-/// the `If` branch runs `CopySpell { count: 2 }`.
+/// effect). The card now carries its printed Flashback {3}{R}{R}, so
+/// we cast via `GameAction::CastFlashback` directly. The cast_from_hand
+/// flag is false for flashback casts → `Predicate::CastFromGraveyard`
+/// evaluates true → the `If` branch runs `CopySpell { count: 2 }`.
 #[test]
 fn increasing_vengeance_double_copies_when_flashed_back_from_graveyard() {
-    use crabomination::card::Keyword;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
 
@@ -161,17 +159,13 @@ fn increasing_vengeance_double_copies_when_flashed_back_from_graveyard() {
     })
     .expect("Bolt castable for {R}");
 
-    // Put a synthetic Increasing Vengeance (with Flashback {R}{R}) into
-    // P0's graveyard. Bolt is on the stack above.
-    let mut iv_def = catalog::increasing_vengeance();
-    iv_def.keywords.push(Keyword::Flashback(crabomination::mana::cost(&[
-        crabomination::mana::r(),
-        crabomination::mana::r(),
-    ])));
-    let iv = g.add_card_to_graveyard(0, iv_def);
+    // Put Increasing Vengeance into P0's graveyard (it carries its
+    // printed Flashback {3}{R}{R}). Bolt is on the stack above.
+    let iv = g.add_card_to_graveyard(0, catalog::increasing_vengeance());
 
-    // Pay the {R}{R} flashback cost.
+    // Pay the {3}{R}{R} flashback cost.
     g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastFlashback {
         card_id: iv,
         target: Some(Target::Permanent(bolt)),
@@ -179,7 +173,7 @@ fn increasing_vengeance_double_copies_when_flashed_back_from_graveyard() {
         mode: None,
         x_value: None,
     })
-    .expect("Increasing Vengeance castable via Flashback for {R}{R}");
+    .expect("Increasing Vengeance castable via Flashback for {3}{R}{R}");
     drain_stack(&mut g);
 
     // Bolt + TWO copies of Bolt = 9 damage total (each deals 3 to the

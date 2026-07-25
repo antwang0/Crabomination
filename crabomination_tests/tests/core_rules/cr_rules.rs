@@ -10081,3 +10081,23 @@ fn cr_707_10_finale_of_promise_copies_at_ten() {
     // Original Bolt + two copies = 9 damage to the opponent.
     assert_eq!(g.players[1].life, opp_life - 9, "Bolt plus two copies dealt 9");
 }
+
+/// Swords to Plowshares — "Exile target creature. Its controller gains
+/// life equal to its power." Regression for the 2026-07 audit fix that
+/// added the lifegain rider (it was exile-only before).
+#[test]
+fn swords_to_plowshares_controller_gains_power_in_life() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::swords_to_plowshares());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("StP castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == angel), "Angel exiled");
+    assert_eq!(g.players[1].life, p1 + 4,
+        "its controller gains life equal to its power (4)");
+}

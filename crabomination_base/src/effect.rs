@@ -205,6 +205,10 @@ pub enum Selector {
     EachMatching { zone: ZoneRef, filter: SelectionRequirement },
     /// All permanents on the battlefield matching `filter`.
     EachPermanent(SelectionRequirement),
+    /// All battlefield permanents matching `filter` EXCEPT the cast-time
+    /// target list — the "choose one, [destroy] the rest" shape (Deadly
+    /// Vanity: "Choose a creature or planeswalker. Destroy the rest.").
+    EachPermanentExceptTargets(SelectionRequirement),
     /// All battlefield permanents controlled by `who` matching `filter`.
     /// The player-relative sibling of `EachPermanent` — lets one effect
     /// touch every permanent a *targeted* player controls (Sleep: tap +
@@ -4638,6 +4642,13 @@ pub enum Effect {
     // ── Stack interaction ────────────────────────────────────────────────────
     /// Counter target spell (removes from stack; sends to owner's graveyard).
     CounterSpell { what: Selector },
+    /// Test of Talents — "Counter target instant or sorcery spell. Search
+    /// its controller's graveyard, hand, and library for any number of
+    /// cards with the same name as that spell and exile them. That player
+    /// shuffles, then draws a card for each card exiled from their hand
+    /// this way." The exile sweep is exhaustive (every same-named card),
+    /// keyed on the countered spell's printed name and owner.
+    CounterSpellExileSameNamed { what: Selector },
     /// Counter target spell; if the mana spent to cast it was less than its
     /// mana value, the controller draws a card (Unravel).
     CounterSpellDrawIfUnderpaid { what: Selector },
@@ -4983,6 +4994,17 @@ pub enum Effect {
     /// The affected player chooses which permanents; a `wants_ui` player with
     /// a genuine choice is prompted, bots/no-choice auto-pick the weakest.
     PlayerExilesPermanents { who: PlayerRef, count: Value, filter: SelectionRequirement },
+    /// "`who` returns `count` permanents they control of their choice to
+    /// their owner's hand" — the bounce analogue of
+    /// `PlayerExilesPermanents` (Devastating Mastery's alt-cost rider,
+    /// Multiple Choice's X=2 bullet). `up_to` makes the count optional
+    /// ("up to two"); the auto path returns the weakest matches.
+    PlayerReturnsPermanentsToHand {
+        who: PlayerRef,
+        count: Value,
+        filter: SelectionRequirement,
+        up_to: bool,
+    },
     /// Sacrifice this effect's source permanent (CR 701.16), firing proper
     /// death triggers. Used by end-of-turn self-sacrifice (Blitz, Ball
     /// Lightning) where `Effect::Move { This → Graveyard }` would skip the

@@ -1607,7 +1607,7 @@ pub fn valor() -> CardDefinition {
 pub fn pigment_storm() -> CardDefinition {
     CardDefinition {
         name: "Pigment Storm",
-        cost: cost(&[generic(4), r()]),
+        cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageExcessToController {
             to: target_filtered(SelectionRequirement::Creature),

@@ -302,9 +302,8 @@ pub fn defiant_strike() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
+                // "Target creature" — ANY creature, not just your own.
+                what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(1),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
@@ -544,75 +543,78 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
 
 /// Pestilent Cauldron — {2}{B} Artifact (front face of the MDFC).
 ///
-/// "{2}, {T}, Sacrifice this artifact: Each player puts the top four
-/// cards of their library into their graveyard. Each opponent loses 3
-/// life and you gain 3 life. If Pestilent Cauldron is in your
-/// graveyard, you may cast it transformed."
+/// "{T}, Discard a card: Create a 1/1 black and green Pest creature
+/// token with 'When this creature dies, you gain 1 life.' /
+/// {1}, {T}: Each opponent mills a card for each life you gained this
+/// turn. / {4}, {T}: Exile four target cards from a single graveyard.
+/// Draw a card."
 ///
-/// ✅ Both halves wired. The sac activation mills 4 from each player
-/// and drains 3, then grants a one-shot
-/// `Effect::GrantCastBackFromGraveyard` so the controller may cast the
-/// back face (Restorative Burst) transformed from the graveyard —
-/// `GameAction::CastSpellBack` hops a permitted graveyard card into
-/// the back-face cast pipeline. The back is also castable from hand as
-/// a normal MDFC.
+/// Ability 3's "four target cards from a single graveyard" rides
+/// `ExileUpToNFromGraveyards { single: true }` (the Rag Dealer
+/// resolution-time pick, not stack targeting — SIMPLIFIED but the same
+/// board result).
 pub fn pestilent_cauldron() -> CardDefinition {
-    // Back face — Restorative Burst, {2}{B} Sorcery: "Return up to three
-    // creature cards from your graveyard to your hand. You gain 3 life."
-    // Wired via `Effect::ReturnGraveyardCardsToHand` (the Mythos of
-    // Brokkos resolution-time `Decision::ChooseCards` pick) + GainLife 3.
+    use crate::effect::shortcut::mint_pests;
+    // Back face — Restorative Burst, {3}{G}{G} Sorcery: "Return up to two
+    // creature, land, and/or planeswalker cards from your graveyard to
+    // your hand. Each player gains 4 life. Exile Restorative Burst."
     use crate::mana::g;
     let restorative_burst = CardDefinition {
         name: "Restorative Burst",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Sorcery],
+        exile_on_resolve: true,
         effect: Effect::Seq(vec![
             Effect::ReturnGraveyardCardsToHand {
-                filter: SelectionRequirement::Creature,
-                max: Value::Const(3),
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::HasCardType(CardType::Land))
+                    .or(SelectionRequirement::Planeswalker),
+                max: Value::Const(2),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(4),
+            },
         ]),
         ..Default::default()
     };
     CardDefinition {
         name: "Pestilent Cauldron",
-        cost: cost(&[generic(1), b()]),
+        cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Artifact],
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: cost(&[generic(2)]),
-            effect: Effect::Seq(vec![
-                // Each player mills 4.
-                Effect::Mill {
-                    who: Selector::Player(PlayerRef::EachPlayer),
-                    amount: Value::Const(4),
+        activated_abilities: vec![
+            // {T}, Discard a card: mint a Pest.
+            ActivatedAbility {
+                tap_cost: true,
+                discard_cost: Some((SelectionRequirement::Any, 1)),
+                effect: mint_pests(1),
+                ..Default::default()
+            },
+            // {1}, {T}: each opponent mills a card per life gained this turn.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::Mill {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::LifeGainedThisTurn(PlayerRef::You),
                 },
-                // Drain 3 (each opp loses 3, you gain 3).
-                Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
-                    to: Selector::You,
-                    amount: Value::Const(3),
-                },
-                // "...then you may cast Restorative Burst transformed." Grant a
-                // one-shot permission to cast the back face from the graveyard
-                // (the Cauldron is already there from the sacrifice cost).
-                Effect::GrantCastBackFromGraveyard { what: Selector::This },
-            ]),
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: true,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
-            ..Default::default()
-        }],
+                ..Default::default()
+            },
+            // {4}, {T}: exile four cards from a single graveyard; draw.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::Seq(vec![
+                    Effect::ExileUpToNFromGraveyards {
+                        count: Value::Const(4),
+                        of: None,
+                        single: true,
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ]),
+                ..Default::default()
+            },
+        ],
         back_face: Some(Box::new(restorative_burst)),
         ..Default::default()
     }
@@ -639,7 +641,7 @@ pub fn augusta_dean_of_order() -> CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Orc, CreatureType::Shaman],
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
         power: 1,
@@ -1801,11 +1803,14 @@ pub fn dueling_coach() -> CardDefinition {
 /// path, which is functionally equivalent for the headline play
 /// pattern.
 pub fn increasing_vengeance() -> CardDefinition {
-    use crate::card::Predicate;
+    use crate::card::{Keyword, Predicate};
     CardDefinition {
         name: "Increasing Vengeance",
         cost: cost(&[r(), r()]),
         card_types: vec![CardType::Instant],
+        // Flashback {3}{R}{R} — the from-graveyard cast the two-copy
+        // branch below keys on.
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), r(), r()]))],
         effect: Effect::If {
             cond: Predicate::CastFromGraveyard,
             then: Box::new(Effect::CopySpell {

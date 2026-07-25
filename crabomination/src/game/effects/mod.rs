@@ -9515,6 +9515,72 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CounterSpellExileSameNamed { what } => {
+                // Test of Talents: counter (same machinery as CounterSpell),
+                // then strip every same-named card from the owner's
+                // graveyard / hand / library, shuffle, and draw per
+                // hand-exile. The countered copy itself lands in the
+                // graveyard first, so the sweep exiles it too.
+                use rand::seq::SliceRandom;
+                let targets = self.resolve_selector(what, ctx);
+                let mut to_remove: Vec<usize> = Vec::new();
+                for t in &targets {
+                    if let Some(cid) = t.as_card_id()
+                        && let Some(pos) = self.stack.iter().position(|si| matches!(
+                            si,
+                            StackItem::Spell { card, uncounterable: false, .. }
+                                if card.id == cid
+                        ))
+                    {
+                        to_remove.push(pos);
+                    }
+                }
+                to_remove.sort_unstable_by(|a, b| b.cmp(a));
+                for pos in to_remove {
+                    if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
+                        self.countered_spell_mana_spent = mana_spent;
+                        let name = card.definition.name;
+                        let owner = card.owner;
+                        self.countered_spell_off_stack(*card, events);
+                        let mut hand_exiled = 0usize;
+                        for zone in ["gy", "hand", "lib"] {
+                            let ids: Vec<CardId> = match zone {
+                                "gy" => &self.players[owner].graveyard,
+                                "hand" => &self.players[owner].hand,
+                                _ => &self.players[owner].library,
+                            }
+                            .iter()
+                            .filter(|c| c.definition.name == name)
+                            .map(|c| c.id)
+                            .collect();
+                            for id in ids {
+                                let taken = match zone {
+                                    "gy" => Self::take_card(&mut self.players[owner].graveyard, id),
+                                    "hand" => {
+                                        hand_exiled += 1;
+                                        Self::take_card(&mut self.players[owner].hand, id)
+                                    }
+                                    _ => Self::take_card(&mut self.players[owner].library, id),
+                                };
+                                if let Some(c) = taken {
+                                    self.exile.push(c);
+                                }
+                            }
+                        }
+                        // That player shuffles (searched their library —
+                        // CR 701.19), then draws per hand-exile.
+                        self.players[owner].library.shuffle(&mut rand::rng());
+                        for _ in 0..hand_exiled {
+                            if !self.draw_one(owner, events) {
+                                self.lose_to_empty_draw(owner);
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CounterSpellDrawIfUnderpaid { what } => {
                 let targets = self.resolve_selector(what, ctx);
                 let mut hit: Option<(usize, bool)> = None;
@@ -10377,6 +10443,55 @@ impl GameState {
                     let ids = self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false);
                     for id in ids {
                         self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::PlayerReturnsPermanentsToHand { who, count, filter, up_to } => {
+                // Bounce analogue of `PlayerExilesPermanents`: the affected
+                // player picks which of their matching permanents go back to
+                // hand. A wants_ui chooser picks via `ChooseCards`; the auto
+                // path returns the weakest N ("up to" choosers may take 0 —
+                // approximated by still auto-picking, since declining is
+                // rarely right for the affected player's own choice).
+                use crate::decision::{Decision, DecisionAnswer};
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
+                let players: Vec<usize> = self.resolve_players(who, ctx);
+                for p in players {
+                    let candidates = self.sacrifice_candidates(p, filter, ctx.source);
+                    if candidates.is_empty() {
+                        continue;
+                    }
+                    let ids = if self.players[p].wants_ui {
+                        let cand_named: Vec<(CardId, String)> = candidates
+                            .iter()
+                            .filter_map(|id| {
+                                self.battlefield_find(*id)
+                                    .map(|c| (*id, c.definition.name.to_string()))
+                            })
+                            .collect();
+                        let answer = self.decider.decide(&Decision::ChooseCards {
+                            source: ctx.source.unwrap_or(CardId(0)),
+                            prompt: format!("Return up to {n} permanents to hand"),
+                            candidates: cand_named,
+                            min: if *up_to { 0 } else { n.min(candidates.len()) as u32 },
+                            max: n as u32,
+                        });
+                        match answer {
+                            DecisionAnswer::Cards(ids) => {
+                                ids.into_iter().take(n).collect::<Vec<_>>()
+                            }
+                            _ => self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false),
+                        }
+                    } else {
+                        self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false)
+                    };
+                    for id in ids {
+                        self.move_card_to(id, &ZoneDest::Hand(PlayerRef::OwnerOfMoved), ctx, events);
                     }
                 }
                 Ok(())
@@ -18592,6 +18707,24 @@ impl GameState {
                 let filter = filter.resolve_x(ctx.x_value);
                 self.battlefield
                     .iter()
+                    .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
+
+            Selector::EachPermanentExceptTargets(filter) => {
+                let filter = filter.resolve_x(ctx.x_value);
+                let chosen: Vec<CardId> = ctx
+                    .targets
+                    .iter()
+                    .filter_map(|t| match t {
+                        Target::Permanent(id) => Some(*id),
+                        _ => None,
+                    })
+                    .collect();
+                self.battlefield
+                    .iter()
+                    .filter(|c| !chosen.contains(&c.id))
                     .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()

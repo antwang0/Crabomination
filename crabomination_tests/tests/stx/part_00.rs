@@ -832,8 +832,9 @@ fn test_of_talents_counters_target_instant() {
 
     // P0's life is unchanged — Bolt was countered.
     assert_eq!(g.players[0].life, 20, "Bolt should have been countered");
-    // Bolt is in the graveyard.
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+    // The same-name sweep exiles the countered copy out of the graveyard.
+    assert!(g.exile.iter().any(|c| c.id == bolt),
+        "countered Bolt exiled by the same-name sweep");
 }
 
 // ── Repartee plumbing ──────────────────────────────────────────────────────
@@ -2316,8 +2317,8 @@ fn reduce_to_memory_exiles_and_controller_gets_spirit() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
 
     let id = g.add_card_to_hand(0, catalog::reduce_to_memory());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -3391,13 +3392,13 @@ fn manifestation_sage_etb_creates_fractal_with_counters_from_hand() {
 fn crackle_with_power_deals_five_x_damage_to_target_player() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::crackle_with_power());
-    // X=2 → 10 damage.
-    g.players[0].mana_pool.add(Color::Red, 5);
-    g.players[0].mana_pool.add_colorless(2);
+    // X=2 → 10 damage; cost {X}{X}{X}{R}{R} = {2}{2}{2}{R}{R}.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(6);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: Some(2),
-    }).expect("Crackle castable for {X=2}{R}{R}{R}{R}{R}");
+    }).expect("Crackle castable for {X}{X}{X}{R}{R} at X=2");
     drain_stack(&mut g);
 
     assert_eq!(g.players[1].life, 20 - 10,
@@ -3412,16 +3413,16 @@ fn crackle_with_power_deals_five_x_to_each_of_two_targets() {
     let mut g = two_player_game();
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
     let id = g.add_card_to_hand(0, catalog::crackle_with_power());
-    // X=2 → 10 damage to each of two targets.
-    g.players[0].mana_pool.add(Color::Red, 5);
-    g.players[0].mana_pool.add_colorless(2);
+    // X=2 → 10 damage to each of two targets; {X}{X}{X}{R}{R}, X=2.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
         additional_targets: vec![Target::Permanent(angel)],
         mode: None,
         x_value: Some(2),
-    }).expect("Crackle castable for {X=2}{R}{R}{R}{R}{R}");
+    }).expect("Crackle castable for {X}{X}{X}{R}{R} at X=2");
     drain_stack(&mut g);
 
     assert_eq!(g.players[1].life, 20 - 10, "player takes the full 5X = 10");
@@ -3928,4 +3929,41 @@ fn tend_the_pests_sacrifices_at_cast_and_mints_power_pests() {
         .filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Pest")
         .count();
     assert_eq!(pests, 2, "X = sacrificed power (2) Pest tokens minted");
+}
+
+/// Test of Talents' second half — audit fix: counter, then exile every
+/// same-named card from the owner's graveyard/hand/library; they
+/// shuffle and draw one per card exiled from their HAND.
+#[test]
+fn test_of_talents_strips_same_named_copies_and_compensates_hand() {
+    let mut g = two_player_game();
+    // P1 holds one extra Bolt in hand, one in graveyard, one in library.
+    let hand_bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let gy_bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let lib_bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::island()); // draw fodder
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    g.priority.player_with_priority = 0;
+    let tot = g.add_card_to_hand(0, catalog::test_of_talents());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: tot, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Test of Talents castable");
+    drain_stack(&mut g);
+
+    for (id, wher) in [(bolt, "countered copy"), (hand_bolt, "hand copy"),
+                       (gy_bolt, "graveyard copy"), (lib_bolt, "library copy")] {
+        assert!(g.exile.iter().any(|c| c.id == id), "{wher} exiled");
+    }
+    // Hand: -1 (exiled Bolt) +1 (compensation draw) = unchanged.
+    assert_eq!(g.players[1].hand.len(), hand_before,
+        "one draw per card exiled from hand");
 }

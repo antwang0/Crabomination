@@ -680,6 +680,7 @@ fn pick_ability_counter_response(state: &GameState, seat: usize) -> Option<GameA
 fn effect_counters_spells(eff: &Effect) -> bool {
     match eff {
         Effect::CounterSpell { .. }
+        | Effect::CounterSpellExileSameNamed { .. }
         | Effect::CounterSpellToZone { .. }
         | Effect::CounterUnlessPaid { .. }
         | Effect::CounterUnless { .. } => true,
@@ -6211,8 +6212,8 @@ mod tests {
             .find(|c| c.id == pc)
             .unwrap()
             .may_cast_back_from_graveyard = true;
-        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
-        g.players[0].mana_pool.add_colorless(2); // {2}{B} for Restorative Burst
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+        g.players[0].mana_pool.add_colorless(3); // {3}{G}{G} for Restorative Burst
         match main_phase_action(&g, 0) {
             GameAction::CastSpellBack { card_id, .. } => assert_eq!(card_id, pc),
             other => panic!("expected a graveyard back-face cast, got {other:?}"),

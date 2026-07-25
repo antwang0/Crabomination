@@ -114,7 +114,7 @@ pub fn field_trip() -> CardDefinition {
 pub fn reduce_to_memory() -> CardDefinition {
     CardDefinition {
         name: "Reduce to Memory",
-        cost: cost(&[generic(2), u()]),
+        cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
         effect: Effect::Seq(vec![
@@ -1183,12 +1183,9 @@ pub fn manifestation_sage() -> CardDefinition {
 /// (a `max_targets: Value` variant would close it). For X ≥ 5 this is
 /// exact in practice; for X < 5 a UI caster could over-select targets.
 pub fn crackle_with_power() -> CardDefinition {
-    use crate::mana::ManaSymbol;
-    let mut crackle_cost = cost(&[r(), r(), r(), r(), r()]);
-    crackle_cost.symbols.insert(0, ManaSymbol::X);
     CardDefinition {
         name: "Crackle with Power",
-        cost: crackle_cost,
+        cost: cost(&[x(), x(), x(), r(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ApplyToTargets {
             max_targets: 5,
@@ -1369,6 +1366,15 @@ pub fn expressive_iteration() -> CardDefinition {
                 pay_any_color: false,
                 pay_own_cost: true,
                 uncast_penalty: None,
+            },
+            // "...and the rest on the bottom of your library" — bottom the
+            // last leftover instead of leaving it on top.
+            Effect::Move {
+                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(1) },
+                to: crate::effect::ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
             },
         ]),
         ..Default::default()
@@ -2103,42 +2109,27 @@ pub fn eccentric_apprentice() -> CardDefinition {
 
 // ── Tezzeret's Gambit ───────────────────────────────────────────────────────
 
-/// Tezzeret's Gambit — {U}{B} Sorcery.
-/// "Choose one — / • Proliferate. / • Pay 2 life. Draw two cards."
+/// Tezzeret's Gambit — {3}{U/P} Sorcery.
+/// "Draw two cards, then proliferate."
 ///
-/// Printed cost is `{U/P}{B/P}` (Phyrexian: pay 2 life instead of each
-/// pip). Wired with real `ManaSymbol::Phyrexian` pips — `ManaCost::pay()`
-/// pays each pip with the colored mana if available, else 2 life, so the
-/// card can be cast for {U}{B}, {U} + 2 life, or 4 life, etc.
+/// The single `{U/P}` Phyrexian pip is a real `ManaSymbol::Phyrexian` —
+/// `ManaCost::pay()` pays it with blue mana if available, else 2 life,
+/// so the card can be cast for {3}{U} or {3} + 2 life.
 ///
-/// Two-mode `Effect::ChooseMode`:
-/// * Mode 0 — `Effect::Proliferate` (every permanent and player with a
-///   counter gets one more of any kind they already have, controller
-///   chooses per object).
-/// * Mode 1 — `Seq(LoseLife(2), Draw(2))` (pay 2 life, draw 2 cards).
-///
-/// Auto-decider picks mode 0 by default (Proliferate is the stronger
-/// floor in any counter-having board state — +1/+1 counters, poison,
-/// charge, loyalty all benefit). Scripted decider can probe mode 1.
+/// Non-modal: draw 2, then `Effect::Proliferate` (every permanent and
+/// player with a counter gets one more of any kind they already have,
+/// controller chooses per object).
 pub fn tezzerets_gambit() -> CardDefinition {
     CardDefinition {
         name: "Tezzeret's Gambit",
-        cost: cost(&[crate::mana::phyrexian(Color::Blue), crate::mana::phyrexian(Color::Black)]),
+        cost: cost(&[generic(3), crate::mana::phyrexian(Color::Blue)]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: Proliferate.
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::Proliferate,
-            // Mode 1: Pay 2 life, draw 2.
-            Effect::Seq(vec![
-                Effect::LoseLife {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-            ]),
         ]),
         ..Default::default()
     }
@@ -2197,22 +2188,45 @@ pub fn wandering_archaic() -> CardDefinition {
                 count: Value::Const(1),
             },
         }],
-        // Back face: Explore the Vastlands — {4} Sorcery. Add {C}{C}{C}{C}{C}{C};
-        // you gain 3 life. Cast from hand via GameAction::CastSpellBack.
+        // Back face: Explore the Vastlands — {3} Sorcery. "Each player looks
+        // at the top five cards of their library and may reveal a land card
+        // and/or an instant or sorcery card from among them. Each player puts
+        // the revealed cards into their hand and the rest on the bottom of
+        // their library in a random order. Each player gains 3 life."
+        // Per-player `ForEach` + `LookPickToHand` (take up to 2, filtered to
+        // land/instant/sorcery, rest to bottom random). Approximation: the
+        // "one land AND/OR one instant/sorcery" category split is collapsed
+        // to "up to two matching cards" — a player could take two lands.
         back_face: Some(Box::new(CardDefinition {
             name: "Explore the Vastlands",
-            cost: cost(&[generic(4)]),
+            cost: cost(&[generic(3)]),
             card_types: vec![CardType::Sorcery],
-            effect: Effect::Seq(vec![
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::Colorless(Value::Const(6)),
-                },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(3),
-                },
-            ]),
+            effect: Effect::ForEach {
+                selector: Selector::Player(PlayerRef::EachPlayer),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::LookPickToHand {
+                        who: PlayerRef::Triggerer,
+                        count: Value::Const(5),
+                        rest_to_graveyard: false,
+                        pick_filter: Some(
+                            SelectionRequirement::HasCardType(CardType::Land)
+                                .or(SelectionRequirement::HasCardType(CardType::Instant))
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        ),
+                        take: Some(Value::Const(2)),
+                        to_battlefield: false,
+                        gain_life_if_pick: None,
+                        gain_life_greatest_power_rest: false,
+                        optional: true,
+                        picked_lands_to_battlefield: false,
+                        rest_bottom_random: true,
+                    },
+                    Effect::GainLife {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::Const(3),
+                    },
+                ])),
+            },
             ..Default::default()
         })),
         ..Default::default()

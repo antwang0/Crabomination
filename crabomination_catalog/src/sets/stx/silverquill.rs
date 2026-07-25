@@ -209,36 +209,42 @@ pub fn killian_ink_duelist() -> CardDefinition {
 
 // ── Devastating Mastery ─────────────────────────────────────────────────────
 
-/// Devastating Mastery — {2}{W}{W}{W}{W} Sorcery.
+/// Devastating Mastery — {4}{W}{W} Sorcery.
 /// "You may pay {2}{W}{W} rather than pay this spell's mana cost.
 /// If the {2}{W}{W} cost was paid, an opponent chooses up to two nonland
 /// permanents they control and returns them to their owner's hand.
 /// Destroy all nonland permanents."
 ///
-/// ✅ The destroy-each-nonland-permanent body fully matches the printed
-/// primary clause. The {2}{W}{W} alternative cost itself is expressible
-/// (`CardDefinition.alternative_cost` + `effect_override` would carry
-/// the rider conditionally), but the rider's body is BLOCKED: there is
-/// no "an opponent chooses up to N permanents they control and returns
-/// them to their owner's hand" effect — every existing chooser
-/// primitive (`Selector::one_of`, `Move`) asks the effect's controller,
-/// and inverting the incentive (the caster picking which opponent
-/// permanents get saved) would be wrong. Needs an opponent-side
-/// choose-own-permanents-to-hand primitive (the bounce mirror of
-/// `Effect::Sacrifice`'s owner-chooses behavior). Until then only the
-/// full-cost cast is wired, which plays the printed primary effect
-/// correctly.
+/// The alt cast rides `alternative_cost` + `effect_override`: the rider
+/// uses `Effect::PlayerReturnsPermanentsToHand` (the opponent picks
+/// which of their own nonland permanents to save) before the sweep.
 pub fn devastating_mastery() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    let sweep = || Effect::ForEach {
+        selector: Selector::EachPermanent(SelectionRequirement::Nonland),
+        body: Box::new(Effect::Destroy {
+            what: Selector::TriggerSource,
+        }),
+    };
     CardDefinition {
         name: "Devastating Mastery",
-        cost: cost(&[generic(2), w(), w(), w(), w()]),
+        cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(SelectionRequirement::Nonland),
-            body: Box::new(Effect::Destroy {
-                what: Selector::TriggerSource,
-            }),
-        },
+        effect: sweep(),
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), w(), w()]),
+            effect_override: Some(Effect::Seq(vec![
+                Effect::PlayerReturnsPermanentsToHand {
+                    who: PlayerRef::EachOpponent,
+                    count: Value::Const(2),
+                    filter: SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland),
+                    up_to: true,
+                },
+                sweep(),
+            ])),
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -584,26 +590,36 @@ pub fn tenured_inkcaster() -> CardDefinition {
 /// until end of turn."
 ///
 /// MDFC Selfless Glyphweaver // Deadly Vanity. The back face (Deadly Vanity —
-/// {4}{B}{B}{B} Sorcery: "Each player chooses a creature or planeswalker they
-/// control, then sacrifices the rest.") is wired via
-/// `Effect::EachPlayerKeepsOneSacrificeRest` and castable from hand through
+/// {4}{B}{B}{B} Sorcery: "Choose a creature or planeswalker. Destroy the
+/// rest.") picks the single survivor as target slot 0, then destroys every
+/// OTHER creature and planeswalker via
+/// `Selector::EachPermanentExceptTargets`. Castable from hand through
 /// `GameAction::CastSpellBack`.
 ///
-/// The front's activation is a `sac_cost` activated ability whose effect
-/// grants Indestructible (EOT) to each creature the controller owns. Because
-/// the source is sacrificed as part of the cost (before resolution), it
+/// The front's activation is an *exile-self*-cost activated ability whose
+/// effect grants Indestructible (EOT) to each creature the controller owns.
+/// Because the source is exiled as part of the cost (before resolution), it
 /// won't grant indestructible to itself — matching the printed Oracle
-/// where the sacrificed Glyphweaver is no longer on the battlefield
+/// where the exiled Glyphweaver is no longer on the battlefield
 /// when the effect resolves.
 pub fn selfless_glyphweaver() -> CardDefinition {
+    let cre_or_pw = SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker);
     let deadly_vanity = CardDefinition {
         name: "Deadly Vanity",
         cost: cost(&[generic(4), b(), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::EachPlayerKeepsOneSacrificeRest {
-            who: Selector::Player(PlayerRef::EachPlayer),
-            filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-        },
+        effect: Effect::Seq(vec![
+            // Slot 0: the chosen survivor. The ForEach body is a Noop —
+            // the slot exists only to declare the choice; the survivor is
+            // exempted from the sweep below.
+            Effect::ForEach {
+                selector: Selector::TargetFiltered { slot: 0, filter: cre_or_pw.clone() },
+                body: Box::new(Effect::Noop),
+            },
+            Effect::Destroy {
+                what: Selector::EachPermanentExceptTargets(cre_or_pw),
+            },
+        ]),
         ..Default::default()
     };
     CardDefinition {
@@ -630,11 +646,11 @@ pub fn selfless_glyphweaver() -> CardDefinition {
             },
             once_per_turn: false,
             sorcery_speed: false,
-            sac_cost: true,
+            sac_cost: false,
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: true,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,

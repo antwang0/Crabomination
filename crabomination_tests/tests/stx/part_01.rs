@@ -2033,10 +2033,10 @@ fn guiding_voice_counters_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
-/// Tezzeret's Gambit mode 0: Proliferate. Bears with +1/+1 counters
-/// get another counter; players with poison get another poison.
+/// Tezzeret's Gambit: draw two, then proliferate. Bears with +1/+1
+/// counters get another counter.
 #[test]
-fn tezzerets_gambit_mode_zero_proliferates() {
+fn tezzerets_gambit_draws_two_then_proliferates() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -2046,17 +2046,21 @@ fn tezzerets_gambit_mode_zero_proliferates() {
     assert_eq!(g.battlefield_find(bear).unwrap()
         .counter_count(CounterType::PlusOnePlusOne), 1);
 
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::tezzerets_gambit());
+    let hand_before = g.players[0].hand.len();
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
-    }).expect("Tezzeret's Gambit castable for {U}{B}");
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tezzeret's Gambit castable for {3}{U}");
     drain_stack(&mut g);
 
+    // -1 cast +2 draw = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "draw two");
     let post = g.battlefield_find(bear).unwrap();
     assert_eq!(post.counter_count(CounterType::PlusOnePlusOne), 2,
-        "proliferate adds one +1/+1 counter");
+        "then proliferate adds one +1/+1 counter");
 }
 
 /// CR 701.34a: proliferate must not pump enemy creatures with +1/+1
@@ -2075,9 +2079,9 @@ fn proliferate_skips_enemy_plus_one_counters() {
         .add_counters(CounterType::PlusOnePlusOne, 1);
     let id = g.add_card_to_hand(0, catalog::tezzerets_gambit());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Gambit castable");
     drain_stack(&mut g);
     let friend_after = g.battlefield_find(friend).unwrap();
@@ -2097,53 +2101,35 @@ fn proliferate_skips_self_poison_counters() {
     g.players[1].poison_counters = 3;
     let id = g.add_card_to_hand(0, catalog::tezzerets_gambit());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Gambit castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].poison_counters, 3, "self poison untouched");
     assert_eq!(g.players[1].poison_counters, 4, "opp poison proliferated");
 }
 
-/// Tezzeret's Gambit mode 1: pay 2 life, draw 2 cards.
+/// Tezzeret's Gambit's {3}{U/P} can be cast with no blue mana by paying
+/// the Phyrexian pip with 2 life.
 #[test]
-fn tezzerets_gambit_mode_one_pays_two_life_draws_two() {
+fn tezzerets_gambit_phyrexian_pip_payable_with_two_life() {
     let mut g = two_player_game();
     for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::tezzerets_gambit());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
     let life_before = g.players[0].life;
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
-    }).expect("Tezzeret's Gambit mode 1 castable");
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tezzeret's Gambit castable for {3} + 2 life");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].life, life_before - 2,
-        "lose 2 life from mode 1");
+        "Phyrexian U-Phyrexian pip paid with 2 life");
     // -1 cast +2 draw = +1 net.
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2);
-}
-
-/// Tezzeret's Gambit's {U/P}{B/P} can be cast with no mana by paying both
-/// Phyrexian pips with life — 4 life total (mode 0 = Proliferate, no
-/// further life cost).
-#[test]
-fn tezzerets_gambit_castable_for_four_life_no_mana() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::tezzerets_gambit());
-    let life_before = g.players[0].life;
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
-    }).expect("Tezzeret's Gambit castable for 4 life (both Phyrexian pips)");
-    drain_stack(&mut g);
-
-    assert_eq!(g.players[0].life, life_before - 4,
-        "two Phyrexian pips paid with 2 life each = 4 life");
 }
 
 /// Wandering Archaic copies an opponent's instant/sorcery spell when
@@ -2825,11 +2811,12 @@ fn expanded_anatomy_lands_two_counters_and_grants_vigilance() {
         "Bear gains vigilance until end of turn");
 }
 
-/// Selfless Glyphweaver's sac activation grants Indestructible (EOT)
-/// to all of the controller's creatures; the Glyphweaver itself is
-/// sacrificed as cost (so it does not stay around with indestructible).
+/// Selfless Glyphweaver's "Exile this creature:" activation grants
+/// Indestructible (EOT) to all of the controller's creatures; the
+/// Glyphweaver itself is exiled as cost (so it does not stay around
+/// with indestructible, and it does NOT hit the graveyard).
 #[test]
-fn selfless_glyphweaver_sac_grants_indestructible_to_friendlies() {
+fn selfless_glyphweaver_exile_grants_indestructible_to_friendlies() {
     let mut g = two_player_game();
     let gw = g.add_card_to_battlefield(0, catalog::selfless_glyphweaver());
     g.clear_sickness(gw);
@@ -2840,17 +2827,17 @@ fn selfless_glyphweaver_sac_grants_indestructible_to_friendlies() {
         card_id: gw,
         ability_index: 0,
         target: None, additional_targets: Vec::new(), x_value: None })
-    .expect("Selfless Glyphweaver sac activation");
+    .expect("Selfless Glyphweaver exile activation");
     drain_stack(&mut g);
 
-    // Glyphweaver is sacrificed.
+    // Glyphweaver is exiled (printed cost is exile, not sacrifice).
     assert!(
         !g.battlefield.iter().any(|c| c.id == gw),
-        "Glyphweaver should be sacrificed"
+        "Glyphweaver should have left the battlefield"
     );
     assert!(
-        g.players[0].graveyard.iter().any(|c| c.id == gw),
-        "Glyphweaver should be in graveyard"
+        g.exile.iter().any(|c| c.id == gw),
+        "Glyphweaver should be in exile, not the graveyard"
     );
     // Buddy bear is indestructible.
     let buddy_card = g.battlefield.iter().find(|c| c.id == buddy).expect("Bear alive");
@@ -3010,41 +2997,71 @@ fn augusta_dean_of_order_tapped_untapped_anthems() {
     assert_eq!((c.power, c.toughness), (3, 2), "tapped → +1/+0");
 }
 
-/// Pestilent Cauldron's sac activation mills 4 from each player and
-/// drains 3.
+/// Pestilent Cauldron ability 0 — "{T}, Discard a card: create a Pest"
+/// — and ability 1 — "{1}, {T}: each opponent mills a card for each
+/// life you gained this turn."
 #[test]
-fn pestilent_cauldron_sac_mills_and_drains() {
+fn pestilent_cauldron_pest_mint_and_lifegain_mill() {
     let mut g = two_player_game();
-    // Seed both libraries.
-    for _ in 0..5 {
-        g.add_card_to_library(0, catalog::island());
-        g.add_card_to_library(1, catalog::island());
-    }
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
     let pc = g.add_card_to_battlefield(0, catalog::pestilent_cauldron());
     g.clear_sickness(pc);
-    let life0_before = g.players[0].life;
-    let life1_before = g.players[1].life;
-    let gy0_before = g.players[0].graveyard.len();
-    let gy1_before = g.players[1].graveyard.len();
-    g.players[0].mana_pool.add_colorless(2);
+    g.add_card_to_hand(0, catalog::island()); // discard fodder
 
+    // Ability 0: {T}, Discard: mint a Pest.
     g.perform_action(GameAction::ActivateAbility {
         card_id: pc,
         ability_index: 0,
         target: None, additional_targets: Vec::new(), x_value: None })
-    .expect("Cauldron activation");
+    .expect("Cauldron Pest activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Pest"),
+        "Pest token minted");
+
+    // Untap, gain 3 life this turn, then ability 1 mills 3.
+    g.battlefield_find_mut(pc).unwrap().tapped = false;
+    g.players[0].life += 3;
+    g.players[0].life_gained_this_turn += 3;
+    let gy1_before = g.players[1].graveyard.len();
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pc,
+        ability_index: 1,
+        target: None, additional_targets: Vec::new(), x_value: None })
+    .expect("Cauldron mill activation");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy1_before + 3,
+        "opponent mills one card per life gained this turn");
+}
+
+/// Pestilent Cauldron ability 2 — "{4}, {T}: Exile four target cards
+/// from a single graveyard. Draw a card."
+#[test]
+fn pestilent_cauldron_exiles_four_from_single_graveyard_draws() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let mut gy_ids = Vec::new();
+    for _ in 0..5 { gy_ids.push(g.add_card_to_graveyard(1, catalog::island())); }
+    g.add_card_to_library(0, catalog::island());
+    let pc = g.add_card_to_battlefield(0, catalog::pestilent_cauldron());
+    g.clear_sickness(pc);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(gy_ids[..4].to_vec()),
+    ]));
+    let hand_before = g.players[0].hand.len();
+    let gy1_before = g.players[1].graveyard.len();
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pc,
+        ability_index: 2,
+        target: None, additional_targets: Vec::new(), x_value: None })
+    .expect("Cauldron exile activation");
     drain_stack(&mut g);
 
-    // Sacrificed.
-    assert!(!g.battlefield.iter().any(|c| c.id == pc));
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == pc));
-    // Life delta: P0 gains 3, P1 loses 3.
-    assert_eq!(g.players[0].life, life0_before + 3);
-    assert_eq!(g.players[1].life, life1_before - 3);
-    // Each player milled 4.
-    // P0's graveyard contains the Cauldron plus 4 milled cards.
-    assert_eq!(g.players[0].graveyard.len(), gy0_before + 1 /* cauldron */ + 4);
-    assert_eq!(g.players[1].graveyard.len(), gy1_before + 4);
+    assert_eq!(g.players[1].graveyard.len(), gy1_before - 4,
+        "four cards exiled from the opponent's graveyard");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "draw a card");
 }
 
 /// Ajani's Response alt cost ({1}{W}, vs printed {4}{W}) requires the target to be tapped.
@@ -5114,18 +5131,19 @@ fn wandering_archaic_back_explore_the_vastlands_castable_from_hand() {
 }
 
 /// Pestilent Cauldron // Restorative Burst — the back face is castable
-/// from hand: {2}{B} Sorcery, "Return up to three creature cards from
-/// your graveyard to your hand. You gain 3 life."
+/// from hand: {3}{G}{G} Sorcery, "Return up to two creature, land,
+/// and/or planeswalker cards from your graveyard to your hand. Each
+/// player gains 4 life. Exile Restorative Burst."
 #[test]
 fn pestilent_cauldron_back_restorative_burst_castable_from_hand() {
     let mut g = two_player_game();
-    // Seed the graveyard: two creature cards + a non-creature.
+    // Seed the graveyard: two creature cards + an instant (ineligible).
     let bear_a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let bear_b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::island());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::pestilent_cauldron());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
     let p0 = g.players[0].life;
     let p1 = g.players[1].life;
     g.perform_action(GameAction::CastSpellBack {
@@ -5135,27 +5153,31 @@ fn pestilent_cauldron_back_restorative_burst_castable_from_hand() {
         mode: None,
         x_value: None,
     })
-    .expect("Restorative Burst (back face) castable for {2}{B}");
+    .expect("Restorative Burst (back face) castable for {3}{G}{G}");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, p0 + 3, "you gain 3");
-    assert_eq!(g.players[1].life, p1, "the opponent is untouched");
-    // Both creature cards returned to hand; the island stayed put.
+    assert_eq!(g.players[0].life, p0 + 4, "each player gains 4 — you");
+    assert_eq!(g.players[1].life, p1 + 4, "each player gains 4 — opponent too");
+    // Both creature cards returned to hand; the instant stayed put.
     assert!(g.players[0].hand.iter().any(|c| c.id == bear_a), "bear A back to hand");
     assert!(g.players[0].hand.iter().any(|c| c.id == bear_b), "bear B back to hand");
     assert!(
-        g.players[0].graveyard.iter().any(|c| c.definition.name == "Island"),
-        "non-creature card stays in the graveyard"
+        g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "instant card stays in the graveyard (not creature/land/planeswalker)"
     );
+    // "Exile Restorative Burst."
+    assert!(g.exile.iter().any(|c| c.id == id), "spell exiled on resolution");
 }
 
 /// Selfless Glyphweaver // Deadly Vanity — the back face is a {4}{B}{B}{B}
-/// sorcery: each player keeps one creature/planeswalker and sacrifices the
-/// rest. Castable from hand via CastSpellBack.
+/// sorcery: "Choose a creature or planeswalker. Destroy the rest." One
+/// survivor TOTAL (the caster's choice); everything else is destroyed
+/// (not sacrificed). Castable from hand via CastSpellBack.
 #[test]
-fn selfless_glyphweaver_back_deadly_vanity_each_player_keeps_one() {
+fn selfless_glyphweaver_back_deadly_vanity_one_survivor_destroy_rest() {
     let mut g = two_player_game();
     // P0 controls three creatures, P1 controls two.
-    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::grizzly_bears()); }
+    let keeper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_battlefield(0, catalog::grizzly_bears()); }
     for _ in 0..2 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
     let id = g.add_card_to_hand(0, catalog::selfless_glyphweaver());
     g.players[0].mana_pool.add(Color::Black, 3);
@@ -5163,7 +5185,7 @@ fn selfless_glyphweaver_back_deadly_vanity_each_player_keeps_one() {
 
     g.perform_action(GameAction::CastSpellBack {
         card_id: id,
-        target: None,
+        target: Some(Target::Permanent(keeper)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
@@ -5171,72 +5193,20 @@ fn selfless_glyphweaver_back_deadly_vanity_each_player_keeps_one() {
     .expect("Deadly Vanity (back face) castable for {4}{B}{B}{B}");
     drain_stack(&mut g);
 
-    let p0_creatures = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count();
-    let p1_creatures = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_creature()).count();
-    assert_eq!(p0_creatures, 1, "P0 keeps exactly one creature");
-    assert_eq!(p1_creatures, 1, "P1 keeps exactly one creature");
-}
-
-/// Pestilent Cauldron — after sacrificing it (which grants the one-shot
-/// permission), its back face Restorative Burst is castable from the
-/// graveyard ("...then cast it transformed"), returning up to three
-/// creature cards to hand and gaining 3 more life.
-#[test]
-fn pestilent_cauldron_back_castable_from_graveyard_after_sacrifice() {
-    let mut g = two_player_game();
-    for _ in 0..6 {
-        g.add_card_to_library(0, catalog::island());
-        g.add_card_to_library(1, catalog::island());
-    }
-    // A creature card in the graveyard for Restorative Burst to return.
-    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let pc = g.add_card_to_battlefield(0, catalog::pestilent_cauldron());
-    g.clear_sickness(pc);
-    let p0 = g.players[0].life;
-    let p1 = g.players[1].life;
-    g.players[0].mana_pool.add_colorless(2); // {2} activation
-
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: pc, ability_index: 0, target: None,
-        additional_targets: Vec::new(), x_value: None,
-    }).expect("Cauldron activation");
-    drain_stack(&mut g);
-
-    // Sacrificed to the graveyard, carrying the one-shot back-cast permission.
-    assert!(
-        g.players[0].graveyard.iter().any(|c| c.id == pc && c.may_cast_back_from_graveyard),
-        "Cauldron is in the graveyard with the cast-back-from-graveyard permission",
-    );
-    assert_eq!(g.players[1].life, p1 - 3, "activation drains 3");
-    assert_eq!(g.players[0].life, p0 + 3);
-
-    // The graveyard back-cast is surfaced as an affordance once affordable
-    // (so the UI highlights it and auto_advance won't skip the window).
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    assert!(
-        g.compute_hand_affordances(0).back_castable.contains(&pc),
-        "the permitted graveyard back-cast is surfaced in affordances",
-    );
-
-    // Cast Restorative Burst (the back face) from the graveyard for {2}{B}.
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: pc, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Restorative Burst castable from the graveyard for {2}{B}");
-    drain_stack(&mut g);
-
-    assert_eq!(g.players[1].life, p1 - 3, "Restorative Burst doesn't touch the opponent");
-    assert_eq!(g.players[0].life, p0 + 3 + 3, "Restorative Burst gains 3 more");
-    assert!(
-        g.players[0].hand.iter().any(|c| c.id == bear),
-        "the graveyard creature card came back to hand"
-    );
-    // The one-shot permission was consumed.
-    assert!(
-        !g.players[0].graveyard.iter().any(|c| c.id == pc && c.may_cast_back_from_graveyard),
-        "permission consumed after the back-face cast",
+    let creatures: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.is_creature())
+        .map(|c| c.id)
+        .collect();
+    assert_eq!(creatures, vec![keeper],
+        "exactly one survivor total: the chosen creature");
+    // Destroyed, not sacrificed: the opponent's creatures hit THEIR graveyard.
+    assert_eq!(
+        g.players[1].graveyard.iter().filter(|c| c.definition.is_creature()).count(),
+        2,
+        "both of P1's creatures were destroyed"
     );
 }
+
 
 /// Real oracle: "If X is 3, create a 4/4 blue and red Elemental creature
 /// token." — the X=3 bullet alone mints the token but never draws (the
@@ -5291,4 +5261,241 @@ fn umbral_juke_mints_a_two_one_flying_inkling() {
         .expect("Inkling minted");
     assert_eq!((tok.power(), tok.toughness()), (2, 1), "real STX Inkling is 2/1");
     assert!(tok.has_keyword(&Keyword::Flying));
+}
+
+// ── 2026-07 audit fixes: hybrid Summoning costs, Campus types, Dean types ──
+
+/// The five Summoning lessons print HYBRID pips ({1}{B/G}{B/G} etc.), so
+/// each must be castable with either color alone filling both pips.
+/// Regression for the audit fix that replaced fixed two-color pips.
+#[test]
+fn summoning_lessons_hybrid_pips_payable_one_color() {
+    // (factory, generic, colors that must each work alone)
+    let cases: [(fn() -> crabomination::card::CardDefinition, u32, [Color; 2]); 4] = [
+        (catalog::pest_summoning, 1, [Color::Black, Color::Green]),
+        (catalog::spirit_summoning, 1, [Color::Red, Color::White]),
+        (catalog::inkling_summoning, 2, [Color::White, Color::Black]),
+        (catalog::elemental_summoning, 3, [Color::Blue, Color::Red]),
+    ];
+    for (factory, generic, colors) in cases {
+        for color in colors {
+            let mut g = two_player_game();
+            let id = g.add_card_to_hand(0, factory());
+            g.players[0].mana_pool.add(color, 2);
+            g.players[0].mana_pool.add_colorless(generic);
+            g.perform_action(GameAction::CastSpell {
+                card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+            })
+            .unwrap_or_else(|e| panic!(
+                "{} should be castable with two {color:?} pips: {e:?}",
+                factory().name));
+        }
+    }
+}
+
+/// Campus lands are typeless ("Land" — no basic land types). Regression
+/// for the audit fix that removed the spurious Mountain/Plains/etc.
+/// subtypes (they were fetchable / Blood Moon-relevant by mistake).
+#[test]
+fn campus_lands_have_no_basic_land_types() {
+    for def in [
+        catalog::lorehold_campus(), catalog::prismari_campus(),
+        catalog::quandrix_campus(), catalog::silverquill_campus(),
+        catalog::witherbloom_campus(),
+    ] {
+        assert!(def.subtypes.land_types.is_empty(),
+            "{} must have no land types", def.name);
+    }
+}
+
+/// Back-face Deans carry their own printed creature types, not a copy of
+/// the front face's (Augusta: Human Cleric, not Plargg's Orc Shaman;
+/// Embrose: Human Warlock, not Shaile's Bird Cleric).
+#[test]
+fn dean_back_faces_have_printed_creature_types() {
+    use crabomination::card::CreatureType;
+    let augusta = catalog::augusta_dean_of_order();
+    assert_eq!(augusta.subtypes.creature_types,
+        vec![CreatureType::Human, CreatureType::Cleric]);
+    let shaile = catalog::shaile_dean_of_radiance();
+    let embrose = shaile.back_face.as_ref().expect("Shaile has a back face");
+    assert_eq!(embrose.subtypes.creature_types,
+        vec![CreatureType::Human, CreatureType::Warlock]);
+}
+
+/// Explore the Vastlands (Wandering Archaic's back face): each player
+/// looks at their top five, may take up to two land/instant/sorcery
+/// cards, rest to the bottom; each player gains 3 life. Regression for
+/// the audit fix that replaced a fabricated mana-ritual effect.
+#[test]
+fn explore_the_vastlands_digs_both_players_and_gains_three() {
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::wandering_archaic());
+    g.players[0].mana_pool.add_colorless(3);
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    let h0 = g.players[0].hand.len();
+    let h1 = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Explore the Vastlands castable for {3}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 + 3, "caster gains 3");
+    assert_eq!(g.players[1].life, p1 + 3, "opponent gains 3 too");
+    // Both players dug: -1 cast for P0, up to +2 into hand each (auto
+    // decider takes eligible picks; islands are lands, so picks exist).
+    assert!(g.players[0].hand.len() > h0 - 1, "P0 took at least one card");
+    assert!(g.players[1].hand.len() > h1, "P1 took at least one card");
+}
+
+/// Defiant Strike targets ANY creature — audit fix removed a spurious
+/// ControlledByYou restriction (you can pump an opponent's creature).
+#[test]
+fn defiant_strike_can_target_an_opponents_creature() {
+    let mut g = two_player_game();
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::defiant_strike());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(enemy)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Defiant Strike legally targets an opponent's creature");
+    drain_stack(&mut g);
+    let c = g.compute_battlefield().into_iter().find(|c| c.id == enemy).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 2), "+1/+0 applied");
+}
+
+/// Expressive Iteration bottoms its leftover card — audit fix (it used
+/// to stay on top of the library).
+#[test]
+fn expressive_iteration_bottoms_the_leftover() {
+    let mut g = two_player_game();
+    // add_card_to_library appends to the BOTTOM, so seed the three
+    // looked-at markers first (top), then the island base below them.
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::serra_angel());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::expressive_iteration());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Expressive Iteration castable");
+    drain_stack(&mut g);
+    // One of the looked-at three went to hand, one to exile (playable),
+    // and the third must be on the BOTTOM of the library — the current
+    // top must be one of the seeded islands.
+    let top = g.players[0].library.first().expect("library nonempty");
+    assert_eq!(top.definition.name, "Island",
+        "the leftover looked-at card was bottomed, not left on top");
+}
+
+/// Agonizing Remorse can hit the graveyard instead of the hand (mode 1)
+/// — audit fix (the graveyard option used to be collapsed away).
+#[test]
+fn agonizing_remorse_can_exile_from_graveyard() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::serra_angel());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::agonizing_remorse());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![dead]),
+    ]));
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Agonizing Remorse castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == dead),
+        "graveyard card exiled via mode 1");
+    assert_eq!(g.players[1].hand.len(), 1, "hand untouched");
+}
+
+/// Devastating Mastery's {2}{W}{W} alternative cast — the opponent
+/// saves up to two of their own nonland permanents to hand before the
+/// sweep (audit fix: previously only the full-cost cast existed).
+#[test]
+fn devastating_mastery_alt_cost_lets_opponent_save_two() {
+    let mut g = two_player_game();
+    let my_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::devastating_mastery());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Devastating Mastery alt-castable for {2}{W}{W}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == my_bear),
+        "the caster's creature is swept");
+    assert_eq!(g.players[1].hand.len(), 2,
+        "the opponent saved two permanents to hand");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.is_creature()).count(),
+        0, "everything else was destroyed");
+}
+
+/// Multiple Choice X=2 — the affected player (not the caster) picks the
+/// creature they return to hand (audit fix: the caster used to pick any
+/// battlefield creature directly).
+#[test]
+fn multiple_choice_x2_opponent_returns_their_own_creature() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::multiple_choice());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None,
+        x_value: Some(2),
+    }).expect("Multiple Choice castable at X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == mine),
+        "the caster's creature is untouched");
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs),
+        "the opponent's own creature bounced to their hand");
+}
+
+/// Venerable Warsinger's reanimation gate scales with the damage dealt
+/// (X = combat damage), not a hardcoded 3 (audit fix).
+#[test]
+fn venerable_warsinger_x_scales_with_damage_dealt() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    // A 5-drop in the graveyard: out of reach at base power 3, in reach
+    // once the Warsinger is pumped to 5.
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::{Attack, AttackTarget, TurnStep};
+    let big = g.add_card_to_graveyard(0, catalog::serra_angel()); // MV 5
+    let ws = g.add_card_to_battlefield(0, catalog::venerable_warsinger());
+    g.clear_sickness(ws);
+    g.battlefield_find_mut(ws).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 2); // 5/5
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ws, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    // 5 damage → X=5 → the MV-5 Angel is reanimatable.
+    assert!(g.battlefield.iter().any(|c| c.id == big),
+        "MV-5 creature reanimated off a 5-damage hit");
 }

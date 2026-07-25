@@ -336,7 +336,7 @@ fn prismari_elemental_token() -> TokenDefinition {
 pub fn elemental_summoning() -> CardDefinition {
     CardDefinition {
         name: "Elemental Summoning",
-        cost: cost(&[generic(3), u(), r()]),
+        cost: cost(&[generic(3), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],

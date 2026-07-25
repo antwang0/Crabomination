@@ -1,17 +1,28 @@
-use crate::card::{CardDefinition, CardType, SelectionRequirement};
+use crate::card::{CardDefinition, CardType, SelectionRequirement, Selector, Value};
 use crate::effect::shortcut::{
     add_mana, counter_target_spell, deal, exile_target, pump_target, target, target_filtered,
 };
 use crate::effect::Effect;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
-/// Swords to Plowshares — {W}: exile target creature
+/// Swords to Plowshares — {W}: exile target creature; its controller
+/// gains life equal to its power (last-known power, read before the
+/// exile so the amount matches the printed "its power").
 pub fn swords_to_plowshares() -> CardDefinition {
+    use crate::effect::PlayerRef;
     CardDefinition {
         name: "Swords to Plowshares",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        effect: exile_target(),
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::PowerOf(Box::new(target_filtered(
+                    SelectionRequirement::Creature,
+                ))),
+            },
+            Effect::Exile { what: Selector::Target(0) },
+        ]),
         ..Default::default()
     }
 }

@@ -232,7 +232,7 @@ pub fn fractal_summoning() -> CardDefinition {
     };
     CardDefinition {
         name: "Fractal Summoning",
-        cost: cost(&[x(), g(), u()]),
+        cost: cost(&[x(), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],

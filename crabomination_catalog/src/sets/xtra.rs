@@ -22,13 +22,19 @@ pub fn time_walk() -> CardDefinition {
     }
 }
 
-/// Time Warp — {3}{U}{U} Sorcery. "Take an extra turn after this one."
+/// Time Warp — {3}{U}{U} Sorcery. "Target player takes an extra turn
+/// after this one." Unlike the self-only extra-turn family, the turn
+/// can be granted to any player (slot 0).
 pub fn time_warp() -> CardDefinition {
+    use crate::effect::{PlayerRef, Value};
     CardDefinition {
         name: "Time Warp",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: extra_turn_body(),
+        effect: Effect::TakeExtraTurn {
+            who: PlayerRef::Target(0),
+            count: Value::Const(1),
+        },
         ..Default::default()
     }
 }

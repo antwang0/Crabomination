@@ -808,21 +808,30 @@ pub fn mystic_repeal() -> CardDefinition {
 }
 
 /// Agonizing Remorse — {1}{B} Sorcery. Target opponent reveals their hand;
-/// exile a nonland card from it. You lose 1 life. (The graveyard-pick
-/// option collapses to the hand pick.)
+/// exile a nonland card from it OR exile a card from their graveyard.
+/// You lose 1 life.
 pub fn agonizing_remorse() -> CardDefinition {
     CardDefinition {
         name: "Agonizing Remorse",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::ExileChosenFromHand {
-                from: Selector::Player(PlayerRef::Target(0)),
-                count: Value::ONE,
-                filter: SelectionRequirement::Nonland,
-                link_to_source: false,
-                face_down: false,
-            },
+            // "...exile a nonland card from it OR a card from their
+            // graveyard." Modal: the caster picks which zone to hit.
+            Effect::ChooseMode(vec![
+                Effect::ExileChosenFromHand {
+                    from: Selector::Player(PlayerRef::Target(0)),
+                    count: Value::ONE,
+                    filter: SelectionRequirement::Nonland,
+                    link_to_source: false,
+                    face_down: false,
+                },
+                Effect::ExileUpToNFromGraveyards {
+                    count: Value::ONE,
+                    of: Some(PlayerRef::Target(0)),
+                    single: true,
+                },
+            ]),
             Effect::LoseLife { who: Selector::You, amount: Value::ONE },
         ]),
         ..Default::default()

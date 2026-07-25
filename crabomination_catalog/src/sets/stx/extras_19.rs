@@ -127,7 +127,13 @@ fn flamethrower_sonata() -> CardDefinition {
                     filter: is.clone(),
                 }),
                 then: Box::new(Effect::DealDamage {
-                    to: Selector::Target(0),
+                    // "...target creature or planeswalker you don't control."
+                    to: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker)
+                            .and(SelectionRequirement::ControlledByYou.negate()),
+                    },
                     amount: Value::ManaValueOf(Box::new(Selector::DiscardedThisResolution {
                         filter: is,
                     })),

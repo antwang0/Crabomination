@@ -10,12 +10,21 @@ use crabomination::game::*;
 use crabomination::mana::Color;
 
 fn cast_and_resolve(card: crabomination::card::CardDefinition, blue: u32, generic: u32) -> GameState {
+    cast_and_resolve_at(card, blue, generic, None)
+}
+
+fn cast_and_resolve_at(
+    card: crabomination::card::CardDefinition,
+    blue: u32,
+    generic: u32,
+    target: Option<Target>,
+) -> GameState {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, card);
     g.players[0].mana_pool.add(Color::Blue, blue);
     g.players[0].mana_pool.add_colorless(generic);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
     g
@@ -24,17 +33,27 @@ fn cast_and_resolve(card: crabomination::card::CardDefinition, blue: u32, generi
 /// Table-driven: every plain "take an extra turn" spell banks exactly one turn.
 #[test]
 fn extra_turn_spells_bank_one_extra_turn() {
-    let cases: Vec<(&str, crabomination::card::CardDefinition, u32, u32)> = vec![
-        ("Time Walk", catalog::time_walk(), 1, 1),
-        ("Time Warp", catalog::time_warp(), 2, 3),
-        ("Temporal Manipulation", catalog::temporal_manipulation(), 2, 3),
-        ("Capture of Jingzhou", catalog::capture_of_jingzhou(), 2, 3),
-        ("Nexus of Fate", catalog::nexus_of_fate(), 2, 5),
+    // (name, card, blue, generic, target) — Time Warp is "TARGET player
+    // takes an extra turn", so it casts with an explicit player target.
+    let cases: Vec<(&str, crabomination::card::CardDefinition, u32, u32, Option<Target>)> = vec![
+        ("Time Walk", catalog::time_walk(), 1, 1, None),
+        ("Time Warp", catalog::time_warp(), 2, 3, Some(Target::Player(0))),
+        ("Temporal Manipulation", catalog::temporal_manipulation(), 2, 3, None),
+        ("Capture of Jingzhou", catalog::capture_of_jingzhou(), 2, 3, None),
+        ("Nexus of Fate", catalog::nexus_of_fate(), 2, 5, None),
     ];
-    for (name, card, blue, generic) in cases {
-        let g = cast_and_resolve(card, blue, generic);
+    for (name, card, blue, generic, target) in cases {
+        let g = cast_and_resolve_at(card, blue, generic, target);
         assert_eq!(g.players[0].extra_turns, 1, "{name} banks one extra turn");
     }
+}
+
+/// Time Warp can grant the extra turn to the OPPONENT — "target player".
+#[test]
+fn time_warp_can_target_the_opponent() {
+    let g = cast_and_resolve_at(catalog::time_warp(), 2, 3, Some(Target::Player(1)));
+    assert_eq!(g.players[1].extra_turns, 1, "opponent banks the extra turn");
+    assert_eq!(g.players[0].extra_turns, 0, "caster gets nothing");
 }
 
 #[test]

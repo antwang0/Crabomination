@@ -685,6 +685,7 @@ impl Effect {
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what }
             | Effect::CounterSpell { what }
+            | Effect::CounterSpellExileSameNamed { what }
             | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
@@ -793,7 +794,8 @@ impl Effect {
             Effect::Cascade { .. } => false,
             Effect::Ripple { .. } => false,
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
-            Effect::PlayerExilesPermanents { count, .. } => value_has_target(count),
+            Effect::PlayerExilesPermanents { count, .. }
+            | Effect::PlayerReturnsPermanentsToHand { count, .. } => value_has_target(count),
             Effect::SacrificeGreatestMV { who, count, .. } => {
                 sel_has_target(who) || value_has_target(count)
             }
@@ -1043,6 +1045,7 @@ impl Effect {
             | Effect::ClearSuspected { what }
             | Effect::Detain { what }
             | Effect::CounterSpell { what }
+            | Effect::CounterSpellExileSameNamed { what }
             | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
@@ -2196,6 +2199,7 @@ impl Effect {
                 | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }
                 | Effect::CounterSpell { what }
+                | Effect::CounterSpellExileSameNamed { what }
                 | Effect::CounterSpellDrawIfUnderpaid { what }
                 | Effect::CounterSpellToZone { what, .. }
                 | Effect::CounterSpellExileNameLock { what }
