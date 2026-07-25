@@ -933,6 +933,11 @@ pub enum Keyword {
     /// into a graveyard from the battlefield this turn." A self-cast copy
     /// rider mirroring Storm but counting `permanents_to_graveyard_this_turn`.
     Gravestorm,
+    /// "When you cast this spell, copy it for each other instant and
+    /// sorcery spell you've cast this turn." A self-cast copy rider
+    /// mirroring Storm but counting the caster's
+    /// `instants_or_sorceries_cast_this_turn` (Show of Confidence).
+    SpellStorm,
     Inspired,
     /// CR 707 — "This spell can't be copied." Carried by the spell card
     /// (Choreographed Sparks); `Effect::CopySpell` skips a stack spell whose

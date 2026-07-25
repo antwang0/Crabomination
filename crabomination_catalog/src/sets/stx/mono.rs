@@ -228,27 +228,25 @@ pub fn body_of_research() -> CardDefinition {
 /// may choose new targets for the copies. / Put a +1/+1 counter on
 /// target creature. It gains vigilance until end of turn."
 ///
-/// Approximation: the copies aren't real spell objects. The original +
-/// copies are collapsed into one resolution that puts N counters on a
-/// single target and grants it vigilance EOT, where
-/// N = `NoncreatureSpellsCastThisTurn(You)` (this spell counts itself,
-/// so N = "other noncreature spells you've cast this turn" + 1 — equal
-/// to the printed total whenever those other spells were all instants
-/// or sorceries). Remaining gaps: N also counts your noncreature
-/// non-instant/sorcery casts, the copies can't pick separate targets,
-/// and no per-copy magecraft triggers fire. Faithful support needs an
-/// on-cast "copy this spell per prior I/S cast" primitive.
+/// Real cast-time stack copies via `Keyword::SpellStorm` — one per
+/// other instant/sorcery cast this turn, each resolving its own
+/// counter + vigilance (Storm machinery: copies sit above the original
+/// and can be aimed separately by the auto-retargeter).
 pub fn show_of_confidence() -> CardDefinition {
     use crate::effect::Duration;
     CardDefinition {
         name: "Show of Confidence",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
+        // Real cast-time copies via `Keyword::SpellStorm` — one copy per
+        // other instant/sorcery cast this turn, each resolving its own
+        // counter + vigilance (auto-retarget picks per copy).
+        keywords: vec![Keyword::SpellStorm],
         effect: Effect::Seq(vec![
             Effect::AddCounter {
                 what: target_filtered(SelectionRequirement::Creature),
                 kind: CounterType::PlusOnePlusOne,
-                amount: Value::NoncreatureSpellsCastThisTurn(PlayerRef::You),
+                amount: Value::Const(1),
             },
             Effect::GrantKeyword {
                 what: Selector::Target(0),

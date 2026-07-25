@@ -6318,6 +6318,22 @@ impl GameState {
                     .keywords
                     .contains(&Keyword::Gravestorm)
                     .then(|| (card.definition.clone(), self.permanents_to_graveyard_this_turn))
+            })
+            // "Copy it for each OTHER instant and sorcery spell you've cast
+            // this turn" (Show of Confidence). The caster's I/S counter has
+            // already been bumped for this cast, so subtract it back out.
+            .or_else(|| {
+                card.definition
+                    .keywords
+                    .contains(&Keyword::SpellStorm)
+                    .then(|| {
+                        (
+                            card.definition.clone(),
+                            self.players[p]
+                                .instants_or_sorceries_cast_this_turn
+                                .saturating_sub(1),
+                        )
+                    })
             });
 
         // CR 608.2b — remember whether the primary target is a battlefield

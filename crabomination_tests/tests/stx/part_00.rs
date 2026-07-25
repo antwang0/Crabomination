@@ -755,9 +755,9 @@ fn body_of_research_creates_fractal_with_counters_from_library() {
 #[test]
 fn show_of_confidence_pumps_with_storm_count() {
     let mut g = two_player_game();
-    // Cast a Lightning Bolt first, then Show of Confidence — the spell adds
-    // one counter per noncreature spell you've cast this turn (Show counts
-    // itself, standing in for the printed copy-per-prior-I/S).
+    // Cast a Lightning Bolt first, then Show of Confidence — SpellStorm
+    // mints one REAL stack copy per other instant/sorcery cast this turn,
+    // each resolving its own +1/+1 counter.
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -780,8 +780,7 @@ fn show_of_confidence_pumps_with_storm_count() {
 
     let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     let counters = bear_card.counter_count(CounterType::PlusOnePlusOne);
-    // One other noncreature spell (Bolt) + Show itself → 2 counters,
-    // matching the printed "one copy per other I/S you've cast" total.
+    // One other I/S (Bolt) → one copy + the original = 2 counters.
     assert_eq!(counters, 2, "Bolt + Show of Confidence = 2 counters");
     // "It gains vigilance until end of turn."
     assert!(bear_card.has_keyword(&Keyword::Vigilance),
