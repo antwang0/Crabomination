@@ -3090,6 +3090,74 @@ pub fn eyes_everywhere() -> CardDefinition {
     }
 }
 
+/// Plaza of Harmony — Gate land. ETB: gain 3 life if you control two or more
+/// Gates. {T}: add {C}. {T}: add one mana of any color a Gate you control could
+/// produce (approximated to any color).
+pub fn plaza_of_harmony() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Plaza of Harmony",
+        cost: cost(&[]),
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Gate], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(R::HasLandType(LandType::Gate).and(R::ControlledByYou)),
+                n: Value::Const(2),
+            },
+            then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+            else_: Box::new(Effect::Noop),
+        })],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                condition: Some(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(R::HasLandType(LandType::Gate).and(R::ControlledByYou)),
+                    n: Value::ONE,
+                }),
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Emergency Powers — {5}{W}{U} Instant. Each player shuffles their hand and
+/// graveyard into their library, then draws seven, then exile this. Addendum —
+/// cast in your main phase: you may put a permanent card with mana value 7 or
+/// less from your hand onto the battlefield.
+pub fn emergency_powers() -> CardDefinition {
+    CardDefinition {
+        name: "Emergency Powers",
+        cost: cost(&[generic(5), w(), u()]),
+        card_types: vec![CardType::Instant],
+        exile_on_resolve: true,
+        effect: Effect::Seq(vec![
+            Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::EachPlayer },
+            Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(7) },
+            Effect::If {
+                cond: Predicate::YourMainPhase,
+                then: Box::new(Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: R::Permanent.and(R::ManaValueAtMost(7)),
+                    count: Value::ONE,
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Awaken the Erstwhile — {3}{B}{B} Sorcery. Each player discards their hand,
 /// then creates that many 2/2 black Zombie tokens.
 pub fn awaken_the_erstwhile() -> CardDefinition {

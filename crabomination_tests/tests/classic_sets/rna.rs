@@ -2318,3 +2318,46 @@ fn awaken_the_erstwhile_discards_and_zombifies() {
     assert_eq!(zombies1, 3, "opponent made 3 zombies");
     assert!(g.players[0].hand.is_empty() && g.players[1].hand.is_empty(), "both hands emptied");
 }
+
+/// Plaza of Harmony gains 3 life when it enters with another Gate, and taps for
+/// colorless.
+#[test]
+fn plaza_of_harmony_gate_gain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gateway_plaza()); // a Gate
+    let life = g.players[0].life;
+    let plaza = g.move_card_to_battlefield_for_test(0, catalog::plaza_of_harmony());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "two Gates -> gain 3");
+    // {T}: add {C}
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: plaza, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("tap for C");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "added 1 colorless");
+}
+
+/// Emergency Powers wheels every player up to seven cards and exiles itself.
+#[test]
+fn emergency_powers_wheels_and_exiles() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::emergency_powers());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    for _ in 0..12 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    for _ in 0..12 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    // Decline the addendum put (ChooseCards min 0).
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Cards(vec![]),
+    ]));
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 7, "caster drew 7");
+    assert_eq!(g.players[1].hand.len(), 7, "opponent drew 7");
+    assert!(g.exile.iter().any(|c| c.id == spell), "Emergency Powers exiled itself");
+}
