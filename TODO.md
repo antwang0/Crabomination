@@ -3,6 +3,40 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Tier 4 — remaining SOS/SOA audit simplifications (2026-07)
+
+The 2026-07 SOS/SOA correctness audit fixed every WRONG card and the
+tier 1–3 simplifications (see the `claude/modern_decks` commits ending
+at "Simplification tiers 2-3"). What's left all needs real engine
+machinery:
+
+- **Batch-trigger coalescing** — the highest-value item; CR-correct
+  "whenever ONE OR MORE [things happen]" triggers fire once per batch,
+  not once per thing. Design: group simultaneous events at emission time
+  (`CardsLeftGraveyard { count }`, an attacker-declaration batch event)
+  with per-event fallbacks for single subjects. Fixes Garrison Excavator
+  (over-mints a Spirit per card on delve/mass exile), Berta, Wise
+  Extrapolator (fires per +1/+1 counter instead of per batch), and
+  Living History ("whenever you attack" currently fires per attacker
+  and pumps every attacker instead of one target attacker, once).
+  Benefits every future "one or more" card.
+- **Reflexive "when you do" sub-triggers** — Rubble Rouser's "{T},
+  Exile a card…: Add {R}. When you do, deal 1 to each opponent" resolves
+  cost + rider as one lump; the printed reflexive trigger should go on
+  the stack separately (respondable).
+- **Zaffai's special action** — "once during each of your turns, you may
+  cast an instant/sorcery from your hand for free" is approximated as a
+  precombat-main grant on one pre-picked card. Faithful support: a
+  whole-hand, once-consumable may-play permission valid any time during
+  your turn.
+- **Fractalize's type/color rewrite** — "becomes a green and blue
+  Fractal" needs layer-4 `SetCreatureTypes` / layer-5 `SetColors`
+  duration effects (`BecomeCreature` animates noncreatures but doesn't
+  overwrite an existing creature's types/colors).
+- Multiplayer "target player" collapses (Ral Zarek, Guest Lecturer's
+  −1/−7 and friends) — tracked in the dedicated multiplayer worklist
+  table at the bottom of this file.
+
 **Remaining DIS/RTR gap cards (each blocked on one engine primitive):**
 - **Multi-block** (`Keyword::CanBlockAnyNumber`) — unblocks Valor Made Real
   (DIS) and Guardian of the Gateless (GTC). `block_map: HashMap<blocker,
