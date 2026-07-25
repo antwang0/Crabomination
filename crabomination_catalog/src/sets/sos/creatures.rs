@@ -3032,10 +3032,9 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
                     kind: CounterType::PlusOnePlusOne,
-                    amount: Value::CountOf(Box::new(Selector::EachPermanent(
-                        SelectionRequirement::Land
-                            .and(SelectionRequirement::ControlledByYou),
-                    ))),
+                    // "X is the number of DIFFERENTLY NAMED lands you
+                    // control" — duplicate basics count once.
+                    amount: Value::DifferentlyNamedLandsControlled,
                 },
             ]),
             once_per_turn: false,
@@ -3436,7 +3435,10 @@ pub fn soaring_stoneglider() -> CardDefinition {
     use crate::mana::w;
     CardDefinition {
         name: "Soaring Stoneglider",
-        cost: cost(&[generic(3), w()]),
+        // Pay-mana fork of the additional cost folded into the base cost:
+        // {2}{W} base + "pay {1}{W}" = {3}{W}{W} (audit fix: the second
+        // white pip was relaxed to generic).
+        cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elephant, CreatureType::Cleric],
@@ -4747,10 +4749,14 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
                     max_targets: 1,
                     min_targets: 0,
                     filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::InYourGraveyard),
+                        .and(SelectionRequirement::InYourGraveyard)
+                        // "...with mana value X or less, where X is the
+                        // amount of life you gained this turn."
+                        .and(SelectionRequirement::ManaValueAtMostLifeGainedThisTurn),
+                    // "...to the BATTLEFIELD" (was wrongly to hand).
                     effect: Box::new(Effect::Move {
                         what: Selector::Target(0),
-                        to: ZoneDest::Hand(PlayerRef::You),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     }),
                 },
             },
@@ -4846,15 +4852,17 @@ pub fn page_loose_leaf() -> CardDefinition {
             tap_add_colorless(),
             ActivatedAbility {
                 energy_cost: 0,
-                discard_cost: None,
+                // Grandeur: "Discard ANOTHER CARD NAMED Page, Loose Leaf"
+                // — the discard is name-restricted as a real activation
+                // cost (audit fix: was an unrestricted resolution-time
+                // discard gated only by a same-name-in-hand condition).
+                discard_cost: Some((
+                    SelectionRequirement::HasName("Page, Loose Leaf".to_string()),
+                    1,
+                )),
                 tap_cost: false,
                 mana_cost: ManaCost::default(),
                 effect: Effect::Seq(vec![
-                    Effect::Discard {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                        random: false,
-                    },
                     Effect::RevealUntilFind {
                         who: PlayerRef::You,
                         find: SelectionRequirement::HasCardType(CardType::Instant)

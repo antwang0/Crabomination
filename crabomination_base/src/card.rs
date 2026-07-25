@@ -1540,6 +1540,10 @@ pub enum SelectionRequirement {
     /// Astelli Reclaimer's "with mana value X or less, where X is the amount of
     /// mana spent to cast this".
     ManaValueAtMostCastManaSpent,
+    /// "…with mana value X or less, where X is the amount of life you
+    /// gained this turn" (Moseo, Vein's New Dean's Infusion). Evaluated
+    /// against the requirement CONTROLLER's `life_gained_this_turn`.
+    ManaValueAtMostLifeGainedThisTurn,
     /// Mana value ≤ the source permanent's power, read last-known-information
     /// aware (battlefield power first, then the `leaves_bf_lki` snapshot of a
     /// dying source). Sandbender Scavengers' "return a creature with mana value

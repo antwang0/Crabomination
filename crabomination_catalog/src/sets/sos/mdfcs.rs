@@ -440,9 +440,12 @@ pub fn harmonized_trio() -> CardDefinition {
     );
     front.activated_abilities.push(ActivatedAbility {
         tap_cost: true,
-        tap_other_filter: Some(
+        // "{T}, Tap TWO untapped creatures you control" (audit fix — was
+        // one via tap_other_filter).
+        tap_n_filter: Some((
             SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-        ),
+            2,
+        )),
         effect: becomes_prepared(),
         ..Default::default()
     });
@@ -1034,7 +1037,7 @@ pub fn scathing_shadelock() -> CardDefinition {
     let spell = spell_back(
         "Venomous Words",
         cost(&[b()]),
-        CardType::Instant,
+        CardType::Sorcery,
         Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(

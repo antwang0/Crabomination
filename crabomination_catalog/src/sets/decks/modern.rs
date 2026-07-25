@@ -27239,9 +27239,20 @@ pub fn flusterstorm() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Storm],
-        effect: Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(1)]), exile: false,
-    extra_generic: None,
-},
+        // "Counter target INSTANT OR SORCERY spell unless..." (audit fix:
+        // the bare Target(0) accepted any spell).
+        effect: Effect::CounterUnlessPaid {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+            },
+            mana_cost: cost(&[generic(1)]),
+            exile: false,
+            extra_generic: None,
+        },
         ..Default::default()
     }
 }
@@ -52414,8 +52425,8 @@ pub fn aven_wind_guide() -> CardDefinition {
 }
 
 /// Bring to Light — {3}{G}{U} Sorcery, Converge. Search for a creature,
-/// instant, sorcery, or planeswalker with MV ≤ colors of mana spent, exile
-/// it, cast it free.
+/// instant, or sorcery with MV ≤ colors of mana spent, exile it, cast it
+/// free.
 pub fn bring_to_light() -> CardDefinition {
     CardDefinition {
         name: "Bring to Light",
@@ -52424,10 +52435,11 @@ pub fn bring_to_light() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
+                // "creature, instant, or sorcery card" — planeswalkers are
+                // NOT searchable (audit fix).
                 filter: SelectionRequirement::HasCardType(CardType::Creature)
                     .or(SelectionRequirement::HasCardType(CardType::Instant))
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery))
-                    .or(SelectionRequirement::HasCardType(CardType::Planeswalker))
                     .and(SelectionRequirement::ManaValueAtMostConverged),
                 to: ZoneDest::Exile,
             },

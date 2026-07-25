@@ -166,8 +166,8 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
         ..Default::default()
     };
     CardDefinition {
+        // Printed type line is a plain "Land" — NOT legendary (audit fix).
         name: "Great Hall of the Biblioplex",
-        supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add_colorless(), pay_life_for_any, animate],
         ..Default::default()

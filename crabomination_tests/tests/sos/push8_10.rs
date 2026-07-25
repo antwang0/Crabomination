@@ -1087,14 +1087,18 @@ fn moseo_veins_new_dean_is_2_1_flying_pest_etb_minter() {
 }
 
 /// Moseo's Infusion end-step trigger: when you've gained life this turn,
-/// return a creature card from your graveyard to your hand.
+/// return a creature card with MV <= life gained from your graveyard to
+/// the BATTLEFIELD (audit fix — was to hand, ungated).
 #[test]
-fn moseo_veins_new_dean_infusion_returns_creature_to_hand_when_life_gained() {
+fn moseo_veins_new_dean_infusion_reanimates_when_life_gained() {
     let mut g = two_player_game();
     // Seed a creature in P0's graveyard.
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let moseo = g.add_card_to_battlefield(0, catalog::moseo_veins_new_dean());
     g.clear_sickness(moseo);
+    // Also seed an over-MV creature: 2 life gained gates X=2 (Bear MV 2
+    // is eligible; Serra Angel MV 5 is not).
+    let big = g.add_card_to_graveyard(0, catalog::serra_angel());
     // Simulate gaining life this turn.
     g.players[0].life_gained_this_turn = 2;
 
@@ -1102,10 +1106,14 @@ fn moseo_veins_new_dean_infusion_returns_creature_to_hand_when_life_gained() {
     g.fire_step_triggers(crabomination::game::types::TurnStep::End);
     drain_stack(&mut g);
 
-    // Bear should now be in P0's hand.
+    // Bear reanimated to the battlefield; the MV-5 Angel stays dead.
     assert!(
-        g.players[0].hand.iter().any(|c| c.id == bear),
-        "Moseo's Infusion end-step trigger should return the bear to hand"
+        g.battlefield.iter().any(|c| c.id == bear),
+        "Moseo's Infusion returns the MV<=X creature to the battlefield"
+    );
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == big),
+        "creature above the life-gained MV gate stays in the graveyard"
     );
 }
 

@@ -2523,6 +2523,10 @@ impl GameState {
                     R::ManaValueAtMostCastManaSpent => source
                         .and_then(|s| self.battlefield_find(s))
                         .is_some_and(|s| card.definition.cost.cmc() <= s.cast_mana_spent),
+                    R::ManaValueAtMostLifeGainedThisTurn => self
+                        .players
+                        .get(controller)
+                        .is_some_and(|p| card.definition.cost.cmc() <= p.life_gained_this_turn),
                     R::ManaValueAtMostSourcePower => source
                         .and_then(|s| self.source_power_lki(s))
                         .is_some_and(|pw| card.definition.cost.cmc() as i32 <= pw),
@@ -2796,7 +2800,7 @@ impl GameState {
             }
             // Unresolved X-relative filter (callers concretize via `resolve_x`).
             // `CastManaSpent` is source-relative; no source here, so vacuous.
-            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ToughnessAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent | R::ManaValueAtMostSourcePower => false,
+            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ToughnessAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent | R::ManaValueAtMostSourcePower | R::ManaValueAtMostLifeGainedThisTurn => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
             R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,

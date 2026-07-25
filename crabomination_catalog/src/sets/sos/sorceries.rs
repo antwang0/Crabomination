@@ -453,7 +453,7 @@ pub fn dinas_guidance() -> CardDefinition {
     CardDefinition {
         name: "Dina's Guidance",
         cost: cost(&[generic(1), b(), g()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             // Mode 0: search → hand.
             Effect::Search {
@@ -792,11 +792,14 @@ pub fn moment_of_reckoning() -> CardDefinition {
                     SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
                 ),
             },
-            // Mode 1: return target nonland permanent card from your
-            // graveyard to the battlefield.
+            // Mode 1: return target nonland PERMANENT card from your
+            // graveyard to the battlefield (audit fix: instants/sorceries
+            // are not legal targets).
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Nonland.and(SelectionRequirement::InYourGraveyard),
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::InYourGraveyard),
                 ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
@@ -1792,7 +1795,11 @@ pub fn restoration_seminar() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Nonland.and(SelectionRequirement::InYourGraveyard),
+                    // "nonland PERMANENT card" — instants/sorceries are
+                    // not legal targets (audit fix).
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::InYourGraveyard),
                 ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,

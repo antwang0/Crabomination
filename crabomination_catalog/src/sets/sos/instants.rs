@@ -771,7 +771,7 @@ pub fn witherbloom_charm() -> CardDefinition {
 /// • Each opponent sacrifices a nontoken artifact of their choice.
 /// • Return target artifact or creature card with mana value 2 or less
 ///   from your graveyard to the battlefield.
-/// • Creatures you control get +2/+1 until end of turn.
+/// • Creatures you control get +1/+1 and gain trample until end of turn.
 ///
 /// All three modes wired:
 /// - Mode 0 forces each opponent to sacrifice a nontoken artifact (the
@@ -779,8 +779,8 @@ pub fn witherbloom_charm() -> CardDefinition {
 ///   the `NotToken` requirement keeps Treasures out of the picker).
 /// - Mode 1 returns a graveyard card (auto-decider picks the highest-
 ///   priority eligible card).
-/// - Mode 2 fans out a +2/+1 EOT pump across creatures the caster
-///   controls.
+/// - Mode 2 fans out the printed +1/+1 + trample EOT across creatures
+///   the caster controls.
 pub fn lorehold_charm() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::r;
@@ -810,17 +810,24 @@ pub fn lorehold_charm() -> CardDefinition {
                     tapped: false,
                 },
             },
-            // Mode 2: creatures you control get +2/+1 EOT.
+            // Mode 2: creatures you control get +1/+1 and gain trample EOT.
             Effect::ForEach {
                 selector: Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
-                body: Box::new(Effect::PumpPT {
-                    what: Selector::TriggerSource,
-                    power: Value::Const(2),
-                    toughness: Value::Const(1),
-                    duration: Duration::EndOfTurn,
-                }),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::TriggerSource,
+                        power: Value::Const(1),
+                        toughness: Value::Const(1),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
             },
         ]),
         ..Default::default()

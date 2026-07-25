@@ -1839,3 +1839,94 @@ fn winds_of_abandon_exiles_and_compensates() {
     assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.is_land() && c.tapped),
         "its controller fetched a tapped basic");
 }
+
+// ── 2026-07 SOS/SOA correctness audit fixes ─────────────────────────────────
+
+/// Dina's Guidance is an INSTANT (audit fix: was Sorcery-typed).
+/// Venomous Words (Scathing Shadelock's inset spell) is a SORCERY.
+/// Great Hall of the Biblioplex is a plain nonlegendary Land.
+#[test]
+fn audit_type_line_fixes() {
+    use crabomination::card::{CardType, Supertype};
+    assert!(catalog::dinas_guidance().card_types.contains(&CardType::Instant));
+    let shadelock = catalog::scathing_shadelock();
+    let words = shadelock.prepare_spell.as_ref().expect("inset spell");
+    assert!(words.card_types.contains(&CardType::Sorcery),
+        "Venomous Words is a sorcery");
+    assert!(!catalog::great_hall_of_the_biblioplex()
+        .supertypes.contains(&Supertype::Legendary),
+        "Great Hall is not legendary");
+}
+
+/// Harmonized Trio's prepare activation taps TWO other untapped
+/// creatures (audit fix: was one).
+#[test]
+fn harmonized_trio_taps_two_other_creatures() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let trio = g.add_card_to_battlefield(0, catalog::harmonized_trio());
+    g.clear_sickness(trio);
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(b1); g.clear_sickness(b2);
+
+    // With only ONE other creature the activation is rejected.
+    let mut g1 = two_player_game();
+    let t1 = g1.add_card_to_battlefield(0, catalog::harmonized_trio());
+    g1.clear_sickness(t1);
+    let only = g1.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g1.clear_sickness(only);
+    assert!(g1.perform_action(GameAction::ActivateAbility {
+        card_id: t1, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "needs two untapped creatures to tap");
+
+    // With two, it works and taps both.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: trio, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("prepare activation with two tappable creatures");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(b1).unwrap().tapped && g.battlefield_find(b2).unwrap().tapped,
+        "both other creatures tapped as cost");
+    assert!(g.battlefield_find(trio).unwrap().counter_count(CounterType::Prepared) > 0,
+        "Trio became prepared");
+}
+
+/// Emil's Fractal counters count DIFFERENTLY NAMED lands (audit fix).
+#[test]
+fn emil_counts_differently_named_lands() {
+    let mut g = two_player_game();
+    let emil = g.add_card_to_battlefield(0, catalog::emil_vastlands_roamer());
+    g.clear_sickness(emil);
+    // Three Islands + one Forest = 2 distinct names.
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::island()); }
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: emil, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Emil activation");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Fractal")
+        .expect("Fractal minted");
+    assert_eq!(fractal.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 2,
+        "X = 2 differently named lands, not 4 total lands");
+}
+
+/// Restoration Seminar can't reanimate an instant (audit fix: filter now
+/// requires a nonland PERMANENT card).
+#[test]
+fn restoration_seminar_rejects_nonpermanent_targets() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::restoration_seminar());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "an instant in the graveyard is not a legal target");
+}

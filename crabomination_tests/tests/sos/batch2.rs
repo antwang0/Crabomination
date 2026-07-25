@@ -951,9 +951,11 @@ fn lorehold_charm_pump_mode_pumps_creatures() {
     .expect("Lorehold Charm castable in pump mode");
     drain_stack(&mut g);
 
-    let target = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(target.power(), 4, "Bear gets +2/+1 → 4/3");
-    assert_eq!(target.toughness(), 3);
+    let target = g.computed_permanent(bear).unwrap();
+    assert_eq!(target.power, 3, "Bear gets +1/+1 → 3/3");
+    assert_eq!(target.toughness, 3);
+    assert!(target.keywords.contains(&Keyword::Trample),
+        "printed mode also grants trample");
 }
 
 // ── Borrowed Knowledge ──────────────────────────────────────────────────────

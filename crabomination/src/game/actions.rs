@@ -11066,6 +11066,12 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p && !c.tapped)
+                // With a separate {T} cost the source is already being
+                // tapped, so it can't double as one of the N ("{T}, Tap
+                // two untapped creatures you control" — Harmonized Trio).
+                // Heritage Druid-style abilities without {T} still count
+                // the source among its own Elves.
+                .filter(|c| !(ability.tap_cost && c.id == card_id))
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                 .map(|c| c.id)
                 .collect();
