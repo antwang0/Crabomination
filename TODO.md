@@ -41,9 +41,20 @@ Reborn). Residual nuances left as follow-ups:
 **Addendum (RNA) mechanic** — SHIPPED via `Predicate::YourMainPhase` (an
 instant resolves in the step it was cast, so a resolution-time "your main
 phase" check faithfully captures the Addendum trigger). Arrester's Zeal /
-Arrester's Admonition ride it. RNA's `catalog::sets::rna` opened this run with
-14 cards; sweep `scripts/set_gaps.py rna` for the rest (many need bespoke work
-— Riot, Afterlife, Spectacle payoffs, the guild-mechanic uncommons).
+Arrester's Admonition ride it. RNA's `catalog::sets::rna` is now deep;
+`scripts/set_gaps.py rna` shows the remaining gaps, all rares/mythics needing
+new primitives: Amplifire (reveal-until-creature, base P/T = 2× until next
+turn — needs `SetBasePowerToughness` + the reveal capture); Captive Audience;
+Domri/Dovin/Kaya (planeswalkers — Domri's riot-mana rider and Kaya's
+cards-owned-in-exile Value are the blockers); Knight of Sorrows / Lumbering
+Battlement (multi-block, CR 509.1g — `block_map` must go multi-valued);
+Lavinia (no-mana-spent counter + per-opponent MV-vs-lands cast lock); Mass
+Manipulation (X-many targets on a spell — `ApplyToTargets` caps are fixed, not
+X-from-cost); Mirror March (flip-until-lose token copies); Teysa Karlov
+(double death triggers); Theater of Horrors (stateful impulse pool gated on
+opponent-lost-life); Ravager Wurm's land-destroy mode (non-mana-ability land
+filter). Biomancer's Familiar ships the cost-reduction static; its {T}
+adapt-reset rider still needs an "adapt as though no counters" primitive.
 
 **Remaining DGM (Dragon's Maze) gap cards** — `catalog::sets::dgm`. The
 `dgm::gaps`/`gaps2` waves shipped the guild legends/mythics and easy commons

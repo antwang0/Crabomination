@@ -3226,6 +3226,51 @@ pub fn hydroid_krasis() -> CardDefinition {
     }
 }
 
+/// Biomancer's Familiar — {G}{U} 2/2 Mutant. Activated abilities of creatures
+/// you control cost {2} less (never below one mana). (Its {T} adapt-reset rider
+/// is omitted — no "adapt as though it had no counters" primitive yet.)
+pub fn biomancers_familiar() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of creatures you control cost {2} less to activate.",
+            effect: StaticEffect::YourCreatureActivatedAbilitiesCostLess { amount: 2 },
+        }],
+        ..body("Biomancer's Familiar", cost(&[g(), u()]), 2, 2, vec![CreatureType::Mutant], vec![])
+    }
+}
+
+/// Incubation Druid — {1}{G} 0/2 Elf Druid. {T}: add one mana of any color
+/// (any type a land could produce, approximated); three instead while it has a
+/// +1/+1 counter. {3}{G}{G}: Adapt 3.
+pub fn incubation_druid() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::IfPred {
+                        pred: Box::new(Predicate::EntityMatches {
+                            what: Selector::This,
+                            filter: R::WithCounter(CounterType::PlusOnePlusOne),
+                        }),
+                        then: Box::new(Value::Const(3)),
+                        else_: Box::new(Value::ONE),
+                    }),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), g(), g()]),
+                effect: adapt(3),
+                ..Default::default()
+            },
+        ],
+        ..body("Incubation Druid", cost(&[generic(1), g()]), 0, 2, vec![CreatureType::Elf, CreatureType::Druid], vec![])
+    }
+}
+
 /// Ravager Wurm — {3}{R}{G}{G} 4/5 Wurm with Riot. ETB, choose up to one — it
 /// fights target creature you don't control. (The "destroy a land with a
 /// non-mana activated ability" mode is omitted — no such land filter yet.)

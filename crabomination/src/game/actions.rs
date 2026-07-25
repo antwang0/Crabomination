@@ -11279,6 +11279,28 @@ impl GameState {
                 effective_mana_cost.reduce_generic(total.min(max_cut));
             }
         }
+        // Biomancer's Familiar / Training Grounds — activated abilities of
+        // creatures you control cost {N} less (generic-only, floored at one
+        // mana of the printed cost).
+        let source_is_your_creature = self
+            .battlefield_find(card_id)
+            .is_some_and(|c| c.controller == p && c.definition.is_creature());
+        if source_is_your_creature && !effective_mana_cost.symbols.is_empty() {
+            let total: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::YourCreatureActivatedAbilitiesCostLess { amount } => amount,
+                    _ => 0,
+                })
+                .sum();
+            if total > 0 {
+                let max_cut = effective_mana_cost.cmc().saturating_sub(1);
+                effective_mana_cost.reduce_generic(total.min(max_cut));
+            }
+        }
         // Boom Scholar — exhaust abilities of your *other* permanents cost {N}
         // less (generic-only, floored at one mana of the printed cost).
         if ability.exhaust && !effective_mana_cost.symbols.is_empty() {

@@ -2429,3 +2429,42 @@ fn ravager_wurm_riot_and_fight() {
     let w = g.computed_permanent(wurm).unwrap();
     assert!(w.keywords.contains(&Keyword::Haste), "riot granted haste");
 }
+
+/// Incubation Druid taps for one mana, or three once it carries a +1/+1 counter.
+#[test]
+fn incubation_druid_counter_gated_mana() {
+    let mut g = two_player_game();
+    let druid = g.add_card_to_battlefield(0, catalog::incubation_druid());
+    g.clear_sickness(druid);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Color(Color::Green),
+        crabomination::decision::DecisionAnswer::Color(Color::Green),
+    ]));
+    g.perform_action(GameAction::ActivateAbility { card_id: druid, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("tap for 1");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "one mana without a counter");
+    // Give it a +1/+1 counter and untap.
+    g.battlefield_find_mut(druid).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(druid).unwrap().tapped = false;
+    g.players[0].mana_pool = Default::default();
+    g.perform_action(GameAction::ActivateAbility { card_id: druid, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("tap for 3");
+    assert_eq!(g.players[0].mana_pool.total(), 3, "three mana with a counter");
+}
+
+/// Biomancer's Familiar cuts {2} off your creatures' activated abilities: Skitter
+/// Eel's {2}{U} adapt becomes just {U}.
+#[test]
+fn biomancers_familiar_discounts_creature_abilities() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::biomancers_familiar());
+    let eel = g.add_card_to_battlefield(0, catalog::skitter_eel()); // {2}{U}: Adapt 2
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1); // only {U} — the reduced cost
+    g.perform_action(GameAction::ActivateAbility { card_id: eel, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("adapt for reduced {U}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(eel).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "adapted 2");
+}

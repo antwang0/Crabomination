@@ -44,6 +44,23 @@ exercising each) was elided in a compaction pass; recover it from
   bot planner and the client Attack-All panel. Bot now activates adapt
   abilities and weighs toughness-attackers by their real damage. Tests in
   `classic_sets/rna`, `core_rules/cr_recent31`, `core_rules/cr_recent32`.
+  Batch 10 (+19, the batch-9 deferrals + rares): Angel of Grace, Rhythm of the
+  Wild, Galloping Lizrog, Forbidding Spirit, Combine Guildmage, Verity Circle,
+  Rumbling Ruin, Font of Agonies, Deputy of Detention, Prime Speaker Vannifar,
+  Hydroid Krasis, Awaken the Erstwhile, Plaza of Harmony, Emergency Powers,
+  Revival // Revenge, Rakdos the Showstopper, Ravager Wurm, Incubation Druid,
+  Biomancer's Familiar. New engine primitives:
+  `Effect::{DoubleP1P1CountersFromYourCreatures, TaxAttackersUntilYourNextTurn,
+  CreaturesEnterWithExtraCounterThisTurn, OpponentWeakCreaturesCantBlockByYourCounters,
+  EachPlayerDiscardsHandMakeTokens, CoinFlipEachCreatureDestroyOnTails}`,
+  `CounterType::Blood` + `GameEvent`/`EventKind::PaidLife` (a "whenever you pay
+  life" hook in `pay_life_cost`), `EventSpec::not_as_attacker` (the
+  `PermanentTapped.as_attacker` flag — "becomes tapped, not as an attacker"),
+  `StaticEffect::YourCreatureActivatedAbilitiesCostLess` (Training Grounds
+  style), and on-cast triggers now carry the cast's X (`Value::XFromCost` in a
+  "when you cast this spell" body — Hydroid Krasis). CR conformance in
+  `core_rules/cr_recent34` (118.8 pay-life, 614.16 counter-doubling, 508.1g
+  temporary attack tax).
 
 - **WAR set complete (modern_decks, this run, 10 bombs):** Tezzeret Master of
   the Bridge, God-Eternal Kefnet, Nissa Who Shakes the World, Nicol Bolas

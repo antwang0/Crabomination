@@ -1134,6 +1134,11 @@ pub enum StaticEffect {
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).
     ActivationCostReduction { amount: u32 },
+    /// "Activated abilities of creatures you control cost {N} less to activate.
+    /// This effect can't reduce the mana in that cost to less than one mana."
+    /// Biomancer's Familiar / Training Grounds-style (generic-only). Applies
+    /// when the ability's source is a creature the static's controller controls.
+    YourCreatureActivatedAbilitiesCostLess { amount: u32 },
     /// DFT — "Exhaust abilities of other permanents you control cost {N} less
     /// to activate" (Boom Scholar). Generic-only, never below one mana; applies
     /// only to CR 702.177 exhaust abilities of the controller's *other*

@@ -14339,6 +14339,7 @@ fn static_effect_to_effects(
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }
             | StaticEffect::ActivationCostReduction { .. }
+            | StaticEffect::YourCreatureActivatedAbilitiesCostLess { .. }
             // Consulted directly in `activate_ability`, not a layer effect.
             | StaticEffect::OtherExhaustActivationCostReduction { .. }
             // Consulted directly in `equip()`, not a layer effect.
