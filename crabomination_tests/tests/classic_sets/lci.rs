@@ -1353,7 +1353,7 @@ fn attentive_sunscribe_scry_on_tap() {
     let scribe = g.add_card_to_battlefield(0, catalog::attentive_sunscribe());
     g.add_card_to_library(0, catalog::island());
     g.battlefield_find_mut(scribe).unwrap().tapped = true;
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: scribe, actor: None }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: scribe, actor: None, as_attacker: false }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), 1, "scry kept the card (no panic)");
 }
@@ -1556,7 +1556,7 @@ fn deeproot_pilgrimage_on_merfolk_tap() {
     g.add_card_to_battlefield(0, catalog::deeproot_pilgrimage());
     let scout = g.add_card_to_battlefield(0, catalog::cenote_scout()); // Merfolk
     g.battlefield_find_mut(scout).unwrap().tapped = true;
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: scout, actor: None }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: scout, actor: None, as_attacker: false }]);
     drain_stack(&mut g);
     let merfolk = g.battlefield.iter()
         .filter(|c| c.controller == 0 && c.definition.name == "Merfolk").count();
@@ -1886,7 +1886,7 @@ fn volatile_wanderglyph_loots_on_tap() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let hand_before = g.players[0].hand.len();
     g.battlefield_find_mut(glyph).unwrap().tapped = true;
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: glyph, actor: None }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: glyph, actor: None, as_attacker: false }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before, "discarded 1, drew 1");
 }

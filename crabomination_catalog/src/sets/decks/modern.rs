@@ -17581,6 +17581,7 @@ pub fn helix_pinnacle() -> CardDefinition {
                 once_per_turn: false,
                 per_subject_cap: None,
                 actor_is_opponent: false,
+                exclude_attacker_taps: false,
             },
             effect: Effect::WinGame { who: PlayerRef::You },
         }],
@@ -50389,6 +50390,7 @@ pub fn the_ozolith() -> CardDefinition {
                 once_per_turn: false,
                 per_subject_cap: None,
                 actor_is_opponent: false,
+                exclude_attacker_taps: false,
             },
             effect: Effect::MoveAllCounters {
                 from: Selector::This,
@@ -50424,6 +50426,7 @@ pub fn nadu_winged_wisdom() -> CardDefinition {
                 once_per_turn: false,
                 per_subject_cap: Some(2),
                 actor_is_opponent: false,
+                exclude_attacker_taps: false,
             },
             effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You },
         }],

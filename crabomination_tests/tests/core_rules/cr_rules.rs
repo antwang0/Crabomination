@@ -8334,9 +8334,9 @@ fn cr_603_3d_once_each_turn_fires_once() {
     g.add_card_to_library(0, catalog::grizzly_bears());
     g.add_card_to_library(0, catalog::grizzly_bears());
     let hand = g.players[0].hand.len();
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0) }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0), as_attacker: false }]);
     drain_stack(&mut g);
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0) }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0), as_attacker: false }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "only one draw despite two taps this turn");
 }

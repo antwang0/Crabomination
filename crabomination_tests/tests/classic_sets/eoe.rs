@@ -738,7 +738,7 @@ fn seedship_agrarian_taps_for_lander_and_grows() {
     let agr = g.add_card_to_battlefield(0, catalog::seedship_agrarian());
     g.battlefield_find_mut(agr).unwrap().tapped = false;
     // Tapping mints a Lander.
-    let evs = vec![GameEvent::PermanentTapped { card_id: agr, actor: None }];
+    let evs = vec![GameEvent::PermanentTapped { card_id: agr, actor: None, as_attacker: false }];
     g.battlefield_find_mut(agr).unwrap().tapped = true;
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
@@ -953,7 +953,7 @@ fn mechan_navigator_loots_on_tap() {
     g.add_card_to_hand(0, catalog::forest()); // something to discard
     let hand0 = g.players[0].hand.len();
     g.battlefield_find_mut(nav).unwrap().tapped = false;
-    let evs = vec![GameEvent::PermanentTapped { card_id: nav, actor: None }];
+    let evs = vec![GameEvent::PermanentTapped { card_id: nav, actor: None, as_attacker: false }];
     g.battlefield_find_mut(nav).unwrap().tapped = true;
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
@@ -1040,7 +1040,7 @@ fn nanoform_sentinel_untaps_on_tap() {
     let land = g.add_card_to_battlefield(0, catalog::forest());
     g.battlefield_find_mut(land).unwrap().tapped = true;
     g.battlefield_find_mut(nano).unwrap().tapped = false;
-    let evs = vec![GameEvent::PermanentTapped { card_id: nano, actor: None }];
+    let evs = vec![GameEvent::PermanentTapped { card_id: nano, actor: None, as_attacker: false }];
     g.battlefield_find_mut(nano).unwrap().tapped = true;
     g.dispatch_triggers_for_events(&evs);
     // Bind the untap target to the tapped land.
@@ -1187,7 +1187,7 @@ fn chrome_companion_gains_on_tap() {
     let dog = g.add_card_to_battlefield(0, catalog::chrome_companion());
     let life0 = g.players[0].life;
     g.battlefield_find_mut(dog).unwrap().tapped = false;
-    let evs = vec![GameEvent::PermanentTapped { card_id: dog, actor: None }];
+    let evs = vec![GameEvent::PermanentTapped { card_id: dog, actor: None, as_attacker: false }];
     g.battlefield_find_mut(dog).unwrap().tapped = true;
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
@@ -1224,7 +1224,7 @@ fn hemosymbic_mite_pumps_by_power_on_tap() {
     g.battlefield_find_mut(mite).unwrap().add_counters(CounterType::PlusOnePlusOne, 2); // now 3/3
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(mite).unwrap().tapped = false;
-    let evs = vec![GameEvent::PermanentTapped { card_id: mite, actor: None }];
+    let evs = vec![GameEvent::PermanentTapped { card_id: mite, actor: None, as_attacker: false }];
     g.battlefield_find_mut(mite).unwrap().tapped = true;
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
@@ -2324,7 +2324,7 @@ fn cryoshatter_debuffs_and_destroys_on_tap() {
     }).expect("cast Cryoshatter");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(bear).unwrap().power, -1, "-5/-0 applied (4 - 5)");
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: bear, actor: None }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: bear, actor: None, as_attacker: false }]);
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "destroyed when tapped");
 }

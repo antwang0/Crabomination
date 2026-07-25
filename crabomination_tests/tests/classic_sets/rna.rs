@@ -2032,3 +2032,199 @@ fn nikya_noncreature_lock() {
     g.players[0].mana_pool.add_colorless(1);
     assert!(g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).is_ok(), "creature spell allowed");
 }
+
+/// Angel of Grace floors combat/noncombat damage at 1 life the turn it enters,
+/// and its graveyard ability sets life to 10.
+#[test]
+fn angel_of_grace_floors_life_and_recurs() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::angel_of_grace());
+    drain_stack(&mut g);
+    g.players[0].life = 5;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 20, None, &mut evs);
+    assert_eq!(g.players[0].life, 1, "damage floored at 1 this turn");
+
+    // Graveyard ability: {4}{W}{W}, exile from graveyard: life becomes 10.
+    let ang = g.add_card_to_graveyard(0, catalog::angel_of_grace());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ang, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 10, "life set to 10");
+    assert!(g.exile.iter().any(|c| c.id == ang), "card exiled as a cost");
+}
+
+/// Rhythm of the Wild gives nontoken creatures you control riot (here: a +1/+1
+/// counter choice on entry).
+#[test]
+fn rhythm_of_the_wild_grants_riot() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rhythm_of_the_wild());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // riot's ChooseMode: pick the +1/+1 counter (mode index 1).
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Mode(1),
+    ]));
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast bear");
+    drain_stack(&mut g);
+    let b = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("bear on battlefield");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1, "riot added a +1/+1 counter");
+}
+
+/// Galloping Lizrog removes +1/+1 counters from your other creatures and puts
+/// twice that many on itself.
+#[test]
+fn galloping_lizrog_doubles_counters() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(a).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.battlefield_find_mut(b).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let lizrog = g.move_card_to_battlefield_for_test(0, catalog::galloping_lizrog());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "a drained");
+    assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "b drained");
+    assert_eq!(g.battlefield_find(lizrog).unwrap().counter_count(CounterType::PlusOnePlusOne), 6, "3 removed -> 6 on Lizrog");
+}
+
+/// Forbidding Spirit taxes attackers {2} until its controller's next turn.
+#[test]
+fn forbidding_spirit_taxes_attackers() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(1, catalog::forbidding_spirit());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].attack_tax_until_your_turn, 2, "tax installed on controller");
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    // Unpayable — the declaration is rejected.
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: atk, target: AttackTarget::Player(1) }])).is_err(), "can't attack without paying the tax");
+    // Pay the {2} and it goes through.
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: atk, target: AttackTarget::Player(1) }])).expect("attack after paying {2}");
+    assert_eq!(g.attacking().len(), 1);
+}
+
+/// Combine Guildmage's first ability makes your creatures enter with an extra
+/// +1/+1 counter this turn; the second moves a counter between your creatures.
+#[test]
+fn combine_guildmage_abilities() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::combine_guildmage());
+    g.clear_sickness(mage);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility { card_id: mage, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("grant etb counter");
+    drain_stack(&mut g);
+    // Enter through the real ETB funnel so enters-with replacements apply.
+    let bear = g.move_card_to_battlefield_for_test(0, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "entered with an extra counter");
+
+    // Second ability: move the counter from the bear onto the mage.
+    g.battlefield_find_mut(mage).unwrap().tapped = false;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility { card_id: mage, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: vec![Target::Permanent(mage)], x_value: None }).expect("move counter");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "counter left the bear");
+    assert_eq!(g.battlefield_find(mage).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "counter moved to mage");
+}
+
+/// Verity Circle draws when an opponent's creature is tapped (not as an
+/// attacker) — here via its own tap ability — but not when it's declared as
+/// an attacker.
+#[test]
+fn verity_circle_draws_on_nonattacker_tap() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::verity_circle());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand0 = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    // Find the tap ability index (the only activated ability).
+    g.perform_action(GameAction::ActivateAbility { card_id: g.battlefield.iter().find(|c| c.definition.name == "Verity Circle").unwrap().id, ability_index: 0, target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None }).expect("tap the foe");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "foe tapped");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "Verity Circle drew");
+}
+
+/// Declaring an opponent's creature as an attacker does not trigger Verity Circle.
+#[test]
+fn verity_circle_silent_on_attacker_tap() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::verity_circle()); // opponent's Verity Circle
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let hand1 = g.players[1].hand.len();
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: atk, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(atk).unwrap().tapped, "attacker tapped");
+    assert_eq!(g.players[1].hand.len(), hand1, "no draw on attacker tap");
+}
+
+/// Rumbling Ruin locks opponents' creatures with power ≤ your +1/+1 counter
+/// count out of blocking this turn.
+#[test]
+fn rumbling_ruin_locks_weak_blockers() {
+    let mut g = two_player_game();
+    // Two +1/+1 counters on my board -> threshold 2.
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let weak = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, power 2 <= 2
+    let strong = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4, power 6 > 2
+    g.move_card_to_battlefield_for_test(0, catalog::rumbling_ruin());
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(weak).unwrap().keywords.contains(&Keyword::CantBlock), "weak creature can't block");
+    assert!(!g.computed_permanent(strong).unwrap().keywords.contains(&Keyword::CantBlock), "strong creature still blocks");
+}
+
+/// Font of Agonies banks a blood counter per life paid, and four of them fuel a
+/// creature kill.
+#[test]
+fn font_of_agonies_banks_and_kills() {
+    let mut g = two_player_game();
+    let font = g.add_card_to_battlefield(0, catalog::font_of_agonies());
+    // "Whenever you pay life, put that many blood counters on it."
+    g.dispatch_triggers_for_events(&[GameEvent::PaidLife { player: 0, amount: 3 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(font).unwrap().counter_count(CounterType::Blood), 3, "3 blood counters banked");
+    // Bank one more, then spend four to destroy a creature.
+    g.dispatch_triggers_for_events(&[GameEvent::PaidLife { player: 0, amount: 1 }]);
+    drain_stack(&mut g);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility { card_id: font, ability_index: 0, target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None }).expect("destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature destroyed");
+    assert_eq!(g.battlefield_find(font).unwrap().counter_count(CounterType::Blood), 0, "four blood counters removed");
+}

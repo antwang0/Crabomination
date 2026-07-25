@@ -923,7 +923,7 @@ mod recent289 {
         g.add_card_to_library(0, catalog::forest());
         let hand_before = g.players[0].hand.len();
         let life_before = g.players[0].life;
-        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: wylie, actor: None }]);
+        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: wylie, actor: None, as_attacker: false }]);
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
         assert_eq!(g.players[0].life, life_before + 1, "gained 1 life");

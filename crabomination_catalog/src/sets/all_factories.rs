@@ -9903,6 +9903,14 @@ static RNA: &[Factory] = &[
     super::rna::dovins_dismissal,
     super::rna::eyes_everywhere,
     super::rna::nikya_of_the_old_ways,
+    super::rna::angel_of_grace,
+    super::rna::rhythm_of_the_wild,
+    super::rna::galloping_lizrog,
+    super::rna::forbidding_spirit,
+    super::rna::combine_guildmage,
+    super::rna::verity_circle,
+    super::rna::rumbling_ruin,
+    super::rna::font_of_agonies,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

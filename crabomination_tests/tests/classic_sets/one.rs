@@ -3020,7 +3020,7 @@ fn unctus_grand_metatect_statics() {
     let hand0 = g.players[0].hand.len();
     let gy0 = g.players[0].graveyard.len();
     g.battlefield_find_mut(drake).unwrap().tapped = true;
-    g.dispatch_triggers_for_events(&[crabomination::game::GameEvent::PermanentTapped { card_id: drake, actor: None }]);
+    g.dispatch_triggers_for_events(&[crabomination::game::GameEvent::PermanentTapped { card_id: drake, actor: None, as_attacker: false }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0, "loot: net hand unchanged");
     assert_eq!(g.players[0].graveyard.len(), gy0 + 1, "discarded one");

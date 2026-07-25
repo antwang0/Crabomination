@@ -416,6 +416,9 @@ impl GameState {
                 }
             };
             let Some(d) = defender else { continue };
+            // Forbidding Spirit — a temporary Propaganda tax on the defender
+            // that also protects their planeswalkers.
+            total_tax += self.players[d].attack_tax_until_your_turn;
             // Evaluate each tax `amount` with the defender as "you" (and the
             // tax permanent as source) so dynamic taxes — Sphere of Safety's
             // "number of enchantments you control" — count the defender's
@@ -500,7 +503,7 @@ impl GameState {
                 card.tapped = true;
                 // CR 508.1f — attacking taps the creature; surface a
                 // "becomes tapped" event so Tapped triggers fire (Magda).
-                events.push(GameEvent::PermanentTapped { card_id: id, actor: None });
+                events.push(GameEvent::PermanentTapped { card_id: id, actor: None, as_attacker: true });
             }
             // CR 702.83 — Exert. We auto-exert any attacking creature with
             // the keyword (the "you may" choice is collapsed; the AutoDecider

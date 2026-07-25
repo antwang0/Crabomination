@@ -3090,6 +3090,168 @@ pub fn eyes_everywhere() -> CardDefinition {
     }
 }
 
+/// Font of Agonies — {B} Enchantment. Whenever you pay life, put that many
+/// blood counters on it. {1}{B}, remove four blood counters: destroy target
+/// creature.
+pub fn font_of_agonies() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Font of Agonies",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PaidLife, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Blood,
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            remove_counter_cost: Some((CounterType::Blood, 4)),
+            effect: Effect::Destroy { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rumbling Ruin — {5}{R} 6/6 Elemental. ETB: count the +1/+1 counters on
+/// creatures you control; opponents' creatures with power ≤ that number can't
+/// block this turn.
+pub fn rumbling_ruin() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::OpponentWeakCreaturesCantBlockByYourCounters)],
+        ..body("Rumbling Ruin", cost(&[generic(5), r()]), 6, 6, vec![CreatureType::Elemental], vec![])
+    }
+}
+
+/// Verity Circle — {2}{U} Enchantment. Whenever a creature an opponent controls
+/// becomes tapped (not as an attacker), you may draw a card. {4}{U}: Tap target
+/// creature without flying.
+pub fn verity_circle() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Verity Circle",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::AnyPlayer)
+                .not_as_attacker()
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                }),
+            effect: Effect::MayDo {
+                description: "Draw a card.".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), u()]),
+            effect: Effect::Tap {
+                what: target_filtered(R::Creature.and(R::Not(Box::new(R::HasKeyword(Keyword::Flying))))),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Combine Guildmage — {G}{U} 2/2 Merfolk Wizard. {1}{G}, {T}: this turn, each
+/// creature you control enters with an additional +1/+1 counter. {1}{U}, {T}:
+/// move a +1/+1 counter from target creature you control onto another.
+pub fn combine_guildmage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), g()]),
+                tap_cost: true,
+                effect: Effect::CreaturesEnterWithExtraCounterThisTurn { who: PlayerRef::You },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), u()]),
+                tap_cost: true,
+                effect: Effect::MoveCounters {
+                    from: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                    to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByYou) },
+                    counter: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..body("Combine Guildmage", cost(&[g(), u()]), 2, 2, vec![CreatureType::Merfolk, CreatureType::Wizard], vec![])
+    }
+}
+
+/// Forbidding Spirit — {1}{W}{W} 3/3 Spirit Cleric. ETB: until your next turn,
+/// creatures can't attack you or your planeswalkers unless their controller
+/// pays {2} for each.
+pub fn forbidding_spirit() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::TaxAttackersUntilYourNextTurn { amount: Value::Const(2) })],
+        ..body("Forbidding Spirit", cost(&[generic(1), w(), w()]), 3, 3, vec![CreatureType::Spirit, CreatureType::Cleric], vec![])
+    }
+}
+
+/// Galloping Lizrog — {3}{G}{U} 3/3 Frog Lizard with trample. ETB: remove any
+/// number of +1/+1 counters from among creatures you control; put twice that
+/// many on this creature.
+pub fn galloping_lizrog() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::DoubleP1P1CountersFromYourCreatures)],
+        ..body("Galloping Lizrog", cost(&[generic(3), g(), u()]), 3, 3, vec![CreatureType::Frog, CreatureType::Lizard], vec![Keyword::Trample])
+    }
+}
+
+/// Angel of Grace — {3}{W}{W} 5/4 Angel with flash + flying. ETB: until end of
+/// turn, damage that would reduce your life below 1 reduces it to 1 instead.
+/// {4}{W}{W}, exile from graveyard: your life total becomes 10.
+pub fn angel_of_grace() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CantLoseThisTurn { damage_floor: true })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), w(), w()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::SetLifeTotal { who: Selector::You, amount: Value::Const(10) },
+            ..Default::default()
+        }],
+        ..body("Angel of Grace", cost(&[generic(3), w(), w()]), 5, 4, vec![CreatureType::Angel], vec![])
+    }
+}
+
+/// Rhythm of the Wild — {1}{R}{G} Enchantment. Creature spells you control
+/// can't be countered; nontoken creatures you control have riot.
+pub fn rhythm_of_the_wild() -> CardDefinition {
+    use crate::effect::shortcut::riot;
+    CardDefinition {
+        name: "Rhythm of the Wild",
+        cost: cost(&[generic(1), r(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creature spells you control can't be countered.",
+                effect: StaticEffect::CreatureSpellsCantBeCountered,
+            },
+            StaticAbility {
+                description: "Nontoken creatures you control have riot.",
+                effect: StaticEffect::GrantTriggeredAbility {
+                    filter: R::Creature.and(R::ControlledByYou).and(R::NotToken),
+                    ability: Box::new(riot()),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Nikya of the Old Ways — {3}{R}{G} 5/5 Centaur Druid. You can't cast
 /// noncreature spells. Whenever you tap a land for mana, add one mana of any
 /// type that land produced.

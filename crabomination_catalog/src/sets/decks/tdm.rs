@@ -761,8 +761,9 @@ pub fn kheru_goldkeeper() -> CardDefinition {
                 once_per_turn: true,
                 per_subject_cap: None,
                 actor_is_opponent: false,
-            },
-            effect: Effect::CreateToken {
+                exclude_attacker_taps: false,
+                },
+                effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 definition: crate::game::effects::treasure_token(),

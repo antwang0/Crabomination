@@ -2756,7 +2756,7 @@ impl GameState {
                     for id in candidates.into_iter().take(n) {
                         if let Some(c) = self.battlefield_find_mut(id) {
                             c.tapped = true;
-                            events.push(GameEvent::PermanentTapped { card_id: id, actor: Some(ctx.controller) });
+                            events.push(GameEvent::PermanentTapped { card_id: id, actor: Some(ctx.controller), as_attacker: false });
                         }
                     }
                     self.run_effect(then, ctx, events)?;
@@ -3553,6 +3553,12 @@ impl GameState {
 
             Effect::ChannelLifeForMana => {
                 self.players[ctx.controller].channel_life_for_mana = true;
+                Ok(())
+            }
+
+            Effect::TaxAttackersUntilYourNextTurn { amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                self.players[ctx.controller].attack_tax_until_your_turn = n;
                 Ok(())
             }
 
@@ -6250,7 +6256,7 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(cid)
                         && !c.tapped {
                             c.tapped = true;
-                            events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller) });
+                            events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller), as_attacker: false });
                         }
                 }
                 Ok(())
@@ -6296,7 +6302,7 @@ impl GameState {
                 for (_, _, cid) in candidates.into_iter().take(n) {
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         c.tapped = true;
-                        events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller) });
+                        events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller), as_attacker: false });
                     }
                 }
                 Ok(())
@@ -6306,6 +6312,14 @@ impl GameState {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.players[p].extra_plus_one_counters_this_turn =
                         self.players[p].extra_plus_one_counters_this_turn.saturating_add(1);
+                }
+                Ok(())
+            }
+
+            Effect::CreaturesEnterWithExtraCounterThisTurn { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.players[p].extra_etb_p1p1_counters_this_turn =
+                        self.players[p].extra_etb_p1p1_counters_this_turn.saturating_add(1);
                 }
                 Ok(())
             }
@@ -6348,6 +6362,7 @@ impl GameState {
                         events.push(GameEvent::PermanentTapped {
                             card_id: cid,
                             actor: Some(seat),
+                            as_attacker: false,
                         });
                     }
                 }
@@ -6954,7 +6969,7 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         if !c.tapped {
                             c.tapped = true;
-                            events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller) });
+                            events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller), as_attacker: false });
                         }
                         if *skip_untap {
                             c.skip_next_untap = true;
@@ -6974,7 +6989,7 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(cid) {
                             if !c.tapped {
                                 c.tapped = true;
-                                events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller) });
+                                events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller), as_attacker: false });
                             }
                             c.untap_locked_by = source;
                         }
@@ -8473,6 +8488,62 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OpponentWeakCreaturesCantBlockByYourCounters => {
+                let ctrl = ctx.controller;
+                let n: u32 = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctrl && c.definition.is_creature())
+                    .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
+                    .sum();
+                let foes: Vec<crate::card::CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature() && !self.same_team(c.controller, ctrl))
+                    .map(|c| c.id)
+                    .collect();
+                for cid in foes {
+                    let pow = self.computed_permanent(cid).map_or(0, |p| p.power).max(0) as u32;
+                    if pow <= n {
+                        self.grant_keyword_eot(cid, crate::card::Keyword::CantBlock);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::DoubleP1P1CountersFromYourCreatures => {
+                if self.counters_locked() { return Ok(()); }
+                let ctrl = ctx.controller;
+                let src = ctx.source;
+                let ids: Vec<crate::card::CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctrl && c.definition.is_creature() && Some(c.id) != src)
+                    .map(|c| c.id)
+                    .collect();
+                let mut total = 0u32;
+                for cid in ids {
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        let removed = c.remove_counters(CounterType::PlusOnePlusOne, u32::MAX);
+                        if removed > 0 {
+                            total += removed;
+                            events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: removed });
+                        }
+                    }
+                }
+                if total > 0 && let Some(s) = src {
+                    let n = self.scaled_counter_count_on(s, CounterType::PlusOnePlusOne, total * 2);
+                    if let Some(c) = self.battlefield_find_mut(s) {
+                        c.add_counters(CounterType::PlusOnePlusOne, n);
+                        events.push(GameEvent::CounterAdded { card_id: s, counter_type: CounterType::PlusOnePlusOne, count: n });
+                    }
+                    self.permanents_gained_counter_this_turn.insert(s);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             // CR 603.7e — register a one-shot "your next creature spell this
             // turn enters with N counters" rider on the controller.
             Effect::GrantNextCreatureSpellCounters { kind, amount } => {
@@ -9136,7 +9207,7 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(helper) {
                         c.tapped = true;
                     }
-                    events.push(GameEvent::PermanentTapped { card_id: helper, actor: Some(ctx.controller) });
+                    events.push(GameEvent::PermanentTapped { card_id: helper, actor: Some(ctx.controller), as_attacker: false });
                     if let Some(c) = self.battlefield_find_mut(src) {
                         c.power_bonus += power;
                         events.push(GameEvent::PumpApplied { card_id: src, power, toughness: 0 });

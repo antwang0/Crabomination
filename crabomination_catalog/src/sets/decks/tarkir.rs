@@ -231,8 +231,9 @@ pub fn kishla_skimmer() -> CardDefinition {
                 once_per_turn: true,
                 per_subject_cap: None,
                 actor_is_opponent: false,
-            },
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                exclude_attacker_taps: false,
+                },
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
         ..Default::default()
     }

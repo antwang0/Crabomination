@@ -235,7 +235,7 @@ fn palliation_accord_counters_on_opponent_tap() {
     let accord = g.add_card_to_battlefield(0, catalog::palliation_accord());
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.battlefield_find_mut(foe).unwrap().tapped = true;
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: foe, actor: None }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: foe, actor: None, as_attacker: false }]);
     drain_stack(&mut g);
     assert_eq!(
         g.battlefield_find(accord).unwrap().counter_count(CounterType::Palliation), 1,

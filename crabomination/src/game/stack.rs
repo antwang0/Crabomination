@@ -2306,6 +2306,9 @@ impl GameState {
             self.players[q].cant_lose_this_turn = false;
             self.players[q].damage_floor_this_turn = false;
         }
+        // Forbidding Spirit's "until your next turn" attack tax expires when
+        // the taxed player's own turn begins.
+        self.players[self.active_player_idx].attack_tax_until_your_turn = 0;
         // CR 702.108 — fire "becomes untapped" (Inspired) triggers for every
         // permanent that flipped tapped→untapped this step.
         if !untapped_now.is_empty() {
@@ -2431,6 +2434,7 @@ impl GameState {
             player.turn_spell_discounts.clear();
             // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
             player.extra_plus_one_counters_this_turn = 0;
+            player.extra_etb_p1p1_counters_this_turn = 0;
         }
         // Expire UntilEndOfTurn continuous effects from the layer system
         self.expire_end_of_turn_effects();

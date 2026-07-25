@@ -254,6 +254,14 @@ impl Effect {
             // CR 603.7e — registers a player-scoped rider; no cast-time target.
             Effect::GrantNextCreatureSpellCounters { .. } => false,
             Effect::GrantNextCreatureSpellKeyword { .. } => false,
+            // Removes counters from your creatures and doubles onto self — untargeted.
+            Effect::DoubleP1P1CountersFromYourCreatures => false,
+            // Locks opponents' weak creatures out of blocking — untargeted.
+            Effect::OpponentWeakCreaturesCantBlockByYourCounters => false,
+            // Installs a player-scoped attack tax; no cast-time target.
+            Effect::TaxAttackersUntilYourNextTurn { .. } => false,
+            // Player-scoped ETB-counter grant; no cast-time target.
+            Effect::CreaturesEnterWithExtraCounterThisTurn { .. } => false,
             // Random graveyard pick at resolution — no cast-time target.
             Effect::ExileRandomGraveyardCopyTapped { .. } => false,
             // Registers a floating trigger; no cast-time target.

@@ -6031,7 +6031,7 @@ impl GameState {
                     for id in ids {
                         if let Some(c) = self.battlefield_find_mut(id) {
                             c.tapped = true;
-                            events.push(GameEvent::PermanentTapped { card_id: id, actor: None });
+                            events.push(GameEvent::PermanentTapped { card_id: id, actor: None, as_attacker: false });
                         }
                     }
                 }
@@ -11456,7 +11456,7 @@ impl GameState {
         // Vorinclex's opponent-land lock). Emitted after the mana payment
         // succeeded so a rolled-back activation never announces a tap.
         if ability.tap_cost {
-            events.push(GameEvent::PermanentTapped { card_id, actor: None });
+            events.push(GameEvent::PermanentTapped { card_id, actor: None, as_attacker: false });
         }
         if ability.untap_self_cost {
             events.push(GameEvent::PermanentUntapped { card_id });
@@ -12019,6 +12019,10 @@ impl GameState {
         if life == 0 {
             return;
         }
+        // CR 118.8 — "whenever you pay life" (Font of Agonies) sees the amount
+        // paid, whether or not the life reduction was itself replaced.
+        self.pending_cost_events
+            .push(GameEvent::PaidLife { player: p, amount: life });
         let applied = self.adjust_life_applied(p, -(life as i32));
         if applied < 0 {
             self.pending_cost_events

@@ -781,7 +781,7 @@ fn chronic_flooding_mills_on_land_tap() {
     for _ in 0..5 { g.add_card_to_library(1, catalog::grizzly_bears()); }
     let lib = g.players[1].library.len();
     // Land becomes tapped → enchanted-land trigger mills its controller (player 1).
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: land, actor: None }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: land, actor: None, as_attacker: false }]);
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib - 3, "controller milled 3 on tap");
 }

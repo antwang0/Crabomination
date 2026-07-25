@@ -1878,6 +1878,9 @@ pub enum EventKind {
     YourInstantOrSorceryDealtDamage,
     /// A player gained life.
     LifeGained,
+    /// CR — a player paid life as a cost (Font of Agonies). The amount paid
+    /// rides in via `Value::TriggerEventAmount`.
+    PaidLife,
     /// CR 701.22/701.42 — a player scried or surveiled (a nonzero peek that
     /// actually happened). Fires once per scry/surveil resolution; the acting
     /// player rides in as the subject. Matoya, Archon Elder.
@@ -2211,6 +2214,11 @@ pub struct EventSpec {
     /// "becomes the target of a spell an opponent controls" on SelfSource.
     #[serde(default)]
     pub actor_is_opponent: bool,
+    /// "…becomes tapped, if it isn't being declared as an attacker" — excludes
+    /// the CR 508.1f attacker tap from an `EventKind::Tapped` trigger (Verity
+    /// Circle). Defaults to false. Only meaningful for `Tapped`.
+    #[serde(default)]
+    pub exclude_attacker_taps: bool,
 }
 
 impl EventSpec {
@@ -2222,7 +2230,13 @@ impl EventSpec {
             once_per_turn: false,
             per_subject_cap: None,
             actor_is_opponent: false,
+            exclude_attacker_taps: false,
         }
+    }
+    /// "…becomes tapped, if it isn't being declared as an attacker" (Verity Circle).
+    pub fn not_as_attacker(mut self) -> Self {
+        self.exclude_attacker_taps = true;
+        self
     }
     pub fn with_filter(mut self, p: Predicate) -> Self {
         self.filter = Some(p);
@@ -2768,6 +2782,11 @@ pub enum Effect {
     /// Sets `Player.{cant_lose_this_turn, damage_floor_this_turn}`; cleared
     /// by `do_untap` at the turn boundary.
     CantLoseThisTurn { damage_floor: bool },
+    /// Forbidding Spirit — "until your next turn, creatures can't attack you or
+    /// planeswalkers you control unless their controller pays {amount} for
+    /// each." Sets `Player.attack_tax_until_your_turn` on the controller;
+    /// cleared at that player's next untap step.
+    TaxAttackersUntilYourNextTurn { amount: Value },
     /// Channel — until end of turn the controller may pay 1 life per point
     /// of colorless shortfall when paying costs ("you may pay 1 life: add
     /// {C}"). Sets `Player.channel_life_for_mana`; the payment funnel
@@ -3852,6 +3871,11 @@ pub enum Effect {
     /// Bumps `Player.extra_plus_one_counters_this_turn`, a transient
     /// Hardened-Scales bonus cleared at cleanup.
     GrantExtraPlusOneCountersThisTurn { who: PlayerRef },
+    /// Combine Guildmage — "this turn, each creature you control enters with an
+    /// additional +1/+1 counter." Bumps `Player.extra_etb_p1p1_counters_this_turn`
+    /// (stacking across activations); cleared at cleanup. Distinct from
+    /// `GrantExtraPlusOneCountersThisTurn`, which amplifies counters *placed*.
+    CreaturesEnterWithExtraCounterThisTurn { who: PlayerRef },
     /// "Tap any number of untapped permanents matching `filter` you control;
     /// this source gets +`power`/+`toughness` until end of turn for each one
     /// tapped this way" (Orphans of the Wheat). The controller chooses which
@@ -4128,6 +4152,16 @@ pub enum Effect {
     /// Dromedary). Capped by the source's live count; no-ops when `from`
     /// and `to` resolve to the same permanent.
     MoveCounters { from: Selector, to: Selector, counter: crate::card::CounterType, amount: Value },
+    /// Rumbling Ruin — "count the +1/+1 counters on creatures you control;
+    /// creatures your opponents control with power ≤ that number can't block
+    /// this turn." The affected set is locked in at resolution (computed power).
+    OpponentWeakCreaturesCantBlockByYourCounters,
+    /// Galloping Lizrog — "remove any number of +1/+1 counters from among
+    /// creatures you control; put twice that many +1/+1 counters on this."
+    /// The choose-any-number is collapsed to all other creatures (the
+    /// optimal play), then doubled onto the source (honoring CR 614.16
+    /// counter doublers).
+    DoubleP1P1CountersFromYourCreatures,
     /// CR 702.43c — the Modular death trigger's counter move: put the dying
     /// source's last-known +1/+1 counters on the targeted artifact creature.
     /// A `StaticEffect::ModularBonusCounters` (Zabaz) controlled by the

@@ -2398,7 +2398,7 @@ fn contaminated_ground_swamp_and_drain() {
         "enchanted land is a Swamp",
     );
     let life = g.players[1].life;
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: land, actor: None }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: land, actor: None, as_attacker: false }]);
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 2, "land's controller loses 2 on tap");
 }

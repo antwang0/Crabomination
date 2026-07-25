@@ -1114,12 +1114,12 @@ fn traveling_botanist_digs_on_tap() {
     // Land on top → goes to hand.
     let land = g.add_card_to_library(0, catalog::forest());
     g.battlefield_find_mut(bot).unwrap().tapped = true;
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: bot, actor: Some(0) }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: bot, actor: Some(0), as_attacker: false }]);
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == land), "land put into hand");
     // Nonland on top → binned to graveyard.
     let spell = g.add_card_to_library(0, catalog::bewilder());
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: bot, actor: Some(0) }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: bot, actor: Some(0), as_attacker: false }]);
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "nonland milled");
 }

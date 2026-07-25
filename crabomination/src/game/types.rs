@@ -1590,6 +1590,9 @@ pub enum GameEvent {
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
+    /// A player paid life as a cost (CR 118.8 — Font of Agonies). Distinct
+    /// from `LifeLost`, which also fires for damage and drains.
+    PaidLife { player: usize, amount: u32 },
     /// CR 701.22/701.42 — `player` scried or surveiled (a nonzero peek).
     /// `surveil` distinguishes the two for surveil-only / scry-only payoffs.
     ScriedOrSurveiled { player: usize, surveil: bool },
@@ -1679,6 +1682,10 @@ pub enum GameEvent {
     PermanentTapped {
         card_id: CardId,
         actor: Option<usize>,
+        /// True when the tap was caused by declaring the permanent as an
+        /// attacker (CR 508.1f). "Becomes tapped, but not declared as an
+        /// attacker" triggers (Verity Circle) exclude these.
+        as_attacker: bool,
     },
     PermanentUntapped { card_id: CardId },
     /// CR 702.171 — a Mount was saddled; `riders` lists the tapped creatures.

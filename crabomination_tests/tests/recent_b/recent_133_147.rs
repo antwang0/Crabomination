@@ -1599,11 +1599,11 @@ mod recent141 {
         g.add_card_to_library(0, catalog::grizzly_bears());
         // Opponent taps their own creature — no draw.
         let hand = g.players[0].hand.len();
-        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(1) }]);
+        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(1), as_attacker: false }]);
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand, "opponent self-tap does not trigger");
         // You tap it — draw once.
-        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0) }]);
+        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0), as_attacker: false }]);
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "your tap draws a card");
     }
@@ -2131,7 +2131,7 @@ mod recent144 {
         let mut g = two_player_game();
         let sentry = g.add_card_to_battlefield(0, catalog::icewrought_sentry());
         let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0) }]);
+        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0), as_attacker: false }]);
         drain_stack(&mut g);
         let s = g.computed_permanent(sentry).unwrap();
         assert_eq!((s.power, s.toughness), (4, 4), "+2/+1 when you tap an enemy creature");
@@ -2233,7 +2233,7 @@ mod recent145 {
             DecisionAnswer::Bool(true),
             DecisionAnswer::Modes(vec![0]),
         ]));
-        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0) }]);
+        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0), as_attacker: false }]);
         drain_stack(&mut g);
         assert!(
             g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Elemental"),

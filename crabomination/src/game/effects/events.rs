@@ -95,6 +95,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::ManifestedDread, GameEvent::ManifestedDread { .. }) => true,
         (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
         (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
+        (EventKind::PaidLife, GameEvent::PaidLife { .. }) => true,
         (
             EventKind::CrewsOrSaddles,
             GameEvent::VehicleCrewed { .. } | GameEvent::MountSaddled { .. },
@@ -127,6 +128,14 @@ pub(crate) fn event_matches_spec(
         _ => false,
     };
     if !kind_ok {
+        return false;
+    }
+
+    // "…becomes tapped, if it isn't being declared as an attacker" (Verity
+    // Circle) — exclude the CR 508.1f attacker tap.
+    if spec.exclude_attacker_taps
+        && matches!(event, GameEvent::PermanentTapped { as_attacker: true, .. })
+    {
         return false;
     }
 
@@ -516,6 +525,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::SpellCast { player, .. }
         | GameEvent::LifeGained { player, .. }
         | GameEvent::LifeLost { player, .. }
+        | GameEvent::PaidLife { player, .. }
         | GameEvent::ScriedOrSurveiled { player, .. }
         | GameEvent::Proliferated { player }
         | GameEvent::Foraged { player }

@@ -419,6 +419,12 @@ pub struct Player {
     /// Dog's {4}{W}). Adds to `plus_counter_adders_for`; cleared at cleanup.
     #[serde(default)]
     pub extra_plus_one_counters_this_turn: u32,
+    /// Combine Guildmage — "this turn, each creature you control enters with an
+    /// additional +1/+1 counter." Read at the ETB-counter site; cleared at
+    /// cleanup. Distinct from `extra_plus_one_counters_this_turn` (which
+    /// amplifies counters *placed*, Hardened-Scales style).
+    #[serde(default)]
+    pub extra_etb_p1p1_counters_this_turn: u32,
     /// One-shot "next instant/sorcery you cast this turn costs {N} less"
     /// discounts (Thundertrap Trainer). Each entry is `(amount, granted_at)`
     /// where `granted_at` is `instants_or_sorceries_cast_this_turn` at grant
@@ -566,6 +572,13 @@ pub struct Player {
     /// boundary.
     #[serde(default)]
     pub damage_floor_this_turn: bool,
+    /// Forbidding Spirit — a temporary Propaganda tax: creatures can't attack
+    /// this player or their planeswalkers unless the attacker's controller
+    /// pays {N} for each. Set on ETB, cleared at this player's own untap step
+    /// ("until your next turn"). Summed alongside `AttackTaxToController`
+    /// statics in `declare_attackers`.
+    #[serde(default)]
+    pub attack_tax_until_your_turn: u32,
     /// Number of upcoming turns this player must skip. Read by the
     /// turn-advance logic in `do_cleanup` — when the engine would hand
     /// the next turn to this player, the counter is decremented and the
@@ -795,6 +808,7 @@ impl Player {
             instants_or_sorceries_cast_this_turn: 0,
             spells_cast_from_hand_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
+            extra_etb_p1p1_counters_this_turn: 0,
             pending_is_discounts: Vec::new(),
             pending_spell_discounts: Vec::new(),
             turn_spell_discounts: Vec::new(),
@@ -833,6 +847,7 @@ impl Player {
             loss_cause: None,
             cant_lose_this_turn: false,
             damage_floor_this_turn: false,
+            attack_tax_until_your_turn: 0,
             skip_turns: 0,
             skip_next_untap_step: 0,
             skip_next_combat: 0,

@@ -2791,6 +2791,12 @@ impl GameState {
                 }
             }
         }
+        // Combine Guildmage — a turn-scoped "each creature you control enters
+        // with an additional +1/+1 counter" grant on the controller.
+        let extra = self.players[controller].extra_etb_p1p1_counters_this_turn;
+        if extra > 0 {
+            specs.push((crate::card::CounterType::PlusOnePlusOne, extra));
+        }
         specs
     }
 
@@ -9322,7 +9328,7 @@ impl GameState {
         for &cid in crew_creatures {
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
                 c.tapped = true;
-                events.push(GameEvent::PermanentTapped { card_id: cid, actor: None });
+                events.push(GameEvent::PermanentTapped { card_id: cid, actor: None, as_attacker: false });
             }
         }
         // Animate the Vehicle until end of turn.
@@ -9407,7 +9413,7 @@ impl GameState {
         for &cid in creatures {
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
                 c.tapped = true;
-                events.push(GameEvent::PermanentTapped { card_id: cid, actor: None });
+                events.push(GameEvent::PermanentTapped { card_id: cid, actor: None, as_attacker: false });
             }
         }
         if let Some(m) = self.battlefield.iter_mut().find(|c| c.id == mount) {
@@ -13693,6 +13699,7 @@ fn event_amount(event: &GameEvent) -> u32 {
     match event {
         GameEvent::LifeGained { amount, .. }
         | GameEvent::LifeLost { amount, .. }
+        | GameEvent::PaidLife { amount, .. }
         | GameEvent::DamageDealt { amount, .. }
         | GameEvent::PoisonAdded { amount, .. }
         | GameEvent::EnergyGained { amount, .. } => *amount,

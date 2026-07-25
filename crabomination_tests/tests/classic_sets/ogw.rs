@@ -1368,7 +1368,7 @@ fn vampire_envoy_gains_life_when_tapped() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::vampire_envoy());
     let before = g.players[0].life;
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: id, actor: None }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: id, actor: None, as_attacker: false }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, before + 1, "gains 1 life on becoming tapped");
 }

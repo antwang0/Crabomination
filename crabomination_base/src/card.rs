@@ -315,6 +315,9 @@ pub enum CounterType {
     MinusOneMinusZero,
     Loyalty,
     Charge,
+    /// Blood counter — Font of Agonies banks one per point of life paid;
+    /// remove four to destroy a creature. Not the Blood artifact token.
+    Blood,
     /// Fuse counter — Goblin Bomb's upkeep coin-flip tally; remove five to
     /// deal 20. Distinct from `Charge` so the two don't share a pool.
     Fuse,
