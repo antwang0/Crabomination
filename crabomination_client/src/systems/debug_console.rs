@@ -208,6 +208,27 @@ pub fn sync_debug_console_ui(
     }
 }
 
+/// Every card name the server's `AddCardToHand` lookup can resolve —
+/// the full engine registry, not just the audit pools (which omit whole
+/// sets like LEA and made "Armageddon" look unimplemented). Back-face
+/// names are included since the server resolves those too.
+fn all_card_names() -> &'static Vec<String> {
+    static NAMES: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+    NAMES.get_or_init(|| {
+        let mut names: Vec<String> = Vec::new();
+        for f in crabomination::catalog::all_known_factories() {
+            let def = f();
+            names.push(def.name.to_string());
+            if let Some(back) = def.back_face.as_ref() {
+                names.push(back.name.to_string());
+            }
+        }
+        names.sort();
+        names.dedup();
+        names
+    })
+}
+
 /// Best-effort fuzzy match: prefix matches first (sorted by length),
 /// then any substring matches. Case-insensitive. Returns up to
 /// `MAX_SUGGESTIONS` names. Empty buffer → no suggestions (we'd
@@ -218,15 +239,15 @@ fn compute_suggestions(buffer: &str) -> Vec<String> {
         return Vec::new();
     }
     let needle = trimmed.to_lowercase();
-    let catalog = crate::audit::catalog();
+    let catalog = all_card_names();
     let mut prefix: Vec<&str> = Vec::new();
     let mut substr: Vec<&str> = Vec::new();
-    for entry in &catalog {
-        let lower = entry.name.to_lowercase();
+    for name in catalog {
+        let lower = name.to_lowercase();
         if lower.starts_with(&needle) {
-            prefix.push(&entry.name);
+            prefix.push(name.as_str());
         } else if lower.contains(&needle) {
-            substr.push(&entry.name);
+            substr.push(name.as_str());
         }
     }
     prefix.sort_by_key(|s| s.len());

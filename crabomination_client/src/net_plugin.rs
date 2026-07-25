@@ -90,6 +90,19 @@ impl NetOutbox {
         self.1.lock().ok().and_then(|g| g.clone())
     }
 
+    /// Patch the stashed last-cast with the X chosen via the `ChooseAmount`
+    /// modal (the engine's `CastXPick` suspend). Without this, a replayed
+    /// cast that bounces as `ManualTapRequired` re-arms from the original
+    /// `x_value: None` action, and every mana tap re-poses the X prompt.
+    pub fn patch_last_cast_x(&self, card_id: crabomination::card::CardId, x: u32) {
+        if let Ok(mut last) = self.1.lock()
+            && let Some(action) = last.as_mut()
+            && cast_action_card_id(action) == card_id
+        {
+            patch_cast_x(action, x);
+        }
+    }
+
     /// Send a debug-console cheat. The server applies it to whichever
     /// seat owns this channel.
     pub fn submit_debug(&self, action: DebugAction) {
@@ -100,6 +113,21 @@ impl NetOutbox {
     /// / leave), which aren't game actions.
     pub fn submit_msg(&self, msg: ClientMsg) {
         let _ = self.0.send(msg);
+    }
+}
+
+/// Fill in an unset `x_value` on the cast variants the engine's `CastXPick`
+/// suspend replays (see `ResumeContext::CastXPick`).
+pub fn patch_cast_x(action: &mut GameAction, x: u32) {
+    match action {
+        GameAction::CastSpell { x_value, .. }
+        | GameAction::CastPrepareSpell { x_value, .. }
+        | GameAction::CastFlashback { x_value, .. } => {
+            if x_value.is_none() {
+                *x_value = Some(x);
+            }
+        }
+        _ => {}
     }
 }
 

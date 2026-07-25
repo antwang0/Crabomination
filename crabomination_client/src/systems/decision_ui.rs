@@ -2078,6 +2078,7 @@ pub fn handle_confirm(
     outbox: Option<Res<NetOutbox>>,
     mut log: ResMut<GameLog>,
     mut state: ResMut<DecisionUiState>,
+    mut pending_cast: ResMut<PendingManaCast>,
     confirm: Query<&Interaction, (Changed<Interaction>, With<DecisionConfirmButton>)>,
 ) {
     for interaction in &confirm {
@@ -2131,7 +2132,21 @@ pub fn handle_confirm(
                 // set is safe to send.
                 DecisionAnswer::Modes(state.modes_selected.clone().unwrap_or_default())
             }
-            DecisionWire::ChooseAmount { .. } => DecisionAnswer::Amount(state.amount),
+            DecisionWire::ChooseAmount { source, .. } => {
+                // If this amount is the X for a suspended cast (the engine's
+                // `CastXPick`), stamp it onto the client-side copies of that
+                // cast so a `ManualTapRequired` bounce re-arms with the chosen
+                // X instead of re-posing this prompt on every mana tap.
+                if let Some(outbox) = &outbox {
+                    outbox.patch_last_cast_x(*source, state.amount);
+                }
+                if let Some(pc) = pending_cast.0.as_mut()
+                    && crate::net_plugin::cast_action_card_id(&pc.action) == *source
+                {
+                    crate::net_plugin::patch_cast_x(&mut pc.action, state.amount);
+                }
+                DecisionAnswer::Amount(state.amount)
+            }
             DecisionWire::DivideDamage { total, .. } => {
                 // CR 601.2d — the split must use the whole total; hold the
                 // modal open until the remaining-pool readout hits zero.

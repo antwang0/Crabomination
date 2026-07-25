@@ -1240,15 +1240,18 @@ pub fn graveyard_browser(
     keyboard: Res<ButtonInput<KeyCode>>,
     overlay_interaction: Query<&Interaction, (With<GraveyardBrowser>, With<Button>)>,
     chat: Res<crate::systems::chat::ChatInputState>,
+    console: Res<crate::systems::debug_console::DebugConsoleState>,
 ) {
     if keyboard.just_pressed(KeyCode::Escape) && state.open {
         state.open = false;
     }
     // `G` toggles the viewer's own graveyard (clicking a pile still browses
-    // any player's). Suppressed while chat has the keyboard and while a
-    // decision modal is up — ChooseColor binds G to green mana.
+    // any player's). Suppressed while chat or the debug-console card input
+    // has the keyboard and while a decision modal is up — ChooseColor binds
+    // G to green mana.
     if keyboard.just_pressed(KeyCode::KeyG)
         && !chat.open
+        && !console.card_input_focused
         && view
             .0
             .as_ref()
