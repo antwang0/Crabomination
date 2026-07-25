@@ -1490,16 +1490,9 @@ pub fn fractalize() -> CardDefinition {
 /// "Return up to X target instant and/or sorcery cards from your graveyard
 /// to your hand. / Exile Divergent Equation."
 ///
-/// ✅ (was 🟡): The "up to X" multi-target picker now wires via
-/// `Selector::take(CardsInZone(You, Graveyard, IS), Value::XFromCost)`
-/// — walks the controller's gy in iteration order and returns the
-/// first X matching cards. AutoDecider gets the gy iteration order;
-/// a real UI player would surface a per-card pick (the cap-N picker
-/// is already a precedent — Pull from the Grave, Mind Roots). At
-/// X=0 the selector yields zero entities and the spell becomes a
-/// 1-blue cantrip (exile-on-resolve removes the IS from the gy).
-/// "Exile Divergent Equation" rider is wired via the
-/// `CardDefinition.exile_on_resolve` flag.
+/// The "up to X" pick is player-chosen via `Effect::MoveChosen`
+/// (`Decision::ChooseCards`; auto decider maximizes). "Exile Divergent
+/// Equation" rides `exile_on_resolve`.
 pub fn divergent_equation() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;
@@ -1508,16 +1501,16 @@ pub fn divergent_equation() -> CardDefinition {
         name: "Divergent Equation",
         cost: cost(&[x(), x(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Move {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Graveyard,
-                    filter: SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                },
-                Value::XFromCost,
-            ),
+        effect: Effect::MoveChosen {
+            from: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            },
+            filter: None,
+            count: Value::XFromCost,
+            up_to: true,
             to: ZoneDest::Hand(PlayerRef::You),
         },
         exile_on_resolve: true,

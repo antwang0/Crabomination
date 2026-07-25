@@ -514,15 +514,16 @@ pub fn pull_from_the_grave() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: SelectionRequirement::Creature,
-                    },
-                    Value::Const(2),
-                ),
+            // Player-chosen "up to two" (MoveChosen; auto maximizes).
+            Effect::MoveChosen {
+                from: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                },
+                filter: None,
+                count: Value::Const(2),
+                up_to: true,
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::GainLife {

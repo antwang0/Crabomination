@@ -703,11 +703,10 @@ pub fn emeritus_of_abundance() -> CardDefinition {
 /// Prepare spell: instant — printed "Mill seven cards. Then put a
 /// creature card from among them onto the battlefield."
 ///
-/// Approximation: the engine has no "from among the milled cards"
-/// scratch selector, so after the mill we return one creature card from
-/// your graveyard (auto-picked) to the battlefield — a pre-existing
-/// graveyard creature can be chosen where the printed text restricts to
-/// the seven just-milled cards.
+/// Faithful: `Selector::LastMoved` scopes the pick to the seven
+/// just-milled cards, and the creature is player-chosen via
+/// `Effect::MoveChosen` (audit fix — previously any graveyard creature,
+/// auto-picked).
 pub fn vastlands_scavenger() -> CardDefinition {
     let spell = spell_back(
         "Bind to Life",
@@ -718,15 +717,14 @@ pub fn vastlands_scavenger() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(7),
             },
-            Effect::Move {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: SelectionRequirement::Creature,
-                    },
-                    Value::Const(1),
-                ),
+            // "...put a creature card FROM AMONG THEM onto the
+            // battlefield" — restricted to the seven just-milled cards
+            // (Selector::LastMoved tracks the mill), player-chosen.
+            Effect::MoveChosen {
+                from: Selector::LastMoved,
+                filter: Some(SelectionRequirement::Creature),
+                count: Value::Const(1),
+                up_to: true,
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -842,14 +840,13 @@ pub fn pigment_wrangler() -> CardDefinition {
         "Striking Palette",
         cost(&[r()]),
         CardType::Sorcery,
-        Effect::OnYourNextSpellCastThisTurn {
-            body: Box::new(Effect::If {
-                cond: cast_is_instant_or_sorcery(),
-                then: Box::new(Effect::CopySpellMayChooseTargets {
-                    what: Selector::TriggerSource,
-                    count: Value::Const(1),
-                }),
-                else_: Box::new(Effect::Noop),
+        // "When you next cast an instant or sorcery this turn" — a
+        // non-matching cast leaves the rider ARMED (audit fix: the plain
+        // next-spell rider was consumed by any spell type).
+        Effect::OnYourNextInstantSorceryThisTurn {
+            body: Box::new(Effect::CopySpellMayChooseTargets {
+                what: Selector::TriggerSource,
+                count: Value::Const(1),
             }),
         },
     );
@@ -1457,9 +1454,8 @@ pub fn campus_composer() -> CardDefinition {
 /// Prepare spell: instant — Ancestral Recall: target player draws 3
 /// cards.
 ///
-/// Approximation: the attack trigger's exile auto-picks eight cards
-/// from your graveyard — the player chooses whether to exile, but not
-/// which eight cards are exiled.
+/// The attack trigger's exile-eight is player-chosen via
+/// `Effect::MoveChosen` (`Decision::ChooseCards`).
 pub fn emeritus_of_ideation() -> CardDefinition {
     let spell = spell_back(
         "Ancestral Recall",
@@ -1487,15 +1483,15 @@ pub fn emeritus_of_ideation() -> CardDefinition {
         then: Box::new(Effect::MayDo {
             description: "Exile eight cards from your graveyard to become prepared".to_string(),
             body: Box::new(Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::take(
-                        Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Graveyard,
-                            filter: SelectionRequirement::Any,
-                        },
-                        Value::Const(8),
-                    ),
+                Effect::MoveChosen {
+                    from: Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Any,
+                    },
+                    filter: None,
+                    count: Value::Const(8),
+                    up_to: false,
                     to: ZoneDest::Exile,
                 },
                 becomes_prepared(),

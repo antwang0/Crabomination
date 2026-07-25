@@ -2394,15 +2394,19 @@ fn emeritus_of_abundance_prepare_spell_returns_any_card_from_graveyard() {
         "Bolt should be back in hand");
 }
 
-// Vastlands Scavenger // Bind to Life — mill 7, then return a creature card
-// from the graveyard to the battlefield.
+// Vastlands Scavenger // Bind to Life — mill 7, then put a creature card
+// FROM AMONG THE MILLED SEVEN onto the battlefield (audit fix: a
+// pre-existing graveyard creature is NOT eligible).
 #[test]
 fn vastlands_scavenger_prepare_spell_mills_seven_and_reanimates() {
     let mut g = two_player_game();
-    for _ in 0..7 {
+    // Library top-7 contains one creature among spells.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..6 {
         g.add_card_to_library(0, catalog::lightning_bolt());
     }
-    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // A pre-existing graveyard creature that must NOT be picked.
+    let old = g.add_card_to_graveyard(0, catalog::serra_angel());
     let id = prepared_on_battlefield(&mut g, 0, catalog::vastlands_scavenger());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(4);
@@ -2419,8 +2423,10 @@ fn vastlands_scavenger_prepare_spell_mills_seven_and_reanimates() {
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].library.len(), lib_before - 7, "milled 7 cards");
-    assert!(g.battlefield.iter().any(|c| c.id == bear),
-        "the graveyard creature was put onto the battlefield");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the milled creature was put onto the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == old),
+        "a pre-existing graveyard creature is not eligible");
 }
 
 // Adventurous Eater // Have a Bite — +1/+1 counter + gain 1 life.

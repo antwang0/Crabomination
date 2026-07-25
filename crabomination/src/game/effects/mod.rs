@@ -3085,6 +3085,14 @@ impl GameState {
             // Transparent at resolution — the wrapper only marks slots optional
             // for the targeting walk; the body's selectors no-op on absent slots.
             Effect::OptionalTargets { body, .. } => self.run_effect(body, ctx, events),
+            Effect::CapTargetsAtX { body } => {
+                // "Up to X targets" — X is the true cap (Crackle with
+                // Power); slots beyond the paid X are dropped.
+                let mut sub = ctx.clone();
+                sub.targets.truncate(ctx.x_value as usize);
+                return self.run_effect(body, &sub, events);
+            }
+
             Effect::ApplyToTargets { effect: inner, .. } => {
                 let targets: Vec<Target> = ctx
                     .targets
@@ -10444,6 +10452,71 @@ impl GameState {
                     for id in ids {
                         self.move_card_to(id, &ZoneDest::Exile, ctx, events);
                     }
+                }
+                Ok(())
+            }
+
+            Effect::MoveChosen { from, filter, count, up_to, to } => {
+                // Player-chosen sibling of `Move { what: Take {..} }`: the
+                // controller picks WHICH of the resolved cards move. The
+                // decision min equals the pick count so the auto decider
+                // keeps maximizing; a UI/scripted decider may under-pick on
+                // "up to" cards.
+                use crate::decision::{Decision, DecisionAnswer};
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
+                let mut ids: Vec<CardId> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Card(id) | EntityRef::Permanent(id) => Some(id),
+                        _ => None,
+                    })
+                    .collect();
+                if let Some(f) = filter {
+                    ids.retain(|id| {
+                        self.evaluate_requirement_static(
+                            f,
+                            &Target::Permanent(*id),
+                            ctx.controller,
+                            ctx.source,
+                        )
+                    });
+                }
+                if ids.is_empty() {
+                    return Ok(());
+                }
+                let candidates: Vec<(CardId, String)> = ids
+                    .iter()
+                    .filter_map(|id| {
+                        self.find_card_anywhere(*id)
+                            .map(|c| (*id, c.definition.name.to_string()))
+                    })
+                    .collect();
+                let cap = n.min(candidates.len());
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!(
+                        "Choose {}{} cards to move",
+                        if *up_to { "up to " } else { "" },
+                        cap
+                    ),
+                    candidates: candidates.clone(),
+                    min: if *up_to { cap as u32 } else { cap as u32 },
+                    max: cap as u32,
+                });
+                let picked: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(v) => v
+                        .into_iter()
+                        .filter(|id| ids.contains(id))
+                        .take(cap)
+                        .collect(),
+                    _ => ids.iter().copied().take(cap).collect(),
+                };
+                for id in picked {
+                    self.move_card_to(id, to, ctx, events);
                 }
                 Ok(())
             }

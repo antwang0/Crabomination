@@ -1260,18 +1260,32 @@ pub fn jeskas_will() -> CardDefinition {
         name: "Jeska's Will",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseMode(vec![
-            Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::OfColor(Color::Red, Value::Const(3)),
-            },
-            Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::You,
-                count: Value::Const(3),
-                duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false, pay_own_cost: false,
-                uncast_penalty: None,
-            },
-        ]),
+        // "Choose one. If you control a commander as you cast this spell,
+        // you may choose both instead." With a commander, ChooseN runs
+        // both (a decider may still under-pick). Mode 1 adds {R} per card
+        // in target opponent's hand (audit fix: was a flat {R}{R}{R}).
+        effect: {
+            let modes = || vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(
+                        Color::Red,
+                        Value::HandSizeOf(PlayerRef::Target(0)),
+                    ),
+                },
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false, pay_own_cost: false,
+                    uncast_penalty: None,
+                },
+            ];
+            Effect::If {
+                cond: crate::effect::Predicate::YouControlACommander,
+                then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
+                else_: Box::new(Effect::ChooseMode(modes())),
+            }
+        },
         ..Default::default()
     }
 }

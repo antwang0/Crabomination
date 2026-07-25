@@ -453,18 +453,21 @@ fn aetherflux_reservoir_gains_life_then_burns() {
     assert!(g.players[1].life <= 0, "opponent took 50 (lethal)");
 }
 
-/// Jeska's Will mode 0 makes {R}{R}{R}.
+/// Jeska's Will mode 0 adds {R} per card in TARGET opponent's hand
+/// (audit fix: was a flat {R}{R}{R}).
 #[test]
 fn jeskas_will_ritual_mode() {
     let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::island()); }
     let will = g.add_card_to_hand(0, catalog::jeskas_will());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: will, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+        card_id: will, target: Some(Target::Player(1)), additional_targets: vec![], mode: Some(0), x_value: None,
     }).expect("cast Jeska's Will, ritual mode");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "added {{R}}{{R}}{{R}}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3,
+        "added one {{R}} per card in the opponent's 3-card hand");
 }
 
 /// Helper: opponent (seat 1) casts a Lightning Bolt at seat 0, then seat 0

@@ -1177,25 +1177,27 @@ pub fn manifestation_sage() -> CardDefinition {
 ///
 /// ✅ Each supplied target takes the FULL 5X (not divided): wired via
 /// `ApplyToTargets` running `DealDamage(5·X)` once per target. Residue:
-/// `ApplyToTargets.max_targets` is a compile-time `u8`, so the printed
-/// "up to X targets" count cap is approximated with a fixed ceiling of
-/// 5 optional slots — the engine has no Value-driven target-slot count
-/// (a `max_targets: Value` variant would close it). For X ≥ 5 this is
-/// exact in practice; for X < 5 a UI caster could over-select targets.
+/// "Up to X targets" is exact via `CapTargetsAtX` (resolution drops
+/// slots beyond the paid X); the inner `max_targets: 5` is only the
+/// static slot ceiling for cast-time enumeration.
 pub fn crackle_with_power() -> CardDefinition {
     CardDefinition {
         name: "Crackle with Power",
         cost: cost(&[x(), x(), x(), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ApplyToTargets {
-            max_targets: 5,
-            min_targets: 0,
-            filter: SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
-            effect: Box::new(Effect::DealDamage {
-                to: Selector::Target(0),
-                amount: Value::Times(Box::new(Value::Const(5)), Box::new(Value::XFromCost)),
+        // "UP TO X targets": CapTargetsAtX makes X the true cap; the
+        // inner max_targets 5 is only the static slot ceiling.
+        effect: Effect::CapTargetsAtX {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 5,
+                min_targets: 0,
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+                effect: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Times(Box::new(Value::Const(5)), Box::new(Value::XFromCost)),
+                }),
             }),
         },
         ..Default::default()

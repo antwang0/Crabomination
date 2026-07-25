@@ -1981,3 +1981,63 @@ fn scrollboost_pumps_two_targets() {
         assert_eq!((c.power, c.toughness), (4, 4), "each target gets +2/+2");
     }
 }
+
+// ── Tier 2/3 simplification fixes ───────────────────────────────────────────
+
+/// Divergent Equation's "up to X" picks are PLAYER-CHOSEN (MoveChosen):
+/// a scripted pick takes a specific card, not graveyard order.
+#[test]
+fn divergent_equation_player_chooses_cards() {
+    let mut g = two_player_game();
+    let _first = g.add_card_to_graveyard(0, catalog::shock());
+    let wanted = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![wanted])]));
+    let id = g.add_card_to_hand(0, catalog::divergent_equation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(1),
+    }).expect("castable at X=1");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == wanted),
+        "the scripted pick (not graveyard order) came to hand");
+}
+
+/// Crackle with Power at X=1: only ONE target is honored even if extra
+/// slots were supplied (CapTargetsAtX).
+#[test]
+fn crackle_with_power_caps_targets_at_x() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::crackle_with_power());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(angel)],
+        mode: None, x_value: Some(1),
+    }).expect("castable at X=1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 5, "first target takes 5x1");
+    assert!(g.battlefield.iter().any(|c| c.id == angel),
+        "second supplied target is dropped at X=1");
+}
+
+/// Akroma's Will runs BOTH modes when you control a commander.
+#[test]
+fn akromas_will_chooses_both_with_commander() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].commanders.push(bear);
+    let id = g.add_card_to_hand(0, catalog::akromas_will());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert!(c.keywords.contains(&Keyword::DoubleStrike), "mode 0 applied");
+    assert!(c.keywords.contains(&Keyword::Lifelink), "mode 1 applied too (commander)");
+}

@@ -1250,6 +1250,10 @@ pub enum Predicate {
     /// ("when you cast this spell, if it was kicked" — Scourge of the
     /// Skyclaves) see the kicker state before resolution.
     CastSpellWasKicked,
+    /// "If you control a commander" (Akroma's Will, Jeska's Will) — true
+    /// when any battlefield permanent the effect's controller controls is
+    /// one of their designated commanders (`Player.commanders`).
+    YouControlACommander,
     /// True if the spell pointed to by `ctx.trigger_source` (the just-cast
     /// spell driving a `SpellCast` trigger) has at least one `{X}` symbol
     /// in its mana cost. Used by Quandrix's "whenever you cast a spell
@@ -3484,6 +3488,23 @@ pub enum Effect {
     // ── Zone moves ───────────────────────────────────────────────────────────
     /// Move every entity the selector resolves to into `to`.
     Move { what: Selector, to: ZoneDest },
+    /// "[Return/put/exile] up to `count` cards of your choice from the set
+    /// `from` resolves to" — the player-chooses sibling of
+    /// `Move { what: Take {..} }` (which auto-takes in iteration order).
+    /// Resolution-time `Decision::ChooseCards`; the auto decider takes the
+    /// first `count` so bot play keeps maximizing. `filter` narrows the
+    /// resolved set (Bind to Life's "a creature card from AMONG the milled
+    /// seven" — `from: LastMoved`, filter Creature). Divergent Equation,
+    /// Pull from the Grave, Return to the Ranks, Emeritus of Ideation.
+    MoveChosen {
+        from: Selector,
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+        count: Value,
+        #[serde(default)]
+        up_to: bool,
+        to: ZoneDest,
+    },
     /// Search `who`'s library for a card matching `filter` and move to `to`.
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// Search `who`'s library *and/or graveyard* for a card matching `filter`
@@ -4407,6 +4428,12 @@ pub enum Effect {
         filter: SelectionRequirement,
         effect: Box<Effect>,
     },
+    /// "Up to X targets" wrapper (Crackle with Power): truncates the
+    /// supplied cast-time target list to the cast's `x_value` before
+    /// running `body` (usually an `ApplyToTargets` whose `max_targets` is
+    /// the static slot ceiling). Cast-time slot enumeration still offers
+    /// the ceiling; an over-select at small X is dropped at resolution.
+    CapTargetsAtX { body: Box<Effect> },
     /// Transparent wrapper declaring that target slots `>= min` are optional
     /// ("up to one target …") for an otherwise-conventional `body` whose slots
     /// come from *distinct* effects — the case `ApplyToTargets` can't express

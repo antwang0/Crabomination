@@ -20,35 +20,40 @@ use crate::mana::{b, cost, g, generic, r, w, x, Color};
 /// • Creatures you control gain lifelink, indestructible, and protection
 /// from each color until end of turn."
 ///
-/// The commander-gated "choose both" rider is not modeled (no cast-time
-/// commander predicate feeding mode count) — plain choose-one.
+/// With a commander on your battlefield the "may choose both" upgrade
+/// runs via ChooseN (a decider may still under-pick to one mode).
 pub fn akromas_will() -> CardDefinition {
     let your_creatures =
         || Selector::EachPermanent(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou));
+    let modes = move || vec![
+        Effect::GrantKeywords {
+            what: your_creatures(),
+            keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::DoubleStrike],
+            duration: Duration::EndOfTurn,
+        },
+        Effect::GrantKeywords {
+            what: your_creatures(),
+            keywords: vec![
+                Keyword::Lifelink,
+                Keyword::Indestructible,
+                Keyword::Protection(Color::White),
+                Keyword::Protection(Color::Blue),
+                Keyword::Protection(Color::Black),
+                Keyword::Protection(Color::Red),
+                Keyword::Protection(Color::Green),
+            ],
+            duration: Duration::EndOfTurn,
+        },
+    ];
     CardDefinition {
         name: "Akroma's Will",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
-            Effect::GrantKeywords {
-                what: your_creatures(),
-                keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::DoubleStrike],
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeywords {
-                what: your_creatures(),
-                keywords: vec![
-                    Keyword::Lifelink,
-                    Keyword::Indestructible,
-                    Keyword::Protection(Color::White),
-                    Keyword::Protection(Color::Blue),
-                    Keyword::Protection(Color::Black),
-                    Keyword::Protection(Color::Red),
-                    Keyword::Protection(Color::Green),
-                ],
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        effect: Effect::If {
+            cond: Predicate::YouControlACommander,
+            then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
+            else_: Box::new(Effect::ChooseMode(modes())),
+        },
         ..Default::default()
     }
 }
@@ -73,9 +78,8 @@ pub fn reprieve() -> CardDefinition {
 
 /// Return to the Ranks — {X}{W}{W} Sorcery, Convoke. "Return X target
 /// creature cards with mana value 2 or less from your graveyard to the
-/// battlefield." The X picks resolve via `Selector::Take` over the
-/// matching graveyard cards (auto: first X; a targeted per-card pick is
-/// the residual nicety).
+/// battlefield." The X picks are player-chosen via `Effect::MoveChosen`
+/// (`Decision::ChooseCards`; auto decider maximizes).
 pub fn return_to_the_ranks() -> CardDefinition {
     use crate::effect::ZoneRef;
     CardDefinition {
@@ -83,15 +87,15 @@ pub fn return_to_the_ranks() -> CardDefinition {
         cost: cost(&[x(), w(), w()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Convoke],
-        effect: Effect::Move {
-            what: Selector::Take {
-                inner: Box::new(Selector::EachMatching {
-                    zone: ZoneRef::Graveyard(PlayerRef::You),
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ManaValueAtMost(2)),
-                }),
-                count: Box::new(Value::XFromCost),
+        effect: Effect::MoveChosen {
+            from: Selector::EachMatching {
+                zone: ZoneRef::Graveyard(PlayerRef::You),
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
             },
+            filter: None,
+            count: Value::XFromCost,
+            up_to: false,
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
         },
         ..Default::default()

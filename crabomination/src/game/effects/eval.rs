@@ -1728,6 +1728,12 @@ impl GameState {
                 };
                 self.battlefield_find(cid).is_some_and(|c| c.entered_by_cast)
             }
+            Predicate::YouControlACommander => {
+                let ids = &self.players[ctx.controller].commanders;
+                self.battlefield
+                    .iter()
+                    .any(|c| c.controller == ctx.controller && ids.contains(&c.id))
+            }
             Predicate::SpellWasKicked => {
                 // CR 702.32 — true iff the kicker cost was paid at cast
                 // time. Stamped onto `ctx.kicked` from the resolving
