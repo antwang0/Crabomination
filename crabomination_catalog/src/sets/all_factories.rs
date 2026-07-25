@@ -7004,6 +7004,12 @@ static DECKS: &[Factory] = &[
     super::decks::amazing_spider_girl,
     super::decks::silk_web_weaver,
     super::decks::spider_man_india,
+    // MID/VOW slow-land cycle (SOS 2026 reprints).
+    super::decks::deathcap_glade,
+    super::decks::dreamroot_cascade,
+    super::decks::shattered_sanctum,
+    super::decks::stormcarved_coast,
+    super::decks::sundown_pass,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
@@ -10365,6 +10371,16 @@ static SOS: &[Factory] = &[
     super::sos::archaics_agony,
     super::sos::improvisation_capstone,
     super::sos::applied_geometry,
+    // SOA 2026 Mystical Archive — new-to-catalog reprints.
+    super::sos::akromas_will,
+    super::sos::reprieve,
+    super::sos::return_to_the_ranks,
+    super::sos::winds_of_abandon,
+    super::sos::culling_the_weak,
+    super::sos::subterranean_tremors,
+    super::sos::awaken_the_woods,
+    super::sos::berserk,
+    super::sos::glimpse_of_nature,
 ];
 static STX: &[Factory] = &[
     super::stx::bookwurm,

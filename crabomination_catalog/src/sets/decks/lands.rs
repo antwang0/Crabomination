@@ -2094,3 +2094,48 @@ pub fn razortrap_gorge() -> CardDefinition {
 pub fn strangled_cemetery() -> CardDefinition {
     dsk_painland("Strangled Cemetery", Color::Black, Color::Green)
 }
+
+// ── MID/VOW slow lands (SOS reprints) ───────────────────────────────────────
+
+/// Shared frame for the slow-land cycle: "This land enters tapped unless
+/// you control two or more other lands. {T}: Add {A} or {B}." Counted
+/// against the post-ETB battlefield (which already contains this land),
+/// so the untapped threshold is "≥ 3 lands you control".
+fn slow_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(3),
+                },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+pub fn deathcap_glade() -> CardDefinition {
+    slow_land("Deathcap Glade", Color::Black, Color::Green)
+}
+pub fn dreamroot_cascade() -> CardDefinition {
+    slow_land("Dreamroot Cascade", Color::Green, Color::Blue)
+}
+pub fn shattered_sanctum() -> CardDefinition {
+    slow_land("Shattered Sanctum", Color::White, Color::Black)
+}
+pub fn stormcarved_coast() -> CardDefinition {
+    slow_land("Stormcarved Coast", Color::Blue, Color::Red)
+}
+pub fn sundown_pass() -> CardDefinition {
+    slow_land("Sundown Pass", Color::Red, Color::White)
+}

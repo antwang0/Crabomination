@@ -1627,3 +1627,215 @@ fn killians_confidence_stays_in_graveyard_when_no_damage_or_no_pay() {
         "KC should still be in graveyard with no combat damage");
 }
 
+
+// ── SOA / slow-land backfill (2026-07 audit) ────────────────────────────────
+
+/// The five MID/VOW slow lands (SOS reprints): tapped with fewer than
+/// two OTHER lands, untapped once you control two or more others.
+#[test]
+fn slow_lands_tap_rule() {
+    let defs: [fn() -> crabomination::card::CardDefinition; 5] = [
+        catalog::deathcap_glade, catalog::dreamroot_cascade,
+        catalog::shattered_sanctum, catalog::stormcarved_coast,
+        catalog::sundown_pass,
+    ];
+    for f in defs {
+        // 0 other lands → enters tapped.
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, f());
+        g.perform_action(GameAction::PlayLand(id)).unwrap();
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(id).unwrap().tapped,
+            "{} enters tapped with no other lands", f().name);
+        // 2 other lands → enters untapped.
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::island());
+        g.add_card_to_battlefield(0, catalog::island());
+        let id = g.add_card_to_hand(0, f());
+        g.perform_action(GameAction::PlayLand(id)).unwrap();
+        drain_stack(&mut g);
+        assert!(!g.battlefield_find(id).unwrap().tapped,
+            "{} enters untapped with two other lands", f().name);
+    }
+}
+
+/// Reprieve bounces a spell to its owner's hand (not a counter-to-
+/// graveyard) and draws.
+#[test]
+fn reprieve_returns_spell_to_hand_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    g.priority.player_with_priority = 0;
+    let rep = g.add_card_to_hand(0, catalog::reprieve());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let h0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: rep, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reprieve castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "Bolt never resolved");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "Bolt back in owner's hand");
+    assert_eq!(g.players[0].hand.len(), h0 - 1 + 1, "cast Reprieve, drew a card");
+}
+
+/// Culling the Weak: sacrifice a creature at cast, add {B}{B}{B}{B}.
+#[test]
+fn culling_the_weak_sacs_and_ramps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::culling_the_weak());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature sacrificed");
+    assert_eq!(g.players[0].mana_pool.total(), 4, "four black in pool");
+}
+
+/// Subterranean Tremors at X=4: sweeps non-fliers, destroys artifacts,
+/// no Lizard (needs X≥8).
+#[test]
+fn subterranean_tremors_x4_sweeps_and_smashes_artifacts() {
+    let mut g = two_player_game();
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let flier = g.add_card_to_battlefield(1, catalog::serra_angel());    // 4/4 flying
+    let relic = g.add_card_to_battlefield(1, catalog::team_pennant());   // artifact
+    let id = g.add_card_to_hand(0, catalog::subterranean_tremors());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(4),
+    }).expect("castable at X=4");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == ground), "grounded creature died");
+    assert!(g.battlefield.iter().any(|c| c.id == flier), "flier untouched (4 damage, 4 toughness — Serra survives 4? she dies at 4)");
+    assert!(!g.battlefield.iter().any(|c| c.id == relic), "artifact destroyed at X>=4");
+    assert!(!g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Lizard"),
+        "no Lizard below X=8");
+}
+
+/// Awaken the Woods mints X Forest Dryad LAND creatures.
+#[test]
+fn awaken_the_woods_mints_land_creatures() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::awaken_the_woods());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("castable at X=3");
+    drain_stack(&mut g);
+    let dryads: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Forest Dryad").collect();
+    assert_eq!(dryads.len(), 3, "X=3 tokens");
+    let d = dryads[0];
+    assert!(d.definition.card_types.contains(&crabomination::card::CardType::Land));
+    assert!(d.definition.card_types.contains(&crabomination::card::CardType::Creature));
+}
+
+/// Berserk doubles power via +X/+0 and grants trample; the delayed
+/// end-step destroy only fires if the target attacked.
+#[test]
+fn berserk_doubles_power_and_grants_trample() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::berserk());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(angel).unwrap();
+    assert_eq!(c.power, 8, "+X/+0 where X = its power");
+    assert!(c.keywords.contains(&Keyword::Trample));
+}
+
+/// Glimpse of Nature: creatures entering this turn each draw a card.
+#[test]
+fn glimpse_of_nature_draws_per_creature() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::glimpse_of_nature());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let hand_before = g.players[0].hand.len();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    // +1 (add bear) -1 (cast bear) +1 (Glimpse draw) = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew for the creature");
+}
+
+/// Akroma's Will mode 0 grants flying/vigilance/double strike to your team.
+#[test]
+fn akromas_will_mode_zero_team_keywords() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::akromas_will());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    for kw in [Keyword::Flying, Keyword::Vigilance, Keyword::DoubleStrike] {
+        assert!(c.keywords.contains(&kw), "bear gains {kw:?}");
+    }
+}
+
+/// Return to the Ranks reanimates X cheap creatures (Convoke printed).
+#[test]
+fn return_to_the_ranks_reanimates_x_cheap_creatures() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV2
+    let b2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let big = g.add_card_to_graveyard(0, catalog::serra_angel());  // MV5 — ineligible
+    let id = g.add_card_to_hand(0, catalog::return_to_the_ranks());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("castable at X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == b1), "bear 1 reanimated");
+    assert!(g.battlefield.iter().any(|c| c.id == b2), "bear 2 reanimated");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == big), "MV5 stays dead");
+}
+
+/// Winds of Abandon single-target: exile + the controller ramps a basic.
+#[test]
+fn winds_of_abandon_exiles_and_compensates() {
+    let mut g = two_player_game();
+    let isl = g.add_card_to_library(1, catalog::island());
+    // The compensation search is mandatory on the printed card; the
+    // AutoDecider declines searches by default, so script the pick.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(isl))]));
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::winds_of_abandon());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled");
+    assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.is_land() && c.tapped),
+        "its controller fetched a tapped basic");
+}

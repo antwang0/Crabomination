@@ -15,6 +15,7 @@ mod enchantments;
 mod instants;
 mod lands;
 mod mdfcs;
+mod soa;
 mod sorceries;
 
 pub use artifacts::*;
@@ -23,4 +24,5 @@ pub use enchantments::*;
 pub use instants::*;
 pub use lands::*;
 pub use mdfcs::*;
+pub use soa::*;
 pub use sorceries::*;
