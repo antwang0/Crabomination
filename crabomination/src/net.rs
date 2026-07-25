@@ -1481,6 +1481,12 @@ pub struct PermanentView {
     /// by `project_permanent`.
     #[serde(default)]
     pub equippable: bool,
+    /// Cheaper alternate equip cost usable when the target is a creature
+    /// token ("Equip creature token {1}" — Team Pennant). `None` for
+    /// ordinary Equipment. Lets the client show the split cost and offer
+    /// the equip action when only the token cost is affordable.
+    #[serde(default)]
+    pub equip_token_cost: Option<crate::mana::ManaCost>,
     /// Crew cost (required total power, CR 702.122) when this permanent is a
     /// Vehicle with `Keyword::Crew(N)`. 0 means not crewable. Lets the client
     /// offer the "crew" action. Populated by `project_permanent`.

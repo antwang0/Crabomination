@@ -293,6 +293,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
             lines.push(r);
         }
     }
+    // Split equip cost: the cheaper "Equip creature token {N}" line
+    // (Team Pennant) — shown alongside the keyword list's "Equip {M}".
+    if let Some(cost) = &p.equip_token_cost {
+        lines.push(format!("Equip creature token {}", cost.summary()));
+    }
 
     // Saddled (CR 702.171) — flag that the Mount's attacks-while-saddled riders
     // are armed for this combat.
@@ -343,6 +348,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         for r in reminders {
             lines.push(r);
         }
+    }
+    // Split equip cost: the cheaper "Equip creature token {N}" line
+    // (Team Pennant) — shown alongside the keyword list's "Equip {M}".
+    if let Some(cost) = &p.equip_token_cost {
+        lines.push(format!("Equip creature token {}", cost.summary()));
     }
 
     // Activated abilities — show the cost + effect label so players
@@ -1186,6 +1196,8 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Poison => "Poison",
         CounterType::Lore => "Lore",
         CounterType::Fade => "Fade",
+        CounterType::Blood => "Blood",
+        CounterType::Fuse => "Fuse",
         CounterType::Age => "Age",
         CounterType::Level => "Level",
         CounterType::Energy => "Energy",
@@ -1359,6 +1371,7 @@ mod tests {
             finality_counter_count: 0,
             regeneration_shields: 0,
             equippable: false,
+            equip_token_cost: None,
             crew_value: 0,
             marked_lethal: false,
             named_card: None,

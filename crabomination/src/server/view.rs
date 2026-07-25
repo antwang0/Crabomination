@@ -1238,6 +1238,7 @@ fn project_permanent(
         finality_counter_count: card.counter_count(crate::card::CounterType::Finality),
         regeneration_shields: card.regeneration_shields,
         equippable: card.definition.is_equipment() && card.definition.has_equip().is_some(),
+        equip_token_cost: card.definition.equip_token_cost.clone(),
         crew_value: card.definition.crew_cost().unwrap_or(0),
         crew_power_bonus: crew_saddle_power_bonus_in(card.id, battlefield),
         saddled: card.saddled,
