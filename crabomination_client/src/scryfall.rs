@@ -701,10 +701,10 @@ fn scryfall_get_bytes(url: &str) -> Result<Vec<u8>, LookupError> {
                     )));
                 }
                 attempt += 1;
-                // 0.5s, 1s, 2s, ... capped at 32s — gives Scryfall's limiter
+                // 8s, 16s, 32s, ... capped at 2048s — gives Scryfall's limiter
                 // time to refill without stalling the prefetch thread for
                 // minutes on one card.
-                let wait = Duration::from_millis(500u64 << (attempt - 1).min(6));
+                let wait = Duration::from_millis(8000u64 << (attempt - 1).min(6));
                 eprintln!(
                     "  HTTP {code} (rate limited); retry {attempt}/{MAX_RATE_LIMIT_RETRIES} after {}ms",
                     wait.as_millis()
