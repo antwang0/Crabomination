@@ -6362,7 +6362,7 @@ impl GameState {
                 });
             }
         }
-        self.push_on_cast_triggers(card_id, p, on_cast_triggers);
+        self.push_on_cast_triggers_x(card_id, p, on_cast_triggers, x_value);
         // SpellCast / YourControl triggers (Prowess, Magecraft, Repartee, …)
         // fire *at cast time*, before the spell resolves. The trigger goes
         // on the stack above the spell so it resolves first (and still
@@ -6612,11 +6612,15 @@ impl GameState {
     /// just-cast card onto the stack as `Trigger` items, so they resolve
     /// before the spell itself. Caller is responsible for collecting the
     /// effect list before the card moves into the stack item.
-    pub(crate) fn push_on_cast_triggers(
+    /// Push a card's "when you cast this spell" triggers, carrying the cast's
+    /// `x_value` so an on-cast trigger body can read `Value::XFromCost`
+    /// (Hydroid Krasis's "gain half X life and draw half X cards").
+    pub(crate) fn push_on_cast_triggers_x(
         &mut self,
         source: CardId,
         controller: usize,
         triggers: Vec<(Option<crate::card::Predicate>, Effect)>,
+        cast_x: u32,
     ) {
         for (filter, effect) in triggers {
             // Evaluate the trigger's filter (Infusion's
@@ -6632,7 +6636,7 @@ impl GameState {
                     targets: vec![],
                     trigger_source: Some(crate::game::effects::EntityRef::Card(source)),
                     mode: 0,
-                    x_value: 0,
+                    x_value: cast_x,
                     converged_value: 0,
                     mana_spent: 0,
                     mana_spent_by_color: Vec::new(),
@@ -6662,6 +6666,7 @@ impl GameState {
                 TriggerPush::new(source, controller, effect)
                     .target(auto_target)
                     .additional_targets(additional)
+                    .x_value(cast_x)
                     // Self-cast trigger: carry the cast card's id so
                     // Effect::CopySpell can find it on the stack.
                     .trigger_source(Some(crate::game::effects::EntityRef::Card(source)))

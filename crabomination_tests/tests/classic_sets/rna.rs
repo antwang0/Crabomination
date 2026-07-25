@@ -2269,3 +2269,26 @@ fn prime_speaker_vannifar_pods() {
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
     assert!(g.battlefield.iter().any(|c| c.id == target && c.controller == 0), "MV-3 creature onto battlefield");
 }
+
+/// Hydroid Krasis's cast trigger gains half X life and draws half X cards, and
+/// it enters with X +1/+1 counters.
+#[test]
+fn hydroid_krasis_cast_trigger_scales_with_x() {
+    let mut g = two_player_game();
+    let krasis = g.add_card_to_hand(0, catalog::hydroid_krasis());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4); // X = 4
+    g.perform_action(GameAction::CastSpell { card_id: krasis, target: None, additional_targets: vec![], mode: None, x_value: Some(4) }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained half of X=4");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "drew 2 (cast Krasis, drew 2)");
+    let body = g.battlefield.iter().find(|c| c.definition.name == "Hydroid Krasis").expect("on battlefield");
+    assert_eq!(body.counter_count(CounterType::PlusOnePlusOne), 4, "entered with 4 counters");
+}

@@ -15,7 +15,7 @@ use crate::effect::{
     Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, RevealMissDest, Selector,
     StaticEffect, ZoneDest, ZoneRef,
 };
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
     Subtypes { creature_types: t, ..Default::default() }
@@ -3085,6 +3085,30 @@ pub fn eyes_everywhere() -> CardDefinition {
                 b: Selector::TargetFiltered { slot: 0, filter: R::Nonland },
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hydroid Krasis — {X}{G}{U} 0/0 Jellyfish Hydra Beast with flying + trample.
+/// Enters with X +1/+1 counters. When you cast it, gain half X life and draw
+/// half X cards (rounded down), even if it's countered.
+pub fn hydroid_krasis() -> CardDefinition {
+    CardDefinition {
+        name: "Hydroid Krasis",
+        cost: cost(&[x(), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creatures(vec![CreatureType::Jellyfish, CreatureType::Hydra, CreatureType::Beast]),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::HalvedRoundDown(Box::new(Value::XFromCost)) },
+                Effect::Draw { who: Selector::You, amount: Value::HalvedRoundDown(Box::new(Value::XFromCost)) },
+            ]),
         }],
         ..Default::default()
     }
