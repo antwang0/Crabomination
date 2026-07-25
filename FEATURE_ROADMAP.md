@@ -44,12 +44,12 @@ exercising each) was elided in a compaction pass; recover it from
   bot planner and the client Attack-All panel. Bot now activates adapt
   abilities and weighs toughness-attackers by their real damage. Tests in
   `classic_sets/rna`, `core_rules/cr_recent31`, `core_rules/cr_recent32`.
-  Batch 10 (+19, the batch-9 deferrals + rares): Angel of Grace, Rhythm of the
+  Batch 10 (+20, the batch-9 deferrals + rares): Angel of Grace, Rhythm of the
   Wild, Galloping Lizrog, Forbidding Spirit, Combine Guildmage, Verity Circle,
   Rumbling Ruin, Font of Agonies, Deputy of Detention, Prime Speaker Vannifar,
   Hydroid Krasis, Awaken the Erstwhile, Plaza of Harmony, Emergency Powers,
   Revival // Revenge, Rakdos the Showstopper, Ravager Wurm, Incubation Druid,
-  Biomancer's Familiar. New engine primitives:
+  Biomancer's Familiar, Kaya Orzhov Usurper. New engine primitives:
   `Effect::{DoubleP1P1CountersFromYourCreatures, TaxAttackersUntilYourNextTurn,
   CreaturesEnterWithExtraCounterThisTurn, OpponentWeakCreaturesCantBlockByYourCounters,
   EachPlayerDiscardsHandMakeTokens, CoinFlipEachCreatureDestroyOnTails}`,

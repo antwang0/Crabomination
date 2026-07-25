@@ -2468,3 +2468,20 @@ fn biomancers_familiar_discounts_creature_abilities() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(eel).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "adapted 2");
 }
+
+/// Kaya, Orzhov Usurper's −5 burns the target for the cards they own in exile
+/// and gains you that much.
+#[test]
+fn kaya_orzhov_usurper_ultimate() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let kaya = g.add_card_to_battlefield(0, catalog::kaya_orzhov_usurper());
+    for _ in 0..3 { g.add_card_to_exile(1, catalog::grizzly_bears()); }
+    g.battlefield_find_mut(kaya).unwrap().add_counters(CounterType::Loyalty, 5);
+    g.battlefield_find_mut(kaya).unwrap().loyalty_uses_this_turn = 0;
+    let (opp, me) = (g.players[1].life, g.players[0].life);
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: kaya, ability_index: 2, target: Some(Target::Player(1)), x_value: None }).expect("-5");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 3, "3 damage = 3 cards owned in exile");
+    assert_eq!(g.players[0].life, me + 3, "gained 3");
+}

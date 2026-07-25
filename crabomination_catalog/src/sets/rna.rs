@@ -3226,6 +3226,50 @@ pub fn hydroid_krasis() -> CardDefinition {
     }
 }
 
+/// Kaya, Orzhov Usurper — {1}{W}{B} loyalty-3 Planeswalker. +1: exile up to two
+/// target cards from a single graveyard. −1: exile target nonland permanent with
+/// mana value 1 or less. −5: deal damage to target player equal to the cards
+/// they own in exile and gain that much. (The +1 "gain 2 if a creature was
+/// exiled" rider and the −5's "target player" → opponent are minor collapses.)
+pub fn kaya_orzhov_usurper() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    CardDefinition {
+        name: "Kaya, Orzhov Usurper",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Kaya], ..Default::default() },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(2), of: None, single: true },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::Move {
+                    what: target_filtered(R::Nonland.and(R::ManaValueAtMost(1))),
+                    to: ZoneDest::Exile,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -5,
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer },
+                        amount: Value::CardsInExileOwnedBy(PlayerRef::Target(0)),
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::CardsInExileOwnedBy(PlayerRef::Target(0)) },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Biomancer's Familiar — {G}{U} 2/2 Mutant. Activated abilities of creatures
 /// you control cost {2} less (never below one mana). (Its {T} adapt-reset rider
 /// is omitted — no "adapt as though it had no counters" primitive yet.)

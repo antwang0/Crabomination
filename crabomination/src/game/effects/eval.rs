@@ -259,6 +259,11 @@ impl GameState {
                 .map(|&p| self.players[p].life_lost_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::CardsInExileOwnedBy(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&seat| self.exile.iter().filter(|c| c.owner == seat).count() as i32)
+                .sum(),
             Value::CreaturesAttackedWithThisTurn(p) => self
                 .resolve_players(p, ctx)
                 .iter()

@@ -424,6 +424,8 @@ pub enum Value {
     /// opponent has lost this turn" (Spinerock Knoll's hideaway gate).
     /// Backed by `Player.life_lost_this_turn`.
     LifeLostThisTurn(PlayerRef),
+    /// Number of cards `who` owns in the exile zone (Kaya, Orzhov Usurper's −5).
+    CardsInExileOwnedBy(PlayerRef),
     /// Distinct card types among cards in `who`'s graveyard (the delirium
     /// count as a number — Lucid Dreams' "draw X").
     CardTypesInGraveyard(PlayerRef),

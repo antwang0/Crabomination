@@ -45,8 +45,8 @@ Arrester's Admonition ride it. RNA's `catalog::sets::rna` is now deep;
 `scripts/set_gaps.py rna` shows the remaining gaps, all rares/mythics needing
 new primitives: Amplifire (reveal-until-creature, base P/T = 2× until next
 turn — needs `SetBasePowerToughness` + the reveal capture); Captive Audience;
-Domri/Dovin/Kaya (planeswalkers — Domri's riot-mana rider and Kaya's
-cards-owned-in-exile Value are the blockers); Knight of Sorrows / Lumbering
+Domri, Chaos Bringer / Dovin, Grand Arbiter (planeswalkers — Domri's riot-mana
+rider is the blocker); Knight of Sorrows / Lumbering
 Battlement (multi-block, CR 509.1g — `block_map` must go multi-valued);
 Lavinia (no-mana-spent counter + per-opponent MV-vs-lands cast lock); Mass
 Manipulation (X-many targets on a spell — `ApplyToTargets` caps are fixed, not

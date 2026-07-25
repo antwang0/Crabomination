@@ -9922,6 +9922,7 @@ static RNA: &[Factory] = &[
     super::rna::ravager_wurm,
     super::rna::incubation_druid,
     super::rna::biomancers_familiar,
+    super::rna::kaya_orzhov_usurper,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,
