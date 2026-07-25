@@ -2413,3 +2413,19 @@ fn rakdos_showstopper_coinflip_wipe() {
     assert!(g.battlefield_find(wurm).is_some(), "wurm flipped heads -> survived");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Rakdos, the Showstopper"), "Rakdos (a Demon) is not flipped for");
 }
+
+/// Ravager Wurm has riot and fights an opponent's creature on entry.
+#[test]
+fn ravager_wurm_riot_and_fight() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    // riot: pick haste (mode 0); the fight auto-targets the lone foe.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Mode(0),
+    ]));
+    let wurm = g.move_card_to_battlefield_for_test(0, catalog::ravager_wurm());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "4/5 fought and killed the 2/2");
+    let w = g.computed_permanent(wurm).unwrap();
+    assert!(w.keywords.contains(&Keyword::Haste), "riot granted haste");
+}

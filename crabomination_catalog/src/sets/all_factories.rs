@@ -9919,6 +9919,7 @@ static RNA: &[Factory] = &[
     super::rna::emergency_powers,
     super::rna::revival_revenge,
     super::rna::rakdos_the_showstopper,
+    super::rna::ravager_wurm,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

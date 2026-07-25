@@ -3226,6 +3226,25 @@ pub fn hydroid_krasis() -> CardDefinition {
     }
 }
 
+/// Ravager Wurm — {3}{R}{G}{G} 4/5 Wurm with Riot. ETB, choose up to one — it
+/// fights target creature you don't control. (The "destroy a land with a
+/// non-mana activated ability" mode is omitted — no such land filter yet.)
+pub fn ravager_wurm() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            riot(),
+            etb(Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Fight {
+                    attacker: Selector::This,
+                    defender: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) },
+                }),
+            }),
+        ],
+        ..body("Ravager Wurm", cost(&[generic(3), r(), g(), g()]), 4, 5, vec![CreatureType::Wurm], vec![])
+    }
+}
+
 /// Rakdos, the Showstopper — {4}{B}{R} 6/6 Demon with flying + trample. ETB:
 /// flip a coin for each creature that isn't a Demon, Devil, or Imp; destroy
 /// each whose coin comes up tails.
