@@ -2361,3 +2361,36 @@ fn emergency_powers_wheels_and_exiles() {
     assert_eq!(g.players[1].hand.len(), 7, "opponent drew 7");
     assert!(g.exile.iter().any(|c| c.id == spell), "Emergency Powers exiled itself");
 }
+
+/// Revival returns a small creature from the graveyard; Revenge halves each
+/// opponent's life and gains you that much.
+#[test]
+fn revival_revenge_split() {
+    // Revival (left half).
+    let mut g = two_player_game();
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let cast = g.add_card_to_hand(0, catalog::revival_revenge());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(corpse)), additional_targets: vec![], mode: None, x_value: None }).expect("cast Revival");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == corpse && c.controller == 0), "creature reanimated");
+
+    // Revenge (right half).
+    let mut g = two_player_game();
+    let cast = g.add_card_to_hand(0, catalog::revival_revenge());
+    g.players[1].life = 20;
+    let my_life = g.players[0].life;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSplitRight { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast Revenge");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 10, "opponent lost half of 20");
+    assert_eq!(g.players[0].life, my_life + 10, "gained the 10 lost");
+}

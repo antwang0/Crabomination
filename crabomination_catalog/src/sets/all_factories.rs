@@ -9917,6 +9917,7 @@ static RNA: &[Factory] = &[
     super::rna::awaken_the_erstwhile,
     super::rna::plaza_of_harmony,
     super::rna::emergency_powers,
+    super::rna::revival_revenge,
 ];
 static RTR: &[Factory] = &[
     super::rtr::lyev_skyknight,

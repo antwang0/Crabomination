@@ -3090,6 +3090,36 @@ pub fn eyes_everywhere() -> CardDefinition {
     }
 }
 
+/// Revival // Revenge — {W/B}{W/B} // {4}{W}{B} Sorcery // Sorcery. Revival
+/// returns a creature with mana value 3 or less from your graveyard to the
+/// battlefield; Revenge makes each opponent lose half their life (rounded up)
+/// and you gain that much. (The gain reads life the opponent lost this turn —
+/// exact in a duel.)
+pub fn revival_revenge() -> CardDefinition {
+    CardDefinition {
+        name: "Revival // Revenge",
+        cost: cost(&[hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(R::Creature.and(R::InGraveyard).and(R::ManaValueAtMost(3))),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(4), w(), b()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Seq(vec![
+                    Effect::LoseHalfLife { who: Selector::Player(PlayerRef::EachOpponent), rounded_up: true },
+                    Effect::GainLife { who: Selector::You, amount: Value::LifeLostThisTurn(PlayerRef::EachOpponent) },
+                ]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
 /// Plaza of Harmony — Gate land. ETB: gain 3 life if you control two or more
 /// Gates. {T}: add {C}. {T}: add one mana of any color a Gate you control could
 /// produce (approximated to any color).
