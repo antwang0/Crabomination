@@ -309,12 +309,11 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
 ///
 /// Approximation: the printed ability is {0} with a conditional {8}
 /// surcharge on the granted cast when it doesn't target your creature.
-/// The engine's `GrantMayPlay` permission has no per-cast conditional
-/// surcharge hook (needs a "costs {N} more unless the cast targets
-/// [filter]" rider on may-play permissions), so this ships as a
-/// once-per-turn {2} activation that exiles the graveyard IS card and
-/// grants a pay-own-cost, exile-after may-play — a flat {2} surcharge
-/// standing in for the printed {0}/{8} split.
+/// Fully wired: the printed {0} activation, once per turn, exiles the
+/// graveyard IS card and grants a pay-own-cost, exile-after may-play;
+/// `Effect::StampMayPlaySurcharge` adds the "{8} more unless the spell
+/// targets a creature you control" rider, evaluated against the chosen
+/// targets when the granted cast happens.
 pub fn mavinda_students_advocate() -> CardDefinition {
     let target_is_in_your_gy = crate::effect::shortcut::target_filtered(
         SelectionRequirement::HasCardType(CardType::Instant)
@@ -336,7 +335,8 @@ pub fn mavinda_students_advocate() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
-            mana_cost: ManaCost::new(vec![generic(2)]),
+            // Printed {0} — the cost lives in the conditional surcharge.
+            mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: target_is_in_your_gy,
@@ -348,6 +348,14 @@ pub fn mavinda_students_advocate() -> CardDefinition {
                     to_owner: false,
                     exile_after: true,
                     pay_own_cost: true, any_color: false,
+                },
+                // "If that spell doesn't target a creature you control, it
+                // costs {8} more to cast this way."
+                Effect::StampMayPlaySurcharge {
+                    what: Selector::LastMoved,
+                    cost: ManaCost::new(vec![generic(8)]),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
                 },
             ]),
             once_per_turn: true,

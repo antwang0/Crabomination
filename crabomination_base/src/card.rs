@@ -2345,6 +2345,14 @@ pub struct CardDefinition {
     /// regular `Keyword::Equip` cost. Defaults to `None`.
     #[serde(default)]
     pub equip_token_cost: Option<crate::mana::ManaCost>,
+    /// "When you cast this spell, copy it X times" where X is the cast's
+    /// `x_value` — the Storm-family cast-time copy rider driven by a
+    /// caster-chosen count (Plumb the Forbidden's "when you sacrifice a
+    /// creature this way, copy this spell", where the sacrifice count IS
+    /// the X). Copies are real, uncounterable stack objects above the
+    /// original, like Storm's. Defaults to false.
+    #[serde(default)]
+    pub copies_on_cast_x: bool,
     /// CR 702.95 — Soulbond bonus. When `Some`, this card carries the Soulbond
     /// keyword and, while paired (`CardInstance.soulbond_partner`), confers
     /// this bonus on BOTH itself and its partner. Defaults to `None`.
@@ -2765,6 +2773,12 @@ pub enum AdditionalCastCost {
         #[serde(default = "one_u32")]
         count: u32,
     },
+    /// "As an additional cost to cast this spell, you may sacrifice one or
+    /// more [filter]" (Plumb the Forbidden). The caster communicates the
+    /// chosen count as the cast's `x_value`; the cast pipeline rewrites
+    /// this into `SacrificePermanent { count: x }` before payment, so
+    /// downstream payment/trigger machinery is shared.
+    SacrificeAnyNumber { filter: SelectionRequirement },
     /// "As an additional cost, discard N card(s)." When `filter` is set, the
     /// discard is restricted to matching cards ("discard a land card" —
     /// Magmatic Insight); `None` allows any card (Big Score, Illuminate
@@ -4254,6 +4268,11 @@ pub struct CardInstance {
     /// (cleared together by the expiry sweep and when a cast consumes the
     /// permission). `None` for ordinary free may-play grants.
     pub granted_alt_cast_cost_eot: Option<crate::mana::ManaCost>,
+    /// Conditional surcharge on a granted may-play cast: "it costs [cost]
+    /// more to cast this way unless the spell targets a permanent matching
+    /// [filter]" (Mavinda, Students' Advocate's {8}-unless-your-creature).
+    /// Shares `may_play_until`'s lifetime.
+    pub granted_cast_surcharge_eot: Option<(crate::mana::ManaCost, SelectionRequirement)>,
     /// CR 201.3 — a card name chosen as this permanent entered (Pithing
     /// Needle, Phyrexian Revoker "as this enters, choose a card name").
     /// Persistent state read by `activate_ability` to suppress non-mana
@@ -4506,6 +4525,7 @@ impl CardInstance {
             granted_flashback_eot: None,
             granted_harmonize_eot: None,
             granted_alt_cast_cost_eot: None,
+            granted_cast_surcharge_eot: None,
             named_card: None,
             chosen_color: None,
             chosen_colors: Vec::new(),
@@ -4871,6 +4891,7 @@ impl CardInstance {
         self.granted_flashback_eot = None;
         self.granted_harmonize_eot = None;
         self.granted_alt_cast_cost_eot = None;
+        self.granted_cast_surcharge_eot = None;
         self.dealt_deathtouch_damage = false;
         self.dealt_damage_this_turn = false;
         self.damaged_by_this_turn.clear();
@@ -5106,6 +5127,9 @@ struct CardInstanceWire {
     /// back-compat.
     #[serde(default)]
     granted_alt_cast_cost_eot: Option<crate::mana::ManaCost>,
+    /// Conditional may-play surcharge (Mavinda). `#[serde(default)]`.
+    #[serde(default)]
+    granted_cast_surcharge_eot: Option<(crate::mana::ManaCost, SelectionRequirement)>,
     /// CR 201.3 named card (Pithing Needle / Phyrexian Revoker). Persistent
     /// state; `#[serde(default)]` so older snapshots load as `None`.
     #[serde(default)]
@@ -5298,6 +5322,7 @@ impl serde::Serialize for CardInstance {
             granted_flashback_eot: self.granted_flashback_eot.clone(),
             granted_harmonize_eot: self.granted_harmonize_eot.clone(),
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
+            granted_cast_surcharge_eot: self.granted_cast_surcharge_eot.clone(),
             named_card: self.named_card.clone(),
             chosen_color: self.chosen_color,
             chosen_colors: self.chosen_colors.clone(),
@@ -5447,6 +5472,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_flashback_eot = wire.granted_flashback_eot;
         c.granted_harmonize_eot = wire.granted_harmonize_eot;
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
+        c.granted_cast_surcharge_eot = wire.granted_cast_surcharge_eot;
         c.named_card = wire.named_card;
         c.chosen_color = wire.chosen_color;
         c.chosen_colors = wire.chosen_colors;

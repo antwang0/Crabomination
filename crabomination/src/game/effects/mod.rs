@@ -17365,6 +17365,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::StampMayPlaySurcharge { what, cost, filter } => {
+                // Chain after GrantMayPlay: stamp the "costs [cost] more
+                // unless the cast targets [filter]" rider (Mavinda).
+                for ent in self.resolve_selector(what, ctx) {
+                    let cid = match ent {
+                        EntityRef::Card(id) | EntityRef::Permanent(id) => id,
+                        _ => continue,
+                    };
+                    if let Some(card) = self.find_card_anywhere_mut(cid) {
+                        card.granted_cast_surcharge_eot =
+                            Some((cost.clone(), filter.clone()));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Cascade { max_mv } => {
                 // CR 702.85: exile cards from the top of the controller's
                 // library until a nonland card with MV < max_mv is exiled;

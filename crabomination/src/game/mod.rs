@@ -11117,6 +11117,15 @@ impl GameState {
         if let Some(Target::Permanent(c)) = primary {
             avoid.push(c);
         }
+        // Player slots must not double up: "each mode must target a
+        // different player" (Shadrix Silverquill). Track players already
+        // claimed by the primary slot / earlier slots and prefer an
+        // unclaimed one (falling back to any legal player only when every
+        // player is taken).
+        let mut used_players: Vec<usize> = Vec::new();
+        if let Some(Target::Player(pl)) = primary {
+            used_players.push(pl);
+        }
         let mut chosen: Vec<Target> = Vec::new();
         let mut slot: u8 = 1;
         while slot < 16 {
@@ -11128,10 +11137,17 @@ impl GameState {
                 self.evaluate_requirement_static(&req, t, controller, Some(source))
                     && self.check_target_legality(t, controller).is_ok()
             };
-            // Player slots: controller first (your-side bias), then opponent.
+            // Player slots: an unclaimed player first (controller-biased),
+            // then any legal player.
             let mut pick = [Target::Player(controller), Target::Player(opp)]
                 .into_iter()
-                .find(|t| is_legal(t));
+                .filter(|t| !matches!(t, Target::Player(pl) if used_players.contains(pl)))
+                .find(|t| is_legal(t))
+                .or_else(|| {
+                    [Target::Player(controller), Target::Player(opp)]
+                        .into_iter()
+                        .find(|t| is_legal(t))
+                });
             // Then a not-yet-claimed permanent, your own preferred.
             if pick.is_none() {
                 pick = self
@@ -11144,8 +11160,10 @@ impl GameState {
             }
             match pick {
                 Some(t) => {
-                    if let Target::Permanent(cid) = t {
-                        avoid.push(cid);
+                    match t {
+                        Target::Permanent(cid) => avoid.push(cid),
+                        Target::Player(pl) => used_players.push(pl),
+                        _ => {}
                     }
                     chosen.push(t);
                 }

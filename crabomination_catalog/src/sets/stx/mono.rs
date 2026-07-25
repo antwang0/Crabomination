@@ -76,38 +76,26 @@ pub fn mascot_exhibition() -> CardDefinition {
 /// sacrifice a creature this way, copy this spell. / You draw a card and
 /// you lose 1 life."
 ///
-/// Approximation: modeled as "sacrifice X of your creatures at
-/// resolution, then draw X + 1 cards and lose X + 1 life" (X = the
-/// cast-time `x_value`, read via `Value::XFromCost`; the `+ 1` is the
-/// original spell's own draw/life alongside its X copies). Still missing
-/// vs. the printed card: the sacrifice is a resolution-time effect, not
-/// a cast-time additional cost (the creatures are still on the
-/// battlefield while the spell is on the stack, and removal can't fizzle
-/// the copies), and the copies are not real spell objects — no per-copy
-/// magecraft triggers and no per-copy responses. Faithful support needs
-/// a "sacrifice-as-additional-cost → copy this spell per sacrifice"
-/// primitive.
+/// Fully wired: the sacrifice is a real CAST-TIME additional cost
+/// (`AdditionalCastCost::SacrificeAnyNumber` — the caster picks the
+/// count as the cast's X, creatures leave before the spell is on the
+/// stack), and each sacrifice mints a real, uncounterable stack copy
+/// via `copies_on_cast_x`. The original + X copies each resolve their
+/// own "draw a card, lose 1 life".
 pub fn plumb_the_forbidden() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
     CardDefinition {
         name: "Plumb the Forbidden",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificeAnyNumber {
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou),
+        }],
+        copies_on_cast_x: true,
         effect: Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::XFromCost,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
-            },
-            // X copies + the original each draw 1 / lose 1 → X + 1 total.
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Sum(vec![Value::XFromCost, Value::Const(1)]),
-            },
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Sum(vec![Value::XFromCost, Value::Const(1)]),
-            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
         ]),
         ..Default::default()
     }

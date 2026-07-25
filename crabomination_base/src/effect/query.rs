@@ -785,7 +785,8 @@ impl Effect {
             Effect::CopySpellUnlessPaid { what, count, .. } => {
                 sel_has_target(what) || value_has_target(count)
             }
-            Effect::GrantMayPlay { what, .. } => sel_has_target(what),
+            Effect::GrantMayPlay { what, .. }
+            | Effect::StampMayPlaySurcharge { what, .. } => sel_has_target(what),
             Effect::GrantCastBackFromGraveyard { what } => sel_has_target(what),
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
             Effect::AddCardTypeIndefinitely { what, .. } => sel_has_target(what),
@@ -1221,6 +1222,7 @@ impl Effect {
             | Effect::BecomeCreatureType { what, .. }
             | Effect::AddCreatureTypes { what, .. }
             | Effect::GrantMayPlay { what, .. }
+            | Effect::StampMayPlaySurcharge { what, .. }
             | Effect::DoubleCountersOnEach { what, .. }
             | Effect::DoubleAllCountersOn { what }
             | Effect::NameCreatureType { what }
@@ -1313,6 +1315,25 @@ impl Effect {
             | Effect::MayPayX { body, .. } => {
                 body.prefers_friendly_target()
             }
+            // "TARGET player draws a card" is a gift — aim slot 0 at the
+            // caster (Shadrix Silverquill's draw mode is the mode you take
+            // yourself in the canonical two-pick line). A non-targeted
+            // Draw (who: You / EachPlayer) declares no preference, so
+            // hostile siblings (Keranos's reveal-bolt branch) keep their
+            // opponent-facing default.
+            Effect::Draw { who, .. } => matches!(
+                who,
+                Selector::Player(crate::effect::PlayerRef::Target(_))
+                    | Selector::Target(_)
+                    | Selector::TargetFiltered { .. }
+            ),
+            // Modal: friendly when the first slot-owning mode (default
+            // picks order — slot 0's owner) is friendly.
+            Effect::ChooseN { picks, modes } => picks
+                .iter()
+                .filter_map(|&i| modes.get(i as usize))
+                .find(|m| m.requires_target())
+                .is_some_and(|m| m.prefers_friendly_target()),
             Effect::Process { then, .. } => then.prefers_friendly_target(),
             // Reanimate-style spells move target → caster's hand or battlefield.
             // Without this, `auto_target_for_effect` picks an opp's battlefield

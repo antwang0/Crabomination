@@ -200,6 +200,11 @@ fn mizzixs_mastery_recasts_graveyard_instant() {
     drain_stack(&mut g);
 
     assert_eq!(g.players[1].life, life - 3, "recast Bolt dealt 3");
+    // CR 707.12 — a COPY was cast; the exiled original stays in exile.
+    assert!(g.exile.iter().any(|c| c.id == bolt),
+        "the original Bolt remains exiled (a copy was cast)");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "the original never returns to the graveyard");
 }
 
 /// Overloaded Mizzix's Mastery free-casts every instant/sorcery in the

@@ -141,17 +141,20 @@ pub fn tainted_pact() -> CardDefinition {
 /// graveyard and cast a copy of it for free. Overload {5}{R}{R}{R}: do that
 /// for each instant/sorcery in your graveyard.
 ///
-/// The exiled card itself is cast from exile (a faithful-enough stand-in for
-/// "copy it"); under overload each card is exiled and free-cast in turn.
+/// Faithful: the exiled card stays in exile and a COPY is cast for free
+/// (CR 707.12, `CastWithoutPayingImmediate { copy: true }`); under overload
+/// each card is exiled and its copy free-cast in turn.
 pub fn mizzixs_mastery() -> CardDefinition {
     let is_filter = SelectionRequirement::HasCardType(CardType::Instant)
         .or(SelectionRequirement::HasCardType(CardType::Sorcery));
+    // "You may cast a COPY of the exiled card" (CR 707.12): the original
+    // stays in exile; the copy is cast without paying its mana cost.
     let free_cast = |what| Effect::CastWithoutPayingImmediate {
         what,
         source_zone: Zone::Exile,
         exile_after: false,
-                copy: false,
-            };
+        copy: true,
+    };
     CardDefinition {
         name: "Mizzix's Mastery",
         cost: cost(&[generic(3), r()]),

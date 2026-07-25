@@ -7059,3 +7059,26 @@ in the topical sections above, are:
   snapshot round-trip tests for new `#[serde(default)]` fields; a
   mana-paid-for-optional audit event; per-cast-face metrics. (Ward is now
   factored into hostile auto-targeting — un-warded candidates first.)
+
+## 1v1-collapsed "target player" effects (multiplayer worklist)
+
+The engine plays 1v1, so several printed "target player" clauses are
+collapsed to `You` / `EachOpponent` — observably identical in two-player
+games, wrong in multiplayer. When a multiplayer push lands, convert each
+to a real player-target slot (the Time Warp fix in the 2026-07 STX audit
+is the template: `PlayerRef::Target(0)` + a `Player` slot filter):
+
+| Card | Where | Printed scope | Collapsed to |
+|---|---|---|---|
+| Inquisition of Kozilek | `decks/spells.rs` | target player | EachOpponent |
+| Tendrils of Agony | `stx/extras_01.rs` | target player loses 2 | Drain EachOpponent |
+| Callous Bloodmage (mode 3) | `stx/witherbloom.rs` | target player's graveyard | ExilePlayerGraveyard EachOpponent |
+| Quandrix Command (mode 3) | `stx/quandrix.rs` | target player shuffles ≤3 target cards | You, no card targeting |
+| Primal Command (mode 2) | `decks/modern.rs` | target player shuffles graveyard | You only |
+| Tempted by the Oriq | `stx/extras_00.rs` | per-opponent steal | single steal (max_targets 1) |
+| Multiple Choice (X=2) | `stx/mono.rs` | "may choose a player" (any, incl. self) | EachOpponent returns |
+| Devastating Mastery (alt rider) | `stx/silverquill.rs` | "an opponent chooses" | EachOpponent (= the opponent in 1v1) |
+
+Also multiplayer-sensitive but structural: `Punisher`-heuristic choices
+(the affected player auto-picks; UI prompting for opponents is tracked
+above), and `EachPlayerKeepsOneSacrificeRest` auto-picks by highest MV.

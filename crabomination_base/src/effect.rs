@@ -4830,6 +4830,17 @@ pub enum Effect {
         #[serde(default)]
         any_color: bool,
     },
+    /// Stamp a conditional surcharge onto cards just granted a may-play
+    /// permission (chain after `GrantMayPlay` in a `Seq`): "it costs
+    /// [cost] more to cast this way unless the spell targets a permanent
+    /// matching [filter]" — Mavinda, Students' Advocate's {8} rider.
+    /// Writes `CardInstance.granted_cast_surcharge_eot`; consumed by the
+    /// permission-cast path at target-validation time.
+    StampMayPlaySurcharge {
+        what: Selector,
+        cost: crate::mana::ManaCost,
+        filter: crate::card::SelectionRequirement,
+    },
     /// Grant a one-shot permission to cast `what`'s MDFC **back face from the
     /// graveyard**, paying the back's cost (Pestilent Cauldron — "sacrifice
     /// this, then you may cast Restorative Burst transformed"). Sets the

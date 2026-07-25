@@ -5240,6 +5240,17 @@ impl GameState {
         if kicked && let Some(kc) = &card.definition.kicker_action_cost {
             additional_costs.push(kc.clone());
         }
+        // "Sacrifice one or more [filter]" (Plumb the Forbidden): the caster
+        // picked the count as the cast's X — concretize into the shared
+        // SacrificePermanent payment path.
+        for c in additional_costs.iter_mut() {
+            if let crate::card::AdditionalCastCost::SacrificeAnyNumber { filter } = c {
+                *c = crate::card::AdditionalCastCost::SacrificePermanent {
+                    filter: filter.clone(),
+                    count: x_value.unwrap_or(0),
+                };
+            }
+        }
         if !additional_costs.is_empty() && !self.additional_costs_payable(p, &additional_costs) {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
@@ -5639,6 +5650,10 @@ impl GameState {
                 }).count();
                 matching >= *count as usize
             }
+            // "Sacrifice one or more" — zero is a legal choice, so the cost
+            // is always payable (the cast pipeline concretizes it into a
+            // counted SacrificePermanent before payment).
+            A::SacrificeAnyNumber { .. } => true,
             A::Discard { count, filter } => {
                 self.players[p]
                     .hand
@@ -5794,6 +5809,9 @@ impl GameState {
         let mut discard_override = chosen_discards;
         for cost in costs {
             match cost {
+                // Concretized into SacrificePermanent before payment; a raw
+                // instance here (flashback path etc.) means count 0 — no-op.
+                A::SacrificeAnyNumber { .. } => {}
                 A::SacrificePermanent { filter, count } => {
                     // Honor the player's explicit pick(s) when present and
                     // valid; auto-pick the `count` cheapest matching permanents
@@ -6334,6 +6352,13 @@ impl GameState {
                                 .saturating_sub(1),
                         )
                     })
+            })
+            // Caster-chosen copy count via the cast's X (Plumb the
+            // Forbidden — one copy per additional-cost sacrifice).
+            .or_else(|| {
+                card.definition
+                    .copies_on_cast_x
+                    .then(|| (card.definition.clone(), x_value))
             });
 
         // CR 608.2b — remember whether the primary target is a battlefield
@@ -7578,7 +7603,23 @@ impl GameState {
         // the permission (Lorehold, the Historian). When present, the cast
         // isn't free — the controller pays this cost instead of the card's
         // full mana cost.
-        let alt_cast_cost = card_ref.granted_alt_cast_cost_eot.clone();
+        let mut alt_cast_cost = card_ref.granted_alt_cast_cost_eot.clone();
+        // "It costs [N] more to cast this way unless the spell targets a
+        // permanent matching [filter]" (Mavinda's {8} rider). Evaluated
+        // against the chosen targets before payment.
+        if let Some((surcharge, filt)) = card_ref.granted_cast_surcharge_eot.clone() {
+            let targets_match = target
+                .iter()
+                .chain(additional_targets.iter())
+                .any(|t| self.evaluate_requirement_static(&filt, t, p, None));
+            if !targets_match {
+                let extra = surcharge.cmc();
+                match alt_cast_cost.as_mut() {
+                    Some(c) => c.symbols.push(crate::mana::generic(extra)),
+                    None => alt_cast_cost = Some(surcharge),
+                }
+            }
+        }
         // Two ways to invoke a free cast: a per-card `may_play_until`
         // permission (Discovery / Paradigm / etc.), or an Omniscience-style
         // standing static letting the controller free-cast their own hand

@@ -661,15 +661,16 @@ fn velomachus_attack_exiles_is_card_from_top_of_library_and_grants_may_play() {
 
 #[test]
 fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
-    // Mavinda's {2} activation: target IS card in your gy moves to exile
-    // with may_play_until + exile_after + pay-own-cost stamped (cost +{2},
-    // not free). Once-per-turn gate enforced.
+    // Mavinda's printed {0} activation: target IS card in your gy moves
+    // to exile with may_play_until + exile_after + pay-own-cost stamped,
+    // plus the {8}-unless-targets-your-creature surcharge rider.
+    // Once-per-turn gate enforced.
     let mut g = two_player_game();
     let mavinda = g.add_card_to_battlefield(0, catalog::mavinda_students_advocate());
     if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == mavinda) {
         c.summoning_sick = false; c.tapped = false;
     }
-    g.players[0].mana_pool.add_colorless(2);
+    // Printed cost is {0} — no mana floated.
     // Seed a Lightning Bolt in P0's graveyard.
     let mut bolt = crabomination::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
     bolt.controller = 0;
@@ -678,7 +679,7 @@ fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(crabomination::game::types::Target::Permanent(bolt_id)), additional_targets: Vec::new(), x_value: None }).expect("Mavinda activation (cost {2})");
+        target: Some(crabomination::game::types::Target::Permanent(bolt_id)), additional_targets: Vec::new(), x_value: None }).expect("Mavinda activation (printed {0})");
     drain_stack(&mut g);
 
     let exiled = g.exile.iter().find(|c| c.id == bolt_id)
@@ -688,11 +689,11 @@ fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
     assert_eq!(perm.player, 0, "permission goes to Mavinda's controller");
     // Pay-own-cost: the may-play cast isn't free — Bolt's own {R} is stamped.
     assert_eq!(exiled.granted_alt_cast_cost_eot.as_ref().map(|c| c.cmc()), Some(1),
-        "cast-this-way pays the spell's own cost (+{{2}} paid on activation)");
+        "cast-this-way pays the spell's own cost");
+    assert!(exiled.granted_cast_surcharge_eot.is_some(),
+        "the {{8}}-unless-targets-your-creature surcharge is stamped");
 
-    // Second activation in the same turn → rejected (once-per-turn), with
-    // mana available so the rejection is specifically the once-per-turn gate.
-    g.players[0].mana_pool.add_colorless(2);
+    // Second activation in the same turn → rejected (once-per-turn).
     let mut bolt2 = crabomination::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
     bolt2.controller = 0;
     let bolt2_id = bolt2.id;
@@ -1726,4 +1727,61 @@ fn velomachus_cap_follows_live_power() {
         g.exile.iter().any(|c| c.id == big && c.may_play_until.is_some()),
         "7-MV sorcery within the live-power cap was exiled with may-play"
     );
+}
+
+/// Mavinda's surcharge: the granted cast costs {8} more unless it
+/// targets a creature you control (audit fix — was a flat {2}).
+#[test]
+fn mavinda_surcharge_applies_unless_targeting_own_creature() {
+    use crabomination::game::types::Target;
+    // Case 1: granted Giant Growth aimed at YOUR creature — costs just {G}.
+    let mut g = two_player_game();
+    let mavinda = g.add_card_to_battlefield(0, catalog::mavinda_students_advocate());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == mavinda) {
+        c.summoning_sick = false;
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut gg = crabomination::card::CardInstance::new(g.next_id(), catalog::giant_growth(), 0);
+    gg.controller = 0;
+    let gg_id = gg.id;
+    g.players[0].graveyard.push(gg);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mavinda, ability_index: 0,
+        target: Some(Target::Permanent(gg_id)), additional_targets: Vec::new(), x_value: None,
+    }).expect("Mavinda activation");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: gg_id,
+        target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("targets your creature: no surcharge, {G} suffices");
+
+    // Case 2: aimed at the OPPONENT's creature — {G} alone is rejected
+    // (needs {G} + {8}).
+    let mut g = two_player_game();
+    let mavinda = g.add_card_to_battlefield(0, catalog::mavinda_students_advocate());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == mavinda) {
+        c.summoning_sick = false;
+    }
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut gg = crabomination::card::CardInstance::new(g.next_id(), catalog::giant_growth(), 0);
+    gg.controller = 0;
+    let gg_id = gg.id;
+    g.players[0].graveyard.push(gg);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mavinda, ability_index: 0,
+        target: Some(Target::Permanent(gg_id)), additional_targets: Vec::new(), x_value: None,
+    }).expect("Mavinda activation");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    assert!(g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: gg_id,
+        target: Some(Target::Permanent(enemy)), additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "opponent-creature target: G alone can't cover the +8");
+    // With {8} more floated the cast goes through.
+    g.players[0].mana_pool.add_colorless(8);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: gg_id,
+        target: Some(Target::Permanent(enemy)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("with 8 more the surcharged cast resolves");
 }

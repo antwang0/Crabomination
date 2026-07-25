@@ -351,17 +351,17 @@ pub fn shadrix_silverquill() -> CardDefinition {
                             definition: stx_inkling,
                         },
                         // Mode 1: "Target player draws a card and loses 1
-                        // life" — collapsed to the controller (see doc:
-                        // the trigger pipeline can only auto-fill one
-                        // target slot, and this is the mode you aim at
-                        // yourself in the canonical line).
+                        // life." Each picked mode owns its own player slot
+                        // (ChooseN rebinds each mode's slot as Target(0));
+                        // the auto-filler biases this one to the controller
+                        // and keeps player slots distinct across modes.
                         Effect::Seq(vec![
                             Effect::Draw {
-                                who: Selector::You,
+                                who: Selector::Player(PlayerRef::Target(0)),
                                 amount: Value::Const(1),
                             },
                             Effect::LoseLife {
-                                who: Selector::You,
+                                who: Selector::Player(PlayerRef::Target(0)),
                                 amount: Value::Const(1),
                             },
                         ]),
