@@ -338,15 +338,25 @@ pub fn quill_blade_laureate() -> CardDefinition {
 /// Prepare spell: sorcery — printed "One or two target creatures each
 /// get +2/+2 until end of turn."
 ///
-/// Approximation: the engine's target plumbing here is single-slot, so
-/// the spell pumps one target creature +2/+2 until end of turn; the
-/// optional second target is dropped.
+/// The pump is the printed "one or two target creatures each get
+/// +2/+2" via `ApplyToTargets { min 1, max 2 }` (audit fix: the second
+/// target used to be dropped).
 pub fn spiritcall_enthusiast() -> CardDefinition {
     let spell = spell_back(
         "Scrollboost",
         cost(&[generic(1), w()]),
         CardType::Sorcery,
-        pump_target(2, 2),
+        Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 1,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            }),
+        },
     );
     let mut front = vanilla_front(
         "Spiritcall Enthusiast",

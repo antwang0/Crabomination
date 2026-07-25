@@ -1930,3 +1930,54 @@ fn restoration_seminar_rejects_nonpermanent_targets() {
         additional_targets: vec![], mode: None, x_value: None,
     }).is_err(), "an instant in the graveyard is not a legal target");
 }
+
+// ── Tier-1 simplification rewires (2026-07) ─────────────────────────────────
+
+/// Stress Dream's damage is "up to one target" — castable with no
+/// target for pure card selection; the look-half bottoms the unpicked
+/// card instead of leaving it on top.
+#[test]
+fn stress_dream_no_target_and_bottoms_unpicked() {
+    let mut g = two_player_game();
+    // Top-down: Bolt, Bear, then islands.
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::stress_dream());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable with zero targets (up to one)");
+    drain_stack(&mut g);
+    // One of the top two went to hand, the other to the bottom: the new
+    // library top must be an Island.
+    assert_eq!(g.players[0].library.first().unwrap().definition.name, "Island",
+        "the unpicked card was bottomed, not left on top");
+    assert_eq!(g.players[0].hand.len(), 1, "one of the two to hand");
+}
+
+/// Scrollboost hits one OR two targets, each +2/+2.
+#[test]
+fn scrollboost_pumps_two_targets() {
+    let mut g = two_player_game();
+    let sc = g.add_card_to_battlefield(0, catalog::spiritcall_enthusiast());
+    g.battlefield_find_mut(sc).unwrap()
+        .add_counters(crabomination::card::CounterType::Prepared, 1);
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: sc,
+        target: Some(Target::Permanent(b1)),
+        additional_targets: vec![Target::Permanent(b2)],
+        mode: None, x_value: None,
+    }).expect("Scrollboost castable at two targets");
+    drain_stack(&mut g);
+    for b in [b1, b2] {
+        let c = g.computed_permanent(b).unwrap();
+        assert_eq!((c.power, c.toughness), (4, 4), "each target gets +2/+2");
+    }
+}

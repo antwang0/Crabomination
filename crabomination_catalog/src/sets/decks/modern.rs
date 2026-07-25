@@ -104,18 +104,27 @@ pub fn manamorphose() -> CardDefinition {
 /// Sleight of Hand — {U} Sorcery. Look at the top two cards of your library,
 /// put one into your hand, the other on the bottom.
 ///
-/// Approximation: `Scry 1 + Draw 1` — close enough to "look at 2, take the
-/// better one" since Scry can put the unwanted card on the bottom before the
-/// draw resolves (slightly worse than the real card's view of two).
+/// Faithful: `LookPickToHand` over the top two — one to hand, the other
+/// bottomed (audit fix; the old Scry 1 + Draw 1 stand-in left the
+/// unpicked card viewable on top).
 pub fn sleight_of_hand() -> CardDefinition {
     CardDefinition {
         name: "Sleight of Hand",
         cost: cost(&[u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-        ]),
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+                rest_to_graveyard: false,
+                pick_filter: None,
+                take: None,
+                to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
+                optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: true,
+        },
         ..Default::default()
     }
 }

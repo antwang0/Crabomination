@@ -832,15 +832,24 @@ pub fn stirring_honormancer() -> CardDefinition {
         toughness: 5,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::RevealUntilFind {
+            // "Look at the top X cards ... put one of those cards (ANY
+            // card, your pick) into your hand and the rest into your
+            // graveyard" (audit fix: was reveal-until-creature, which
+            // both restricted the pick and took the first match).
+            effect: Effect::LookPickToHand {
                 who: PlayerRef::You,
-                find: SelectionRequirement::Creature,
-                to: ZoneDest::Hand(PlayerRef::You),
-                cap: Value::CountOf(Box::new(Selector::EachPermanent(
+                count: Value::CountOf(Box::new(Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ))),
-                life_per_revealed: 0,
-                miss_dest: crate::effect::RevealMissDest::Graveyard,
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: None,
+                to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
+                optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
             },
         }],
         ..Default::default()
@@ -3135,15 +3144,22 @@ pub fn geometers_arthropod() -> CardDefinition {
         },
         power: 1,
         toughness: 4,
-        triggered_abilities: vec![cast_has_x_trigger(Effect::RevealUntilFind {
+        // "Look at the top X cards ... put ONE OF THEM into your hand and
+        // the rest on the bottom in a random order" — a real look-and-pick
+        // (audit fix: the reveal-until-find stand-in always took the top
+        // card).
+        triggered_abilities: vec![cast_has_x_trigger(Effect::LookPickToHand {
             who: PlayerRef::You,
-            find: SelectionRequirement::Any,
-            to: ZoneDest::Hand(PlayerRef::You),
-            cap: Value::XFromCost,
-            life_per_revealed: 0,
-            // Printed: "Put one of them into your hand and the rest on
-            // the bottom of your library in a random order."
-            miss_dest: crate::effect::RevealMissDest::BottomRandom,
+            count: Value::XFromCost,
+            rest_to_graveyard: false,
+            pick_filter: None,
+            take: None,
+            to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
+            optional: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: true,
         })],
         ..Default::default()
     }

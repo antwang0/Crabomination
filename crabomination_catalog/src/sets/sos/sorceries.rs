@@ -1860,10 +1860,9 @@ pub fn zimones_experiment() -> CardDefinition {
 /// instead put two of those cards into your hand and the third on the
 /// bottom of your library."
 ///
-/// Mainline: look at top 3, take one to hand, rest to the bottom
-/// (`LookPickToHand`). With both an instant and a sorcery in your
-/// graveyard, the "take two to hand" upgrade is approximated as
-/// `Scry 3 → Draw 2`.
+/// Both branches use `LookPickToHand` over the same top three — the
+/// upgraded branch takes two to hand (audit fix; previously Scry 3 →
+/// Draw 2).
 pub fn flow_state() -> CardDefinition {
     use crate::mana::u;
     use crate::card::{Predicate, Zone};
@@ -1884,16 +1883,19 @@ pub fn flow_state() -> CardDefinition {
                     filter: SelectionRequirement::HasCardType(CardType::Sorcery),
                 }),
             ]),
-            then: Box::new(Effect::Seq(vec![
-                Effect::Scry {
-                    who: PlayerRef::You,
-                    amount: Value::Const(3),
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-            ])),
+            then: Box::new(Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: false,
+                pick_filter: None,
+                take: Some(Value::Const(2)),
+                to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
+                optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: true,
+            }),
             else_: Box::new(Effect::LookPickToHand {
                 who: PlayerRef::You,
                 count: Value::Const(3),

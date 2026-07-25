@@ -689,11 +689,16 @@ pub fn proctors_gaze() -> CardDefinition {
         cost: cost(&[generic(2), g(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-                ),
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            // "Return UP TO ONE target nonland permanent" — the bounce may
+            // be declined to just fetch (audit fix: was mandatory).
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                }),
             },
             Effect::Search {
                 who: PlayerRef::You,
@@ -878,15 +883,9 @@ pub fn vibrant_outburst() -> CardDefinition {
 /// top two cards of your library. Put one of those cards into your hand
 /// and the other on the bottom of your library."
 ///
-/// Approximation (push modern_decks batch 43): the "look at top two,
-/// put one in hand and the other on the bottom" half is wired as
-/// **scry 2 then draw 1** — the engine has no "look at N, choose K
-/// to hand, rest to bottom" primitive, but Scry 2 → Draw 1 is
-/// gameplay-equivalent for the typical play pattern: the player sees
-/// both cards, puts the unwanted one on the bottom, and draws the
-/// other. (The corner case where the player wants to keep both
-/// cards on top — Scry 2 keep both → Draw the top — is also handled
-/// faithfully.) The 5-damage half is wired against a creature target.
+/// Faithful (audit fixes): the 5 damage is "UP TO one target creature"
+/// (`ApplyToTargets min 0`), and the card-selection half is a real
+/// `LookPickToHand` over the top two — one to hand, the other bottomed.
 pub fn stress_dream() -> CardDefinition {
     use crate::mana::{r, u};
     CardDefinition {
@@ -894,17 +893,27 @@ pub fn stress_dream() -> CardDefinition {
         cost: cost(&[generic(3), u(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::Const(5),
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(5),
+                }),
             },
-            Effect::Scry {
+            Effect::LookPickToHand {
                 who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+                count: Value::Const(2),
+                rest_to_graveyard: false,
+                pick_filter: None,
+                take: None,
+                to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
+                optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: true,
             },
         ]),
         ..Default::default()
