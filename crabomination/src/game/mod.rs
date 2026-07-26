@@ -8507,11 +8507,27 @@ impl GameState {
         cost: &crate::mana::ManaCost,
         events: &mut Vec<GameEvent>,
     ) -> bool {
-        let answer = self.decider.decide(&Decision::OptionalTrigger {
-            source: card_id,
-            description: "Cast for madness".to_string(),
-        });
-        if !matches!(answer, DecisionAnswer::Bool(true)) {
+        // AutoDecider's blanket "no" made Madness a dead keyword for every
+        // server-hosted seat (this ask never suspends — it sits inside the
+        // synchronous discard path). Auto seats now use a policy: cast
+        // whenever the floated pool can already pay (madness is a discount;
+        // declining with the mana up is strictly worse). Scripted deciders
+        // keep full control. Real interactive choice needs a resumable
+        // discard flow — TODO.md.
+        let take = match self.decider.kind() {
+            crate::decision::DeciderKind::Auto => {
+                let mut probe = self.players[p].mana_pool.clone();
+                probe.pay(cost).is_ok()
+            }
+            _ => matches!(
+                self.decider.decide(&Decision::OptionalTrigger {
+                    source: card_id,
+                    description: "Cast for madness".to_string(),
+                }),
+                DecisionAnswer::Bool(true)
+            ),
+        };
+        if !take {
             return false;
         }
         // Pre-flight: try paying. On failure (unaffordable pool), decline.
@@ -9019,13 +9035,27 @@ impl GameState {
             })
         });
         let Some((card_id, n)) = cand else { return false; };
-        let answer = self.decider.decide(&Decision::OptionalTrigger {
-            source: card_id,
-            description: format!(
-                "Dredge {n}: mill {n} card(s) and return this card to your hand instead of drawing?"
+        // AutoDecider's blanket "no" made Dredge fully inert (this ask sits
+        // in the synchronous draw path and never suspends). Auto seats now
+        // dredge while the library stays comfortably deep — recursion plus
+        // graveyard fuel usually beats a blind draw, but never dredge into
+        // deck-out range. Scripted deciders keep full control; interactive
+        // choice needs a resumable draw flow (TODO.md).
+        let take = match self.decider.kind() {
+            crate::decision::DeciderKind::Auto => {
+                self.players[p].library.len() > (n as usize) + 10
+            }
+            _ => matches!(
+                self.decider.decide(&Decision::OptionalTrigger {
+                    source: card_id,
+                    description: format!(
+                        "Dredge {n}: mill {n} card(s) and return this card to your hand instead of drawing?"
+                    ),
+                }),
+                DecisionAnswer::Bool(true)
             ),
-        });
-        if !matches!(answer, DecisionAnswer::Bool(true)) {
+        };
+        if !take {
             return false;
         }
         // Mill N from the top of the library.
@@ -12857,6 +12887,56 @@ impl GameState {
                 // set and enforces min/max, so no sanitisation here.
                 self.stashed_resolution_answer = Some(DecisionAnswer::Cards(ids.clone()));
                 Ok(Vec::new())
+            }
+            PendingEffectState::MayCastExiledPending { player, card, decline } => {
+                let DecisionAnswer::Bool(yes) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = Vec::new();
+                let auto_target = self
+                    .find_card_anywhere(card)
+                    .map(|c| c.definition.effect.clone())
+                    .and_then(|eff| {
+                        self.auto_target_for_effect_avoiding(&eff, player, Some(card))
+                    });
+                let cast = *yes
+                    && self
+                        .cast_card_for_free(
+                            player,
+                            card,
+                            crate::card::Zone::Exile,
+                            auto_target,
+                            vec![],
+                            None,
+                            None,
+                            false,
+                        )
+                        .map(|mut ev| {
+                            events.append(&mut ev);
+                            true
+                        })
+                        .unwrap_or(false);
+                if !cast {
+                    // Zone moves mirror each keyword's printed decline path.
+                    // (No per-move event today — matches the pre-suspension
+                    // behavior of these arms' decline branches.)
+                    match decline {
+                        crate::game::types::MayCastDecline::LeaveInExile => {}
+                        crate::game::types::MayCastDecline::ToHand => {
+                            if let Some(c) = Self::take_card(&mut self.exile, card) {
+                                let owner = c.owner;
+                                self.players[owner].hand.push(c);
+                            }
+                        }
+                        crate::game::types::MayCastDecline::ToBottom => {
+                            if let Some(c) = Self::take_card(&mut self.exile, card) {
+                                let owner = c.owner;
+                                self.players[owner].library.push(c);
+                            }
+                        }
+                    }
+                }
+                Ok(events)
             }
         }
     }

@@ -36,13 +36,16 @@ fn possibility_storm_digs_to_a_shared_type_card() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
-    // The cast bolt was exiled (countered), so player 1 took no damage from it.
-    assert_eq!(g.players[1].life, 20, "the cast spell was exiled, not resolved");
-    // The dug Instant + the exiled spell + the non-matching card all end up
-    // bottomed; nothing stays on the battlefield from the cast.
+    // The cast bolt was exiled (countered) and never resolved — but the
+    // STORM-DUG bolt is now free-cast (AutoDecider accepts free casts; the
+    // blanket decline was the dead-keyword bug) and burns the opponent.
+    assert_eq!(g.players[1].life, 17, "the dug card was cast for free; the original never resolved");
     assert!(g.battlefield.iter().all(|c| c.definition.name != "Lightning Bolt"));
-    // Library is back to its prior size (everything exiled this way bottomed,
-    // and the cast spell joined them) minus none — the dug Instant may have
-    // been declined-to-cast (AutoDecider declines), so it returns too.
-    assert!(g.players[0].library.len() >= lib_before, "exiled cards bottomed back");
+    // The original cast spell bottoms; the dug bolt resolved to the
+    // graveyard — library ends at its prior size.
+    assert!(g.players[0].library.len() >= lib_before - 1, "exiled cards bottomed back");
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "the dug bolt resolved",
+    );
 }

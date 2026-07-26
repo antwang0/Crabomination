@@ -112,9 +112,11 @@ fn madness_zero_cost_basking_rootwalla_cast_from_exile_when_accepted() {
 
 #[test]
 fn madness_declined_sends_card_to_graveyard() {
-    // The AutoDecider declines "you may" prompts by default, so an ordinary
-    // discard of a Madness card still lands it in the graveyard (CR 702.35b).
+    // AutoDecider now casts affordable madness cards (the blanket decline
+    // was the dead-keyword bug), so the CR 702.35b decline path is
+    // exercised with a scripted "no".
     let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
     let rw = g.add_card_to_hand(0, catalog::basking_rootwalla());
 
     let mut events = vec![];

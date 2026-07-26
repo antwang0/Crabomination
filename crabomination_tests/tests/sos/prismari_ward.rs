@@ -1329,12 +1329,14 @@ fn improvisation_capstone_exiles_four_cards_and_registers_paradigm() {
     }).expect("Improvisation Capstone castable");
     drain_stack(&mut g);
 
-    // 4 cards from library should be exiled (Improvisation Capstone
-    // itself also lands in exile via exile_on_resolve).
-    let exiled_bolts = g.exile.iter().filter(|c|
+    // 4 cards exiled from the library AND free-cast (AutoDecider now
+    // accepts the "cast without paying?" offers — the blanket decline
+    // that stranded them in exile was the dead-keyword bug). Cast bolts
+    // resolve to the graveyard.
+    let cast_bolts = g.players[0].graveyard.iter().filter(|c|
         c.definition.name == "Lightning Bolt"
     ).count();
-    assert_eq!(exiled_bolts, 4, "exiled top 4 library cards");
+    assert_eq!(cast_bolts, 4, "top 4 exiled and free-cast (resolved to graveyard)");
     let capstone_in_exile = g.exile.iter().any(|c|
         c.definition.name == "Improvisation Capstone"
     );

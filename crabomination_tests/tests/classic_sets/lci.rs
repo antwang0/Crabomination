@@ -2143,15 +2143,20 @@ fn curator_of_suns_creation_rediscovers() {
     // Four cheap nonland cards on top so each discover hits immediately.
     for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
     g.active_player_idx = 0;
-    let hand_before = g.players[0].hand.len();
-    // AutoDecider declines the "cast for free" prompt → discovered card to hand.
+    let bears_before =
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    // AutoDecider now CASTS the discover hit for free (declining a free
+    // spell was the old dead-keyword bug) → the bears resolve onto the
+    // battlefield, once per discover.
     let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
     ctx.source = Some(curator);
     let events = g.resolve_effect(&Effect::Discover { n: Value::Const(3), filter: None }, &ctx).unwrap();
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
-    // Initial discover + Curator's re-discover = two cards to hand.
-    assert_eq!(g.players[0].hand.len(), hand_before + 2, "discovered twice");
+    // Initial discover + Curator's re-discover = two free bears cast.
+    let bears_after =
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears_after, bears_before + 2, "discovered and free-cast twice");
 }
 
 /// Didact Echo draws on ETB and gains flying at descend 4.
@@ -3221,10 +3226,14 @@ fn chimil_uncounterable_and_end_step_discover() {
     assert!(g.caster_grants_uncounterable(0, &spell), "your spells are uncounterable");
     g.add_card_to_library(0, catalog::grizzly_bears());
     g.active_player_idx = 0;
-    let hand_before = g.players[0].hand.len();
     g.fire_step_triggers(TurnStep::End);
     drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "discovered a card at end step");
+    // AutoDecider now free-casts the discover hit (declining was the old
+    // dead-keyword bug) → the bears land on the battlefield.
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "discovered and free-cast a card at end step",
+    );
 }
 
 /// Abuelo blinks one of your own permanents, which returns at the next end step.

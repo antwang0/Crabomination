@@ -202,9 +202,10 @@ fn codie_activation_ramps_and_impulses_on_next_spell() {
         card_id: div, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Divination");
     drain_stack(&mut g);
-    // The impulse fired: bear skipped to exile→bottom, Bolt (declined cast) to hand.
-    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
-        "cheaper instant found and (declined) put in hand");
+    // The impulse fired: bear skipped to exile→bottom; the found Bolt is
+    // free-cast (AutoDecider now accepts free casts) and resolves.
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "cheaper instant found and cast for free");
     assert_eq!(g.players[0].library.last().map(|c| c.id), Some(skipped),
         "non-IS card bottomed");
 }

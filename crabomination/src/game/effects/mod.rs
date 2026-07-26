@@ -429,7 +429,12 @@ impl GameState {
                     min,
                     max,
                 };
-                if self.players.get(seat).is_some_and(|p| p.wants_ui) {
+                // Scripted deciders answer synchronously even for wants_ui
+                // seats — tests script UI players' picks without a suspend
+                // round-trip. Only live (Auto) games suspend.
+                if self.players.get(seat).is_some_and(|p| p.wants_ui)
+                    && matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
+                {
                     self.suspend_signal = Some((
                         decision,
                         PendingEffectState::CardsAnswerPending { player: seat },
@@ -450,6 +455,15 @@ impl GameState {
                 .take(max as usize)
                 .collect(),
         )
+    }
+
+    /// True when a resolution-time choice for `seat` should suspend into a
+    /// pending decision: the seat wants a UI *and* the installed decider is
+    /// the live-game `AutoDecider`. Scripted deciders (tests) answer
+    /// synchronously even for wants_ui seats.
+    pub(crate) fn seat_suspends(&self, seat: usize) -> bool {
+        self.players.get(seat).is_some_and(|p| p.wants_ui)
+            && matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
     }
 
     /// Drop the multi-question replay log — call when a log-using effect
@@ -2667,7 +2681,7 @@ impl GameState {
                 let paid = match self.stashed_resolution_answer.take() {
                     Some(DecisionAnswer::Amount(n)) => n.min(cap),
                     Some(_) => 0,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_suspends(ctx.controller) => {
                         self.suspend_signal = Some((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: cap },
@@ -3809,7 +3823,7 @@ impl GameState {
                     match self.stashed_resolution_answer.take() {
                         Some(DecisionAnswer::Amount(n)) => n.min(avail),
                         Some(_) => 0,
-                        None if self.players[p].wants_ui => {
+                        None if self.seat_suspends(p) => {
                             let source = ctx.source.unwrap_or(CardId(0));
                             self.suspend_signal = Some((
                                 Decision::ChooseAmount {
@@ -4138,13 +4152,25 @@ impl GameState {
                     return Ok(());
                 }
                 let src = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
-                    source: src,
-                    description: format!(
-                        "Pay {{E}}×{energy} to cast the exiled card without paying its mana cost?"
+                // Auto policy: the energy is affordable (gated above) and the
+                // exile already happened — declining is strict card
+                // disadvantage, which is exactly what AutoDecider's blanket
+                // "no" used to inflict. Scripted deciders keep control; the
+                // energy payment keeps this out of the generic may-cast
+                // suspension (interactive choice tracked in TODO.md).
+                let take = match self.decider.kind() {
+                    crate::decision::DeciderKind::Auto => true,
+                    _ => matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source: src,
+                            description: format!(
+                                "Pay {{E}}×{energy} to cast the exiled card without paying its mana cost?"
+                            ),
+                        }),
+                        DecisionAnswer::Bool(true)
                     ),
-                });
-                if !matches!(answer, DecisionAnswer::Bool(true)) {
+                };
+                if !take {
                     return Ok(());
                 }
                 self.spend_energy(p, *energy);
@@ -4250,11 +4276,37 @@ impl GameState {
                         .find(|c| c.id == card_id)
                         .map(|c| c.definition.name.to_string())
                         .unwrap_or_default();
-                    let answer = self.decider.decide(&Decision::OptionalTrigger {
-                        source: card_id,
-                        description: format!("Return {name} to the battlefield instead of learning?"),
-                    });
-                    if matches!(answer, DecisionAnswer::Bool(true)) {
+                    // Suspended ask for wants_ui (this sits ABOVE the arm's
+                    // Learn suspend, which never covered it — even humans
+                    // auto-declined); Auto seats take the free body.
+                    let take = if self.seat_suspends(p) {
+                        let mut cursor = 0;
+                        let Some(yes) = self.ask_seat_bool(
+                            &mut cursor,
+                            p,
+                            format!("Return {name} to the battlefield instead of learning?"),
+                            card_id,
+                            effect,
+                        ) else {
+                            return Ok(());
+                        };
+                        self.clear_answer_log();
+                        yes
+                    } else {
+                        match self.decider.kind() {
+                            crate::decision::DeciderKind::Auto => true,
+                            _ => matches!(
+                                self.decider.decide(&Decision::OptionalTrigger {
+                                    source: card_id,
+                                    description: format!(
+                                        "Return {name} to the battlefield instead of learning?"
+                                    ),
+                                }),
+                                DecisionAnswer::Bool(true)
+                            ),
+                        }
+                    };
+                    if take {
                         self.move_card_to(
                             card_id,
                             &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
@@ -5666,7 +5718,7 @@ impl GameState {
                 let n = match self.stashed_resolution_answer.take() {
                     Some(DecisionAnswer::Amount(n)) => n.min(*max),
                     Some(_) => 0,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_suspends(ctx.controller) => {
                         self.suspend_signal = Some((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: *max },
@@ -5911,12 +5963,40 @@ impl GameState {
                 use crate::game::types::{DelayedKind, DelayedTrigger};
                 let Some(cid) = ctx.source else { return Ok(()); };
                 if self.battlefield_find(cid).is_none() { return Ok(()); }
-                // "You may exile" — ask the controller.
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
-                    source: cid,
-                    description: "Exile this and return it at your next upkeep?".to_string(),
-                });
-                if !matches!(answer, DecisionAnswer::Bool(true)) { return Ok(()); }
+                // "You may exile" — real suspended ask for wants_ui seats
+                // (mutations all follow the single ask); Auto seats blink
+                // (dodges sorcery removal, re-fires the ETB — the card's
+                // whole design); scripted deciders steer.
+                if self.seat_suspends(ctx.controller) {
+                    let mut cursor = 0;
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        ctx.controller,
+                        "Exile this and return it at your next upkeep?".to_string(),
+                        cid,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    if !yes {
+                        return Ok(());
+                    }
+                } else {
+                    let take = match self.decider.kind() {
+                        crate::decision::DeciderKind::Auto => true,
+                        _ => matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: cid,
+                                description: "Exile this and return it at your next upkeep?".to_string(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        ),
+                    };
+                    if !take {
+                        return Ok(());
+                    }
+                }
                 self.remove_from_battlefield_to_exile(cid);
                 if ctx.controller < self.players.len() {
                     self.players[ctx.controller].cards_exiled_this_turn =
@@ -6634,13 +6714,19 @@ impl GameState {
                 }
                 if let Some(cid) = hit {
                     let src = ctx.source.unwrap_or(CardId(0));
-                    let to_bf = matches!(
-                        self.decider.decide(&Decision::OptionalTrigger {
-                            source: src,
-                            description: "Put the exiled card onto the battlefield? (else into hand)".to_string(),
-                        }),
-                        DecisionAnswer::Bool(true)
-                    );
+                    // Battlefield beats hand for a free permanent in all but
+                    // corner cases — Auto seats take it (the old blanket "no"
+                    // always downgraded to hand). Scripted deciders steer.
+                    let to_bf = match self.decider.kind() {
+                        crate::decision::DeciderKind::Auto => true,
+                        _ => matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: src,
+                                description: "Put the exiled card onto the battlefield? (else into hand)".to_string(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        ),
+                    };
                     let dest = if to_bf {
                         ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }
                     } else {
@@ -9782,18 +9868,24 @@ impl GameState {
                                 self.players[owner].library.push(*card);
                             }
                             CounteredSpellZone::OwnerLibraryTopOrBottom => {
-                                // CR 701.5g — the spell's owner chooses top or
-                                // bottom (Subtlety). Ask via OptionalTrigger
-                                // (true = top, false = bottom); AutoDecider
-                                // bottoms it.
+                                // CR 701.5g — the spell's OWNER chooses top or
+                                // bottom (Subtlety). The owner essentially
+                                // always wants their spell back on top, so
+                                // Auto seats pick top (the old blanket "no"
+                                // always bottomed it — a strict misplay
+                                // against that seat, never consulted).
+                                // Scripted deciders steer.
                                 let cid = card.id;
-                                let on_top = matches!(
-                                    self.decider.decide(&crate::decision::Decision::OptionalTrigger {
-                                        source: cid,
-                                        description: "Put countered spell on top of library? (no = bottom)".into(),
-                                    }),
-                                    crate::decision::DecisionAnswer::Bool(true)
-                                );
+                                let on_top = match self.decider.kind() {
+                                    crate::decision::DeciderKind::Auto => true,
+                                    _ => matches!(
+                                        self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                                            source: cid,
+                                            description: "Put countered spell on top of library? (no = bottom)".into(),
+                                        }),
+                                        crate::decision::DecisionAnswer::Bool(true)
+                                    ),
+                                };
                                 if on_top {
                                     self.players[owner].library.insert(0, *card);
                                 } else {
@@ -10771,7 +10863,7 @@ impl GameState {
                 // keep the source by paying the weakest candidate.
                 let spare = if candidates.is_empty() {
                     false
-                } else if self.players[p].wants_ui {
+                } else if self.seat_suspends(p) {
                     let mut cursor = 0;
                     let Some(yes) = self.ask_seat_bool(
                         &mut cursor,
@@ -15445,27 +15537,72 @@ impl GameState {
                         break;
                     }
                 }
+                // Bottom the non-hit cards first (the may-cast suspension is
+                // completion-style — no re-run); the hit follows via cast or
+                // its own bottom on decline (CR 616-adjacent: a declined hit
+                // is NOT stranded in exile — the old code lost it there).
+                if let Some(cid) = hit {
+                    exiled.retain(|&x| x != cid);
+                }
+                for cid in std::mem::take(&mut exiled) {
+                    if self.exile.iter().any(|c| c.id == cid) {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Library {
+                                who: PlayerRef::Seat(caster),
+                                pos: LibraryPosition::Bottom,
+                            },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
                 if let Some(cid) = hit {
                     let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
                     if let Some(card_def) = card_def {
                         let src = ctx.source.unwrap_or(CardId(0));
-                        let cast = matches!(
-                            self.decider.decide(&Decision::OptionalTrigger {
-                                source: src,
-                                description: "Possibility Storm: cast the exiled card without \
-                                              paying its mana cost?"
-                                    .to_string(),
-                            }),
-                            DecisionAnswer::Bool(true)
-                        );
+                        let decision = Decision::OptionalTrigger {
+                            source: src,
+                            description: "Possibility Storm: cast the exiled card without \
+                                          paying its mana cost?"
+                                .to_string(),
+                        };
+                        if self.seat_suspends(caster) {
+                            self.suspend_signal = Some((
+                                decision,
+                                PendingEffectState::MayCastExiledPending {
+                                    player: caster,
+                                    card: cid,
+                                    decline: crate::game::types::MayCastDecline::ToBottom,
+                                },
+                                Effect::Noop,
+                            ));
+                            return Ok(());
+                        }
+                        let cast = match self.decider.kind() {
+                            crate::decision::DeciderKind::Auto => true,
+                            _ => matches!(
+                                self.decider.decide(&decision),
+                                DecisionAnswer::Bool(true)
+                            ),
+                        };
                         if cast {
-                            exiled.retain(|&x| x != cid);
                             let auto_target =
                                 self.auto_target_for_effect_avoiding(&card_def.effect, caster, Some(cid));
                             let cast_events = self.cast_card_for_free(
                                 caster, cid, Zone::Exile, auto_target, vec![], None, None, false,
                             )?;
                             events.extend(cast_events);
+                        } else if self.exile.iter().any(|c| c.id == cid) {
+                            self.move_card_to(
+                                cid,
+                                &ZoneDest::Library {
+                                    who: PlayerRef::Seat(caster),
+                                    pos: LibraryPosition::Bottom,
+                                },
+                                ctx,
+                                events,
+                            );
                         }
                     }
                 }
@@ -16432,7 +16569,7 @@ impl GameState {
                 let n = match self.stashed_resolution_answer.take() {
                     Some(DecisionAnswer::Amount(n)) => n.min(*max),
                     Some(_) => 0,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_suspends(ctx.controller) => {
                         self.suspend_signal = Some((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: *max },
@@ -17644,18 +17781,59 @@ impl GameState {
                         break;
                     }
                 }
-                // Offer the matched card for a free cast.
+                // Bottom the non-hit cards FIRST (the may-cast suspension is
+                // completion-style — no re-run — so every other mutation
+                // must land before it), then offer the hit.
+                if let Some(cid) = hit {
+                    exiled.retain(|&x| x != cid);
+                }
+                for cid in exiled {
+                    if self.exile.iter().any(|c| c.id == cid) {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Library {
+                                who: PlayerRef::Seat(p),
+                                pos: LibraryPosition::Bottom,
+                            },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
                 if let Some(cid) = hit {
                     use crate::decision::{Decision, DecisionAnswer};
                     let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
                     if let Some(card_def) = card_def {
                         let src = ctx.source.unwrap_or(CardId(0));
-                        let answer = self.decider.decide(&Decision::OptionalTrigger {
+                        let decision = Decision::OptionalTrigger {
                             source: src,
                             description: "Cascade: cast the exiled card without paying its mana cost?"
                                 .to_string(),
-                        });
-                        if matches!(answer, DecisionAnswer::Bool(true)) {
+                        };
+                        // wants_ui: real suspended offer (the bare ask hit
+                        // AutoDecider's "no" — cascade never cast anything).
+                        // Auto seats treat the free cast as upside; declined
+                        // hits go to the bottom per CR 702.85.
+                        if self.seat_suspends(p) {
+                            self.suspend_signal = Some((
+                                decision,
+                                PendingEffectState::MayCastExiledPending {
+                                    player: p,
+                                    card: cid,
+                                    decline: crate::game::types::MayCastDecline::ToBottom,
+                                },
+                                Effect::Noop,
+                            ));
+                            return Ok(());
+                        }
+                        let cast = match self.decider.kind() {
+                            crate::decision::DeciderKind::Auto => true,
+                            _ => matches!(
+                                self.decider.decide(&decision),
+                                DecisionAnswer::Bool(true)
+                            ),
+                        };
+                        if cast {
                             let auto_target = self.auto_target_for_effect_avoiding(
                                 &card_def.effect,
                                 p,
@@ -17672,23 +17850,17 @@ impl GameState {
                                 false,
                             )?;
                             events.extend(cast_events);
-                            // The matched card left exile — don't bottom it.
-                            exiled.retain(|&x| x != cid);
+                        } else if self.exile.iter().any(|c| c.id == cid) {
+                            self.move_card_to(
+                                cid,
+                                &ZoneDest::Library {
+                                    who: PlayerRef::Seat(p),
+                                    pos: LibraryPosition::Bottom,
+                                },
+                                ctx,
+                                events,
+                            );
                         }
-                    }
-                }
-                // Bottom the remaining exiled cards (random order ≈ bottom).
-                for cid in exiled {
-                    if self.exile.iter().any(|c| c.id == cid) {
-                        self.move_card_to(
-                            cid,
-                            &ZoneDest::Library {
-                                who: PlayerRef::Seat(p),
-                                pos: LibraryPosition::Bottom,
-                            },
-                            ctx,
-                            events,
-                        );
                     }
                 }
                 Ok(())
@@ -17729,12 +17901,24 @@ impl GameState {
                     use crate::decision::{Decision, DecisionAnswer};
                     let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
                     let Some(card_def) = card_def else { continue };
-                    let answer = self.decider.decide(&Decision::OptionalTrigger {
-                        source: src,
-                        description: "Ripple: cast the revealed copy without paying its mana cost?"
-                            .to_string(),
-                    });
-                    if matches!(answer, DecisionAnswer::Bool(true)) {
+                    // Free copies of the spell you just cast are near-strictly
+                    // upside, and the offers chain (a cast between asks can
+                    // recurse into another ripple), so a per-copy suspension
+                    // isn't expressible with the one-shot pending machinery.
+                    // Policy: cast every copy; scripted deciders keep control.
+                    let cast = match self.decider.kind() {
+                        crate::decision::DeciderKind::Auto => true,
+                        _ => matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: src,
+                                description:
+                                    "Ripple: cast the revealed copy without paying its mana cost?"
+                                        .to_string(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        ),
+                    };
+                    if cast {
                         let auto_target =
                             self.auto_target_for_effect_avoiding(&card_def.effect, p, Some(cid));
                         let cast_events =
@@ -17787,20 +17971,60 @@ impl GameState {
                         break;
                     }
                 }
+                // Bottom the non-hit cards FIRST — the may-cast suspension is
+                // completion-style (no re-run), so all other mutations must
+                // land before it.
+                if let Some(cid) = hit {
+                    exiled.retain(|&x| x != cid);
+                }
+                for cid in &exiled {
+                    if self.exile.iter().any(|c| c.id == *cid) {
+                        self.move_card_to(
+                            *cid,
+                            &ZoneDest::Library {
+                                who: PlayerRef::Seat(p),
+                                pos: LibraryPosition::Bottom,
+                            },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
                 if let Some(cid) = hit {
                     use crate::decision::{Decision, DecisionAnswer};
                     let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
                     if let Some(card_def) = card_def {
                         let src = ctx.source.unwrap_or(CardId(0));
-                        let answer = self.decider.decide(&Decision::OptionalTrigger {
+                        let decision = Decision::OptionalTrigger {
                             source: src,
                             description:
                                 "Discover: cast the exiled card without paying its mana cost? \
                                  (Otherwise put it into your hand.)"
                                     .to_string(),
-                        });
-                        let cast = matches!(answer, DecisionAnswer::Bool(true));
-                        exiled.retain(|&x| x != cid);
+                        };
+                        // wants_ui: real suspended offer (the old bare ask
+                        // hit AutoDecider's "no" — the free-cast half of
+                        // Discover was unreachable). Non-UI: free casts are
+                        // upside, take them.
+                        if self.seat_suspends(p) {
+                            self.suspend_signal = Some((
+                                decision,
+                                PendingEffectState::MayCastExiledPending {
+                                    player: p,
+                                    card: cid,
+                                    decline: crate::game::types::MayCastDecline::ToHand,
+                                },
+                                Effect::Noop,
+                            ));
+                            return Ok(());
+                        }
+                        let cast = match self.decider.kind() {
+                            crate::decision::DeciderKind::Auto => true,
+                            _ => matches!(
+                                self.decider.decide(&decision),
+                                DecisionAnswer::Bool(true)
+                            ),
+                        };
                         if cast {
                             let auto_target = self.auto_target_for_effect_avoiding(
                                 &card_def.effect,
@@ -17815,20 +18039,6 @@ impl GameState {
                             // Decline → put the matched card into hand.
                             self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
                         }
-                    }
-                }
-                // Bottom the remaining exiled cards (random order ≈ bottom).
-                for cid in exiled {
-                    if self.exile.iter().any(|c| c.id == cid) {
-                        self.move_card_to(
-                            cid,
-                            &ZoneDest::Library {
-                                who: PlayerRef::Seat(p),
-                                pos: LibraryPosition::Bottom,
-                            },
-                            ctx,
-                            events,
-                        );
                     }
                 }
                 Ok(())
@@ -17907,9 +18117,10 @@ impl GameState {
                 }
                 let src = ctx.source.unwrap_or(CardId(0));
                 let to_exile: Vec<CardId> = if self.players[p].wants_ui {
-                    // A human picks exactly which cards to exile; the engine
-                    // validates the chosen set clears the MV threshold and
-                    // otherwise treats the answer as a decline.
+                    // A human picks exactly which cards to exile via a real
+                    // suspended pick (the old synchronous ask hit AutoDecider
+                    // → empty set → decline, so collect evidence never
+                    // happened for UI seats). Under-threshold answers decline.
                     let mv: std::collections::HashMap<CardId, u32> =
                         gy.iter().copied().collect();
                     let candidates: Vec<(CardId, String)> = self.players[p]
@@ -17917,36 +18128,44 @@ impl GameState {
                         .iter()
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
-                    let answer = self.decider.decide(&Decision::ChooseCards {
-                        source: src,
-                        prompt: format!(
+                    let n_cands = candidates.len() as u32;
+                    let Some(chosen) = self.ask_seat_cards(
+                        p,
+                        format!(
                             "Collect evidence {need}: exile cards from your \
                              graveyard with total mana value {need}+"
                         ),
+                        src,
                         candidates,
-                        min: 0,
-                        max: mv.len() as u32,
-                    });
-                    let chosen: Vec<CardId> = match answer {
-                        DecisionAnswer::Cards(ids) => {
-                            ids.into_iter().filter(|id| mv.contains_key(id)).collect()
-                        }
-                        _ => vec![],
+                        0,
+                        n_cands,
+                        effect,
+                    ) else {
+                        return Ok(());
                     };
-                    let picked: u32 = chosen.iter().map(|id| mv[id]).sum();
+                    let picked: u32 = chosen.iter().filter_map(|id| mv.get(id)).sum();
                     if picked < need {
                         return Ok(()); // declined or insufficient evidence
                     }
                     chosen
                 } else {
-                    let answer = self.decider.decide(&Decision::OptionalTrigger {
-                        source: src,
-                        description: format!(
-                            "Collect evidence {need}? (exile cards from your graveyard \
-                             with total mana value {need} or greater)"
+                    // Auto seats collect whenever the payoff is live (the
+                    // cheapest qualifying set is auto-picked below); the old
+                    // blanket "no" made the mechanic dead. Scripted steer.
+                    let take = match self.decider.kind() {
+                        crate::decision::DeciderKind::Auto => true,
+                        _ => matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: src,
+                                description: format!(
+                                    "Collect evidence {need}? (exile cards from your graveyard \
+                                     with total mana value {need} or greater)"
+                                ),
+                            }),
+                            DecisionAnswer::Bool(true)
                         ),
-                    });
-                    if !matches!(answer, DecisionAnswer::Bool(true)) {
+                    };
+                    if !take {
                         return Ok(());
                     }
                     let mut acc = 0u32;
@@ -17989,33 +18208,45 @@ impl GameState {
                     return Ok(());
                 }
                 let to_exile: Vec<CardId> = if self.players[p].wants_ui {
+                    // Real suspended pick (the old synchronous ask whiffed at
+                    // AutoDecider's empty set — X was never collected).
                     let candidates: Vec<(CardId, String)> = self.players[p]
                         .graveyard
                         .iter()
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
-                    let answer = self.decider.decide(&Decision::ChooseCards {
-                        source: src,
-                        prompt: "Collect evidence X: exile any cards from your \
-                                 graveyard (X = their total mana value)"
-                            .into(),
+                    let n_cands = candidates.len() as u32;
+                    let Some(ids) = self.ask_seat_cards(
+                        p,
+                        "Collect evidence X: exile any cards from your \
+                         graveyard (X = their total mana value)"
+                            .to_string(),
+                        src,
                         candidates,
-                        min: 0,
-                        max: self.players[p].graveyard.len() as u32,
-                    });
-                    match answer {
-                        DecisionAnswer::Cards(ids) => ids,
-                        _ => vec![],
-                    }
+                        0,
+                        n_cands,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    ids
                 } else {
-                    // Bot policy: opt in by exiling the whole graveyard (max X).
-                    let answer = self.decider.decide(&Decision::OptionalTrigger {
-                        source: src,
-                        description: "Collect evidence X? (exile cards from your \
-                                      graveyard; X = their total mana value)"
-                            .into(),
-                    });
-                    if !matches!(answer, DecisionAnswer::Bool(true)) {
+                    // Auto policy: opt in by exiling the whole graveyard
+                    // (max X); the old blanket "no" defeated the intent
+                    // documented right here. Scripted deciders steer.
+                    let take = match self.decider.kind() {
+                        crate::decision::DeciderKind::Auto => true,
+                        _ => matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: src,
+                                description: "Collect evidence X? (exile cards from your \
+                                              graveyard; X = their total mana value)"
+                                    .into(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        ),
+                    };
+                    if !take {
                         return Ok(());
                     }
                     self.players[p].graveyard.iter().map(|c| c.id).collect()
@@ -18075,12 +18306,40 @@ impl GameState {
                     return Ok(()); // can't forage
                 }
                 let src = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
-                    source: src,
-                    description: "Forage? (exile three cards from your graveyard \
-                        or sacrifice a Food)".into(),
-                });
-                if !matches!(answer, DecisionAnswer::Bool(true)) {
+                // wants_ui seats get a real suspended ask (single ask, all
+                // mutations after); Auto seats forage when the cost is cheap
+                // (a spare Food, or a graveyard deep enough that three cards
+                // don't matter). Blanket "no" made the payoff dead text.
+                let take = if self.seat_suspends(p) {
+                    let mut cursor = 0;
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        p,
+                        "Forage? (exile three cards from your graveyard \
+                         or sacrifice a Food)".to_string(),
+                        src,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    yes
+                } else {
+                    match self.decider.kind() {
+                        crate::decision::DeciderKind::Auto => {
+                            food.is_some() || gy_ids.len() >= 6
+                        }
+                        _ => matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: src,
+                                description: "Forage? (exile three cards from your graveyard \
+                                    or sacrifice a Food)".into(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        ),
+                    }
+                };
+                if !take {
                     return Ok(());
                 }
                 if can_exile {
@@ -18137,11 +18396,22 @@ impl GameState {
                 if is_land { return Ok(()); }
                 use crate::decision::{Decision, DecisionAnswer};
                 let source_for_ask = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
-                    source: source_for_ask,
-                    description: "Cast without paying?".to_string(),
-                });
-                let yes = matches!(answer, DecisionAnswer::Bool(true));
+                // Free cast = pure upside, so every non-scripted seat
+                // accepts (the blanket "no" killed every ForEach→
+                // CastWithoutPayingImmediate card). No suspension here: this
+                // arm often runs inside a ForEach over LastMoved, and a
+                // stash-and-rerun suspend would re-queue only the inner cast,
+                // dropping the loop's remaining offers.
+                let yes = match self.decider.kind() {
+                    crate::decision::DeciderKind::Auto => true,
+                    _ => matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source: source_for_ask,
+                            description: "Cast without paying?".to_string(),
+                        }),
+                        DecisionAnswer::Bool(true)
+                    ),
+                };
                 if !yes {
                     return Ok(());
                 }
@@ -18240,13 +18510,23 @@ impl GameState {
                         }
                         let name = card_ref.definition.name;
                         let card_def = card_ref.definition.clone();
-                        let answer = self.decider.decide(&Decision::OptionalTrigger {
-                            source: source_for_ask,
-                            description: format!(
-                                "Cast {name} without paying? (declined cards are re-offered)"
+                        // Free casts are upside: Auto seats accept everything
+                        // (blanket "no" made the whole loop a no-op). The
+                        // re-offer loop can't suspend per card; scripted
+                        // deciders express custom orders.
+                        let take = match self.decider.kind() {
+                            crate::decision::DeciderKind::Auto => true,
+                            _ => matches!(
+                                self.decider.decide(&Decision::OptionalTrigger {
+                                    source: source_for_ask,
+                                    description: format!(
+                                        "Cast {name} without paying? (declined cards are re-offered)"
+                                    ),
+                                }),
+                                DecisionAnswer::Bool(true)
                             ),
-                        });
-                        if !matches!(answer, DecisionAnswer::Bool(true)) {
+                        };
+                        if !take {
                             continue;
                         }
                         let auto_target = self.auto_target_for_effect_avoiding(
@@ -18292,14 +18572,48 @@ impl GameState {
                 if candidates.is_empty() {
                     return Ok(());
                 }
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: "Cast which spell without paying its mana cost?".to_string(),
-                    candidates: candidates.clone(),
-                    min: 0,
-                    max: 1,
-                });
-                let DecisionAnswer::Cards(picked) = answer else { return Ok(()) };
+                // wants_ui: real suspended pick. Auto: cast the highest-MV
+                // candidate (free cast of your biggest spell — the blanket
+                // empty pick made the effect a no-op). Scripted deciders
+                // steer via the ChooseCards ask.
+                let picked: Vec<CardId> = if self.players[p].wants_ui {
+                    let Some(ids) = self.ask_seat_cards(
+                        p,
+                        "Cast which spell without paying its mana cost?".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates.clone(),
+                        0,
+                        1,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    ids
+                } else {
+                    match self.decider.kind() {
+                        crate::decision::DeciderKind::Auto => {
+                            let best = candidates
+                                .iter()
+                                .filter_map(|(id, _)| {
+                                    self.find_card_anywhere(*id)
+                                        .map(|c| (*id, c.definition.cost.cmc()))
+                                })
+                                .max_by_key(|(_, mv)| *mv)
+                                .map(|(id, _)| id);
+                            best.into_iter().collect()
+                        }
+                        _ => match self.decider.decide(&Decision::ChooseCards {
+                            source: ctx.source.unwrap_or(CardId(0)),
+                            prompt: "Cast which spell without paying its mana cost?".to_string(),
+                            candidates: candidates.clone(),
+                            min: 0,
+                            max: 1,
+                        }) {
+                            DecisionAnswer::Cards(ids) => ids,
+                            _ => Vec::new(),
+                        },
+                    }
+                };
                 let Some(card_id) = picked
                     .into_iter()
                     .find(|id| candidates.iter().any(|(c, _)| c == id))
@@ -18399,13 +18713,20 @@ impl GameState {
                     .find(|c| c.id == source)
                     .map(|c| c.definition.clone());
                 let Some(def) = original_def else { return Ok(()); };
-                // Ask the controller "cast a copy?"
+                // Free copy = upside: Auto seats accept (the blanket "no"
+                // made the trigger dead); scripted deciders steer.
                 use crate::decision::{Decision, DecisionAnswer};
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
-                    source,
-                    description: format!("Cast a copy of {}?", def.name),
-                });
-                if !matches!(answer, DecisionAnswer::Bool(true)) {
+                let take = match self.decider.kind() {
+                    crate::decision::DeciderKind::Auto => true,
+                    _ => matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source,
+                            description: format!("Cast a copy of {}?", def.name),
+                        }),
+                        DecisionAnswer::Bool(true)
+                    ),
+                };
+                if !take {
                     return Ok(());
                 }
                 // Mint a tokenized copy of the exiled card in exile.
@@ -18453,11 +18774,19 @@ impl GameState {
                 }
                 creatures.sort_by_key(|(_, p)| -*p);
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
-                    source,
-                    description: "Cipher: encode this spell on a creature you control?".into(),
-                });
-                if matches!(answer, DecisionAnswer::Bool(true)) {
+                // Encoding is the card's recurring upside: Auto seats accept
+                // (blanket "no" made Cipher dead text); scripted steer.
+                let take = match self.decider.kind() {
+                    crate::decision::DeciderKind::Auto => true,
+                    _ => matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source,
+                            description: "Cipher: encode this spell on a creature you control?".into(),
+                        }),
+                        DecisionAnswer::Bool(true)
+                    ),
+                };
+                if take {
                     self.cipher_encode_pending = Some(creatures[0].0);
                 }
                 Ok(())

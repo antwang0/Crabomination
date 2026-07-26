@@ -75,7 +75,12 @@ fn cascade_skips_lands_during_the_walk() {
 #[test]
 fn cascade_declined_bottoms_the_card() {
     let mut g = two_player_game();
-    // No ScriptedDecider → AutoDecider declines the optional free cast.
+    // Script an explicit decline — AutoDecider now opts INTO free cascade
+    // casts (the blanket decline was the dead-keyword bug), so the decline
+    // path needs a scripted "no" to be exercised.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(false),
+    ]));
     let bears = g.add_card_to_library(0, catalog::grizzly_bears());
 
     let elf = g.add_card_to_hand(0, catalog::bloodbraid_elf());

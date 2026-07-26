@@ -822,6 +822,7 @@ impl PendingEffectState {
             PendingEffectState::SacrificePending { player } => Some(*player),
             PendingEffectState::SeatBoolAnswerPending { player } => Some(*player),
             PendingEffectState::CardsAnswerPending { player } => Some(*player),
+            PendingEffectState::MayCastExiledPending { player, .. } => Some(*player),
             _ => None,
         }
     }
@@ -1454,6 +1455,22 @@ pub enum PendingEffectState {
     /// picker isn't the resolving controller (an opponent choosing which
     /// of their permanents to bounce).
     CardsAnswerPending { player: usize },
+    /// Suspended on a "cast the exiled card without paying?" offer after a
+    /// dig already mutated state (Cascade, Discover, Possibility Storm,
+    /// Ripple, Amped Raptor). Completion-style — no re-run: the answer
+    /// handler casts `card` from exile on yes, or applies `decline` on no.
+    MayCastExiledPending { player: usize, card: crate::card::CardId, decline: MayCastDecline },
+}
+
+/// Where a declined [`PendingEffectState::MayCastExiledPending`] card goes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MayCastDecline {
+    /// Stays in exile (Possibility Storm, Amped Raptor).
+    LeaveInExile,
+    /// Owner's hand (Discover).
+    ToHand,
+    /// Bottom of the owner's library (Cascade, Ripple).
+    ToBottom,
 }
 
 /// Sentinel trigger-mode value meaning "the controller's mode pick was
