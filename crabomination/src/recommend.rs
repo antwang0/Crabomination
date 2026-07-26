@@ -270,7 +270,14 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     rng: &mut R,
 ) -> (Vec<CardFactory>, Vec<CardFactory>) {
     let allowed = |f: CardFactory| -> bool {
-        let card_colors = colors_of_cost(&f().cost);
+        let def = f();
+        // Lands never occupy spell slots in the sealed builder —
+        // `assemble_lands` owns the land base. (High jitter used to
+        // promote off-color duals into the 22-24 spell main.)
+        if def.card_types.contains(&crate::card::CardType::Land) {
+            return false;
+        }
+        let card_colors = colors_of_cost(&def.cost);
         card_colors.is_empty()
             || card_colors.iter().all(|c| colors.contains(c))
             || splash.iter().any(|s| *s as usize == f as usize)
