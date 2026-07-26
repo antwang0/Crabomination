@@ -189,6 +189,23 @@ impl Bot for RandomBot {
                     crate::decision::Decision::ChooseTarget { legal, .. } if !legal.is_empty() => {
                         decide_choose_target(state, seat, legal)
                     }
+                    // AutoDecider answers every amount with 0, which turns
+                    // "choose up to X" payoffs into no-ops and (worse) reads
+                    // as "power ≥ 0" on destroy-cutoff wraths. Default to
+                    // the max for generic upside prompts; prompt families
+                    // with a real downside get their own rule.
+                    crate::decision::Decision::ChooseAmount { prompt, max, .. } => {
+                        let amount = if prompt.contains("destroy all creatures with power") {
+                            best_destroy_power_cutoff(state, seat, *max)
+                        } else if prompt.to_lowercase().contains("life") {
+                            // Life payments: keep a buffer, never sink deep.
+                            let spare = (state.effective_life(seat) - 10).max(0) as u32;
+                            spare.min(*max).min(3)
+                        } else {
+                            *max
+                        };
+                        crate::decision::DecisionAnswer::Amount(amount)
+                    }
                     other => AutoDecider.decide(other),
                 };
                 return Some(GameAction::SubmitDecision(answer));
@@ -4273,6 +4290,27 @@ fn beneficial_aura_host(
             Some(f) => state.evaluate_requirement_static(f, t, seat, Some(aura.id)),
             None => true,
         })
+}
+
+/// Best cutoff for "choose a number; destroy all creatures with power ≥
+/// it": maximize destroyed enemy value minus destroyed own value,
+/// breaking ties upward (spare more of everyone's board when equal).
+fn best_destroy_power_cutoff(state: &GameState, seat: usize, max: u32) -> u32 {
+    let mut best = (i32::MIN, 0u32);
+    for n in 0..=max {
+        let mut score = 0i32;
+        for c in state.battlefield.iter().filter(|c| c.definition.is_creature()) {
+            let power = state.computed_permanent(c.id).map(|cp| cp.power).unwrap_or(c.power());
+            if power >= n as i32 {
+                let v = permanent_value(state, c.id);
+                score += if c.controller == seat { -v } else { v };
+            }
+        }
+        if score > best.0 || (score == best.0 && n > best.1) {
+            best = (score, n);
+        }
+    }
+    best.1
 }
 
 /// True when `def` carries a static that keys off the Prepared counter

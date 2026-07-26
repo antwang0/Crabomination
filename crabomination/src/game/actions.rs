@@ -1685,18 +1685,27 @@ impl crate::game::GameState {
                     _ => None,
                 }),
                 ExtraManaKind::AnyColor => {
-                    let legal = vec![
+                    // Needs-aware pick for every seat: the heaviest colored
+                    // pip across the player's hand — this mana exists to cast
+                    // things. (The old bare `ChooseColor` ask hit AutoDecider
+                    // and always produced White, wasting the pip for any
+                    // non-white deck. A real suspension isn't reachable mid
+                    // mana-ability; interactive choice is a TODO.md item.)
+                    let mut best = (0u32, ManaColor::White);
+                    for c in [
                         ManaColor::White, ManaColor::Blue, ManaColor::Black,
                         ManaColor::Red, ManaColor::Green,
-                    ];
-                    let answer = self.decider.decide(&crate::decision::Decision::ChooseColor {
-                        source: src_id,
-                        legal,
-                    });
-                    Some(match answer {
-                        crate::decision::DecisionAnswer::Color(c) => c,
-                        _ => ManaColor::White,
-                    })
+                    ] {
+                        let pips: u32 = self.players[p]
+                            .hand
+                            .iter()
+                            .map(|h| crate::draft::colored_pip_count(&h.definition.cost, c))
+                            .sum();
+                        if pips > best.0 {
+                            best = (pips, c);
+                        }
+                    }
+                    Some(best.1)
                 }
                 // Handled above (colorless-only fast path).
                 ExtraManaKind::MirrorColorless => continue,

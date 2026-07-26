@@ -12849,6 +12849,15 @@ impl GameState {
                 self.stashed_resolution_answer = Some(DecisionAnswer::CreatureType(*ct));
                 Ok(Vec::new())
             }
+            PendingEffectState::CardsAnswerPending { .. } => {
+                let DecisionAnswer::Cards(ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // Raw stash — the re-run filters against its own candidate
+                // set and enforces min/max, so no sanitisation here.
+                self.stashed_resolution_answer = Some(DecisionAnswer::Cards(ids.clone()));
+                Ok(Vec::new())
+            }
         }
     }
 

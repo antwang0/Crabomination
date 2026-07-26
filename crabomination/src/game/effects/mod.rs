@@ -399,6 +399,59 @@ impl GameState {
         Some(b)
     }
 
+    /// Ask `seat` for a card pick inside a resolving effect, suspending
+    /// for a `wants_ui` seat via the `CardsAnswerPending` stash-and-rerun.
+    /// Returns `None` when suspended (the originating `effect` is
+    /// re-queued; its re-run consumes the stashed answer instead of
+    /// asking again — so this must be the arm's FIRST ask and all
+    /// mutations must come after it). The returned ids are filtered to
+    /// `candidates` and truncated to `max`; callers enforce their own
+    /// `min` semantics.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn ask_seat_cards(
+        &mut self,
+        seat: usize,
+        prompt: String,
+        source: CardId,
+        candidates: Vec<(CardId, String)>,
+        min: u32,
+        max: u32,
+        effect: &Effect,
+    ) -> Option<Vec<CardId>> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let answer = match self.stashed_resolution_answer.take() {
+            Some(a) => a,
+            None => {
+                let decision = Decision::ChooseCards {
+                    source,
+                    prompt,
+                    candidates: candidates.clone(),
+                    min,
+                    max,
+                };
+                if self.players.get(seat).is_some_and(|p| p.wants_ui) {
+                    self.suspend_signal = Some((
+                        decision,
+                        PendingEffectState::CardsAnswerPending { player: seat },
+                        effect.clone(),
+                    ));
+                    return None;
+                }
+                self.decider.decide(&decision)
+            }
+        };
+        let ids = match answer {
+            DecisionAnswer::Cards(v) => v,
+            _ => Vec::new(),
+        };
+        Some(
+            ids.into_iter()
+                .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                .take(max as usize)
+                .collect(),
+        )
+    }
+
     /// Drop the multi-question replay log — call when a log-using effect
     /// reaches any completing path (see `ask_seat_bool`).
     pub(crate) fn clear_answer_log(&mut self) {
@@ -2604,13 +2657,28 @@ impl GameState {
                     return Ok(());
                 }
                 let source = ctx.source.unwrap_or(CardId(0));
-                let paid = match self.decider.decide(&Decision::ChooseAmount {
+                let decision = Decision::ChooseAmount {
                     source,
                     prompt: "Pay how much?".to_string(),
                     max: cap,
-                }) {
-                    DecisionAnswer::Amount(n) => n.min(cap),
-                    _ => 0,
+                };
+                // Suspend for wants_ui seats; the bare AutoDecider ask paid
+                // 0 for everyone, making every "you may pay {X}" a no-op.
+                let paid = match self.stashed_resolution_answer.take() {
+                    Some(DecisionAnswer::Amount(n)) => n.min(cap),
+                    Some(_) => 0,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::AmountAnswerPending { max: cap },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => match self.decider.decide(&decision) {
+                        DecisionAnswer::Amount(n) => n.min(cap),
+                        _ => 0,
+                    },
                 };
                 if paid == 0 {
                     return Ok(());
@@ -3731,23 +3799,31 @@ impl GameState {
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;
                 let avail = self.players[p].energy;
-                // A UI seat picks the amount; bots/tests pay all available
-                // energy (the aggressive default for a counter-tax payoff),
-                // mirroring `PayAnyEnergyDealDamage`'s heuristic.
+                // A UI seat picks the amount via a real suspension (the old
+                // synchronous ask hit AutoDecider and paid ZERO for humans
+                // while bots paid everything — inverted); bots/tests pay all
+                // available energy, mirroring `PayAnyEnergyDealDamage`.
                 let pay = if avail == 0 {
                     0
-                } else if self.players[p].wants_ui {
-                    let source = ctx.source.unwrap_or(CardId(0));
-                    match self.decider.decide(&Decision::ChooseAmount {
-                        source,
-                        prompt: "Pay how much {E}?".to_string(),
-                        max: avail,
-                    }) {
-                        DecisionAnswer::Amount(n) => n.min(avail),
-                        _ => 0,
-                    }
                 } else {
-                    avail
+                    match self.stashed_resolution_answer.take() {
+                        Some(DecisionAnswer::Amount(n)) => n.min(avail),
+                        Some(_) => 0,
+                        None if self.players[p].wants_ui => {
+                            let source = ctx.source.unwrap_or(CardId(0));
+                            self.suspend_signal = Some((
+                                Decision::ChooseAmount {
+                                    source,
+                                    prompt: "Pay how much {E}?".to_string(),
+                                    max: avail,
+                                },
+                                PendingEffectState::AmountAnswerPending { max: avail },
+                                effect.clone(),
+                            ));
+                            return Ok(());
+                        }
+                        None => avail,
+                    }
                 };
                 self.spend_energy(p, pay);
                 self.energy_paid_this_resolution = pay;
@@ -5577,13 +5653,45 @@ impl GameState {
             Effect::ChooseNumberDestroyByPower { max } => {
                 use crate::card::SelectionRequirement as R;
                 use crate::decision::{Decision, DecisionAnswer};
-                let n = match self.decider.decide(&Decision::ChooseAmount {
+                let decision = Decision::ChooseAmount {
                     source: ctx.source.unwrap_or(CardId(0)),
                     prompt: "Choose a number; destroy all creatures with power ≥ it".to_string(),
                     max: *max,
-                }) {
-                    DecisionAnswer::Amount(n) => n.min(*max),
-                    _ => 0,
+                };
+                // Suspend for a wants_ui seat — the AutoDecider default of 0
+                // read as "destroy all creatures with power ≥ 0", i.e. an
+                // unconditional symmetric wrath, the worst possible answer.
+                // Headless fallback: the number sparing the most of the
+                // controller's own board while still hitting something.
+                let n = match self.stashed_resolution_answer.take() {
+                    Some(DecisionAnswer::Amount(n)) => n.min(*max),
+                    Some(_) => 0,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::AmountAnswerPending { max: *max },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    // Decider first (scripted tests pick real cutoffs);
+                    // AutoDecider's 0 would read as "power ≥ 0" = wrath-all,
+                    // so 0 falls back to sparing the controller's own board.
+                    None => match self.decider.decide(&decision) {
+                        DecisionAnswer::Amount(n) if n > 0 => n.min(*max),
+                        _ => {
+                            let own_max = self
+                                .battlefield
+                                .iter()
+                                .filter(|c| {
+                                    c.controller == ctx.controller && c.definition.is_creature()
+                                })
+                                .map(|c| c.power())
+                                .max()
+                                .unwrap_or(0);
+                            ((own_max + 1) as u32).clamp(1, (*max).max(1))
+                        }
+                    },
                 };
                 let req = R::Creature.and(R::PowerAtLeast(n as i32));
                 self.run_effect(
@@ -6828,22 +6936,22 @@ impl GameState {
                 // Returning cards to hand is pure upside, so a non-UI seat
                 // (bot/AutoDecider, which would otherwise pick the min of 0)
                 // grabs the `n` highest-mana-value matches instead of whiffing.
+                // wants_ui seats get a real suspended pick — the old
+                // synchronous ask reintroduced the whiff for exactly the
+                // seats the bot branch was built to protect.
                 let chosen: Vec<CardId> = if self.players[p].wants_ui {
-                    let answer = self.decider.decide(&Decision::ChooseCards {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        prompt: format!("Return up to {n} cards to your hand"),
-                        candidates: candidates.clone(),
-                        min: 0,
-                        max: n,
-                    });
-                    match answer {
-                        DecisionAnswer::Cards(ids) => ids
-                            .into_iter()
-                            .filter(|id| candidates.iter().any(|(c, _)| c == id))
-                            .take(n as usize)
-                            .collect(),
-                        _ => Vec::new(),
-                    }
+                    let Some(ids) = self.ask_seat_cards(
+                        p,
+                        format!("Return up to {n} cards to your hand"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates.clone(),
+                        0,
+                        n,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    ids
                 } else {
                     let mut matches: Vec<&crate::card::CardInstance> = self.players[p]
                         .graveyard
@@ -6875,22 +6983,21 @@ impl GameState {
                     // Reshuffling your own cards is card-neutral upside (anti-
                     // mill / recursion), so a non-UI seat grabs the `n`
                     // highest-mana-value matches rather than whiffing at 0.
+                    // wants_ui seats suspend for a real pick (the old
+                    // synchronous ask whiffed for them).
                     let chosen: Vec<CardId> = if self.players[p].wants_ui {
-                        let answer = self.decider.decide(&Decision::ChooseCards {
-                            source: ctx.source.unwrap_or(CardId(0)),
-                            prompt: format!("Shuffle up to {n} cards into your library"),
-                            candidates: candidates.clone(),
-                            min: 0,
-                            max: n,
-                        });
-                        match answer {
-                            DecisionAnswer::Cards(ids) => ids
-                                .into_iter()
-                                .filter(|id| candidates.iter().any(|(c, _)| c == id))
-                                .take(n as usize)
-                                .collect(),
-                            _ => Vec::new(),
-                        }
+                        let Some(ids) = self.ask_seat_cards(
+                            p,
+                            format!("Shuffle up to {n} cards into your library"),
+                            ctx.source.unwrap_or(CardId(0)),
+                            candidates.clone(),
+                            0,
+                            n,
+                            effect,
+                        ) else {
+                            return Ok(());
+                        };
+                        ids
                     } else {
                         let mut matches: Vec<&crate::card::CardInstance> = self.players[p]
                             .graveyard
@@ -10561,6 +10668,10 @@ impl GameState {
                         continue;
                     }
                     let ids = if self.players[p].wants_ui {
+                        // Real suspended pick, routed to the affected player.
+                        // (The old synchronous ask hit AutoDecider: `up_to`
+                        // choosers bounced nothing, forced ones bounced the
+                        // first N in list order.)
                         let cand_named: Vec<(CardId, String)> = candidates
                             .iter()
                             .filter_map(|id| {
@@ -10568,18 +10679,23 @@ impl GameState {
                                     .map(|c| (*id, c.definition.name.to_string()))
                             })
                             .collect();
-                        let answer = self.decider.decide(&Decision::ChooseCards {
-                            source: ctx.source.unwrap_or(CardId(0)),
-                            prompt: format!("Return up to {n} permanents to hand"),
-                            candidates: cand_named,
-                            min: if *up_to { 0 } else { n.min(candidates.len()) as u32 },
-                            max: n as u32,
-                        });
-                        match answer {
-                            DecisionAnswer::Cards(ids) => {
-                                ids.into_iter().take(n).collect::<Vec<_>>()
-                            }
-                            _ => self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false),
+                        let min = if *up_to { 0 } else { n.min(candidates.len()) as u32 };
+                        let Some(ids) = self.ask_seat_cards(
+                            p,
+                            format!("Return up to {n} permanents to hand"),
+                            ctx.source.unwrap_or(CardId(0)),
+                            cand_named,
+                            min,
+                            n as u32,
+                            effect,
+                        ) else {
+                            return Ok(());
+                        };
+                        // Under-picked forced choice → auto-fill the shortfall.
+                        if (ids.len() as u32) < min {
+                            self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false)
+                        } else {
+                            ids
                         }
                     } else {
                         self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false)
@@ -10649,18 +10765,26 @@ impl GameState {
                 let Some(src) = ctx.source else { return Ok(()); };
                 let p = ctx.controller;
                 let candidates = self.sacrifice_candidates(p, filter, Some(src));
+                // wants_ui seats get a real suspended yes/no (the old
+                // synchronous ask hit AutoDecider's "no" and killed a human's
+                // source every upkeep while bots kept theirs); non-UI seats
+                // keep the source by paying the weakest candidate.
                 let spare = if candidates.is_empty() {
                     false
                 } else if self.players[p].wants_ui {
-                    matches!(
-                        self.decider.decide(&crate::decision::Decision::OptionalTrigger {
-                            source: src,
-                            description: "Sacrifice a permanent to keep this one?".into(),
-                        }),
-                        crate::decision::DecisionAnswer::Bool(true)
-                    )
+                    let mut cursor = 0;
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        p,
+                        "Sacrifice a permanent to keep this one?".to_string(),
+                        src,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    yes
                 } else {
-                    // Bots keep the source by paying the weakest candidate.
                     true
                 };
                 if spare {
@@ -13505,10 +13629,13 @@ impl GameState {
             }
             Effect::DistributeCountersAmongLastCreated { total, kind } => {
                 // Resolution-time distribution among the tokens minted
-                // earlier in this resolution. A UI controller picks each
-                // token's share (the last token takes the remainder);
-                // non-UI seats split as evenly as possible.
-                use crate::decision::{Decision, DecisionAnswer};
+                // earlier in this resolution: as even as possible for every
+                // seat. (The old UI branch asked per token through the bare
+                // decider, which answered 0 for every token but the last —
+                // a maximally lopsided split. A real per-token picker needs
+                // amount-log machinery like `resolution_answer_log`; until
+                // then the even split is both fair and the strongest
+                // default. Follow-up tracked in TODO.md.)
                 let tokens: Vec<CardId> = self
                     .last_created_tokens
                     .iter()
@@ -13526,20 +13653,6 @@ impl GameState {
                     }
                     let share = if i + 1 == n_tokens {
                         remaining
-                    } else if self.players[ctx.controller].wants_ui {
-                        let name = self
-                            .battlefield_find(*cid)
-                            .map(|c| c.definition.name)
-                            .unwrap_or("token");
-                        let answer = self.decider.decide(&Decision::ChooseAmount {
-                            source: *cid,
-                            prompt: format!("Counters for {name} ({remaining} left)"),
-                            max: remaining,
-                        });
-                        match answer {
-                            DecisionAnswer::Amount(v) => v.min(remaining),
-                            _ => 0,
-                        }
                     } else {
                         // Even split, front-loaded remainder.
                         let left = (n_tokens - i) as u32;
@@ -16304,9 +16417,11 @@ impl GameState {
             }
 
             Effect::ChooseNumberForSource { max } => {
-                // Sanctum Prelate — "as this enters, choose a number." Bots /
-                // AutoDecider pick via the ChooseAmount decision (0 by default);
-                // full UI selection is a follow-up (TODO.md).
+                // Sanctum Prelate — "as this enters, choose a number."
+                // Suspends for wants_ui seats; the old bare ask locked the
+                // number at AutoDecider's 0 (hitting only MV-0 spells).
+                // Headless fallback: the most common nonland MV among
+                // opponents' visible cards, else 2.
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };
                 let decision = Decision::ChooseAmount {
@@ -16314,9 +16429,39 @@ impl GameState {
                     prompt: "Choose a number".to_string(),
                     max: *max,
                 };
-                let n = match self.decider.decide(&decision) {
-                    DecisionAnswer::Amount(n) => n.min(*max),
-                    _ => 0,
+                let n = match self.stashed_resolution_answer.take() {
+                    Some(DecisionAnswer::Amount(n)) => n.min(*max),
+                    Some(_) => 0,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::AmountAnswerPending { max: *max },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    // Consult the installed decider (ScriptedDecider tests);
+                    // AutoDecider's 0 reads as "no opinion" → heuristic.
+                    None => match self.decider.decide(&decision) {
+                        DecisionAnswer::Amount(n) if n > 0 => n.min(*max),
+                        _ => {
+                            let mut counts: std::collections::HashMap<u32, u32> =
+                                std::collections::HashMap::new();
+                            for (i, pl) in self.players.iter().enumerate() {
+                                if i == ctx.controller {
+                                    continue;
+                                }
+                                for c in pl.graveyard.iter().filter(|c| !c.definition.is_land()) {
+                                    *counts.entry(c.definition.cost.cmc().min(*max)).or_insert(0) += 1;
+                                }
+                            }
+                            counts
+                                .into_iter()
+                                .max_by_key(|(_, n)| *n)
+                                .map(|(mv, _)| mv)
+                                .unwrap_or(2.min(*max))
+                        }
+                    },
                 };
                 if let Some(c) = self.battlefield_find_mut(source) {
                     c.chosen_number = Some(n);

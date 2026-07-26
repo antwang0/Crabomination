@@ -821,6 +821,7 @@ impl PendingEffectState {
         match self {
             PendingEffectState::SacrificePending { player } => Some(*player),
             PendingEffectState::SeatBoolAnswerPending { player } => Some(*player),
+            PendingEffectState::CardsAnswerPending { player } => Some(*player),
             _ => None,
         }
     }
@@ -1444,6 +1445,15 @@ pub enum PendingEffectState {
     /// resolution effect (Crippling Fear's "except chosen type" sweep)
     /// rather than a permanent stamp (`ChooseCreatureTypePending`).
     CreatureTypeAnswerPending,
+    /// Suspended on a `ChooseCards` pick inside a resolving effect
+    /// ("return up to two target creature cards…", fateseal, mill-then-
+    /// take). Same stash-and-rerun shape as `ModesAnswerPending`: the raw
+    /// id list is stashed; the re-queued arm validates ids against its
+    /// candidate set (and min/max) itself, so a stale or malformed answer
+    /// degrades to the legal subset. `player` routes the modal when the
+    /// picker isn't the resolving controller (an opponent choosing which
+    /// of their permanents to bounce).
+    CardsAnswerPending { player: usize },
 }
 
 /// Sentinel trigger-mode value meaning "the controller's mode pick was
