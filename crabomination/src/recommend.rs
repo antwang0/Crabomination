@@ -271,12 +271,20 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     };
     // Hoisted: pip totals over the pile are invariant while scoring it.
     let pick_colors = colors_of_picks(picks);
+    // Fixing-aware bonus: mana rocks / land fetchers earn their keep in
+    // proportion to how many colors the build stretches across.
+    let fixing_bonus = match colors.len() {
+        0..=1 => 0,
+        2 => 1,
+        _ => 3,
+    };
     let mut scored: Vec<(CardFactory, i32)> = Vec::new();
     let mut off: Vec<CardFactory> = Vec::new();
     for &f in picks {
         if allowed(f) {
             let jitter = if noise > 0 { rng.random_range(-noise..=noise) } else { 0 };
-            scored.push((f, score_card_with_colors(f, &pick_colors) + jitter));
+            let fix = if fixing_bonus > 0 && is_fixing_card(&f()) { fixing_bonus } else { 0 };
+            scored.push((f, score_card_with_colors(f, &pick_colors) + jitter + fix));
         } else {
             off.push(f);
         }
@@ -296,6 +304,38 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     }
     leftovers.extend(off);
     (main, leftovers)
+}
+
+/// True when a card helps cast a multicolor deck's spells: it taps for
+/// mana (Page, Loose Leaf) or its effect tree searches for a land
+/// (Environmental Scientist's ETB fetch). The pip scorer is otherwise
+/// fixing-blind, so these never survived the cut on their own merits.
+pub(crate) fn is_fixing_card(def: &crate::card::CardDefinition) -> bool {
+    use crate::effect::Effect;
+    fn req_mentions_land(r: &crate::card::SelectionRequirement) -> bool {
+        use crate::card::SelectionRequirement as R;
+        match r {
+            R::Land | R::IsBasicLand => true,
+            R::And(a, b) | R::Or(a, b) => req_mentions_land(a) || req_mentions_land(b),
+            _ => false,
+        }
+    }
+    fn searches_land(e: &Effect) -> bool {
+        match e {
+            Effect::Search { filter, .. } => req_mentions_land(filter),
+            Effect::Seq(v) => v.iter().any(searches_land),
+            Effect::MayDo { body, .. } => searches_land(body),
+            Effect::If { then, else_, .. } => searches_land(then) || searches_land(else_),
+            _ => false,
+        }
+    }
+    let taps_for_mana = def
+        .activated_abilities
+        .iter()
+        .any(|a| matches!(a.effect, Effect::AddMana { .. }));
+    taps_for_mana
+        || searches_land(&def.effect)
+        || def.triggered_abilities.iter().any(|t| searches_land(&t.effect))
 }
 
 /// Cheap build rank: summed card scores, minus a shortfall penalty when
@@ -1103,6 +1143,18 @@ mod tests {
             candidates[0].main.len() + cfg.total_lands as usize,
             "deck = main + basics",
         );
+    }
+
+    /// Fixing classifier: mana-rock bodies and land fetchers qualify,
+    /// vanilla creatures don't.
+    #[test]
+    fn fixing_cards_classified() {
+        assert!(is_fixing_card(&catalog::page_loose_leaf()), "taps for {{C}}");
+        assert!(
+            is_fixing_card(&catalog::environmental_scientist()),
+            "ETB basic-land fetch",
+        );
+        assert!(!is_fixing_card(&catalog::grizzly_bears()));
     }
 
     /// On-color pool duals occupy land slots ahead of basics; off-color

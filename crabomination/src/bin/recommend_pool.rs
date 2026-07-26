@@ -19,6 +19,55 @@ fn normalize_label(s: &str) -> String {
     s.chars().filter(|c| !c.is_whitespace()).collect::<String>().to_lowercase()
 }
 
+/// Per-card attribution across a refined variant fleet: each card's mean
+/// win rate over variants that play it vs those that don't. Deck-level
+/// results can't credit single cards; this can (noisily — the counts are
+/// shown for a reason). Only names appearing in AND missing from ≥3
+/// variants are comparable.
+fn print_attribution(rec: &recommend::Recommendation) {
+    let n = rec.evals.len();
+    if n < 6 {
+        return;
+    }
+    let mut per_card: HashMap<&'static str, (Vec<f64>, Vec<f64>)> = HashMap::new();
+    let all_names: std::collections::HashSet<&'static str> = rec.candidates[..n]
+        .iter()
+        .flat_map(|c| c.main.iter().chain(c.duals.iter()).map(|&f| f().name))
+        .collect();
+    for (i, c) in rec.candidates[..n].iter().enumerate() {
+        let wr = rec.evals[i].win_rate();
+        let in_deck: std::collections::HashSet<&'static str> =
+            c.main.iter().chain(c.duals.iter()).map(|&f| f().name).collect();
+        for name in &all_names {
+            let entry = per_card.entry(name).or_default();
+            if in_deck.contains(name) {
+                entry.0.push(wr);
+            } else {
+                entry.1.push(wr);
+            }
+        }
+    }
+    let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;
+    let mut rows: Vec<(&str, f64, usize, f64, usize, f64)> = per_card
+        .into_iter()
+        .filter(|(_, (i, o))| i.len() >= 3 && o.len() >= 3)
+        .map(|(name, (i, o))| {
+            let (mi, mo) = (mean(&i), mean(&o));
+            (name, mi, i.len(), mo, o.len(), mi - mo)
+        })
+        .collect();
+    rows.sort_by(|a, b| b.5.partial_cmp(&a.5).unwrap_or(std::cmp::Ordering::Equal));
+    println!("\nper-card attribution (mean win rate with vs without; noisy — mind the counts):");
+    for (name, mi, ni, mo, no, d) in rows {
+        println!(
+            "  {:+5.1}  {:5.1}% (in {ni:>2})  vs {:5.1}% (out {no:>2})  {name}",
+            d * 100.0,
+            mi * 100.0,
+            mo * 100.0,
+        );
+    }
+}
+
 fn print_ranking(rec: &recommend::Recommendation) {
     for (rank, &i) in rec.ranking.iter().enumerate() {
         let e = &rec.evals[i];
@@ -162,6 +211,7 @@ fn main() {
         eprintln!();
         println!("\nrefined ranking (win rate vs the field ± 95% CI):");
         print_ranking(&refined);
+        print_attribution(&refined);
         refined
     } else {
         rec
