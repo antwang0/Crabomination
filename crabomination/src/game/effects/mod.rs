@@ -5022,19 +5022,40 @@ impl GameState {
             }
 
             Effect::RevealTopToHandLoseLifeRepeat => {
-                use crate::decision::{Decision, DecisionAnswer};
+                // Ad Nauseam. Asked per reveal through `ask_seat_bool` so a
+                // `wants_ui` seat (human modal, or a bot answering pending
+                // decisions) actually gets the choice — the old direct
+                // `self.decider` ask hit `AutoDecider`'s blanket "no" and
+                // made the card a do-nothing under every server-hosted seat.
+                // `ask_seat_bool`'s re-run repeats everything before the
+                // suspension point, so ALL mutations must wait until the
+                // asks are done: walk the library by index collecting
+                // yes/no answers (state untouched, each prompt names the
+                // right card), then apply every accepted reveal at once.
                 let p = ctx.controller;
                 let source = ctx.source.unwrap_or(CardId(0));
-                while let Some(top) = self.players[p].library.first() {
+                let mut cursor = 0;
+                let mut accepted = 0usize;
+                while let Some(top) = self.players[p].library.get(accepted) {
                     let (name, mv) = (top.definition.name, top.definition.cost.cmc() as i32);
-                    let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        p,
+                        format!("Reveal the top card ({name}, lose {mv} life)?"),
                         source,
-                        description: format!("Reveal the top card ({name}, lose {mv} life)?"),
-                    });
-                    if !matches!(answer, DecisionAnswer::Bool(true)) {
+                        effect,
+                    ) else {
+                        return Ok(()); // suspended; the resume re-runs this arm
+                    };
+                    if !yes {
                         break;
                     }
+                    accepted += 1;
+                }
+                self.clear_answer_log();
+                for _ in 0..accepted {
                     let card = self.players[p].library.remove(0);
+                    let mv = card.definition.cost.cmc() as i32;
                     self.players[p].hand.push(card);
                     if mv > 0 {
                         let applied = self.adjust_life_applied(p, -mv);

@@ -39,6 +39,15 @@ pub struct RandomBot {
     last_step_key: Option<(u32, TurnStep, usize)>,
     attackers_declared: bool,
     blocks_declared: bool,
+    /// `true` (the default) ranks castable candidates via
+    /// [`score_candidate`]; `false` keeps the legacy uniform-random pick.
+    /// The baseline exists so bot changes can be A/B-laddered against the
+    /// previous behavior.
+    scored: bool,
+    /// Ad Nauseam-style reveal series: the asks all happen before any life
+    /// is lost, so the bot tracks what it has already committed to across
+    /// consecutive prompts from the same source. `(source, cards, life)`.
+    reveal_commit: Option<(CardId, usize, i32)>,
 }
 
 impl RandomBot {
@@ -47,7 +56,16 @@ impl RandomBot {
             last_step_key: None,
             attackers_declared: false,
             blocks_declared: false,
+            scored: true,
+            reveal_commit: None,
         }
+    }
+
+    /// The pre-scoring reference bot: identical candidate enumeration and
+    /// combat, but the castable pick is uniform-random. Kept as the ladder
+    /// baseline for measuring bot improvements.
+    pub fn uniform_baseline() -> Self {
+        Self { scored: false, ..Self::new() }
     }
 
     fn sync_step(&mut self, state: &GameState) {
@@ -104,11 +122,36 @@ impl Bot for RandomBot {
                     // declines bodies that impose a self-cost (lose life /
                     // sacrifice / discard).
                     crate::decision::Decision::OptionalTrigger { source, description } => {
-                        crate::decision::DecisionAnswer::Bool(optional_trigger_beneficial(
-                            state,
-                            *source,
-                            description,
-                        ))
+                        // Ad Nauseam's per-reveal prompt: the generic screen
+                        // can't introspect it (no MayDo body) and would
+                        // answer yes forever — drawing the whole library and
+                        // dying to the life loss. The asks all precede the
+                        // life loss (see `RevealTopToHandLoseLifeRepeat`),
+                        // so track committed reveals across the series and
+                        // keep saying yes only while the running total
+                        // leaves a comfortable buffer.
+                        let take = if description.starts_with("Reveal the top card (") {
+                            let (cards, life_committed) = match &self.reveal_commit {
+                                Some((s, c, l)) if *s == *source => (*c, *l),
+                                _ => (0, 0),
+                            };
+                            let mv = state.players[seat]
+                                .library
+                                .get(cards)
+                                .map(|c| c.definition.cost.cmc() as i32)
+                                .unwrap_or(0);
+                            let yes =
+                                state.effective_life(seat) - life_committed - mv > 10;
+                            self.reveal_commit = if yes {
+                                Some((*source, cards + 1, life_committed + mv))
+                            } else {
+                                None
+                            };
+                            yes
+                        } else {
+                            optional_trigger_beneficial(state, *source, description)
+                        };
+                        crate::decision::DecisionAnswer::Bool(take)
                     }
                     // AutoDecider always names Demon; the bot instead names the
                     // creature type it has the most of across its battlefield +
@@ -552,7 +595,17 @@ impl Bot for RandomBot {
                 }
             }
             TurnStep::PreCombatMain | TurnStep::PostCombatMain if is_active => {
-                Some(main_phase_action(state, seat))
+                Some(main_phase_action_with(state, seat, self.scored))
+            }
+            // Opponent's end step with an empty stack — the bot's canonical
+            // off-turn window. Reuse the whole scored main-phase enumeration:
+            // `would_accept` filters it down to instant-legal lines (removal,
+            // tricks, flash creatures, EOT draw, mana-sink abilities), while
+            // land drops, sorcery-speed casts, and loyalty/crew lines simply
+            // drop out of the candidate set. Without this, every non-counter
+            // instant was dead in hand until the bot's own main phase.
+            TurnStep::End if !is_active && state.stack.is_empty() => {
+                Some(main_phase_action_with(state, seat, self.scored))
             }
             _ => Some(
                 pick_stack_response(state, seat)
@@ -603,16 +656,38 @@ fn pick_stack_response(state: &GameState, seat: usize) -> Option<GameAction> {
         if *caster == seat || *uncounterable {
             return None;
         }
-        let targets_us = match target {
-            Some(crate::game::Target::Player(p)) => *p == seat,
-            Some(crate::game::Target::Permanent(id)) => state
-                .battlefield_find(*id)
-                .is_some_and(|c| c.controller == seat),
-            None => false,
-        };
-        Some((card.id, targets_us || card.definition.cost.cmc() >= 3))
+        // Score the spell like a candidate play of the caster's: mana
+        // investment + body + what it's aimed at. Replaces the old
+        // "anything ≥ 3 cmc or pointed at us" gate, which burned
+        // Counterspell on 3-mana value creatures and face burn at 20 life.
+        let def = &card.definition;
+        let mut threat = def.cost.cmc() as i32;
+        if def.card_types.contains(&crate::card::CardType::Creature) {
+            threat += def.power.max(0) + def.toughness.max(0);
+            threat += (def.keywords.len() as i32).min(3);
+        }
+        match target {
+            // Aimed at one of our permanents: the spell is worth what
+            // we'd lose.
+            Some(crate::game::Target::Permanent(id))
+                if state.battlefield_find(*id).is_some_and(|c| c.controller == seat) =>
+            {
+                threat += permanent_value(state, *id);
+            }
+            // Aimed at our face: mildly threatening, urgent when low.
+            Some(crate::game::Target::Player(p)) if *p == seat => {
+                threat += 6;
+                if state.effective_life(seat) <= 10 {
+                    threat += 8;
+                }
+            }
+            _ => {}
+        }
+        Some((card.id, threat))
     })?;
-    if !threat {
+    // Hold the counter below this bar — a vanilla two-drop or an early
+    // cantrip isn't worth the bot's only interaction.
+    if threat < 10 {
         return None;
     }
     let mut counters: Vec<&crate::card::CardInstance> = state.players[seat]
@@ -1350,6 +1425,10 @@ fn decide_mulligan(
 }
 
 fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
+    main_phase_action_with(state, seat, true)
+}
+
+fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameAction {
     // Tap the first untapped land THE BOT CURRENTLY CONTROLS, one call
     // at a time so each mana ability surfaces as its own event. The
     // `controller`-not-`owner` filter is a cheap pre-filter; the
@@ -1437,7 +1516,14 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
                 // slots that find no legal target are skipped, matching
                 // "up to N target" semantics.
                 let mode_effect = mode_branch(&c.definition.effect, mode);
-                let (target, additional_targets) = if mode_effect.requires_target() {
+                // Beneficial Auras pick their host explicitly: `Effect::Attach`
+                // isn't classified friendly by the generic auto-targeter, so
+                // without this a Rancor walks the OPPONENT's creatures first.
+                // No friendly host at all → skip the candidate rather than
+                // let the fallback pump an opposing creature.
+                let (target, additional_targets) = if is_beneficial_aura(&c.definition) {
+                    (Some(beneficial_aura_host(state, seat, c)?), vec![])
+                } else if mode_effect.requires_target() {
                     let (t, extras) =
                         state.auto_targets_for_effect_all_slots(mode_effect, seat, mode);
                     t.as_ref()?;
@@ -2213,8 +2299,20 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         } else {
             castable
         };
+        // Scored pick (replacing the old uniform-random sample): rank every
+        // candidate by mana investment + body stats + value of what it hits,
+        // with a small random jitter so exact ties don't collapse into one
+        // deterministic line. See `score_candidate`. The uniform pick
+        // survives as `RandomBot::uniform_baseline` for A/B ladders.
         let mut r = rng();
-        return pool[r.random_range(0..pool.len())].clone();
+        if !scored {
+            return pool[r.random_range(0..pool.len())].clone();
+        }
+        let best = pool
+            .iter()
+            .max_by_key(|a| score_candidate(state, seat, a) * 4 + r.random_range(0..4) as i32)
+            .expect("pool is non-empty");
+        return best.clone();
     }
 
     // Activate planeswalker loyalty abilities the bot controls. Pick the
@@ -4132,6 +4230,219 @@ fn is_instant_or_sorcery_in_hand(state: &GameState, seat: usize, cid: CardId) ->
                 || c.definition.card_types.contains(&CardType::Sorcery)
         })
         .unwrap_or(false)
+}
+
+/// For a *beneficial* Aura in hand (positive `equipped_bonus` stats or a
+/// granted keyword), pick the bot's most valuable creature that satisfies
+/// the enchant filter as the host. Returns `None` for non-Auras and for
+/// debuff Auras (negative stats — Pacifism-style restrictions live in
+/// other def fields and keep the hostile auto-target walk). Without this,
+/// `Effect::Attach` falls into the auto-targeter's hostile branch and a
+/// Rancor prefers the opponent's creatures.
+fn is_beneficial_aura(def: &CardDefinition) -> bool {
+    use crate::card::EnchantmentSubtype;
+    if !def.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura) {
+        return false;
+    }
+    def.equipped_bonus.as_ref().is_some_and(|bonus| {
+        bonus.power + bonus.toughness > 0
+            || (bonus.power + bonus.toughness == 0 && !bonus.keywords.is_empty())
+    })
+}
+
+fn beneficial_aura_host(
+    state: &GameState,
+    seat: usize,
+    aura: &crate::card::CardInstance,
+) -> Option<crate::game::Target> {
+    let def = &aura.definition;
+    if !is_beneficial_aura(def) {
+        return None;
+    }
+    let filter = def.effect.primary_target_filter();
+    let mut hosts: Vec<&crate::card::CardInstance> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_creature())
+        .collect();
+    hosts.sort_by_key(|c| std::cmp::Reverse(permanent_value(state, c.id)));
+    hosts
+        .into_iter()
+        .map(|c| crate::game::Target::Permanent(c.id))
+        .find(|t| match &filter {
+            Some(f) => state.evaluate_requirement_static(f, t, seat, Some(aura.id)),
+            None => true,
+        })
+}
+
+/// True when `def` carries a static that keys off the Prepared counter
+/// (SOS "prepared creatures you control get …" payoffs). Matched
+/// structurally on the pump/keyword-grant shapes those payoffs use.
+fn static_rewards_prepared(def: &CardDefinition) -> bool {
+    use crate::card::{SelectionRequirement as R, Selector};
+    use crate::effect::StaticEffect;
+    fn req_mentions_prepared(r: &R) -> bool {
+        match r {
+            R::WithCounter(crate::card::CounterType::Prepared) => true,
+            R::And(a, b) | R::Or(a, b) => req_mentions_prepared(a) || req_mentions_prepared(b),
+            _ => false,
+        }
+    }
+    let sel_mentions = |s: &Selector| match s {
+        Selector::EachPermanent(r) => req_mentions_prepared(r),
+        _ => false,
+    };
+    def.static_abilities.iter().any(|sa| match &sa.effect {
+        StaticEffect::PumpPT { applies_to, .. }
+        | StaticEffect::GrantKeyword { applies_to, .. } => sel_mentions(applies_to),
+        _ => false,
+    })
+}
+
+/// First damage amount a spell's effect tree deals (walking `Seq`), with
+/// `{X}` resolved to the candidate's chosen X. `None` when the effect deals
+/// no (statically knowable) damage — non-Const amounts are treated as
+/// unknown rather than guessed.
+fn first_damage_amount(effect: &Effect, x: u32) -> Option<i32> {
+    use crate::effect::Value;
+    match effect {
+        Effect::DealDamage { amount, .. } => match amount {
+            Value::Const(n) => Some(*n),
+            Value::XFromCost => Some(x as i32),
+            _ => None,
+        },
+        Effect::Seq(steps) => steps.iter().find_map(|e| first_damage_amount(e, x)),
+        _ => None,
+    }
+}
+
+/// Heuristic rank for one candidate play. Rough scale:
+///
+/// * mana investment counts double (printed cmc + chosen X + kick count) —
+///   the bot leads with its biggest affordable play and spends its pool;
+/// * a creature body adds its printed stats plus a small keyword nod, so
+///   on-curve bodies outrank cantrip filler;
+/// * a targeted effect adds the value of what it hits — an opponent's
+///   permanent contributes its full `permanent_value`, so removal chases
+///   the biggest threat and a Bolt at a 1/1 loses to a Bolt at a dragon
+///   (or to just deploying a bomb instead);
+/// * enhanced cast variants (kicker, delve, gift, bestow, conspire, …) get
+///   a flat edge over the plain cast of the same card, so the upside line
+///   wins whenever both are affordable.
+///
+/// The caller adds jitter for tie-breaks; scores only need to be
+/// *relatively* right within one candidate pool.
+fn score_candidate(state: &GameState, seat: usize, action: &GameAction) -> i32 {
+    use crate::card::CardType;
+    // (source card, slot-0 target, variant bonus, extra mana sunk in).
+    let (card_id, target, variant_bonus, extra_mana) = match action {
+        GameAction::CastSpell { card_id, target, x_value, .. } => {
+            (*card_id, target.clone(), 0, x_value.unwrap_or(0))
+        }
+        GameAction::CastSpellBack { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
+        GameAction::CastSpellDelve { card_id, target, x_value, .. } => {
+            (*card_id, target.clone(), 3, x_value.unwrap_or(0))
+        }
+        GameAction::CastGift { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
+        GameAction::CastSpellSpree { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
+        GameAction::CastSpellConspire { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
+        GameAction::CastSpellKicked { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
+        GameAction::CastSpellMultikicked { card_id, target, times, .. } => {
+            (*card_id, target.clone(), 3, *times)
+        }
+        GameAction::CastBestow { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
+        GameAction::CastAdventure { card_id, target, .. }
+        | GameAction::CastOmen { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
+        GameAction::CastPrototype { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
+        GameAction::CastSplitRight { card_id, target, .. }
+        | GameAction::CastAftermath { card_id, target, .. }
+        | GameAction::CastFlashback { card_id, target, .. }
+        | GameAction::CastMayhem { card_id, target, .. }
+        | GameAction::CastHarmonize { card_id, target, .. }
+        | GameAction::CastDisturb { card_id, target, .. }
+        | GameAction::CastSpellAlternative { card_id, target, .. } => {
+            (*card_id, target.clone(), 0, 0)
+        }
+        GameAction::CastAdventureCreature { card_id, target, .. }
+        | GameAction::CastPlotted { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
+        GameAction::ActivateAbility { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
+        GameAction::CastPrepareSpell { creature_id, target, .. } => {
+            (*creature_id, target.clone(), 0, 0)
+        }
+        // Fallback lines (face-down morphs, discard-activated) only appear
+        // when nothing else is castable, so their exact rank is moot.
+        _ => return 0,
+    };
+
+    let mut score = 0i32;
+    let mut damage: Option<i32> = None;
+    if let Some(card) = state.find_card_anywhere(card_id) {
+        // Score the face actually being cast when it isn't the front:
+        // MDFC backs for back-face casts, and the inset spell for
+        // prepare-casts — scoring the latter by the CREATURE valued
+        // "cast draw-3 for {U}" like deploying a 5/5 body, so the bot
+        // fired every inset spell at the first opportunity.
+        let def = match (action, card.definition.back_face.as_deref()) {
+            (GameAction::CastSpellBack { .. } | GameAction::CastDisturb { .. }, Some(back)) => back,
+            _ => &card.definition,
+        };
+        let def = match (action, card.definition.prepare_spell.as_deref()) {
+            (GameAction::CastPrepareSpell { .. }, Some(spell)) => spell,
+            _ => def,
+        };
+        score += 2 * (def.cost.cmc() as i32 + extra_mana as i32);
+        if def.card_types.contains(&CardType::Creature) {
+            score += def.power.max(0) + def.toughness.max(0);
+            score += (def.keywords.len() as i32).min(3);
+        }
+        damage = first_damage_amount(&def.effect, extra_mana);
+    }
+
+    // Unpreparing forfeits any "prepared creatures you control …" static
+    // the bot has out (SOS Top of the Class); charge the cast for the
+    // rider it strips.
+    if matches!(action, GameAction::CastPrepareSpell { .. })
+        && state.battlefield.iter().any(|c| {
+            c.controller == seat && static_rewards_prepared(&c.definition)
+        })
+    {
+        score -= 4;
+    }
+
+    match target {
+        // Aimed at an opponent's permanent: removal / theft / lockdown —
+        // worth what the target is worth. Aimed at our own: pump / aura /
+        // equip, a small flat gain.
+        Some(Target::Permanent(id)) => {
+            match state.battlefield_find(id).map(|c| c.controller) {
+                Some(ctrl) if ctrl != seat => {
+                    let mut v = permanent_value(state, id);
+                    // Damage spells only count as removal when they kill:
+                    // chip damage at a too-big creature keeps a quarter of
+                    // the value, and overkill (a huge X at a small body)
+                    // pays back the wasted points so Shock-the-2/2 beats
+                    // Fireball-for-8-the-2/2.
+                    if let (Some(dmg), Some(cp)) = (damage, state.computed_permanent(id))
+                        && cp.card_types.contains(&CardType::Creature)
+                    {
+                        if dmg < cp.toughness {
+                            v /= 4;
+                        } else {
+                            v -= (dmg - cp.toughness).max(0);
+                        }
+                    }
+                    score += v;
+                }
+                Some(_) => score += 2,
+                None => {}
+            }
+        }
+        // Face damage / discard at an opponent beats a self-aimed cantrip.
+        Some(Target::Player(p)) => score += if p != seat { 4 } else { 1 },
+        _ => {}
+    }
+
+    score + variant_bonus
 }
 
 #[cfg(test)]
@@ -6481,13 +6792,14 @@ mod tests {
         g.priority.player_with_priority = 0;
         g.active_player_idx = 0;
 
-        // The bot can cast Hopeful Eidolon normally *or* bestow it; with the
-        // random pick, the bestow line must appear over repeated draws.
-        let bestowed = (0..40).any(|_| {
+        // The bot can cast Hopeful Eidolon normally *or* bestow it; the
+        // scored pick prefers the bestow line (variant bonus + own-target
+        // gain), so it must win outright, not merely appear.
+        let bestowed = (0..10).all(|_| {
             matches!(main_phase_action(&g, 0),
                 GameAction::CastBestow { target: Some(crate::game::Target::Permanent(t)), .. } if t == host)
         });
-        assert!(bestowed, "bot offers a Bestow line enchanting its creature");
+        assert!(bestowed, "scored pick prefers the Bestow line enchanting its creature");
     }
 
     /// `decide_choose_cards` over the bot's own hand (Sneak Attack / Elvish
@@ -6945,5 +7257,303 @@ mod stack_response_tests {
             }
             other => panic!("expected a Spree cast, got {other:?}"),
         }
+    }
+
+    /// Off-turn window: at the opponent's end step with an empty stack the
+    /// bot casts instant-speed spells (EOT removal) but not sorcery-speed
+    /// cards, which `would_accept` filters out.
+    #[test]
+    fn bot_casts_instant_at_opponents_end_step() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.step = TurnStep::End;
+        g.active_player_idx = 1; // opponent's turn
+        g.priority.player_with_priority = 0;
+        let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        let _bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::CastSpell { card_id, target, .. } => {
+                assert_eq!(card_id, bolt, "only the instant is castable off-turn");
+                // "Any target" burn defaults to the face per the engine's
+                // auto-targeter; either opponent-side target is fine here —
+                // the point is that the instant is cast off-turn at all.
+                let opponent_side = matches!(target, Some(Target::Player(1)))
+                    || matches!(target, Some(Target::Permanent(id)) if id == angel);
+                assert!(opponent_side, "aimed at the opponent's side: {target:?}");
+            }
+            other => panic!("expected an EOT Bolt, got {other:?}"),
+        }
+    }
+
+    /// Overkill/chip awareness: with a 5/5 and a 2/2 on the other side and
+    /// only Shock in hand, the scorer must not value Shock-at-the-5/5 as
+    /// removal — the kill (2/2) outranks the chip (5/5) despite the 5/5's
+    /// higher `permanent_value`.
+    #[test]
+    fn scorer_prefers_killing_over_chipping() {
+        let mut g = two_player_game();
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+        let shock = g.add_card_to_hand(0, catalog::shock());
+
+        let kill = GameAction::CastSpell {
+            card_id: shock, target: Some(Target::Permanent(bear)),
+            additional_targets: vec![], mode: None, x_value: None,
+        };
+        let chip = GameAction::CastSpell {
+            card_id: shock, target: Some(Target::Permanent(dragon)),
+            additional_targets: vec![], mode: None, x_value: None,
+        };
+        assert!(
+            score_candidate(&g, 0, &kill) > score_candidate(&g, 0, &chip),
+            "killing the 2/2 must outscore chipping the 5/5",
+        );
+    }
+
+    /// The counter gate scores the stack spell instead of the old cmc>=3
+    /// rule: a removal spell aimed at the bot's best creature is counter-
+    /// worthy even at 2 cmc.
+    #[test]
+    fn bot_counters_cheap_removal_aimed_at_its_bomb() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+        // P0 bolts the bot's dragon (cmc 1 — held under the old gate).
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Permanent(dragon)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).unwrap();
+        let cs = g.add_card_to_hand(1, catalog::counterspell());
+        for _ in 0..2 { g.add_card_to_battlefield(1, catalog::island()); }
+        g.priority.player_with_priority = 1;
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 1).expect("bot acts") {
+            GameAction::CastSpell { card_id, .. } => {
+                assert_eq!(card_id, cs, "counters the removal aimed at its best creature");
+            }
+            other => panic!("expected a counterspell, got {other:?}"),
+        }
+    }
+
+    /// A beneficial Aura (Rancor) is cast on the bot's own best creature,
+    /// never on an opposing one (Effect::Attach isn't classified friendly
+    /// by the generic auto-targeter).
+    #[test]
+    fn bot_puts_beneficial_aura_on_own_best_creature() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+        let _opp = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5, tempting
+        g.add_card_to_hand(0, catalog::rancor());
+        g.players[0].mana_pool.add(Color::Green, 1);
+
+        match main_phase_action(&g, 0) {
+            GameAction::CastSpell { target: Some(Target::Permanent(t)), .. } => {
+                assert_ne!(t, small, "picks the better of its own creatures");
+                assert_eq!(t, big, "Rancor goes on the bot's best creature, not the opponent's");
+            }
+            other => panic!("expected a Rancor cast on own creature, got {other:?}"),
+        }
+    }
+
+    /// Prepare-cast valuation: the inset spell is scored as itself (a
+    /// {U} instant ≈ 2 points), not as the 5/5 creature carrying it
+    /// (≈ 22) — and a controlled "prepared matters" static (Top of the
+    /// Class) charges the cast for the rider it strips.
+    #[test]
+    fn prepare_cast_scored_by_inset_spell_not_creature() {
+        use crate::card::CounterType;
+        let mut g = two_player_game();
+        let em = g.add_card_to_battlefield(0, catalog::emeritus_of_ideation());
+        g.battlefield
+            .iter_mut()
+            .find(|c| c.id == em)
+            .unwrap()
+            .add_counters(CounterType::Prepared, 1);
+        let cast = GameAction::CastPrepareSpell {
+            creature_id: em,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        let plain = score_candidate(&g, 0, &cast);
+        assert!(
+            plain <= 8,
+            "inset {{U}} draw spell must score as a cheap spell, got {plain}",
+        );
+        g.add_card_to_battlefield(0, catalog::top_of_the_class());
+        let with_anthem = score_candidate(&g, 0, &cast);
+        assert!(
+            with_anthem < plain,
+            "unpreparing under a prepared-matters anthem must score lower \
+             ({with_anthem} !< {plain})",
+        );
+    }
+
+    /// Ad Nauseam under bot play: the per-reveal prompt suspends for the
+    /// wants_ui seat and the bot keeps revealing only while the next card
+    /// leaves a life buffer — it neither declines everything (the old
+    /// AutoDecider path: zero cards) nor draws itself to death (the
+    /// generic "can't introspect → yes" fallback).
+    #[test]
+    fn bot_pilots_ad_nauseam_with_life_buffer() {
+        use crate::decision::Decision;
+        let mut g = two_player_game();
+        g.players[0].wants_ui = true;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // Library of 3-mana cards: reveals at 20→17→14→11 life, then the
+        // next reveal (11 - 3 = 8 ≤ 10 buffer) is declined.
+        for _ in 0..10 {
+            g.add_card_to_library(0, catalog::gray_ogre());
+        }
+        let nauseam = g.add_card_to_hand(0, catalog::ad_nauseam());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+        g.players[0].mana_pool.add_colorless(3);
+        let hand_before = g.players[0].hand.len();
+        g.perform_action(GameAction::CastSpell {
+            card_id: nauseam, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .unwrap();
+        // Resolve; answer each suspended reveal prompt with the bot.
+        let mut bot = RandomBot::new();
+        let mut guard = 0;
+        loop {
+            while g.pending_decision.is_none() && !g.stack.is_empty() {
+                g.perform_action(GameAction::PassPriority).ok();
+                let _ = g.perform_action(GameAction::PassPriority);
+            }
+            let Some(pd) = &g.pending_decision else { break };
+            assert!(matches!(pd.decision, Decision::OptionalTrigger { .. }));
+            let action = bot.next_action(&g, 0).expect("bot answers the reveal prompt");
+            g.perform_action(action).unwrap();
+            guard += 1;
+            assert!(guard < 20, "reveal loop must terminate");
+        }
+        // 3 cards revealed (life 20 → 11), then stopped; -1 for the cast.
+        assert_eq!(g.players[0].life, 11, "stopped with a life buffer");
+        assert_eq!(
+            g.players[0].hand.len(),
+            hand_before - 1 + 3,
+            "took exactly the comfortable reveals",
+        );
+    }
+
+    /// A/B ladder: the scored candidate pick vs the legacy uniform-random
+    /// pick, mirror decks, seats swapped every game. Expensive (full games),
+    /// so `#[ignore]` — run manually:
+    ///
+    /// ```text
+    /// cargo test -p crabomination --lib scored_pick_beats_uniform_baseline -- --ignored --nocapture
+    /// ```
+    #[test]
+    #[ignore = "expensive A/B ladder; run manually with --ignored"]
+    fn scored_pick_beats_uniform_baseline() {
+        use crate::player::Player;
+
+        // Mirror match on the same limited-style 40-card creature deck so
+        // deck strength cancels out and only the pilots differ. A fair
+        // curve-and-removal deck (not the BRG combo deck, whose games are
+        // decided by drawing the combo, drowning out play-skill signal).
+        fn mirror_game() -> GameState {
+            use rand::seq::SliceRandom;
+            let deck: Vec<fn() -> CardDefinition> = {
+                let mut d: Vec<fn() -> CardDefinition> = Vec::new();
+                let mut push = |f: fn() -> CardDefinition, n: usize| {
+                    for _ in 0..n {
+                        d.push(f);
+                    }
+                };
+                push(catalog::mountain, 17);
+                push(catalog::lightning_bolt, 4);
+                push(catalog::shock, 3);
+                push(catalog::goblin_guide, 4);
+                push(catalog::monastery_swiftspear, 3);
+                push(catalog::gray_ogre, 3);
+                push(catalog::hill_giant, 3);
+                push(catalog::fire_elemental, 2);
+                push(catalog::shivan_dragon, 1);
+                d
+            };
+            let mut g = GameState::new(vec![Player::new(0, "Scored"), Player::new(1, "Uniform")]);
+            let mut r = rng();
+            for seat in 0..2 {
+                for &f in &deck {
+                    g.add_card_to_library(seat, f());
+                }
+                g.players[seat].library.shuffle(&mut r);
+                g.players[seat].wants_ui = true;
+            }
+            g.start_mulligan_phase();
+            g
+        }
+
+        const GAMES: usize = 300;
+        let (mut scored_wins, mut uniform_wins, mut other) = (0u32, 0u32, 0u32);
+        for i in 0..GAMES {
+            let scored_seat = i % 2;
+            let mut g = mirror_game();
+            let mut bots: Vec<Box<dyn Bot>> = (0..2)
+                .map(|s| -> Box<dyn Bot> {
+                    if s == scored_seat {
+                        Box::new(RandomBot::new())
+                    } else {
+                        Box::new(RandomBot::uniform_baseline())
+                    }
+                })
+                .collect();
+            // Poll both seats to a fixed point, server-actor style. `stale`
+            // guards against a state where neither bot volunteers an
+            // accepted action (counted as a draw below).
+            let (mut actions, mut stale) = (0usize, 0usize);
+            while !g.is_game_over() && actions < 50_000 && stale < 8 {
+                let mut any = false;
+                for s in 0..2 {
+                    let Some(a) = bots[s].next_action(&g, s) else { continue };
+                    if g.perform_action(a).is_ok() {
+                        any = true;
+                        actions += 1;
+                        if g.is_game_over() {
+                            break;
+                        }
+                    }
+                }
+                if any { stale = 0 } else { stale += 1 }
+            }
+            let _ = actions;
+            match g.game_over {
+                Some(Some(w)) if w == scored_seat => scored_wins += 1,
+                Some(Some(_)) => uniform_wins += 1,
+                _ => other += 1,
+            }
+        }
+        let decided = scored_wins + uniform_wins;
+        let pct = 100.0 * scored_wins as f64 / decided.max(1) as f64;
+        println!(
+            "scored {scored_wins} – uniform {uniform_wins} (draw/stall {other}): scored win rate {pct:.1}%",
+        );
+        assert!(
+            decided >= (GAMES as u32) / 2,
+            "too many undecided games ({other}/{GAMES}) — harness stalled, results meaningless",
+        );
+        assert!(
+            pct >= 55.0,
+            "scored pick should clearly beat the uniform baseline, got {pct:.1}%",
+        );
     }
 }
