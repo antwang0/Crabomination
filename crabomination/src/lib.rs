@@ -26,6 +26,7 @@ pub mod decklist;
 pub mod decision;
 pub mod demo;
 pub mod draft;
+pub mod recommend;
 pub mod format;
 pub mod game;
 pub mod net;

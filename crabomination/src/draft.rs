@@ -257,16 +257,29 @@ pub fn open_all_packs<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<Vec<Card
 /// This is intentionally simple. It produces playable decks without
 /// needing a per-card synergy model.
 pub fn score_card_for_seat(factory: CardFactory, seat_picks_so_far: &[CardFactory]) -> i32 {
+    score_card_with_colors(factory, &colors_of_picks(seat_picks_so_far))
+}
+
+/// [`score_card_for_seat`] with the seat's pip-color totals precomputed.
+/// Callers scoring many cards against the *same* pick pile (the sealed
+/// recommender builds whole decks at once) hoist `colors_of_picks` out of
+/// the loop — recomputing it per card invoked every factory in the pile
+/// per scored card, an O(n²) instantiation blow-up.
+pub(crate) fn score_card_with_colors(
+    factory: CardFactory,
+    seat_colors: &HashMap<Color, u32>,
+) -> i32 {
     let def = factory();
     let mut score: i32 = 0;
 
     // ── Color fit (the dominant signal once you have ~5 picks) ──
-    let seat_colors = colors_of_picks(seat_picks_so_far);
     let card_colors = colors_of_cost(&def.cost);
     if card_colors.is_empty() {
-        // Colorless / artifact / generic-only cards: small neutral
-        // bonus since they slot into any deck.
-        score += 2;
+        // Colorless / artifact / generic-only cards: slot into any deck.
+        // Priced just under a single on-color pip (+6) — the old +2 made
+        // "castable everywhere" function as a penalty, so no colorless
+        // card ever survived the sealed builder's cut regardless of body.
+        score += 5;
     } else if seat_colors.is_empty() {
         // First few picks before any colors are committed: don't
         // penalize colored cards at all — early picks define the
@@ -368,7 +381,7 @@ pub fn colors_of_picks(picks: &[CardFactory]) -> HashMap<Color, u32> {
 
 /// Distinct colors referenced by a card's printed cost (colored,
 /// hybrid, or Phyrexian pips).
-fn colors_of_cost(cost: &crate::mana::ManaCost) -> Vec<Color> {
+pub(crate) fn colors_of_cost(cost: &crate::mana::ManaCost) -> Vec<Color> {
     let mut seen = [false; 5];
     let idx = |c: Color| match c {
         Color::White => 0,
@@ -395,7 +408,7 @@ fn colors_of_cost(cost: &crate::mana::ManaCost) -> Vec<Color> {
 
 /// Count of colored pips of the given color on this cost. Hybrid pips
 /// count for both halves; Phyrexian pips count for their colored half.
-fn colored_pip_count(cost: &crate::mana::ManaCost, color: Color) -> u32 {
+pub(crate) fn colored_pip_count(cost: &crate::mana::ManaCost, color: Color) -> u32 {
     cost.symbols
         .iter()
         .filter(|s| match s {

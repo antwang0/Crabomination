@@ -7116,3 +7116,82 @@ is the template: `PlayerRef::Target(0)` + a `Player` slot filter):
 Also multiplayer-sensitive but structural: `Punisher`-heuristic choices
 (the affected player auto-picks; UI prompting for opponents is tracked
 above), and `EachPlayerKeepsOneSacrificeRest` auto-picks by highest MV.
+
+## Decision-plumbing audit (2026-07): bare `decider.decide` sites
+
+A sweep for the "Ad Nauseam pattern" (fixed 2026-07: a mid-resolution
+choice consulted `self.decider` directly, so AutoDecider's blanket
+defaults answered for every seat — bots AND wants_ui humans). ~125
+direct `decide` call sites audited across `effects/mod.rs`,
+`effects/movement.rs`, `combat.rs`, `stack.rs`, `game/mod.rs`,
+`actions.rs`. ~45 are live bugs, in five classes. AutoDecider defaults
+for reference: OptionalTrigger→no, ChooseAmount→0, ChooseCards→first
+`min` (empty when min=0, the "up to N" case), ChooseColor→first legal
+(≈ always White), ChooseMode→0.
+
+**Class 1 — whole keywords dead for every seat** (bare OptionalTrigger,
+auto-declined): Madness (`mod.rs:8510`, ~17 cards), Dredge
+(`mod.rs:9022`, ~15 cards), Cascade (`effects/mod.rs:17508`), Ripple
+(17587), Cipher (18311), Forage (17933), Collect Evidence (17775/17797
+AND 17852/17867 — both the wants_ui and bot branches are broken),
+Discover's free-cast half (17650), CastFromHandWithoutPaying (18150),
+CastWithoutPayingImmediate (17995 — kills SOS Improvisation Capstone),
+CastAnyOrderWithoutPaying (18098), CastFreeParadigmCopy (18259),
+Obzedat-style exile-blink (5807), Amped Raptor energy-cast (4065 —
+worse than no-op: exiles the top card, then never casts it).
+**Possibility Storm (15340) is actively destructive**: the original
+spell is gone and the dug card stays in exile.
+
+**Class 2 — "choose up to N" resolves as zero** (ChooseCards min=0):
+Command the Dreadhorde (6640), three reanimation piles (6560, 6596,
+6793), tutor-to-total-MV (6689), tap-any-number pump (6370),
+Archipelagore tap (6968), Aether Vial-style PutFromHandOntoBattlefield
+(10884), DeployCreatureFromHandAttacking (10975), Fateseal (4931 —
+Jace +2 is a no-op), mill-then-take (4486), dig-to-hand (4965 — still
+pays the self-mill, takes nothing), MayExileFromYourGraveyard rider
+(5968), graveyard-exile hate (5924, 19899), SearchSplitOpponentChooses
+(11629).
+
+**Class 3 — amount defaults to 0**: ChooseNumberDestroyByPower (5580)
+— **destroys every creature including the controller's own board**
+(worst single finding; Expel the Interlopers); MayPayGenericUpTo (2607
+— Wildborn Preserver never pumps); Sanctum Prelate locks 0 (16317);
+Read Ahead sagas always start at chapter I (stack.rs:770).
+
+**Class 4 — inverted wants_ui gates**: the human branch calls `decide`
+synchronously (no suspension) while the bot branch has a real
+heuristic — interactive seats play WORSE than bots:
+SacrificeSourceUnlessSacrifice (10656 — a human's Gitrog dies every
+upkeep, a bot's survives), ReturnGraveyardCardsToHand (6832),
+ShuffleGraveyardCardsIntoLibrary (6879), PlayerReturnsPermanentsToHand
+(10571), DistributeCountersAmongLastCreated (13534), PayAnyEnergy
+(3741 — polarity fully reversed: bots pay all, humans pay zero),
+CollectEvidence (see class 1). Also stack.rs:67's modal-trigger gate
+skips suspension whenever ANY mode requires a target.
+
+**Class 5 — quality-of-play defaults** (playable but wrong):
+ChooseColor → White everywhere it matters
+(GrantProtectionFromChosenColor 8058 — Mother of Runes always names
+white; extra-mana AnyColor actions.rs:1692; Oona 19945 — the intended
+Blue fallback is unreachable); legend rule keeps the NEWEST copy
+(stack.rs:2858 — sacrifices the aura'd/countered older copy); owner
+tuck choices always pick bottom (movement.rs:1197, 1216); coin-flip
+repeat loops always stop at one win (1893); `MoveChosen` (10520) has a
+dead `up_to` ternary — both arms identical, so "up to N" is enforced
+as "exactly N" for every seat.
+
+**Bot-side mirror bugs** (`server/bot.rs`): un-introspectable
+ask_seat_bool prompts fall into `optional_trigger_beneficial`'s
+`.unwrap_or(true)` — blind YES to "Pay N life to deny…", "Accept the
+tempting offer?" (always accepts opponents' offers), echo/cumulative
+upkeep (pays forever), clash (always bottoms), tribute (always
+counters). Root gap: the source lookup scans battlefield/graveyard/hand
+but NOT the stack, so any resolving spell's self-costly MayDo gets
+blanket-yes.
+
+Fix pattern per site: route through `ask_seat_bool` /
+stash-and-suspend (all mutations after the final ask — see the
+RevealTopToHandLoseLifeRepeat re-run contract), add a bot policy for
+each new prompt family, keep AutoDecider's conservative defaults for
+headless autoplay. Suggested order: class 3+4 (active misplays /
+human-vs-bot asymmetry), class 1 (dead keywords), class 2, class 5.
