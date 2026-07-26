@@ -3356,10 +3356,11 @@ fn devious_cover_up_auto_decider_exiles_nothing() {
         card_id: cover, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Cover-Up castable");
     drain_stack(&mut g);
-    // Nothing exiled; both the seed and the countered Bolt remain.
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == gy));
+    // AutoDecider now exiles OPPONENT graveyard cards (free hate — the
+    // old empty default forfeited the rider every time). The seed card
+    // is exiled; the countered Bolt hit the graveyard after the pick.
+    assert!(g.exile.iter().any(|c| c.id == gy), "opponent's graveyard card exiled");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
-    assert!(g.exile.is_empty(), "AutoDecider exiles nothing");
 }
 
 #[test]

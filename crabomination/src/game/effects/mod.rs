@@ -466,6 +466,33 @@ impl GameState {
             && matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
     }
 
+    /// "Choose up to N cards" resolver. Live-UI and scripted seats answer
+    /// through [`ask_seat_cards`] (authoritative — including a genuine
+    /// empty pick); a headless `AutoDecider` seat takes `auto_default`
+    /// instead of its blanket empty answer, which turned every up-to
+    /// effect into a no-op. Returns `None` when suspended.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn choose_up_to_cards(
+        &mut self,
+        seat: usize,
+        prompt: String,
+        source: CardId,
+        candidates: Vec<(CardId, String)>,
+        max: u32,
+        effect: &Effect,
+        auto_default: Vec<CardId>,
+    ) -> Option<Vec<CardId>> {
+        if self.players.get(seat).is_some_and(|p| p.wants_ui)
+            || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
+        {
+            self.ask_seat_cards(seat, prompt, source, candidates, 0, max, effect)
+        } else {
+            let mut auto = auto_default;
+            auto.truncate(max as usize);
+            Some(auto)
+        }
+    }
+
     /// Drop the multi-question replay log — call when a log-using effect
     /// reaches any completing path (see `ask_seat_bool`).
     pub(crate) fn clear_answer_log(&mut self) {
@@ -5056,14 +5083,21 @@ impl GameState {
                 // Decided by the fatesealer (ctx.controller), not the library's
                 // owner. A wants_ui controller is served the same inline pick
                 // (a dedicated suspend path is a TODO.md follow-up).
-                let answer = self.decider.decide(&Decision::ChooseCards {
+                // Auto default: bottom everything peeked (max hate); UI /
+                // scripted picks are authoritative.
+                let auto_default: Vec<CardId> = peek.iter().map(|(id, _)| *id).collect();
+                let Some(to_bottom) = self.choose_up_to_cards(
+                    ctx.controller,
+                    "Fateseal: put which cards on the bottom?".to_string(),
                     source,
-                    prompt: "Fateseal: put which cards on the bottom?".to_string(),
-                    candidates: peek,
-                    min: 0,
-                    max: n as u32,
-                });
-                if let DecisionAnswer::Cards(to_bottom) = answer {
+                    peek,
+                    n as u32,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
+                };
+                {
                     for cid in to_bottom {
                         if let Some(card) = Self::take_card(&mut self.players[opp].library, cid) {
                             self.players[opp].library.push(card);
@@ -5090,16 +5124,27 @@ impl GameState {
                 // Controller chooses any subset to keep (a `wants_ui` seat is
                 // served the same inline pick; a dedicated suspend path is a
                 // TODO.md follow-up).
-                let answer = self.decider.decide(&Decision::ChooseCards {
+                // Auto default: take everything the life budget allows
+                // (keep a buffer of 5); UI / scripted picks authoritative.
+                let per = self.evaluate_value(life_per_card, ctx).max(0);
+                let affordable = if per > 0 {
+                    (((self.players[ctx.controller].life - 5).max(0)) / per) as usize
+                } else {
+                    top.len()
+                };
+                let auto_default: Vec<CardId> =
+                    top.iter().take(affordable).map(|(id, _)| *id).collect();
+                let top_len = top.len() as u32;
+                let Some(chosen) = self.choose_up_to_cards(
+                    ctx.controller,
+                    "Put which cards into your hand?".to_string(),
                     source,
-                    prompt: "Put which cards into your hand?".to_string(),
-                    candidates: top.clone(),
-                    min: 0,
-                    max: top.len() as u32,
-                });
-                let chosen: Vec<CardId> = match answer {
-                    DecisionAnswer::Cards(v) => v,
-                    _ => vec![],
+                    top.clone(),
+                    top_len,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
                 };
                 let mut taken = 0i32;
                 // Take chosen → hand (top-down), rest of the revealed set →
@@ -6109,23 +6154,37 @@ impl GameState {
                 if candidates.is_empty() { return Ok(()); }
                 let max = candidates.len() as u32;
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::ChooseCards {
+                // Auto default: exile every OPPONENT card (graveyard hate);
+                // own cards stay. UI / scripted picks authoritative.
+                let controller = ctx.controller;
+                let auto_default: Vec<CardId> = candidates
+                    .iter()
+                    .filter(|(id, _)| {
+                        self.players
+                            .iter()
+                            .enumerate()
+                            .any(|(i, pl)| i != controller && pl.graveyard.iter().any(|c| c.id == *id))
+                    })
+                    .map(|(id, _)| *id)
+                    .collect();
+                let Some(answer_ids) = self.choose_up_to_cards(
+                    controller,
+                    "Exile which cards from graveyards?".to_string(),
                     source,
-                    prompt: "Exile which cards from graveyards?".to_string(),
-                    candidates: candidates.clone(),
-                    min: 0,
+                    candidates.clone(),
                     max,
-                });
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
+                };
                 let valid: std::collections::HashSet<CardId> =
                     candidates.iter().map(|(id, _)| *id).collect();
-                let chosen: Vec<CardId> = match answer {
-                    DecisionAnswer::Cards(ids) => ids
-                        .into_iter()
-                        .filter(|id| valid.contains(id))
-                        .take(max as usize)
-                        .collect(),
-                    _ => vec![],
-                };
+                let chosen: Vec<CardId> = answer_ids
+                    .into_iter()
+                    .filter(|id| valid.contains(id))
+                    .take(max as usize)
+                    .collect();
                 for cid in chosen {
                     self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                 }
@@ -6153,21 +6212,36 @@ impl GameState {
                 }
                 let max = candidates.len() as u32;
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::ChooseCards {
+                // Auto default: exile the single cheapest card — enough to
+                // fire the "when you do" rider at minimum fuel cost.
+                let auto_default: Vec<CardId> = candidates
+                    .iter()
+                    .filter_map(|(id, _)| {
+                        self.players[p]
+                            .graveyard
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| (*id, c.definition.cost.cmc()))
+                    })
+                    .min_by_key(|(_, mv)| *mv)
+                    .map(|(id, _)| id)
+                    .into_iter()
+                    .collect();
+                let Some(answer_ids) = self.choose_up_to_cards(
+                    p,
+                    "Exile which cards from your graveyard?".to_string(),
                     source,
-                    prompt: "Exile which cards from your graveyard?".to_string(),
-                    candidates: candidates.clone(),
-                    min: 0,
+                    candidates.clone(),
                     max,
-                });
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
+                };
                 let valid: std::collections::HashSet<CardId> =
                     candidates.iter().map(|(id, _)| *id).collect();
-                let chosen: Vec<CardId> = match answer {
-                    DecisionAnswer::Cards(ids) => {
-                        ids.into_iter().filter(|id| valid.contains(id)).collect()
-                    }
-                    _ => vec![],
-                };
+                let chosen: Vec<CardId> =
+                    answer_ids.into_iter().filter(|id| valid.contains(id)).collect();
                 if chosen.is_empty() {
                     return Ok(());
                 }
@@ -6555,16 +6629,20 @@ impl GameState {
                 if candidates.is_empty() {
                     return Ok(());
                 }
-                let answer = self.decider.decide(&Decision::ChooseCards {
+                // Auto default: tap everything (max pump). UI / scripted
+                // picks authoritative.
+                let auto_default: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                let n_cands = candidates.len() as u32;
+                let Some(chosen) = self.choose_up_to_cards(
+                    seat,
+                    "Tap any number of untapped creatures you control".to_string(),
                     source,
-                    prompt: "Tap any number of untapped creatures you control".to_string(),
-                    candidates: candidates.clone(),
-                    min: 0,
-                    max: candidates.len() as u32,
-                });
-                let chosen: Vec<CardId> = match answer {
-                    DecisionAnswer::Cards(ids) => ids,
-                    _ => Vec::new(),
+                    candidates.clone(),
+                    n_cands,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
                 };
                 let mut tapped = 0i32;
                 for cid in chosen {
@@ -6751,16 +6829,19 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: format!("Return creatures with total power {cap} or less"),
-                    candidates: candidates.clone(),
-                    min: 0,
-                    max: candidates.len() as u32,
-                });
-                let chosen: Vec<CardId> = match answer {
-                    DecisionAnswer::Cards(ids) => ids,
-                    _ => Vec::new(),
+                // Auto default: offer everything; the arm's own cap/validity
+                // trims apply downstream. UI/scripted picks are authoritative.
+                let auto_default: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                let Some(chosen) = self.choose_up_to_cards(
+                    p,
+                    format!("Return creatures with total power {cap} or less").to_string(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates.clone(),
+                    candidates.len() as u32,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
                 };
                 // Accept greedily while the running total stays within the cap.
                 let mut total = 0i32;
@@ -6787,16 +6868,19 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: format!("Return up to {count_cap} creatures with total mana value {cap} or less"),
-                    candidates: candidates.clone(),
-                    min: 0,
-                    max: count_cap as u32,
-                });
-                let chosen: Vec<CardId> = match answer {
-                    DecisionAnswer::Cards(ids) => ids,
-                    _ => Vec::new(),
+                // Auto default: offer everything; the arm's own cap/validity
+                // trims apply downstream. UI/scripted picks are authoritative.
+                let auto_default: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                let Some(chosen) = self.choose_up_to_cards(
+                    p,
+                    format!("Return up to {count_cap} creatures with total mana value {cap} or less").to_string(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates.clone(),
+                    count_cap as u32,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
                 };
                 let mut total = 0i32;
                 let mut returned = 0usize;
@@ -6831,16 +6915,43 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: "Choose any number of creature/planeswalker cards in graveyards".to_string(),
-                    candidates: candidates.clone(),
-                    min: 0,
-                    max: candidates.len() as u32,
-                });
-                let chosen: Vec<CardId> = match answer {
-                    DecisionAnswer::Cards(ids) => ids,
-                    _ => Vec::new(),
+                // Auto default: reanimate greedily, biggest first, while the
+                // self-damage stays survivable (life buffer of 5).
+                let mut by_mv: Vec<(CardId, i32)> = candidates
+                    .iter()
+                    .filter_map(|(cid, _)| {
+                        self.players
+                            .iter()
+                            .flat_map(|pl| pl.graveyard.iter())
+                            .find(|c| c.id == *cid)
+                            .map(|c| (*cid, c.definition.cost.cmc() as i32))
+                    })
+                    .collect();
+                by_mv.sort_by_key(|(_, mv)| std::cmp::Reverse(*mv));
+                let mut budget = (self.players[p].life - 5).max(0);
+                let auto_default: Vec<CardId> = by_mv
+                    .into_iter()
+                    .filter(|(_, mv)| {
+                        if *mv <= budget {
+                            budget -= mv;
+                            true
+                        } else {
+                            false
+                        }
+                    })
+                    .map(|(cid, _)| cid)
+                    .collect();
+                let n_cands = candidates.len() as u32;
+                let Some(chosen) = self.choose_up_to_cards(
+                    p,
+                    "Choose any number of creature/planeswalker cards in graveyards".to_string(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates,
+                    n_cands,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
                 };
                 // CR 608 order: total mana value → self-damage → reanimate.
                 let total: i32 = chosen
@@ -6880,18 +6991,23 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if !candidates.is_empty() {
-                    let answer = self.decider.decide(&Decision::ChooseCards {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        prompt: format!(
+                    // Auto default: everything (the cap-trim below enforces
+                    // the MV budget in order). UI / scripted authoritative.
+                    let auto_default: Vec<CardId> =
+                        candidates.iter().map(|(id, _)| *id).collect();
+                    let n_cands = candidates.len() as u32;
+                    let Some(chosen) = self.choose_up_to_cards(
+                        p,
+                        format!(
                             "Search library for creatures with total mana value {cap} or less"
                         ),
-                        candidates: candidates.clone(),
-                        min: 0,
-                        max: candidates.len() as u32,
-                    });
-                    let chosen: Vec<CardId> = match answer {
-                        DecisionAnswer::Cards(ids) => ids,
-                        _ => Vec::new(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates.clone(),
+                        n_cands,
+                        effect,
+                        auto_default,
+                    ) else {
+                        return Ok(());
                     };
                     let mut total = 0i32;
                     for cid in chosen {
@@ -6984,16 +7100,19 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: "Return permanent cards with different names".to_string(),
-                    candidates: candidates.clone(),
-                    min: 0,
-                    max: candidates.len() as u32,
-                });
-                let chosen: Vec<CardId> = match answer {
-                    DecisionAnswer::Cards(ids) => ids,
-                    _ => Vec::new(),
+                // Auto default: offer everything; the arm's own cap/validity
+                // trims apply downstream. UI/scripted picks are authoritative.
+                let auto_default: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                let Some(chosen) = self.choose_up_to_cards(
+                    p,
+                    "Return permanent cards with different names".to_string().to_string(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates.clone(),
+                    candidates.len() as u32,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
                 };
                 let mut seen: Vec<String> = Vec::new();
                 for cid in chosen {
@@ -7118,16 +7237,25 @@ impl GameState {
                 let chosen: Vec<CardId> = if permanents.is_empty() {
                     Vec::new()
                 } else {
-                    let answer = self.decider.decide(&Decision::ChooseCards {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        prompt: "Put any number of permanent cards onto the battlefield".to_string(),
-                        candidates: permanents.clone(),
-                        min: 0,
-                        max: permanents.len() as u32,
-                    });
-                    match answer {
-                        DecisionAnswer::Cards(ids) => ids.into_iter().filter(|id| permanents.iter().any(|(c, _)| c == id)).collect(),
-                        _ => Vec::new(),
+                    // Auto default: deploy every permanent. UI / scripted
+                    // picks authoritative.
+                    let auto_default: Vec<CardId> =
+                        permanents.iter().map(|(id, _)| *id).collect();
+                    let n_perm = permanents.len() as u32;
+                    match self.choose_up_to_cards(
+                        p,
+                        "Put any number of permanent cards onto the battlefield".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        permanents.clone(),
+                        n_perm,
+                        effect,
+                        auto_default,
+                    ) {
+                        Some(ids) => ids
+                            .into_iter()
+                            .filter(|id| permanents.iter().any(|(c, _)| c == id))
+                            .collect(),
+                        None => return Ok(()),
                     }
                 };
                 for id in &top {
@@ -11096,15 +11224,33 @@ impl GameState {
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
                 let source = ctx.source.unwrap_or(CardId(0));
-                // Always optional ("you may"): min 0.
-                let answer = self.decider.decide(&Decision::ChooseCards {
+                // Always optional ("you may"): min 0. Auto default: biggest
+                // mana values first (free deploys). UI / scripted
+                // authoritative.
+                let mut auto_default: Vec<(CardId, u32)> = candidates
+                    .iter()
+                    .filter_map(|(id, _)| {
+                        self.players[p]
+                            .hand
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| (*id, c.definition.cost.cmc()))
+                    })
+                    .collect();
+                auto_default.sort_by_key(|(_, mv)| std::cmp::Reverse(*mv));
+                let auto_default: Vec<CardId> =
+                    auto_default.into_iter().map(|(id, _)| id).collect();
+                let Some(chosen) = self.choose_up_to_cards(
+                    p,
+                    "Put which card(s) from your hand onto the battlefield?".to_string(),
                     source,
-                    prompt: "Put which card(s) from your hand onto the battlefield?".to_string(),
                     candidates,
-                    min: 0,
                     max,
-                });
-                let chosen: Vec<CardId> = match answer { DecisionAnswer::Cards(v) => v, _ => vec![] };
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
+                };
                 // Card enters under the resolved player's control (their hand →
                 // their battlefield), so a "target opponent may put …" (Wumpus
                 // Aberration) doesn't hand it to the effect's controller.
@@ -11188,15 +11334,33 @@ impl GameState {
                     return Ok(());
                 }
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source,
-                    prompt: "Put a creature card from your hand onto the battlefield attacking?"
+                // Auto default: the biggest-power creature. UI / scripted
+                // picks authoritative.
+                let auto_default: Vec<CardId> = candidates
+                    .iter()
+                    .filter_map(|(id, _)| {
+                        self.players[p]
+                            .hand
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| (*id, c.definition.power))
+                    })
+                    .max_by_key(|(_, pw)| *pw)
+                    .map(|(id, _)| id)
+                    .into_iter()
+                    .collect();
+                let Some(chosen) = self.choose_up_to_cards(
+                    p,
+                    "Put a creature card from your hand onto the battlefield attacking?"
                         .to_string(),
+                    source,
                     candidates,
-                    min: 0,
-                    max: 1,
-                });
-                let DecisionAnswer::Cards(chosen) = answer else { return Ok(()) };
+                    1,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
+                };
                 let Some(&cid) = chosen.first() else { return Ok(()) };
                 if !self.players[p].hand.iter().any(|c| c.id == cid) {
                     return Ok(());
@@ -11842,16 +12006,40 @@ impl GameState {
                     .iter()
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: format!("Search for up to {count} cards with different names"),
-                    candidates: candidates.clone(),
-                    min: 0,
-                    max: *count,
-                });
+                // Auto default: the first `count` distinct-named cards (the
+                // dedup below enforces distinctness either way). UI /
+                // scripted picks authoritative.
+                let auto_default: Vec<crate::card::CardId> = {
+                    let mut seen: Vec<&str> = Vec::new();
+                    candidates
+                        .iter()
+                        .filter(|(_, name)| {
+                            if seen.contains(&name.as_str()) {
+                                false
+                            } else {
+                                seen.push(name.as_str());
+                                true
+                            }
+                        })
+                        .take(*count as usize)
+                        .map(|(id, _)| *id)
+                        .collect()
+                };
+                let Some(answer_ids) = self.choose_up_to_cards(
+                    p,
+                    format!("Search for up to {count} cards with different names"),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates.clone(),
+                    *count,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
+                };
                 let mut picked: Vec<crate::card::CardId> = Vec::new();
                 let mut seen_names: Vec<String> = Vec::new();
-                if let crate::decision::DecisionAnswer::Cards(ids) = answer {
+                {
+                    let ids = answer_ids;
                     for id in ids {
                         let Some((_, name)) = candidates.iter().find(|(c, _)| *c == id) else {
                             continue;

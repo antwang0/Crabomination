@@ -887,9 +887,14 @@ fn mind_into_matter_draws_x_cards() {
     .expect("Mind into Matter castable for X=3 {G}{U}");
     drain_stack(&mut g);
 
-    // -1 (cast) +3 (draw X=3) = +2. AutoDecider declines the optional
-    // "put a permanent" step, so hand size is just affected by the draw.
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+    // -1 (cast) +3 (draw X=3) -1 (AutoDecider now TAKES the optional
+    // "put a permanent onto the battlefield" — declining a free deploy
+    // was the old blanket-no bug) = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3 - 1);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Island"),
+        "the drawn permanent was deployed",
+    );
 }
 
 #[test]
