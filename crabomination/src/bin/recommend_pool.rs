@@ -109,6 +109,7 @@ fn main() {
     // Stage-2 refinement: variants per top shape. 0 disables (default).
     let refine_top: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(0);
     let variants: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(6);
+    let racing_rounds: u32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(3);
 
     // `random:SEED` generates a synthetic sealed pool (6 SOS packs) instead
     // of reading a file — for calibrating what a typical pool's best build
@@ -150,6 +151,7 @@ fn main() {
         candidate_cap: cap,
         refine_top,
         variants_per_shape: variants,
+        racing_rounds,
         ..Default::default()
     };
     let mut candidates = recommend::enumerate_candidates(&pool, &cfg);

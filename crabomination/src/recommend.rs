@@ -88,6 +88,11 @@ pub struct SimConfig {
     /// Refinement stage: builds per shape (the greedy build + jittered
     /// variants with sampled spell/land counts).
     pub variants_per_shape: usize,
+    /// Racing rounds. More rounds with a smaller `games_per_pairing`
+    /// prunes a big fleet cheaply and spends the saved games on the
+    /// finalists (each round widens the opponent sample and adds
+    /// `games_per_pairing` games per pairing).
+    pub racing_rounds: u32,
 }
 
 impl Default for SimConfig {
@@ -112,6 +117,7 @@ impl Default for SimConfig {
             crn: true,
             refine_top: 3,
             variants_per_shape: 6,
+            racing_rounds: 3,
         }
     }
 }
@@ -707,6 +713,11 @@ pub fn simulate_match_games(
     max_actions: usize,
     seed_base: Option<u64>,
 ) -> MatchTally {
+    // Build the two seat arrangements ONCE (libraries loaded, unshuffled)
+    // and clone per game — definitions are Arc'd, so a state clone is a
+    // fraction of re-invoking ~80 card factories per game.
+    let template_a0 = build_match_template(deck_a, deck_b);
+    let template_b0 = build_match_template(deck_b, deck_a);
     let mut tally = MatchTally { wins_a: 0, wins_b: 0, undecided: 0 };
     for i in 0..games {
         let a_seat0 = i % 2 == 0;
@@ -715,50 +726,52 @@ pub fn simulate_match_games(
                 b.wrapping_add((i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)),
             )
         });
-        match play_one_game(
-            deck_a,
-            deck_b,
-            a_seat0,
-            uniform_a,
-            uniform_b,
-            max_actions,
-            shuffle_rng.as_mut(),
-        ) {
-            Some(0) => tally.wins_a += 1,
-            Some(_) => tally.wins_b += 1,
+        let template = if a_seat0 { &template_a0 } else { &template_b0 };
+        let uniform = if a_seat0 { [uniform_a, uniform_b] } else { [uniform_b, uniform_a] };
+        match play_one_game(template, uniform, max_actions, shuffle_rng.as_mut()) {
+            Some(seat) => {
+                let a_won = (seat == 0) == a_seat0;
+                if a_won {
+                    tally.wins_a += 1;
+                } else {
+                    tally.wins_b += 1;
+                }
+            }
             None => tally.undecided += 1,
         }
     }
     tally
 }
 
-/// Play one full bot game. Returns `Some(0)` when deck A wins, `Some(1)`
-/// for deck B, `None` for a stall/draw. Mirrors the server actor's
-/// fixed-point bot polling.
+/// Unshuffled two-seat state with both libraries loaded — the clone-me
+/// template for [`play_one_game`].
+fn build_match_template(seat0: &[CardFactory], seat1: &[CardFactory]) -> GameState {
+    let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
+    for (seat, deck) in [seat0, seat1].into_iter().enumerate() {
+        for &f in deck {
+            g.add_card_to_library(seat, f());
+        }
+        g.players[seat].wants_ui = true;
+    }
+    g
+}
+
+/// Play one full bot game from a prebuilt template. Returns the winning
+/// SEAT (`Some(0)`/`Some(1)`), `None` for a stall/draw. Mirrors the
+/// server actor's fixed-point bot polling.
 fn play_one_game(
-    deck_a: &[CardFactory],
-    deck_b: &[CardFactory],
-    a_seat0: bool,
-    uniform_a: bool,
-    uniform_b: bool,
+    template: &GameState,
+    uniform: [bool; 2],
     max_actions: usize,
     shuffle_rng: Option<&mut StdRng>,
 ) -> Option<usize> {
-    let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
+    let mut g = template.clone();
     let mut seeded = shuffle_rng;
-    let decks: [&[CardFactory]; 2] =
-        if a_seat0 { [deck_a, deck_b] } else { [deck_b, deck_a] };
-    let uniform: [bool; 2] =
-        if a_seat0 { [uniform_a, uniform_b] } else { [uniform_b, uniform_a] };
     for seat in 0..2 {
-        for &f in decks[seat] {
-            g.add_card_to_library(seat, f());
-        }
         match &mut seeded {
             Some(r) => g.players[seat].library.shuffle(*r),
             None => g.players[seat].library.shuffle(&mut rand::rng()),
         }
-        g.players[seat].wants_ui = true;
     }
     g.start_mulligan_phase();
     let mut bots: Vec<Box<dyn Bot>> = uniform
@@ -782,9 +795,7 @@ fn play_one_game(
         }
         if any { stale = 0 } else { stale += 1 }
     }
-    let winner_seat = g.game_over.flatten()?;
-    // Map winning seat back to deck index.
-    Some(if a_seat0 { winner_seat } else { 1 - winner_seat })
+    g.game_over.flatten()
 }
 
 // ─────────────────────────────── evaluation ──────────────────────────────
@@ -830,7 +841,7 @@ where
     let evals: Mutex<Vec<CandidateEval>> =
         Mutex::new((0..candidate_decks.len()).map(CandidateEval::new).collect());
     let mut active: Vec<usize> = (0..candidate_decks.len()).collect();
-    let rounds: u32 = if cfg.racing { 3 } else { 1 };
+    let rounds: u32 = if cfg.racing { cfg.racing_rounds.max(1) } else { 1 };
     let threads = worker_threads(cfg);
 
     for round in 0..rounds {
@@ -863,7 +874,9 @@ where
             }
             r
         };
-        const CHUNK: usize = 5;
+        // 10-game chunks amortize the per-job match-template build while
+        // keeping tail latency acceptable.
+        const CHUNK: usize = 10;
         let mut jobs: Vec<Job> = Vec::new();
         for &cand in &active {
             for opp in 0..opps_this_round {
@@ -990,14 +1003,16 @@ where
                     ^ (v as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15),
             );
             // v0 = the shape's greedy build, verbatim; later variants
-            // jitter picks and sample counts.
+            // jitter picks and sample counts, with the jitter widening as
+            // the fleet grows so big sweeps explore past the near-greedy
+            // neighborhood instead of colliding into dedup.
             let (spells, lands, n) = if v == 0 {
                 (cfg.target_spells, cfg.total_lands, 0)
             } else {
                 (
                     rng.random_range(cfg.spell_count_range.0..=cfg.spell_count_range.1),
                     rng.random_range(cfg.land_count_range.0..=cfg.land_count_range.1),
-                    noise,
+                    noise + (v as i32 / 16) * 2,
                 )
             };
             let Some(mut build) =

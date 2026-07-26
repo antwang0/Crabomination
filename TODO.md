@@ -7208,3 +7208,14 @@ extra-mana pick (smart defaults, no agency); legend-keep is a smart
 default — the client's ChooseLegendToKeep modal still needs an engine
 suspension to ever fire; single-stash constraint limits multi-ui-player
 loops (EachPlayer shuffles) to one suspension per resolution.
+
+## Simulation throughput
+
+The recommender's dominant cost is `would_accept`: every bot candidate
+action dry-runs against a full `GameState::clone`, hundreds of times per
+game (~40 games/s/thread release). Match-template cloning + factory
+elimination in `simulate_match_games` was neutral — setup was never the
+bottleneck. The 10x lever is a transactional apply/undo (or
+copy-on-write zones) for dry-runs; until then, throughput scaling comes
+from the racing schedule (`racing_rounds` + small `games_per_pairing`
+prune big fleets at ~100 games each).
