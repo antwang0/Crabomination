@@ -2855,18 +2855,40 @@ impl GameState {
             let mut victims = Vec::new();
             for (player, name, duplicates) in legend_groups {
                 // Ask the controller which to keep; default keeps newest.
-                let kept = match self.decider.decide(&crate::decision::Decision::ChooseLegendToKeep {
-                    player,
-                    name,
-                    duplicates: duplicates.clone(),
-                }) {
-                    crate::decision::DecisionAnswer::KeptLegend(id)
-                        if duplicates.iter().any(|(d, _)| *d == id) =>
-                    {
-                        id
-                    }
-                    // Out-of-set / wrong answer → keep newest (highest id).
-                    _ => duplicates.iter().map(|(id, _)| *id).max().unwrap_or(CardId(0)),
+                // Auto default: keep the copy carrying the most accumulated
+                // board state (counters + attachments), tiebreak newest —
+                // "keep newest" alone sacrificed the aura'd/countered copy
+                // to a freshly cast vanilla one. Scripted deciders steer.
+                let kept = match self.decider.kind() {
+                    crate::decision::DeciderKind::Auto => duplicates
+                        .iter()
+                        .map(|(id, _)| {
+                            let inst = self.battlefield.iter().find(|c| c.id == *id);
+                            let counters: u32 =
+                                inst.map(|c| c.counters.values().sum()).unwrap_or(0);
+                            let attached = self
+                                .battlefield
+                                .iter()
+                                .filter(|c| c.attached_to == Some(*id))
+                                .count() as u32;
+                            (counters + attached, id.0, *id)
+                        })
+                        .max()
+                        .map(|(_, _, id)| id)
+                        .unwrap_or(CardId(0)),
+                    _ => match self.decider.decide(&crate::decision::Decision::ChooseLegendToKeep {
+                        player,
+                        name,
+                        duplicates: duplicates.clone(),
+                    }) {
+                        crate::decision::DecisionAnswer::KeptLegend(id)
+                            if duplicates.iter().any(|(d, _)| *d == id) =>
+                        {
+                            id
+                        }
+                        // Out-of-set / wrong answer → keep newest (highest id).
+                        _ => duplicates.iter().map(|(id, _)| *id).max().unwrap_or(CardId(0)),
+                    },
                 };
                 for (id, _) in &duplicates {
                     if *id != kept {

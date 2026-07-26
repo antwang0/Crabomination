@@ -8376,9 +8376,31 @@ impl GameState {
                 let legal = vec![
                     Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
                 ];
-                let color = match self.decider.decide(&Decision::ChooseColor { source, legal }) {
-                    DecisionAnswer::Color(c) => c,
-                    _ => Color::White,
+                // Auto default: the color most represented among OPPONENTS'
+                // permanents — protection exists to dodge their threats;
+                // first-legal always chose White, so Mother of Runes died to
+                // every red/black removal spell she was meant to blank.
+                let color = match self.decider.kind() {
+                    crate::decision::DeciderKind::Auto => {
+                        let mut counts = [0u32; 5];
+                        for c in self
+                            .battlefield
+                            .iter()
+                            .filter(|c| !self.same_team(c.controller, ctx.controller))
+                        {
+                            for col in crate::draft::colors_of_cost(&c.definition.cost) {
+                                counts[col as usize] += 1;
+                            }
+                        }
+                        [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+                            .into_iter()
+                            .max_by_key(|c| counts[*c as usize])
+                            .unwrap_or(Color::White)
+                    }
+                    _ => match self.decider.decide(&Decision::ChooseColor { source, legal }) {
+                        DecisionAnswer::Color(c) => c,
+                        _ => Color::White,
+                    },
                 };
                 let kw = Keyword::Protection(color);
                 let is_eot = matches!(
@@ -10844,24 +10866,40 @@ impl GameState {
                     })
                     .collect();
                 let cap = n.min(candidates.len());
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: format!(
-                        "Choose {}{} cards to move",
-                        if *up_to { "up to " } else { "" },
-                        cap
-                    ),
-                    candidates: candidates.clone(),
-                    min: if *up_to { cap as u32 } else { cap as u32 },
-                    max: cap as u32,
-                });
-                let picked: Vec<CardId> = match answer {
-                    DecisionAnswer::Cards(v) => v
-                        .into_iter()
-                        .filter(|id| ids.contains(id))
-                        .take(cap)
-                        .collect(),
-                    _ => ids.iter().copied().take(cap).collect(),
+                // "up to N" is genuinely optional (a dead ternary here used
+                // to force exactly-N for every seat): UI/scripted picks are
+                // authoritative; Auto seats take the full cap either way.
+                let picked: Vec<CardId> = if *up_to {
+                    let auto_default: Vec<CardId> =
+                        ids.iter().copied().take(cap).collect();
+                    let Some(v) = self.choose_up_to_cards(
+                        ctx.controller,
+                        format!("Choose up to {cap} cards to move"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates.clone(),
+                        cap as u32,
+                        effect,
+                        auto_default,
+                    ) else {
+                        return Ok(());
+                    };
+                    v.into_iter().filter(|id| ids.contains(id)).take(cap).collect()
+                } else {
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: format!("Choose {cap} cards to move"),
+                        candidates: candidates.clone(),
+                        min: cap as u32,
+                        max: cap as u32,
+                    });
+                    match answer {
+                        DecisionAnswer::Cards(v) => v
+                            .into_iter()
+                            .filter(|id| ids.contains(id))
+                            .take(cap)
+                            .collect(),
+                        _ => ids.iter().copied().take(cap).collect(),
+                    }
                 };
                 for id in picked {
                     self.move_card_to(id, to, ctx, events);
@@ -20604,13 +20642,31 @@ impl GameState {
             return Ok(());
         };
         let n = self.evaluate_value(amount, ctx).max(0) as usize;
-        let answer = self.decider.decide(&Decision::ChooseColor {
-            source: ctx.source.unwrap_or(CardId(0)),
-            legal: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
-        });
-        let color = match answer {
-            DecisionAnswer::Color(c) => c,
-            _ => Color::Blue,
+        // Auto default: the color most common in the victim's graveyard —
+        // a proxy for their deck's colors, maximizing expected token hits.
+        // (First-legal always chose White, often minting zero against
+        // non-white decks; the intended Blue fallback was unreachable.)
+        let color = match self.decider.kind() {
+            crate::decision::DeciderKind::Auto => {
+                let mut counts = [0u32; 5];
+                for c in self.players[victim].graveyard.iter() {
+                    for col in crate::draft::colors_of_cost(&c.definition.cost) {
+                        counts[col as usize] += 1;
+                    }
+                }
+                [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+                    .into_iter()
+                    .max_by_key(|c| counts[*c as usize])
+                    .filter(|c| counts[*c as usize] > 0)
+                    .unwrap_or(Color::Blue)
+            }
+            _ => match self.decider.decide(&Decision::ChooseColor {
+                source: ctx.source.unwrap_or(CardId(0)),
+                legal: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+            }) {
+                DecisionAnswer::Color(c) => c,
+                _ => Color::Blue,
+            },
         };
         let mut matches = 0;
         for _ in 0..n {

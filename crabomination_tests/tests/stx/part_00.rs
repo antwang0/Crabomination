@@ -3360,7 +3360,9 @@ fn devious_cover_up_auto_decider_exiles_nothing() {
     // old empty default forfeited the rider every time). The seed card
     // is exiled; the countered Bolt hit the graveyard after the pick.
     assert!(g.exile.iter().any(|c| c.id == gy), "opponent's graveyard card exiled");
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+    // The countered Bolt reaches the graveyard before the pick, so the
+    // hate default sweeps it into exile as well.
+    assert!(g.exile.iter().any(|c| c.id == bolt), "countered spell exiled too");
 }
 
 #[test]

@@ -7189,9 +7189,22 @@ counters). Root gap: the source lookup scans battlefield/graveyard/hand
 but NOT the stack, so any resolving spell's self-costly MayDo gets
 blanket-yes.
 
-Fix pattern per site: route through `ask_seat_bool` /
-stash-and-suspend (all mutations after the final ask — see the
-RevealTopToHandLoseLifeRepeat re-run contract), add a bot policy for
-each new prompt family, keep AutoDecider's conservative defaults for
-headless autoplay. Suggested order: class 3+4 (active misplays /
-human-vs-bot asymmetry), class 1 (dead keywords), class 2, class 5.
+**STATUS (fixed on claude/modern_decks, 2026-07):** all five classes
+plus the bot-side mirrors are addressed — suspensions (AmountAnswerPending,
+new CardsAnswerPending + ask_seat_cards/choose_up_to_cards, new
+MayCastExiledPending completion), DeciderKind::Auto policies where
+suspension is out of architectural reach, and bot prompt policies
+(life-tax guard, tempting-offer decline, upkeep-value check, stack-zone
+source lookup). ScriptedDecider always retains authority (suspension and
+policies engage only for the live AutoDecider).
+
+Deliberate remainders (policy-only or unchanged, each documented at the
+site): Madness/Dredge interactive modals need resumable discard/draw
+flows; Fiery Gambit's flip-again loop; Read Ahead's chapter pick
+(ETB-time, no suspension reach); Amped Raptor's energy free-cast and
+Ripple's chained offers (policy yes); per-token counter distribution
+(even split for all seats); owner tuck choices and the AnyColor
+extra-mana pick (smart defaults, no agency); legend-keep is a smart
+default — the client's ChooseLegendToKeep modal still needs an engine
+suspension to ever fire; single-stash constraint limits multi-ui-player
+loops (EachPlayer shuffles) to one suspension per resolution.

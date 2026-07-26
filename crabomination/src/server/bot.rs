@@ -130,7 +130,34 @@ impl Bot for RandomBot {
                         // so track committed reveals across the series and
                         // keep saying yes only while the running total
                         // leaves a comfortable buffer.
-                        let take = if description.starts_with("Reveal the top card (") {
+                        // Engine-authored prompt families the generic screen
+                        // can't introspect (no MayDo body): each gets a real
+                        // policy instead of the blanket-yes fallback.
+                        let take = if description.starts_with("Pay ")
+                            && description.contains(" life to deny ")
+                        {
+                            // Rhystic-style life tax: pay only with a healthy
+                            // buffer. Parse the printed amount.
+                            let n: i32 = description
+                                .split_whitespace()
+                                .nth(1)
+                                .and_then(|w| w.parse().ok())
+                                .unwrap_or(2);
+                            state.effective_life(seat) - n > 10
+                        } else if description.starts_with("Accept the tempting offer") {
+                            // Tempting offers reward the caster; decline.
+                            false
+                        } else if description.starts_with("Pay echo ")
+                            || description.starts_with("Pay cumulative upkeep ")
+                            || description.starts_with("Discard a card for ")
+                        {
+                            // Pay while the permanent is worth keeping; let
+                            // cheap chaff die to its own upkeep.
+                            state
+                                .battlefield_find(*source)
+                                .map(|c| permanent_value(state, c.id) >= 4)
+                                .unwrap_or(false)
+                        } else if description.starts_with("Reveal the top card (") {
                             let (cards, life_committed) = match &self.reveal_commit {
                                 Some((s, c, l)) if *s == *source => (*c, *l),
                                 _ => (0, 0),
@@ -886,6 +913,17 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
                 .flat_map(|p| p.graveyard.iter().chain(p.hand.iter()))
                 .find(|c| c.id == source)
                 .map(|c| &c.definition)
+        })
+        // A resolving SPELL lives on the stack — without this, any
+        // instant/sorcery's self-costly MayDo fell through to the
+        // blanket-true fallback below.
+        .or_else(|| {
+            state.stack.iter().find_map(|si| match si {
+                crate::game::types::StackItem::Spell { card, .. } if card.id == source => {
+                    Some(&card.definition)
+                }
+                _ => None,
+            })
         });
     let Some(def) = def else { return true };
     // Find the `MayDo` body whose description matches the prompt. Scan the

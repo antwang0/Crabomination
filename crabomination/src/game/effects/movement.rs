@@ -1190,15 +1190,22 @@ impl GameState {
                         // True = top, false = bottom. AutoDecider
                         // defaults to false (bottom). Run Behind is the
                         // only printed user today.
-                        let decision = crate::decision::Decision::OptionalTrigger {
-                            source: card.id,
-                            description: "Put on top of library? (no = bottom)".into(),
+                        // Auto default: TOP — the choice belongs to the
+                        // card's owner, who nearly always wants their own
+                        // tucked card back next draw (blanket "no" buried
+                        // it every time). Scripted deciders steer;
+                        // suspension isn't reachable this deep in
+                        // `place_card_in_dest` (TODO.md).
+                        let put_on_top = match self.decider.kind() {
+                            crate::decision::DeciderKind::Auto => true,
+                            _ => matches!(
+                                self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                                    source: card.id,
+                                    description: "Put on top of library? (no = bottom)".into(),
+                                }),
+                                crate::decision::DecisionAnswer::Bool(true)
+                            ),
                         };
-                        let answer = self.decider.decide(&decision);
-                        let put_on_top = matches!(
-                            answer,
-                            crate::decision::DecisionAnswer::Bool(true)
-                        );
                         if put_on_top {
                             self.players[p].library.insert(0, card);
                         } else {
@@ -1208,14 +1215,18 @@ impl GameState {
                     LibraryPosition::SecondFromTopOrBottom => {
                         // Deem Inferior — owner picks second-from-top or
                         // bottom. Yes = second from top; no/default = bottom.
-                        let decision = crate::decision::Decision::OptionalTrigger {
-                            source: card.id,
-                            description: "Put second from the top of library? (no = bottom)".into(),
+                        // Auto default: second-from-top (the owner wants the
+                        // card back soon); scripted deciders steer.
+                        let second_from_top = match self.decider.kind() {
+                            crate::decision::DeciderKind::Auto => true,
+                            _ => matches!(
+                                self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                                    source: card.id,
+                                    description: "Put second from the top of library? (no = bottom)".into(),
+                                }),
+                                crate::decision::DecisionAnswer::Bool(true)
+                            ),
                         };
-                        let second_from_top = matches!(
-                            self.decider.decide(&decision),
-                            crate::decision::DecisionAnswer::Bool(true)
-                        );
                         if second_from_top && !self.players[p].library.is_empty() {
                             self.players[p].library.insert(1, card);
                         } else {
