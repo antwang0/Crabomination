@@ -283,7 +283,17 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     for &f in picks {
         if allowed(f) {
             let jitter = if noise > 0 { rng.random_range(-noise..=noise) } else { 0 };
-            let fix = if fixing_bonus > 0 && is_fixing_card(&f()) { fixing_bonus } else { 0 };
+            // Lands never take spell slots — they're assigned by
+            // `assemble_lands`; the fixing bonus is for rocks/fetchers.
+            let def = f();
+            let fix = if fixing_bonus > 0
+                && !def.card_types.contains(&crate::card::CardType::Land)
+                && is_fixing_card(&def)
+            {
+                fixing_bonus
+            } else {
+                0
+            };
             scored.push((f, score_card_with_colors(f, &pick_colors) + jitter + fix));
         } else {
             off.push(f);

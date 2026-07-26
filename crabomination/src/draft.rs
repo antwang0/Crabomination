@@ -275,11 +275,16 @@ pub(crate) fn score_card_with_colors(
     // ── Color fit (the dominant signal once you have ~5 picks) ──
     let card_colors = colors_of_cost(&def.cost);
     if card_colors.is_empty() {
-        // Colorless / artifact / generic-only cards: slot into any deck.
-        // Priced just under a single on-color pip (+6) — the old +2 made
-        // "castable everywhere" function as a penalty, so no colorless
+        // Colorless / artifact / generic-only NONLAND cards: slot into any
+        // deck. Priced just under a single on-color pip (+6) — the old +2
+        // made "castable everywhere" function as a penalty, so no colorless
         // card ever survived the sealed builder's cut regardless of body.
-        score += 5;
+        // Lands are excluded: they'd sneak into SPELL slots on this bonus
+        // (the sealed builder assigns lands separately in assemble_lands),
+        // producing accidental 18-land/21-spell decks.
+        if !def.card_types.contains(&CardType::Land) {
+            score += 5;
+        }
     } else if seat_colors.is_empty() {
         // First few picks before any colors are committed: don't
         // penalize colored cards at all — early picks define the
