@@ -543,6 +543,9 @@ fn build_shape<R: Rng>(
             land_colors.push(c);
         }
     }
+    // Legal-deck floor: when the pool can't fill the requested spell
+    // count, pad lands so the deck still reaches 40 cards.
+    let lands = lands.max(40u32.saturating_sub(main.len() as u32));
     let (duals, basics) = assemble_lands(&mut leftovers, &main, &land_colors, lands);
     Some(CandidateBuild {
         static_score: static_build_score(&main, spells),
@@ -629,8 +632,7 @@ fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, rng: &mut R
 
     // Noisy rebuild of the chosen shape: jittered card picks, sampled
     // spell/land counts.
-    let spells = rng.random_range(cfg.spell_count_range.0..=cfg.spell_count_range.1);
-    let lands = rng.random_range(cfg.land_count_range.0..=cfg.land_count_range.1);
+    let (spells, lands) = sample_deck_split(cfg, rng);
     let noise = (t * 4.0).round() as i32;
     let build =
         build_shape(pulls, &chosen.colors, &chosen.splash, spells, lands, noise, cfg, rng)
@@ -741,6 +743,21 @@ pub fn simulate_match_games(
         }
     }
     tally
+}
+
+/// Sample a variant's spell/land split that always sums to the legal
+/// 40-card sealed deck: spells from `spell_count_range`, lands = 40 −
+/// spells (clamped into `land_count_range`, re-deriving spells from the
+/// clamp if the config ranges don't line up). Independent sampling used
+/// to produce 38-39-card decks, which are illegal AND thinner-deck
+/// advantaged — they won tournaments on the bug.
+fn sample_deck_split<R: Rng>(cfg: &SimConfig, rng: &mut R) -> (usize, u32) {
+    const DECK_SIZE: usize = 40;
+    let spells = rng.random_range(cfg.spell_count_range.0..=cfg.spell_count_range.1);
+    let lands = (DECK_SIZE.saturating_sub(spells) as u32)
+        .clamp(cfg.land_count_range.0, cfg.land_count_range.1);
+    let spells = DECK_SIZE.saturating_sub(lands as usize);
+    (spells, lands)
 }
 
 /// Unshuffled two-seat state with both libraries loaded — the clone-me
@@ -1009,11 +1026,8 @@ where
             let (spells, lands, n) = if v == 0 {
                 (cfg.target_spells, cfg.total_lands, 0)
             } else {
-                (
-                    rng.random_range(cfg.spell_count_range.0..=cfg.spell_count_range.1),
-                    rng.random_range(cfg.land_count_range.0..=cfg.land_count_range.1),
-                    noise + (v as i32 / 16) * 2,
-                )
+                let (s, l) = sample_deck_split(cfg, &mut rng);
+                (s, l, noise + (v as i32 / 16) * 2)
             };
             let Some(mut build) =
                 build_shape(pool, &shape.colors, &shape.splash, spells, lands, n, cfg, &mut rng)
@@ -1168,6 +1182,32 @@ mod tests {
             candidates[0].main.len() + cfg.total_lands as usize,
             "deck = main + basics",
         );
+    }
+
+    /// Every variant and gauntlet deck is a legal 40-card sealed deck —
+    /// independent spell/land sampling used to mint 38-39-card decks,
+    /// which won tournaments on thinner-deck consistency.
+    #[test]
+    fn variants_and_gauntlet_decks_are_forty_cards()  {
+        let cfg = SimConfig {
+            gauntlet_size: 4,
+            games_per_pairing: 1,
+            candidate_cap: 1,
+            racing: false,
+            threads: 2,
+            refine_top: 1,
+            variants_per_shape: 12,
+            ..Default::default()
+        };
+        for deck in generate_gauntlet(&cfg) {
+            assert_eq!(deck.cards.len(), 40, "gauntlet deck {} is 40 cards", deck.label);
+        }
+        let pool = wr_pool_with_green_bomb();
+        let base = recommend(&pool, &cfg, |_| {});
+        let refined = refine(&pool, &base, &cfg, |_| {});
+        for c in &refined.candidates {
+            assert_eq!(c.deck().len(), 40, "variant {} is 40 cards", c.label);
+        }
     }
 
     /// Fixing classifier: mana-rock bodies and land fetchers qualify,
