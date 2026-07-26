@@ -93,6 +93,11 @@ pub struct SimConfig {
     /// finalists (each round widens the opponent sample and adds
     /// `games_per_pairing` games per pairing).
     pub racing_rounds: u32,
+    /// Stage-3 local search: generations of attribution-guided card swaps
+    /// around the incumbent winner. 0 disables (default).
+    pub search_generations: usize,
+    /// Stage-3 local search: swap children raced per generation.
+    pub search_children: usize,
 }
 
 impl Default for SimConfig {
@@ -118,11 +123,14 @@ impl Default for SimConfig {
             refine_top: 3,
             variants_per_shape: 6,
             racing_rounds: 3,
+            search_generations: 0,
+            search_children: 8,
         }
     }
 }
 
 /// One enumerated build from the user's pool.
+#[derive(Clone)]
 pub struct CandidateBuild {
     /// Main colors (2–5).
     pub colors: Vec<Color>,
@@ -407,11 +415,23 @@ fn splash_cards(pool: &[CardFactory], pair: &[Color], third: Color, cfg: &SimCon
 
 /// Proportional basic split over arbitrarily many colors (≥1 source per
 /// color with any pips when possible). Generalizes
-/// `draft::suggest_basic_split` beyond two colors.
+/// `draft::suggest_basic_split` beyond two colors. Pips are weighted by
+/// earliness — a {B} pip on a two-drop needs its source in the opening
+/// hand, a {B} pip on a six-drop can wait — so a splash of expensive
+/// cards leans on fewer sources than the raw pip count suggests.
 fn basic_split(main: &[CardFactory], colors: &[Color], total: u32) -> HashMap<Color, u32> {
     let weights: Vec<(Color, u32)> = colors
         .iter()
-        .map(|&c| (c, main.iter().map(|&f| colored_pip_count(&f().cost, c)).sum()))
+        .map(|&c| {
+            let w = main
+                .iter()
+                .map(|&f| {
+                    let def = f();
+                    colored_pip_count(&def.cost, c) * 7u32.saturating_sub(def.cost.cmc()).max(1)
+                })
+                .sum();
+            (c, w)
+        })
         .collect();
     let total_w: u32 = weights.iter().map(|(_, w)| w).sum();
     let mut out: HashMap<Color, u32> = HashMap::new();
@@ -614,17 +634,27 @@ pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<Candid
 
 // ─────────────────────────────── gauntlet ────────────────────────────────
 
-/// Build one randomized deck from `pulls`. Color identity is sampled from
-/// the top-3 pairs (weight ∝ rank, scaled by temperature), card choice
-/// gets score jitter, and spell/land counts are sampled from the config
-/// ranges — so a field of these looks like a room of humans, not clones.
+/// Build one randomized deck from `pulls`. Color identity is sampled by a
+/// softmax over the top shapes' static scores (temperature-scaled), card
+/// choice gets score jitter, and spell/land counts are sampled from the
+/// config ranges — so a field of these looks like a room of humans, not
+/// clones.
 fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, rng: &mut R) -> GauntletDeck {
     // Same shape lattice as user candidates (pairs, splashes, 3/4/5-color).
     // A field that only ever builds pairs never bombs back at splash-shaped
     // candidates — inflating their measured win rates.
     let shapes = enumerate_candidates(pulls, cfg);
     let t = cfg.build_temperature.max(0.0);
-    let weights = [1.0, 0.5 * t, 0.25 * t];
+    // Honest field: weight shape choice by the actual static-score gaps
+    // (softmax over the top 5) instead of flat rank weights — a pool whose
+    // best build dominates plays it nearly always, while close calls stay
+    // diverse. A ~12-point score gap costs ~e× likelihood at t = 1;
+    // t → 0 collapses to the argmax.
+    let k = shapes.len().min(5);
+    let scale = (12.0 * t).max(1e-6);
+    let best = shapes[0].static_score as f64;
+    let weights: Vec<f64> =
+        shapes[..k].iter().map(|s| ((s.static_score as f64 - best) / scale).exp()).collect();
     let total: f64 = weights.iter().sum();
     let mut roll = rng.random_range(0.0..total);
     let mut idx = 0;
@@ -635,12 +665,14 @@ fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, rng: &mut R
         }
         roll -= w;
     }
-    let chosen = &shapes[idx.min(shapes.len() - 1)];
+    let chosen = &shapes[idx];
 
     // Noisy rebuild of the chosen shape: jittered card picks, sampled
-    // spell/land counts.
+    // spell/land counts. The jitter is deliberately mild — a field of
+    // near-greedy builds is the honest opposition; heavy jitter made the
+    // field soft and inflated every candidate's measured win rate.
     let (spells, lands) = sample_deck_split(cfg, rng);
-    let noise = (t * 4.0).round() as i32;
+    let noise = (t * 2.0).round() as i32;
     let build =
         build_shape(pulls, &chosen.colors, &chosen.splash, spells, lands, noise, cfg, rng)
             .unwrap_or_else(|| {
@@ -1059,6 +1091,217 @@ where
     recommend_prepared(variants, &cfg_all, on_progress)
 }
 
+/// One card's attribution across an evaluated fleet: mean win rate of the
+/// builds playing it vs the builds benching it. Deck-level results can't
+/// credit single cards; this can (noisily — mind the sample counts).
+pub struct CardAttribution {
+    pub name: &'static str,
+    pub mean_in: f64,
+    pub n_in: usize,
+    pub mean_out: f64,
+    pub n_out: usize,
+}
+
+impl CardAttribution {
+    pub fn delta(&self) -> f64 {
+        self.mean_in - self.mean_out
+    }
+}
+
+/// Per-card attribution over `(build, win rate)` samples. Only names
+/// appearing in AND missing from at least `min_side` samples are
+/// comparable (a card in every build has no counterfactual). Sorted by
+/// descending delta.
+pub fn per_card_attribution(
+    samples: &[(&CandidateBuild, f64)],
+    min_side: usize,
+) -> Vec<CardAttribution> {
+    let all_names: std::collections::HashSet<&'static str> = samples
+        .iter()
+        .flat_map(|(c, _)| c.main.iter().chain(c.duals.iter()).map(|&f| f().name))
+        .collect();
+    let mut per: HashMap<&'static str, (Vec<f64>, Vec<f64>)> = HashMap::new();
+    for (c, wr) in samples {
+        let in_deck: std::collections::HashSet<&'static str> =
+            c.main.iter().chain(c.duals.iter()).map(|&f| f().name).collect();
+        for name in &all_names {
+            let e = per.entry(name).or_default();
+            if in_deck.contains(name) { e.0.push(*wr) } else { e.1.push(*wr) }
+        }
+    }
+    let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;
+    let mut rows: Vec<CardAttribution> = per
+        .into_iter()
+        .filter(|(_, (i, o))| i.len() >= min_side && o.len() >= min_side)
+        .map(|(name, (i, o))| CardAttribution {
+            name,
+            mean_in: mean(&i),
+            n_in: i.len(),
+            mean_out: mean(&o),
+            n_out: o.len(),
+        })
+        .collect();
+    rows.sort_by(|a, b| b.delta().partial_cmp(&a.delta()).unwrap_or(std::cmp::Ordering::Equal));
+    rows
+}
+
+/// A single-swap child of `parent`: `main[out_idx]` goes to the bench,
+/// `in_card` comes off it, and the basics re-split for the new pips. The
+/// spell count (and so the 40-card total) is unchanged by construction.
+fn swap_child(parent: &CandidateBuild, out_idx: usize, in_card: CardFactory, label: String) -> CandidateBuild {
+    let mut child = parent.clone();
+    let removed = child.main[out_idx];
+    child.main[out_idx] = in_card;
+    if let Some(pos) = child.leftovers.iter().position(|&f| f as usize == in_card as usize) {
+        child.leftovers.remove(pos);
+    }
+    child.leftovers.push(removed);
+    // Land colors track the new main (a splash card swapped out may free
+    // its basics; one swapped in needs a source).
+    let mut land_colors = child.colors.clone();
+    for &c in &child.splash {
+        if child.main.iter().any(|&f| colors_of_cost(&f().cost).contains(&c)) {
+            land_colors.push(c);
+        }
+    }
+    let basic_total: u32 = parent.basics.values().sum();
+    child.basics = basic_split(&child.main, &land_colors, basic_total);
+    child.static_score = static_build_score(&child.main, child.main.len());
+    child.label = label;
+    child
+}
+
+/// Stage-3 refinement: attribution-guided local search around the winning
+/// build. Each generation computes per-card attribution over *every*
+/// build measured so far, proposes children that swap the weakest in-deck
+/// cards for the strongest bench cards (plus seeded random swaps for
+/// exploration), and races children + incumbent against the same CRN
+/// gauntlet — so the comparison is paired game-for-game. Adopts a child
+/// that wins; stops at `search_generations`, on a generation with no
+/// improvement, or when no legal swap remains.
+///
+/// This replaces "read the attribution table by hand and re-run with a
+/// pin": the gradient the table exposes is followed automatically.
+pub fn local_search<F>(base: &Recommendation, cfg: &SimConfig, on_progress: F) -> Recommendation
+where
+    F: Fn(&[CandidateEval]) + Sync,
+{
+    let mut incumbent: CandidateBuild = base.candidates[base.ranking[0]].clone();
+    incumbent.label = format!("{} (incumbent)", incumbent.label);
+    let mut samples: Vec<(CandidateBuild, f64)> = base.candidates[..base.evals.len()]
+        .iter()
+        .zip(&base.evals)
+        .map(|(c, e)| (c.clone(), e.win_rate()))
+        .collect();
+    let mut last: Option<Recommendation> = None;
+    for generation in 0..cfg.search_generations {
+        // Which cards may come in: bench nonlands whose colors fit the
+        // build, honoring the copy cap.
+        let legal_in = |f: CardFactory, main: &[CardFactory]| -> bool {
+            let def = f();
+            if def.card_types.contains(&crate::card::CardType::Land) {
+                return false;
+            }
+            let cs = colors_of_cost(&def.cost);
+            let fits = cs.is_empty()
+                || cs.iter().all(|c| incumbent.colors.contains(c) || incumbent.splash.contains(c));
+            fits && (main.iter().filter(|&&m| m as usize == f as usize).count() as u32) < COPY_CAP
+        };
+        let refs: Vec<(&CandidateBuild, f64)> = samples.iter().map(|(c, w)| (c, *w)).collect();
+        let attribution = per_card_attribution(&refs, 3);
+        let delta_of = |f: CardFactory| -> f64 {
+            attribution.iter().find(|a| a.name == f().name).map(|a| a.delta()).unwrap_or(0.0)
+        };
+        // Candidate swaps: every (weak in-deck, strong bench) pair ranked
+        // by expected gain, then seeded random swaps to keep exploring
+        // when the gradient runs dry.
+        let mut proposals: Vec<(usize, CardFactory, f64)> = Vec::new();
+        for (i, &out_card) in incumbent.main.iter().enumerate() {
+            for &in_card in &incumbent.leftovers {
+                if in_card as usize == out_card as usize || !legal_in(in_card, &incumbent.main) {
+                    continue;
+                }
+                let gain = delta_of(in_card) - delta_of(out_card);
+                proposals.push((i, in_card, gain));
+            }
+        }
+        proposals.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+        let mut rng = StdRng::seed_from_u64(
+            cfg.seed ^ (generation as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93),
+        );
+        let explore = cfg.search_children / 4;
+        let mut children: Vec<CandidateBuild> = Vec::new();
+        let mut seen: std::collections::HashSet<Vec<usize>> = std::collections::HashSet::new();
+        let key_of = |main: &[CardFactory]| -> Vec<usize> {
+            let mut k: Vec<usize> = main.iter().map(|&f| f as usize).collect();
+            k.sort_unstable();
+            k
+        };
+        seen.insert(key_of(&incumbent.main));
+        // Gradient children first (positive expected gain only), then
+        // random exploration swaps.
+        for &(i, in_card, gain) in &proposals {
+            if children.len() >= cfg.search_children.saturating_sub(explore) || gain <= 0.0 {
+                break;
+            }
+            let child = swap_child(
+                &incumbent,
+                i,
+                in_card,
+                format!("g{generation} s{}", children.len()),
+            );
+            if seen.insert(key_of(&child.main)) {
+                children.push(child);
+            }
+        }
+        for _ in 0..cfg.search_children * 4 {
+            if children.len() >= cfg.search_children || proposals.is_empty() {
+                break;
+            }
+            let &(i, in_card, _) = &proposals[rng.random_range(0..proposals.len())];
+            let child = swap_child(
+                &incumbent,
+                i,
+                in_card,
+                format!("g{generation} x{}", children.len()),
+            );
+            if seen.insert(key_of(&child.main)) {
+                children.push(child);
+            }
+        }
+        if children.is_empty() {
+            break;
+        }
+        let mut cands = vec![incumbent.clone()];
+        cands.extend(children);
+        let cfg_gen = SimConfig { candidate_cap: cands.len(), ..cfg.clone() };
+        let rec = recommend_prepared(cands, &cfg_gen, |e| on_progress(e));
+        samples.extend(
+            rec.candidates[..rec.evals.len()]
+                .iter()
+                .zip(&rec.evals)
+                .map(|(c, e)| (c.clone(), e.win_rate())),
+        );
+        let best = rec.ranking[0];
+        let improved = best != 0
+            && rec.evals[best].win_rate() > rec.evals[0].win_rate();
+        if improved {
+            incumbent = rec.candidates[best].clone();
+            incumbent.label = format!("{} (incumbent)", incumbent.label);
+        }
+        last = Some(rec);
+        if !improved {
+            break;
+        }
+    }
+    last.unwrap_or_else(|| Recommendation {
+        candidates: vec![incumbent],
+        evals: vec![base.evals[base.ranking[0]].clone()],
+        ranking: vec![0],
+        seed: cfg.seed,
+    })
+}
+
 /// Like [`recommend`] but with a caller-supplied candidate list — the
 /// first `candidate_cap` entries are the ones simulated, so callers can
 /// reorder to pin builds the static rank would cut.
@@ -1341,6 +1584,53 @@ mod tests {
             refined.candidates.iter().any(|c| c.label.contains(" v")),
             "at least one jittered variant exists",
         );
+    }
+
+    /// Curve-weighted basics: pips on cheap spells outweigh the same pip
+    /// count on expensive ones — a Bolt-heavy red half wants more sources
+    /// than an Angels-only white half even at fewer raw pips.
+    #[test]
+    fn basic_split_leans_on_cheap_pips() {
+        let mut main: Vec<CardFactory> = Vec::new();
+        for _ in 0..4 {
+            main.push(catalog::lightning_bolt); // {R}, 4 raw R pips, all at cmc 1
+        }
+        for _ in 0..4 {
+            main.push(catalog::serra_angel); // {3}{W}{W}, 8 raw W pips at cmc 5
+        }
+        let split = basic_split(&main, &[Color::Red, Color::White], 10);
+        assert!(
+            split[&Color::Red] > split[&Color::White],
+            "cheap red pips outweigh late white ones, got {split:?}",
+        );
+        assert_eq!(split.values().sum::<u32>(), 10);
+    }
+
+    /// Local search: terminates, every candidate stays a legal 40-card
+    /// deck, and the incumbent is always in the raced set.
+    #[test]
+    fn local_search_produces_legal_swaps() {
+        let cfg = SimConfig {
+            gauntlet_size: 2,
+            games_per_pairing: 1,
+            candidate_cap: 4,
+            racing: false,
+            threads: 2,
+            refine_top: 2,
+            variants_per_shape: 4,
+            search_generations: 1,
+            search_children: 3,
+            ..Default::default()
+        };
+        let pool = wr_pool_with_green_bomb();
+        let base = recommend(&pool, &cfg, |_| {});
+        let refined = refine(&pool, &base, &cfg, |_| {});
+        let searched = local_search(&refined, &cfg, |_| {});
+        assert!(!searched.candidates.is_empty());
+        assert!(searched.candidates[0].label.contains("(incumbent)"));
+        for c in &searched.candidates {
+            assert_eq!(c.deck().len(), 40, "swap child {} stays 40 cards", c.label);
+        }
     }
 
     /// End-to-end smoke: tiny config, racing off, two threads — must

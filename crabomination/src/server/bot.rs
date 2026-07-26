@@ -190,8 +190,8 @@ impl Bot for RandomBot {
                     }
                     // AutoDecider chooses nothing; the bot exiles opponents'
                     // graveyard cards (deny graveyard value) up to the cap.
-                    crate::decision::Decision::ChooseCards { candidates, min, max, .. } => {
-                        decide_choose_cards(state, seat, candidates, *min, *max)
+                    crate::decision::Decision::ChooseCards { prompt, candidates, min, max, .. } => {
+                        decide_choose_cards(state, seat, prompt, candidates, *min, *max)
                     }
                     // A self-discard (cleanup over max hand size, rummaging, a
                     // discard cost): every offered card is in our own hand and
@@ -251,9 +251,20 @@ impl Bot for RandomBot {
                 if !self.blocks_declared && !state.attacking().is_empty() {
                     self.blocks_declared = true;
                     Some(GameAction::DeclareBlockers(pick_blocks(state, seat)))
+                } else if state.blockers_declared() && state.stack.is_empty() {
+                    // Post-block priority: a held pump trick that flips a
+                    // fight one of our blockers is losing.
+                    Some(pick_combat_trick(state, seat).unwrap_or(GameAction::PassPriority))
                 } else {
                     Some(GameAction::PassPriority)
                 }
+            }
+            // Active side of the same window: blocks are in, stack is
+            // empty — the classic trick timing for a blocked attacker.
+            TurnStep::DeclareBlockers
+                if is_active && state.blockers_declared() && state.stack.is_empty() =>
+            {
+                Some(pick_combat_trick(state, seat).unwrap_or(GameAction::PassPriority))
             }
             TurnStep::DeclareAttackers if is_active => {
                 if !self.attackers_declared {
@@ -379,6 +390,30 @@ impl Bot for RandomBot {
                     let total_raw_power: i32 =
                         raw_attackers.iter().map(|c| attacker_damage_value(state, c.id)).sum();
                     let lethal_swing = total_raw_power >= opp_life;
+                    // Race math: compare full-out clocks. We strike first
+                    // (it's our combat), so strictly fewer turns-to-lethal
+                    // than the opponent's counter-clock — inside a short
+                    // horizon — means holding back only concedes the race;
+                    // attack like it's lethal-in-N. Defenders and can't-
+                    // attack bodies add nothing to their clock.
+                    let opp_clock: i32 = state
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == opp_seat
+                                && c.definition.is_creature()
+                                && !c.has_keyword(&Keyword::Defender)
+                                && !c.has_keyword(&Keyword::CantAttack)
+                        })
+                        .map(|c| c.power().max(0))
+                        .sum();
+                    let racing = total_raw_power > 0 && opp_clock > 0 && {
+                        let our_turns = (opp_life.max(1) + total_raw_power - 1) / total_raw_power;
+                        let their_turns =
+                            (state.effective_life(seat).max(1) + opp_clock - 1) / opp_clock;
+                        our_turns < their_turns && our_turns <= 5
+                    };
+                    let lethal_swing = lethal_swing || racing;
                     let opp_blockers: Vec<&crate::card::CardInstance> = state
                         .battlefield
                         .iter()
@@ -1283,17 +1318,33 @@ fn decide_library_search(
 fn decide_choose_cards(
     state: &GameState,
     seat: usize,
+    prompt: &str,
     candidates: &[(crate::card::CardId, String)],
     min: u32,
     max: u32,
 ) -> crate::decision::DecisionAnswer {
     use crate::decision::DecisionAnswer;
-    // Hand-source pick: take the biggest creature(s) we can.
+    // A sacrifice/discard prompt is a COST — the pick should minimize what
+    // we give up, not maximize it. Everything else (draft into hand, tap
+    // opposing creatures, exile from graveyards) is upside and keeps the
+    // biggest-first / most-hostile-first behavior below.
+    let prompt_lc = prompt.to_lowercase();
+    let detrimental = prompt_lc.contains("sacrifice") || prompt_lc.contains("discard");
+    // Hand-source pick.
     let all_in_hand = !candidates.is_empty()
         && candidates
             .iter()
             .all(|(id, _)| state.players[seat].hand.iter().any(|c| c.id == *id));
     if all_in_hand {
+        if detrimental {
+            // Shed the least useful cards, and only as many as forced.
+            let chosen: Vec<_> = hand_worst_first(state, seat, candidates)
+                .into_iter()
+                .take(min as usize)
+                .collect();
+            return DecisionAnswer::Cards(chosen);
+        }
+        // Beneficial: take the biggest card(s) we can.
         let mut ranked: Vec<(crate::card::CardId, i32, i32)> = candidates
             .iter()
             .filter_map(|(id, _)| {
@@ -1309,11 +1360,28 @@ fn decide_choose_cards(
     // Battlefield-source pick (Archipelagore's "tap up to X target creatures",
     // and similar resolution-time multi-target taps): the AutoDecider declines,
     // so the bot would tap nothing. Prefer opponents' untapped creatures — the
-    // biggest threats first — up to the cap.
+    // biggest threats first — up to the cap. A sacrifice prompt (or a forced
+    // pick over only our own permanents) instead gives up the least valuable.
     let all_on_battlefield = candidates
         .iter()
         .all(|(id, _)| state.battlefield.iter().any(|c| c.id == *id));
     if all_on_battlefield {
+        let own_least_valuable_first = || -> Vec<crate::card::CardId> {
+            let mut own: Vec<(crate::card::CardId, i32)> = candidates
+                .iter()
+                .filter_map(|(id, _)| {
+                    let c = state.battlefield.iter().find(|c| c.id == *id)?;
+                    (c.controller == seat).then(|| (*id, sacrifice_keep_value(state, c.id)))
+                })
+                .collect();
+            own.sort_by_key(|(_, v)| *v);
+            own.into_iter().map(|(id, _)| id).collect()
+        };
+        if detrimental {
+            let chosen: Vec<_> =
+                own_least_valuable_first().into_iter().take(min as usize).collect();
+            return DecisionAnswer::Cards(chosen);
+        }
         let mut ranked: Vec<(crate::card::CardId, i32)> = candidates
             .iter()
             .filter_map(|(id, _)| {
@@ -1324,7 +1392,21 @@ fn decide_choose_cards(
             })
             .collect();
         ranked.sort_by_key(|b| std::cmp::Reverse(b.1));
-        let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, _)| id).collect();
+        let mut chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, _)| id).collect();
+        // A forced pick (min ≥ 1) with no enemy candidates — an own-board
+        // choice the enemy-first logic can't fill. Give up the least
+        // valuable of ours rather than answer empty (which the engine
+        // rejects, deadlocking the match on a re-ask loop).
+        if chosen.len() < min as usize {
+            for id in own_least_valuable_first() {
+                if chosen.len() >= min as usize {
+                    break;
+                }
+                if !chosen.contains(&id) {
+                    chosen.push(id);
+                }
+            }
+        }
         return DecisionAnswer::Cards(chosen);
     }
     let owner_of = |id: crate::card::CardId| -> Option<usize> {
@@ -1366,7 +1448,21 @@ fn decide_self_discard(
     hand: &[(crate::card::CardId, String)],
     count: u32,
 ) -> crate::decision::DecisionAnswer {
-    use crate::decision::DecisionAnswer;
+    crate::decision::DecisionAnswer::Discard(
+        hand_worst_first(state, seat, hand).into_iter().take(count as usize).collect(),
+    )
+}
+
+/// Ascending-usefulness ranking of `offered` hand cards (worst first) —
+/// the shed order shared by self-discards and sacrifice/discard-cost
+/// `ChooseCards` prompts. Surplus lands go first once the bot is no
+/// longer mana-light; otherwise the most expensive spells (least likely
+/// to be cast soon) are pitched. Ties keep hand order.
+fn hand_worst_first(
+    state: &GameState,
+    seat: usize,
+    offered: &[(crate::card::CardId, String)],
+) -> Vec<crate::card::CardId> {
     // Lands already in play: once we have plenty, extra lands in hand are the
     // first thing to pitch; while still mana-light, keep them.
     let lands_in_play = state
@@ -1380,7 +1476,7 @@ fn decide_self_discard(
     // flooded bot (≥5 in play) pitches every spare land first.
     let mut lands_still_wanted = 5usize.saturating_sub(lands_in_play);
     // Score each offered card — LOWER is pitched sooner.
-    let mut scored: Vec<(i64, crate::card::CardId)> = hand
+    let mut scored: Vec<(i64, crate::card::CardId)> = offered
         .iter()
         .filter_map(|(id, _)| {
             let card = state.players[seat].hand.iter().find(|c| c.id == *id)?;
@@ -1402,9 +1498,7 @@ fn decide_self_discard(
         })
         .collect();
     scored.sort_by_key(|(s, _)| *s);
-    let discard: Vec<crate::card::CardId> =
-        scored.iter().take(count as usize).map(|(_, id)| *id).collect();
-    DecisionAnswer::Discard(discard)
+    scored.into_iter().map(|(_, id)| id).collect()
 }
 
 fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {
@@ -1484,6 +1578,13 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
 }
 
 fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameAction {
+    // One library-stripped probe template per tick: every candidate dry-run
+    // below re-clones this light template instead of the full state. The
+    // library is the largest part of a `GameState` clone and cast/activate/
+    // play-land legality never reads it (see `affordance_probe_template`),
+    // so this turns N full-deck clones into one + N light ones.
+    let probe = state.affordance_probe_template();
+
     // Tap the first untapped land THE BOT CURRENTLY CONTROLS, one call
     // at a time so each mana ability surfaces as its own event. The
     // `controller`-not-`owner` filter is a cheap pre-filter; the
@@ -1503,7 +1604,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             additional_targets: Vec::new(),
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             return action;
         }
     }
@@ -1521,23 +1622,26 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             additional_targets: Vec::new(),
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             return action;
         }
     }
 
     // Build list of castable non-land spells. Affordability + target
-    // pre-filters reduce the candidate set; the FINAL gate is
-    // `state.would_accept(...)`, which dry-runs each candidate
-    // against a clone of the engine state and discards anything the
-    // engine would reject (sorcery timing under Teferi, Damping
-    // Sphere mana tax, hexproof targets, stolen permanents, etc.).
-    // The dry-run is the source of truth — pre-filters are pure
-    // performance hints to keep the candidate set small.
-    let castable: Vec<GameAction> = state.players[seat]
+    // pre-filters reduce the candidate set; the FINAL gate is still the
+    // engine dry-run, which discards anything the engine would reject
+    // (sorcery timing under Teferi, Damping Sphere mana tax, hexproof
+    // targets, stolen permanents, etc.) — but for this main block it runs
+    // *lazily* at the pick site below, in descending score order, so a
+    // typical tick probes one or two candidates instead of the whole hand.
+    let mut unvalidated: Vec<GameAction> = state.players[seat]
         .hand
         .iter()
         .filter(|c| !c.definition.is_land())
+        // Pure temp-pump instants are combat tricks: held for the fight
+        // window (`pick_combat_trick`), not main-phased where the buff
+        // telegraphs and fizzles at cleanup.
+        .filter(|c| !is_combat_trick(&c.definition))
         // Spree spells need `CastSpellSpree` with chosen modes — a plain
         // `CastSpell` resolves them as a no-op. They get their own candidate
         // block below.
@@ -1600,8 +1704,13 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
                 })
             })
         })
-        .filter(|a| state.would_accept(a.clone()))
         .collect();
+
+    // Specialty candidates below are probed eagerly (their construction
+    // loops need the accept/reject signal — max delve size, biggest
+    // affordable kick count, conspire-over-plain preference), so they land
+    // in `castable` already validated.
+    let mut castable: Vec<GameAction> = Vec::new();
 
     // Delve (CR 702.66): for any hand card with `Keyword::Delve` that the
     // bot can't (yet) afford, try exiling graveyard cards to pay the
@@ -1609,7 +1718,6 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
     // pip total), then let `would_accept` confirm the reduced cost is
     // payable. Appended to the candidate set so the bot actually leverages
     // Treasure Cruise / Dig Through Time / Gurmag Angler off a full bin.
-    let mut castable = castable;
     for c in state.players[seat]
         .hand
         .iter()
@@ -1649,7 +1757,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             x_value: None,
             delve_cards,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -1689,7 +1797,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -1721,7 +1829,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
                 additional_targets,
                 x_value: None,
             };
-            if state.would_accept(action.clone()) {
+            if GameState::would_accept_on(&probe, action.clone()) {
                 castable.push(action);
             }
         }
@@ -1754,7 +1862,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -1806,11 +1914,12 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             // Prefer conspiring over the plain cast of the same card — the
             // extra copy is value the bot's spell eval doesn't otherwise see.
             let cid = c.id;
-            castable.retain(|a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid));
+            unvalidated
+                .retain(|a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid));
             castable.push(action);
         }
     }
@@ -1844,13 +1953,13 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             // Offspring (CR 702.166) is pure upside — a free 1/1 token copy
             // with no downside beyond the mana. When affordable, prefer it
             // over the plain cast of the same card (mirrors Conspire above).
             if c.definition.has_offspring().is_some() {
                 let cid = c.id;
-                castable.retain(
+                unvalidated.retain(
                     |a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid),
                 );
             }
@@ -1884,7 +1993,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
                 mode: None,
                 x_value: None,
             };
-            if state.would_accept(action.clone()) {
+            if GameState::would_accept_on(&probe, action.clone()) {
                 castable.push(action);
                 break;
             }
@@ -1915,7 +2024,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -1942,7 +2051,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -1967,7 +2076,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -1986,7 +2095,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2012,7 +2121,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
         let action = GameAction::CastSplitRight {
             card_id: c.id, target, additional_targets, mode: None, x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2034,7 +2143,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
         let action = GameAction::CastAftermath {
             card_id: c.id, target, additional_targets, mode: None, x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2060,7 +2169,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             let action = GameAction::CastFlashback {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             };
-            if state.would_accept(action.clone()) {
+            if GameState::would_accept_on(&probe, action.clone()) {
                 castable.push(action);
             }
         }
@@ -2081,7 +2190,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
                 let action = GameAction::CastDisturb {
                     card_id: c.id, target, additional_targets,
                 };
-                if state.would_accept(action.clone()) {
+                if GameState::would_accept_on(&probe, action.clone()) {
                     castable.push(action);
                 }
             }
@@ -2103,7 +2212,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             let action = GameAction::CastMayhem {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             };
-            if state.would_accept(action.clone()) {
+            if GameState::would_accept_on(&probe, action.clone()) {
                 castable.push(action);
             }
         }
@@ -2124,7 +2233,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             let action = GameAction::CastHarmonize {
                 card_id: c.id, tap_creature: None, target, additional_targets, mode: None, x_value: None,
             };
-            if state.would_accept(action.clone()) {
+            if GameState::would_accept_on(&probe, action.clone()) {
                 castable.push(action);
             }
         }
@@ -2148,7 +2257,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             let action = GameAction::ActivateAbility {
                 card_id: c.id, ability_index: idx, target, additional_targets, x_value: None,
             };
-            if state.would_accept(action.clone()) {
+            if GameState::would_accept_on(&probe, action.clone()) {
                 castable.push(action);
             }
         }
@@ -2188,7 +2297,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2218,7 +2327,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
         } else {
             continue;
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2264,46 +2373,8 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             castable.push(action);
-        }
-    }
-
-    // Morph / Disguise (CR 702.36 / 702.166): cast a hand card face down for
-    // {3} as a 2/2 (with ward {2} for Disguise). Offered only when no normal
-    // spell candidate exists yet, so the bot still prefers casting cards face
-    // up; `would_accept` enforces sorcery timing and the {3} payment.
-    if castable.is_empty() {
-        for c in state.players[seat].hand.iter().filter(|c| {
-            c.definition.keywords.iter().any(|k| {
-                matches!(
-                    k,
-                    crate::card::Keyword::Morph(_)
-                        | crate::card::Keyword::Megamorph(_)
-                        | crate::card::Keyword::Disguise(_)
-                )
-            })
-        }) {
-            let action = GameAction::CastFaceDown { card_id: c.id };
-            if state.would_accept(action.clone()) {
-                castable.push(action);
-            }
-        }
-    }
-
-    // Discard-activated hand abilities (Magma Opus's {U/R}{U/R}, Discard:
-    // create a Treasure) — a fallback value play, offered only when the bot
-    // has no spell/face-down candidate so it never pitches a castable card.
-    if castable.is_empty() {
-        for c in state.players[seat]
-            .hand
-            .iter()
-            .filter(|c| c.definition.discard_activated.is_some())
-        {
-            let action = GameAction::ActivateDiscardAbility { card_id: c.id };
-            if state.would_accept(action.clone()) {
-                castable.push(action);
-            }
         }
     }
 
@@ -2316,7 +2387,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
         && let Some(land_id) = pick_land_to_play(state, seat)
     {
         let action = GameAction::PlayLand(land_id);
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             return action;
         }
     }
@@ -2329,45 +2400,116 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             state.players[seat].graveyard.iter().find(|c| c.definition.is_land())
     {
         let action = GameAction::PlayLandFromGraveyard(land.id);
-        if state.would_accept(action.clone()) {
+        if GameState::would_accept_on(&probe, action.clone()) {
             return action;
         }
     }
 
-    if !castable.is_empty() {
+    if !castable.is_empty() || !unvalidated.is_empty() {
         // Magecraft-aware bias: if the bot controls a permanent with a
-        // magecraft trigger and at least one instant or sorcery is in
-        // the castable set, prefer the IS subset so the trigger fires.
-        // Falls back to uniform-random sampling when no magecraft body
-        // is in play. Push (claude/modern_decks batch 202).
+        // magecraft trigger, prefer instants/sorceries so the trigger
+        // fires — IS candidates sort first, and finalist collection stops
+        // at the IS/non-IS boundary once an IS line has validated (the
+        // lazy-probe equivalent of the old only-IS pool restriction).
+        // Push (claude/modern_decks batch 202).
         let has_magecraft = state.battlefield.iter().any(|c| {
             c.controller == seat
                 && c.definition.triggered_abilities.iter().any(is_magecraft_trigger)
         });
-        let pool: Vec<GameAction> = if has_magecraft {
-            let only_is: Vec<GameAction> = castable
-                .iter()
-                .filter(|a| matches!(a, GameAction::CastSpell { card_id, .. } if is_instant_or_sorcery_in_hand(state, seat, *card_id)))
-                .cloned()
-                .collect();
-            if only_is.is_empty() { castable } else { only_is }
-        } else {
-            castable
+        let is_is_spell = |a: &GameAction| {
+            matches!(a, GameAction::CastSpell { card_id, .. } if is_instant_or_sorcery_in_hand(state, seat, *card_id))
         };
-        // Scored pick (replacing the old uniform-random sample): rank every
-        // candidate by mana investment + body stats + value of what it hits,
-        // with a small random jitter so exact ties don't collapse into one
-        // deterministic line. See `score_candidate`. The uniform pick
-        // survives as `RandomBot::uniform_baseline` for A/B ladders.
+        let mut pool: Vec<(GameAction, bool)> =
+            Vec::with_capacity(castable.len() + unvalidated.len());
+        pool.extend(castable.into_iter().map(|a| (a, true)));
+        pool.extend(unvalidated.into_iter().map(|a| (a, false)));
         let mut r = rng();
         if !scored {
-            return pool[r.random_range(0..pool.len())].clone();
+            // Uniform baseline: validate everything (the historical
+            // behavior) and sample.
+            let valid: Vec<GameAction> = pool
+                .into_iter()
+                .filter(|(a, ok)| *ok || GameState::would_accept_on(&probe, a.clone()))
+                .map(|(a, _)| a)
+                .collect();
+            if !valid.is_empty() {
+                let only_is: Vec<GameAction> = if has_magecraft {
+                    valid.iter().filter(|a| is_is_spell(a)).cloned().collect()
+                } else {
+                    Vec::new()
+                };
+                let pick = if only_is.is_empty() { &valid } else { &only_is };
+                return pick[r.random_range(0..pick.len())].clone();
+            }
+        } else {
+            // Scored pick: rank by static score (+ jitter so exact ties
+            // don't collapse into one deterministic line — see
+            // `score_candidate`), walk in rank order probing unvalidated
+            // candidates lazily, and hand the top few survivors to the
+            // outcome evaluation for the final call. Most ticks this
+            // probes 1-3 candidates instead of the whole hand.
+            let mut ranked: Vec<(i32, GameAction, bool)> = pool
+                .into_iter()
+                .map(|(a, ok)| {
+                    (score_candidate(state, seat, &a) * 4 + r.random_range(0..4) as i32, a, ok)
+                })
+                .collect();
+            if has_magecraft {
+                ranked.sort_by_key(|&(s, ref a, _)| (!is_is_spell(a), std::cmp::Reverse(s)));
+            } else {
+                ranked.sort_by_key(|&(s, _, _)| std::cmp::Reverse(s));
+            }
+            const EVAL_TOP: usize = 3;
+            let mut finalists: Vec<(i32, GameAction)> = Vec::new();
+            for (s, a, ok) in ranked {
+                if finalists.len() >= EVAL_TOP {
+                    break;
+                }
+                if has_magecraft && !finalists.is_empty() && !is_is_spell(&a) {
+                    break;
+                }
+                if ok || GameState::would_accept_on(&probe, a.clone()) {
+                    finalists.push((s, a));
+                }
+            }
+            if let Some(best) = pick_by_outcome(state, seat, finalists) {
+                return best;
+            }
         }
-        let best = pool
-            .iter()
-            .max_by_key(|a| score_candidate(state, seat, a) * 4 + r.random_range(0..4) as i32)
-            .expect("pool is non-empty");
-        return best.clone();
+    }
+
+    // Morph / Disguise (CR 702.36 / 702.166): cast a hand card face down for
+    // {3} as a 2/2 (with ward {2} for Disguise). Reached only when no normal
+    // spell candidate validated, so the bot still prefers casting cards face
+    // up; `would_accept` enforces sorcery timing and the {3} payment.
+    for c in state.players[seat].hand.iter().filter(|c| {
+        c.definition.keywords.iter().any(|k| {
+            matches!(
+                k,
+                crate::card::Keyword::Morph(_)
+                    | crate::card::Keyword::Megamorph(_)
+                    | crate::card::Keyword::Disguise(_)
+            )
+        })
+    }) {
+        let action = GameAction::CastFaceDown { card_id: c.id };
+        if GameState::would_accept_on(&probe, action.clone()) {
+            return action;
+        }
+    }
+
+    // Discard-activated hand abilities (Magma Opus's {U/R}{U/R}, Discard:
+    // create a Treasure) — a fallback value play, reached only when the bot
+    // has no spell/face-down line so it never pitches a castable card.
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.discard_activated.is_some())
+    {
+        let action = GameAction::ActivateDiscardAbility { card_id: c.id };
+        if GameState::would_accept_on(&probe, action.clone()) {
+            return action;
+        }
     }
 
     // Activate planeswalker loyalty abilities the bot controls. Pick the
@@ -4408,6 +4550,206 @@ fn first_damage_amount(effect: &Effect, x: u32) -> Option<i32> {
 ///
 /// The caller adds jitter for tie-breaks; scores only need to be
 /// *relatively* right within one candidate pool.
+/// Material evaluation of a state from `seat`'s perspective: a decided
+/// game dominates everything, then board presence (`permanent_value` ×3
+/// per permanent, opponents' counted against), hand size (×2), and life.
+/// Deliberately coarse — it's compared between candidate *outcomes* of the
+/// same tick, so shared terms cancel and only the action's delta matters.
+fn eval_material(state: &GameState, seat: usize) -> i32 {
+    if let Some(over) = state.game_over {
+        return match over {
+            Some(winner) if winner == seat => 100_000,
+            Some(_) => -100_000,
+            None => 0,
+        };
+    }
+    let mut v = 0i32;
+    for c in &state.battlefield {
+        if c.definition.is_land() {
+            continue;
+        }
+        let pv = permanent_value(state, c.id);
+        if c.controller == seat {
+            v += 3 * pv;
+        } else if !state.same_team(c.controller, seat) {
+            v -= 3 * pv;
+        }
+    }
+    for (i, p) in state.players.iter().enumerate() {
+        if !p.is_alive() {
+            continue;
+        }
+        let material = 2 * p.hand.len() as i32 + state.effective_life(i);
+        if i == seat {
+            v += material;
+        } else if !state.same_team(i, seat) {
+            v -= material;
+        }
+    }
+    v
+}
+
+/// Dry-run `action` to quiescence on a full-state clone (libraries kept —
+/// resolution may draw) and score the result for `seat`: the cast is
+/// applied, then priority passes with [`AutoDecider`] answers for any
+/// decision that surfaces until the stack empties. `None` on rejection or
+/// a resolution that won't settle — callers fall back to the static rank.
+fn evaluate_action_outcome(state: &GameState, seat: usize, action: &GameAction) -> Option<i32> {
+    let mut g = state.clone();
+    g.perform_action(action.clone()).ok()?;
+    let mut fuel = 64u32;
+    loop {
+        if g.is_game_over() {
+            break;
+        }
+        if g.pending_decision.is_some() {
+            let answer = {
+                let pending = g.pending_decision.as_ref().unwrap();
+                AutoDecider.decide(&pending.decision)
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).ok()?;
+        }
+        fuel = fuel.checked_sub(1)?;
+    }
+    Some(eval_material(&g, seat))
+}
+
+/// Final pick among the validated finalists `(jittered static score,
+/// action)`: resolve each candidate's outcome and take the best resulting
+/// state, static score breaking ties and ordering candidates whose outcome
+/// probe bailed. A lone finalist skips the outcome clones entirely.
+fn pick_by_outcome(
+    state: &GameState,
+    seat: usize,
+    finalists: Vec<(i32, GameAction)>,
+) -> Option<GameAction> {
+    if finalists.len() <= 1 {
+        return finalists.into_iter().next().map(|(_, a)| a);
+    }
+    let baseline = eval_material(state, seat);
+    finalists
+        .into_iter()
+        .max_by_key(|(s, a)| (evaluate_action_outcome(state, seat, a).unwrap_or(baseline), *s))
+        .map(|(_, a)| a)
+}
+
+/// A pure temporary-pump instant aimed at a target creature (Giant
+/// Growth, Infuriate): the whole effect tree is target pumps with an
+/// end-of-turn/combat duration. Anything with riders (draw, damage,
+/// counters, keyword grants) stays castable on the normal schedule.
+fn is_combat_trick(def: &CardDefinition) -> bool {
+    use crate::card::CardType;
+    use crate::effect::{Duration, Selector};
+    if !def.card_types.contains(&CardType::Instant) {
+        return false;
+    }
+    fn all_temp_pumps(e: &Effect) -> bool {
+        match e {
+            Effect::PumpPT {
+                what: Selector::Target(_) | Selector::TargetFiltered { .. },
+                duration: Duration::EndOfTurn | Duration::EndOfCombat,
+                ..
+            } => true,
+            Effect::Seq(v) => !v.is_empty() && v.iter().all(all_temp_pumps),
+            _ => false,
+        }
+    }
+    all_temp_pumps(&def.effect)
+}
+
+/// After blocks are in: cast a held pump trick when it flips a fight our
+/// creature is currently losing — it dies to its opposite number and the
+/// pump saves it, or it fails to kill and the pump finishes the job.
+/// Covers both sides of combat (our blocked attacker on our turn, our
+/// blocker on theirs). Constant pumps only; dynamic amounts are skipped
+/// rather than mis-valued.
+fn pick_combat_trick(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::{Duration, Selector, Value};
+    fn pump_amounts(e: &Effect) -> Option<(i32, i32)> {
+        match e {
+            Effect::PumpPT {
+                what: Selector::Target(_) | Selector::TargetFiltered { .. },
+                power: Value::Const(p),
+                toughness: Value::Const(t),
+                duration: Duration::EndOfTurn | Duration::EndOfCombat,
+            } => Some((*p, *t)),
+            Effect::Seq(v) => {
+                let mut acc: Option<(i32, i32)> = None;
+                for e in v {
+                    let (p, t) = pump_amounts(e)?;
+                    let (ap, at) = acc.unwrap_or((0, 0));
+                    acc = Some((ap + p, at + t));
+                }
+                acc
+            }
+            _ => None,
+        }
+    }
+    let tricks: Vec<(CardId, i32, i32)> = state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| is_combat_trick(&c.definition))
+        .filter(|c| can_afford_in_state(state, seat, c))
+        .filter_map(|c| pump_amounts(&c.definition.effect).map(|(p, t)| (c.id, p, t)))
+        .collect();
+    if tricks.is_empty() {
+        return None;
+    }
+    let computed_pt = |id: CardId| -> Option<(i32, i32)> {
+        let cp = state.computed_permanent(id);
+        let raw = state.battlefield_find(id)?;
+        Some(match cp {
+            Some(cp) => (cp.power, cp.toughness),
+            None => (raw.power(), raw.toughness()),
+        })
+    };
+    for (blocker, attacker) in state.block_map_snapshot() {
+        let (Some(b), Some(a)) =
+            (state.battlefield_find(blocker), state.battlefield_find(attacker))
+        else {
+            continue;
+        };
+        let (our_id, their_id) = if a.controller == seat && !state.same_team(b.controller, seat) {
+            (attacker, blocker)
+        } else if b.controller == seat && !state.same_team(a.controller, seat) {
+            (blocker, attacker)
+        } else {
+            continue;
+        };
+        let (Some((op, ot)), Some((tp, tt))) = (computed_pt(our_id), computed_pt(their_id))
+        else {
+            continue;
+        };
+        let dies = tp >= ot;
+        let kills = op >= tt;
+        if !dies && kills {
+            continue; // already winning this fight
+        }
+        for &(cid, p, t) in &tricks {
+            let saves = dies && ot + t > tp;
+            let now_kills = !kills && op + p >= tt;
+            if !(saves || now_kills) {
+                continue;
+            }
+            let action = GameAction::CastSpell {
+                card_id: cid,
+                target: Some(Target::Permanent(our_id)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
+}
+
 fn score_candidate(state: &GameState, seat: usize, action: &GameAction) -> i32 {
     use crate::card::CardType;
     // (source card, slot-0 target, variant bonus, extra mana sunk in).
@@ -6890,7 +7232,7 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&g, 0, &candidates, 0, 1) {
+        match decide_choose_cards(&g, 0, "Put a creature onto the battlefield?", &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot picks the highest-cmc creature to cheat in"),
             other => panic!("expected Cards, got {other:?}"),
@@ -6911,11 +7253,125 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&g, 0, &candidates, 0, 1) {
+        match decide_choose_cards(&g, 0, "Tap which creatures?", &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot taps the opponent's biggest creature, not its own"),
             other => panic!("expected Cards, got {other:?}"),
         }
+    }
+
+    /// A sacrifice `ChooseCards` prompt is a cost: give up the least
+    /// valuable permanent, and only as many as forced.
+    #[test]
+    fn bot_choose_cards_sacrifices_the_worst() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        let big = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+        let candidates = vec![
+            (small, "Grizzly Bears".to_string()),
+            (big, "Shivan Dragon".to_string()),
+        ];
+        match decide_choose_cards(&g, 0, "Sacrifice a creature", &candidates, 1, 1) {
+            DecisionAnswer::Cards(v) => {
+                assert_eq!(v, vec![small], "bot sacrifices the smaller creature")
+            }
+            other => panic!("expected Cards, got {other:?}"),
+        }
+    }
+
+    /// Pure temp-pump instants are combat tricks; burn and creatures are not.
+    #[test]
+    fn combat_trick_classifier() {
+        assert!(is_combat_trick(&catalog::giant_growth()));
+        assert!(!is_combat_trick(&catalog::lightning_bolt()), "burn is not a trick");
+        assert!(!is_combat_trick(&catalog::grizzly_bears()));
+    }
+
+    /// The bot holds Giant Growth in its main phase (a sorcery-speed pump
+    /// telegraphs and buffs nothing that matters) …
+    #[test]
+    fn bot_holds_pump_trick_in_main_phase() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let growth = g.add_card_to_hand(0, catalog::giant_growth());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            !matches!(action, GameAction::CastSpell { card_id, .. } if card_id == growth),
+            "pump trick is held for combat, got {action:?}",
+        );
+    }
+
+    /// … and fires it after blocks when it flips a fight its attacker is
+    /// losing (2/2 blocked by a 5/5: +3/+3 trades instead of chumping).
+    #[test]
+    fn bot_casts_trick_on_blocked_attacker() {
+        let mut g = two_player_game();
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+        let growth = g.add_card_to_hand(0, catalog::giant_growth());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareBlockers;
+        g.set_attacking(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]);
+        g.set_block_map([(dragon, bears)].into_iter().collect());
+        g.set_blockers_declared(true);
+        let action = RandomBot::new().next_action(&g, 0);
+        assert!(
+            matches!(
+                action,
+                Some(GameAction::CastSpell {
+                    card_id,
+                    target: Some(crate::game::Target::Permanent(t)),
+                    ..
+                }) if card_id == growth && t == bears
+            ),
+            "trick targets the blocked attacker, got {action:?}",
+        );
+    }
+
+    /// No trick when the fight is already won (2/2 blocked by a 1/1).
+    #[test]
+    fn bot_holds_trick_when_fight_already_won() {
+        let mut g = two_player_game();
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+        g.add_card_to_hand(0, catalog::giant_growth());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareBlockers;
+        g.set_attacking(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]);
+        g.set_block_map([(elf, bears)].into_iter().collect());
+        g.set_blockers_declared(true);
+        let action = RandomBot::new().next_action(&g, 0);
+        assert!(
+            matches!(action, Some(GameAction::PassPriority)),
+            "no trick needed on a won fight, got {action:?}",
+        );
+    }
+
+    /// Material eval: a board and full hand beat an empty seat, and a
+    /// decided game dominates everything.
+    #[test]
+    fn eval_material_prefers_board_and_cards() {
+        let mut g = two_player_game();
+        assert_eq!(
+            eval_material(&g, 0),
+            -eval_material(&g, 1),
+            "the two-player eval is symmetric",
+        );
+        g.add_card_to_battlefield(0, catalog::shivan_dragon());
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+        assert!(eval_material(&g, 0) > 0, "board + hand is a material lead");
+        assert!(eval_material(&g, 1) < 0);
+        g.game_over = Some(Some(1));
+        assert!(eval_material(&g, 1) > eval_material(&g, 0), "a won game beats any material");
     }
 }
 

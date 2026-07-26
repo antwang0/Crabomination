@@ -57,7 +57,10 @@ impl GameState {
     /// is ~53 `CardInstance`s vs. ~7 in hand). Cloning the template once and
     /// then cheaply re-cloning the library-less template per card turns N
     /// full-deck clones into one full clone + N light clones.
-    fn affordance_probe_template(&self) -> GameState {
+    ///
+    /// `pub(crate)` so the bot's per-tick candidate sweep (`server::bot`)
+    /// shares the same one-template-many-light-probes pattern.
+    pub(crate) fn affordance_probe_template(&self) -> GameState {
         let mut template = self.clone();
         for p in &mut template.players {
             p.library.clear();
@@ -72,7 +75,7 @@ impl GameState {
     /// irrelevant to their legality), but cheap to repeat across a hand.
     ///
     /// [`affordance_probe_template`]: Self::affordance_probe_template
-    fn would_accept_on(template: &GameState, action: GameAction) -> bool {
+    pub(crate) fn would_accept_on(template: &GameState, action: GameAction) -> bool {
         let mut probe = template.clone();
         probe.perform_action(action).is_ok()
     }

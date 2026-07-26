@@ -7211,11 +7211,17 @@ loops (EachPlayer shuffles) to one suspension per resolution.
 
 ## Simulation throughput
 
-The recommender's dominant cost is `would_accept`: every bot candidate
-action dry-runs against a full `GameState::clone`, hundreds of times per
-game (~40 games/s/thread release). Match-template cloning + factory
-elimination in `simulate_match_games` was neutral — setup was never the
-bottleneck. The 10x lever is a transactional apply/undo (or
-copy-on-write zones) for dry-runs; until then, throughput scaling comes
-from the racing schedule (`racing_rounds` + small `games_per_pairing`
-prune big fleets at ~100 games each).
+The recommender's dominant cost is `would_accept` dry-runs. Two
+stepping stones landed (2026-07): the bot's per-tick candidate sweep
+shares one library-stripped `affordance_probe_template` (a light clone
+per probe instead of a full one), and the main castable block validates
+*lazily* in descending score order at the pick site — a typical tick
+probes 1-3 candidates instead of the whole hand. Match-template cloning
++ factory elimination in `simulate_match_games` was neutral — setup was
+never the bottleneck. The remaining big lever is a transactional
+apply/undo (or copy-on-write zones) so probes stop cloning at all;
+until then, throughput scaling comes from the racing schedule
+(`racing_rounds` + small `games_per_pairing` prune big fleets at ~100
+games each). Note `evaluate_action_outcome` (outcome eval of the top 3
+finalists per cast decision) deliberately spends a few full clones per
+decision on quality — an undo layer would make those nearly free too.

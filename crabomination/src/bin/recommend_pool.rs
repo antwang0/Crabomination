@@ -20,50 +20,30 @@ fn normalize_label(s: &str) -> String {
 }
 
 /// Per-card attribution across a refined variant fleet: each card's mean
-/// win rate over variants that play it vs those that don't. Deck-level
-/// results can't credit single cards; this can (noisily — the counts are
-/// shown for a reason). Only names appearing in AND missing from ≥3
-/// variants are comparable.
+/// win rate over variants that play it vs those that don't (see
+/// `recommend::per_card_attribution`). Only names appearing in AND
+/// missing from ≥3 variants are comparable.
 fn print_attribution(rec: &recommend::Recommendation) {
     let n = rec.evals.len();
     if n < 6 {
         return;
     }
-    let mut per_card: HashMap<&'static str, (Vec<f64>, Vec<f64>)> = HashMap::new();
-    let all_names: std::collections::HashSet<&'static str> = rec.candidates[..n]
+    let samples: Vec<(&recommend::CandidateBuild, f64)> = rec.candidates[..n]
         .iter()
-        .flat_map(|c| c.main.iter().chain(c.duals.iter()).map(|&f| f().name))
+        .zip(&rec.evals)
+        .map(|(c, e)| (c, e.win_rate()))
         .collect();
-    for (i, c) in rec.candidates[..n].iter().enumerate() {
-        let wr = rec.evals[i].win_rate();
-        let in_deck: std::collections::HashSet<&'static str> =
-            c.main.iter().chain(c.duals.iter()).map(|&f| f().name).collect();
-        for name in &all_names {
-            let entry = per_card.entry(name).or_default();
-            if in_deck.contains(name) {
-                entry.0.push(wr);
-            } else {
-                entry.1.push(wr);
-            }
-        }
-    }
-    let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;
-    let mut rows: Vec<(&str, f64, usize, f64, usize, f64)> = per_card
-        .into_iter()
-        .filter(|(_, (i, o))| i.len() >= 3 && o.len() >= 3)
-        .map(|(name, (i, o))| {
-            let (mi, mo) = (mean(&i), mean(&o));
-            (name, mi, i.len(), mo, o.len(), mi - mo)
-        })
-        .collect();
-    rows.sort_by(|a, b| b.5.partial_cmp(&a.5).unwrap_or(std::cmp::Ordering::Equal));
+    let rows = recommend::per_card_attribution(&samples, 3);
     println!("\nper-card attribution (mean win rate with vs without; noisy — mind the counts):");
-    for (name, mi, ni, mo, no, d) in rows {
+    for r in rows {
         println!(
-            "  {:+5.1}  {:5.1}% (in {ni:>2})  vs {:5.1}% (out {no:>2})  {name}",
-            d * 100.0,
-            mi * 100.0,
-            mo * 100.0,
+            "  {:+5.1}  {:5.1}% (in {:>2})  vs {:5.1}% (out {:>2})  {}",
+            r.delta() * 100.0,
+            r.mean_in * 100.0,
+            r.n_in,
+            r.mean_out * 100.0,
+            r.n_out,
+            r.name,
         );
     }
 }
@@ -92,7 +72,7 @@ fn main() {
     let Some(path) = args.next() else {
         eprintln!(
             "usage: recommend_pool <pool.txt> [seed] [games_per_pairing] [candidate_cap] \
-             [pin,labels] [refine_top] [variants_per_shape]"
+             [pin,labels] [refine_top] [variants_per_shape] [racing_rounds] [search_gens]"
         );
         std::process::exit(2);
     };
@@ -110,6 +90,8 @@ fn main() {
     let refine_top: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(0);
     let variants: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(6);
     let racing_rounds: u32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(3);
+    // Stage-3 local search: attribution-guided swap generations. 0 disables.
+    let search_gens: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(0);
 
     // `random:SEED` generates a synthetic sealed pool (6 SOS packs) instead
     // of reading a file — for calibrating what a typical pool's best build
@@ -152,6 +134,7 @@ fn main() {
         refine_top,
         variants_per_shape: variants,
         racing_rounds,
+        search_generations: search_gens,
         ..Default::default()
     };
     let mut candidates = recommend::enumerate_candidates(&pool, &cfg);
@@ -215,6 +198,27 @@ fn main() {
         print_ranking(&refined);
         print_attribution(&refined);
         refined
+    } else {
+        rec
+    };
+
+    // Stage 3: attribution-guided local search around the winner.
+    let rec = if search_gens > 0 {
+        println!(
+            "\nlocal search: {search_gens} generation(s) × {} swap children (same gauntlet) …",
+            cfg.search_children,
+        );
+        let searched = recommend::local_search(&rec, &cfg, |evals| {
+            let n = progress.fetch_add(1, Ordering::Relaxed);
+            if n % 40 == 0 {
+                let total: u32 = evals.iter().map(|e| e.decided() + e.undecided).sum();
+                eprint!("\r  {total} search games played …");
+            }
+        });
+        eprintln!();
+        println!("\nlocal-search ranking (final generation, win rate ± 95% CI):");
+        print_ranking(&searched);
+        searched
     } else {
         rec
     };
