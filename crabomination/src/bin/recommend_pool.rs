@@ -224,7 +224,8 @@ fn main() {
     };
 
     let best = &rec.candidates[rec.ranking[0]];
-    println!("\nrecommended build — {} ({} spells + {} lands):", best.label, best.main.len(), cfg.total_lands);
+    let land_count = best.duals.len() as u32 + best.basics.values().sum::<u32>();
+    println!("\nrecommended build — {} ({} spells + {land_count} lands):", best.label, best.main.len());
     let mut counts: HashMap<&str, u32> = HashMap::new();
     for &f in &best.main {
         *counts.entry(f().name).or_insert(0) += 1;
