@@ -72,7 +72,8 @@ fn main() {
     let Some(path) = args.next() else {
         eprintln!(
             "usage: recommend_pool <pool.txt> [seed] [games_per_pairing] [candidate_cap] \
-             [pin,labels] [refine_top] [variants_per_shape] [racing_rounds] [search_gens]"
+             [pin,labels] [refine_top] [variants_per_shape] [racing_rounds] [search_gens] \
+             [gauntlet_size]"
         );
         std::process::exit(2);
     };
@@ -92,6 +93,9 @@ fn main() {
     let racing_rounds: u32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(3);
     // Stage-3 local search: attribution-guided swap generations. 0 disables.
     let search_gens: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(0);
+    // Opposing field size (independent sealed pools). Racing rounds widen
+    // the sampled opponent set up to this cap: min(5·2^round, gauntlet).
+    let gauntlet_size: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(20);
 
     // `random:SEED` generates a synthetic sealed pool (6 SOS packs) instead
     // of reading a file — for calibrating what a typical pool's best build
@@ -135,6 +139,7 @@ fn main() {
         variants_per_shape: variants,
         racing_rounds,
         search_generations: search_gens,
+        gauntlet_size,
         ..Default::default()
     };
     let mut candidates = recommend::enumerate_candidates(&pool, &cfg);
