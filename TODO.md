@@ -6157,14 +6157,23 @@ the audit found.
   and land the property-based round-trip test (see Infrastructure →
   Snapshot Round-Trip Test).
 
-### Phase 1 — transactional `perform_action`
-- ⏳ Checkpoint at the top of the action entry point: clone the state,
-  restore on `Err`. Start with a full clone per *human-submitted* action
-  (bots/tests can opt out); optimize later only if profiling demands it.
-- ⏳ **Suspension is not failure**: `suspend_signal`/`pending_decision`
-  mid-action are legitimate non-`Err` exits — the checkpoint must restore
-  only on `Err`, and a checkpoint taken before a multi-step suspended
-  action must survive until the resume chain completes or errors.
+### Phase 1 — transactional `perform_action` — ✅ DONE (2026-07)
+- ✅ Checkpoint at the top of `perform_action`, restore on `Err` — for
+  EVERY action, not just human-submitted ones: `GameState`'s heavy zones
+  are now `CowBox`-wrapped (`crate::cow` — Arc + make_mut copy-on-write),
+  so the checkpoint costs reference bumps and a failing action only pays
+  for zones it touched before erroring. Affordance probes skip the
+  checkpoint via `perform_action_inner` (their state is discarded either
+  way). Regression: `cow::tests::rejected_action_restores_state_exactly`.
+- ✅ Suspension is not failure: restore happens only on `Err`, and
+  `GameError::ManualTapRequired` is exempted — it deliberately leaves
+  forced pips auto-tapped + mana floating for the client's pending-cast
+  driver (pinned by `sos::mana_shapes` tests). The restore keeps the
+  *live* decider (the checkpoint clone holds a blank one; swapping it in
+  would wipe a `ScriptedDecider` mid-script).
+- Per-call semantics: a failed resume restores to the *suspended* state,
+  not to before the original action. Full multi-step atomicity across a
+  suspend/resume chain remains future work if ever needed.
 - Keep the targeted P0 fixes anyway (validate-before-mutate is still
   better); the transaction is the backstop that makes the *class*
   unexploitable.
@@ -7218,10 +7227,12 @@ per probe instead of a full one), and the main castable block validates
 *lazily* in descending score order at the pick site — a typical tick
 probes 1-3 candidates instead of the whole hand. Match-template cloning
 + factory elimination in `simulate_match_games` was neutral — setup was
-never the bottleneck. The remaining big lever is a transactional
-apply/undo (or copy-on-write zones) so probes stop cloning at all;
-until then, throughput scaling comes from the racing schedule
-(`racing_rounds` + small `games_per_pairing` prune big fleets at ~100
-games each). Note `evaluate_action_outcome` (outcome eval of the top 3
-finalists per cast decision) deliberately spends a few full clones per
-decision on quality — an undo layer would make those nearly free too.
+never the bottleneck. The big lever LANDED (2026-07): the heavy zones
+(battlefield / stack / exile / per-player library / hand / graveyard /
+command / sideboard / continuous_effects) are `CowBox`-wrapped
+(`crate::cow`), so every `GameState::clone` — probes, probe templates,
+`evaluate_action_outcome`, the `perform_action` transaction checkpoint —
+is reference bumps plus only the zones the action actually mutates.
+Remaining scaling comes from the racing schedule (`racing_rounds` +
+small `games_per_pairing`) and, if ever needed, early adjudication of
+stalled games via `eval_material`.

@@ -1049,8 +1049,9 @@ fn baleful_eidolon_reverts_to_creature_when_host_leaves() {
     drain_stack(&mut g);
 
     // Destroy the host; the bestowed Eidolon stays and becomes a creature.
-    g.players[0].graveyard.push(g.battlefield.remove(
-        g.battlefield.iter().position(|c| c.id == bear).unwrap()));
+    let host_idx = g.battlefield.iter().position(|c| c.id == bear).unwrap();
+    let host = g.battlefield.remove(host_idx);
+    g.players[0].graveyard.push(host);
     g.check_state_based_actions();
 
     let ecp = g.computed_permanent(eid).expect("Eidolon stays on battlefield");

@@ -6264,7 +6264,7 @@ impl GameState {
                         continue;
                     }
                     let cards: Vec<CardInstance> =
-                        std::mem::take(&mut self.players[p].graveyard);
+                        std::mem::take(&mut *self.players[p].graveyard);
                     for card in cards {
                         let matches = filter
                             .as_ref()
@@ -6286,7 +6286,7 @@ impl GameState {
                 // Each player exiles all creature cards from their graveyard…
                 let mut returning: Vec<CardId> = Vec::new();
                 for p in 0..self.players.len() {
-                    let gy = std::mem::take(&mut self.players[p].graveyard);
+                    let gy = std::mem::take(&mut *self.players[p].graveyard);
                     for card in gy {
                         if card.definition.is_creature() {
                             returning.push(card.id);
@@ -6338,7 +6338,7 @@ impl GameState {
             Effect::ExilePlayerGraveyard { who } => {
                 // Go Blank / Ashiok −10 — move graveyards to exile.
                 for p in self.resolve_players(who, ctx) {
-                    let cards: Vec<CardInstance> = std::mem::take(&mut self.players[p].graveyard);
+                    let cards: Vec<CardInstance> = std::mem::take(&mut *self.players[p].graveyard);
                     for card in cards {
                         let cid = card.id;
                         self.exile.push(card);
@@ -6351,7 +6351,7 @@ impl GameState {
 
             Effect::ExileHand { who } => {
                 for p in self.resolve_players(who, ctx) {
-                    let cards: Vec<CardInstance> = std::mem::take(&mut self.players[p].hand);
+                    let cards: Vec<CardInstance> = std::mem::take(&mut *self.players[p].hand);
                     for card in cards {
                         let cid = card.id;
                         self.exile.push(card);
@@ -13822,7 +13822,7 @@ impl GameState {
             Effect::ShuffleGraveyardIntoLibrary { who } => {
                 use rand::seq::SliceRandom;
                 if let Some(p) = self.resolve_player(who, ctx) {
-                    let cards = std::mem::take(&mut self.players[p].graveyard);
+                    let cards = std::mem::take(&mut *self.players[p].graveyard);
                     self.players[p].library.extend(cards);
                     self.players[p].library.shuffle(&mut rand::rng());
                 }
@@ -13832,12 +13832,12 @@ impl GameState {
             Effect::ShuffleFilteredGraveyardIntoLibraryGainLife { who, filter } => {
                 use rand::seq::SliceRandom;
                 if let Some(p) = self.resolve_player(who, ctx) {
-                    let gy = std::mem::take(&mut self.players[p].graveyard);
+                    let gy = std::mem::take(&mut *self.players[p].graveyard);
                     let (matched, kept): (Vec<_>, Vec<_>) = gy
                         .into_iter()
                         .partition(|c| self.evaluate_requirement_on_card(filter, c, p));
                     let moved = matched.len() as i32;
-                    self.players[p].graveyard = kept;
+                    self.players[p].graveyard = kept.into();
                     self.players[p].library.extend(matched);
                     self.players[p].library.shuffle(&mut rand::rng());
                     if moved > 0 {
@@ -13855,8 +13855,8 @@ impl GameState {
             Effect::ShuffleHandAndGraveyardIntoLibrary { who } => {
                 use rand::seq::SliceRandom;
                 for p in self.resolve_players(who, ctx) {
-                    let hand = std::mem::take(&mut self.players[p].hand);
-                    let gy = std::mem::take(&mut self.players[p].graveyard);
+                    let hand = std::mem::take(&mut *self.players[p].hand);
+                    let gy = std::mem::take(&mut *self.players[p].graveyard);
                     self.players[p].library.extend(hand);
                     self.players[p].library.extend(gy);
                     self.players[p].library.shuffle(&mut rand::rng());
@@ -13896,7 +13896,7 @@ impl GameState {
             Effect::ShuffleHandsDrawSame { who } => {
                 use rand::seq::SliceRandom;
                 for p in self.resolve_players(who, ctx) {
-                    let hand = std::mem::take(&mut self.players[p].hand);
+                    let hand = std::mem::take(&mut *self.players[p].hand);
                     let n = hand.len() as u32;
                     self.players[p].library.extend(hand);
                     self.players[p].library.shuffle(&mut rand::rng());
@@ -13910,12 +13910,12 @@ impl GameState {
             Effect::ExchangeHandAndGraveyard { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let (hand, gy) = (
-                        std::mem::take(&mut self.players[p].hand),
-                        std::mem::take(&mut self.players[p].graveyard),
+                        std::mem::take(&mut *self.players[p].hand),
+                        std::mem::take(&mut *self.players[p].graveyard),
                     );
                     // Hand cards → graveyard; graveyard cards → hand.
-                    self.players[p].graveyard = hand;
-                    self.players[p].hand = gy;
+                    self.players[p].graveyard = hand.into();
+                    self.players[p].hand = gy.into();
                 }
                 Ok(())
             }

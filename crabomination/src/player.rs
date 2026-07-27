@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::card::{CardDefinition, CardId, CardInstance};
+use crate::cow::CowBox;
 use crate::mana::ManaPool;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -82,9 +83,13 @@ pub struct Player {
     pub starting_life: i32,
     pub mana_pool: ManaPool,
     /// Top of library is `library[0]`.
-    pub library: Vec<CardInstance>,
-    pub hand: Vec<CardInstance>,
-    pub graveyard: Vec<CardInstance>,
+    ///
+    /// The card zones are [`CowBox`]-wrapped so a `GameState` clone
+    /// (affordance probes, the `perform_action` checkpoint) shares them
+    /// until written — see `crate::cow`.
+    pub library: CowBox<Vec<CardInstance>>,
+    pub hand: CowBox<Vec<CardInstance>>,
+    pub graveyard: CowBox<Vec<CardInstance>>,
     /// The command zone — Commander commanders, Conspiracies, etc.
     /// (Phase I.) Cards arrive here either at game start (initial
     /// commander seating via `seat_commanders`) or via a zone-change
@@ -94,14 +99,14 @@ pub struct Player {
     /// `#[serde(default)]` so snapshots written before the field
     /// existed deserialize cleanly as empty.
     #[serde(default)]
-    pub command: Vec<CardInstance>,
+    pub command: CowBox<Vec<CardInstance>>,
     /// CR 406 / 701.45 — the Lessons "sideboard" (cards owned from outside
     /// the game). A Learn ability may reveal a Lesson card here and put it
     /// into hand. Populated by deck construction; empty by default (in
     /// which case Learn falls back to the legacy `Draw 1` approximation).
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub sideboard: Vec<CardInstance>,
+    pub sideboard: CowBox<Vec<CardInstance>>,
     /// CardIds of cards this player has designated as Commanders
     /// (Phase J). Populated by `GameState::seat_commanders`. Read by
     /// the Phase M 21-commander-damage SBA via
@@ -748,11 +753,11 @@ impl Player {
             starting_life: 20,
             mana_pool: ManaPool::new(),
             kept_mana_this_turn: ManaPool::new(),
-            library: Vec::new(),
-            hand: Vec::new(),
-            graveyard: Vec::new(),
-            command: Vec::new(),
-            sideboard: Vec::new(),
+            library: CowBox::default(),
+            hand: CowBox::default(),
+            graveyard: CowBox::default(),
+            command: CowBox::default(),
+            sideboard: CowBox::default(),
             commanders: Vec::new(),
             lands_played_this_turn: 0,
             extra_land_plays: 0,

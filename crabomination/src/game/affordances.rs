@@ -34,8 +34,11 @@ impl GameState {
         // taps / attacks — the no-pending-decision path is what
         // matters; if a decision is pending the bot uses
         // `SubmitDecision` directly which doesn't go through here.
+        //
+        // `perform_action_inner`: the probe is discarded either way, so
+        // the transactional checkpoint would be pure waste here.
         let mut probe = self.clone();
-        probe.perform_action(action).is_ok()
+        probe.perform_action_inner(action).is_ok()
     }
 
     /// A clone of `self` with every player's library emptied, for use as a
@@ -63,7 +66,9 @@ impl GameState {
     pub(crate) fn affordance_probe_template(&self) -> GameState {
         let mut template = self.clone();
         for p in &mut template.players {
-            p.library.clear();
+            // A fresh empty box, not `.clear()` — clearing would CoW-copy
+            // the shared library first only to drop its contents.
+            p.library = Default::default();
         }
         template
     }
@@ -77,7 +82,7 @@ impl GameState {
     /// [`affordance_probe_template`]: Self::affordance_probe_template
     pub(crate) fn would_accept_on(template: &GameState, action: GameAction) -> bool {
         let mut probe = template.clone();
-        probe.perform_action(action).is_ok()
+        probe.perform_action_inner(action).is_ok()
     }
 
     /// CardIds in `caster`'s hand they could begin casting (or play, for

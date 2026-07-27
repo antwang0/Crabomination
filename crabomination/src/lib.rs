@@ -21,6 +21,7 @@ pub mod catalog {
 
 mod card_registry;
 
+pub mod cow;
 pub mod cube;
 pub mod decklist;
 pub mod decision;

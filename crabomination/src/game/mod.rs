@@ -116,6 +116,7 @@ use crate::game::layers::{
     AffectedPermanents, ComputedPermanent, ContinuousEffect, EffectDuration, Layer, Modification,
     PtSublayer,
 };
+use crate::cow::CowBox;
 use crate::player::Player;
 use std::collections::HashMap;
 
@@ -277,18 +278,23 @@ pub struct GameState {
     #[serde(default)]
     pub teams: Vec<crate::team::Team>,
     /// All permanents currently in play.
-    pub battlefield: Vec<CardInstance>,
+    ///
+    /// The heavy zones (battlefield, phased_out, exile, stack,
+    /// continuous_effects) are [`CowBox`]-wrapped so a `GameState` clone
+    /// (affordance probes, the `perform_action` checkpoint) shares them
+    /// until written — see `crate::cow`.
+    pub battlefield: CowBox<Vec<CardInstance>>,
     /// CR 702.26 — permanents that have phased out. They're treated as though
     /// they don't exist (every battlefield query iterates `battlefield`, so a
     /// phased-out permanent is invisible without per-site filtering), yet
     /// retain all state (counters, attachments, damage). They phase back in
     /// during their controller's untap step (`do_phasing`).
     #[serde(default)]
-    pub phased_out: Vec<CardInstance>,
+    pub phased_out: CowBox<Vec<CardInstance>>,
     /// Cards that have been exiled.
-    pub exile: Vec<CardInstance>,
+    pub exile: CowBox<Vec<CardInstance>>,
     /// The stack of spells and triggered abilities waiting to resolve (LIFO).
-    pub stack: Vec<StackItem>,
+    pub stack: CowBox<Vec<StackItem>>,
     pub step: TurnStep,
     /// Index into `players` of the player whose turn it is.
     pub active_player_idx: usize,
@@ -299,7 +305,7 @@ pub struct GameState {
     /// Priority state — tracks who can act and when the stack resolves.
     pub priority: PriorityState,
     /// Active continuous effects from resolved spells, abilities, and static abilities.
-    pub continuous_effects: Vec<ContinuousEffect>,
+    pub continuous_effects: CowBox<Vec<ContinuousEffect>>,
     pub(crate) next_effect_timestamp: u64,
     pub(crate) next_id: u32,
     /// Attackers declared this combat, each with the player or planeswalker
@@ -1450,16 +1456,16 @@ impl GameState {
         Self {
             players,
             teams,
-            battlefield: Vec::new(),
-            phased_out: Vec::new(),
-            exile: Vec::new(),
-            stack: Vec::new(),
+            battlefield: CowBox::default(),
+            phased_out: CowBox::default(),
+            exile: CowBox::default(),
+            stack: CowBox::default(),
             step: TurnStep::Untap,
             active_player_idx: 0,
             turn_number: 1,
             game_over: None,
             priority: PriorityState::new(0),
-            continuous_effects: Vec::new(),
+            continuous_effects: CowBox::default(),
             next_effect_timestamp: 1,
             next_id: 1,
             attacking: Vec::new(),
@@ -4733,7 +4739,7 @@ impl GameState {
 
     fn gather_continuous_effects_inner(&self) -> Vec<ContinuousEffect> {
         // Include static-ability effects from permanents currently on the battlefield.
-        let mut all_effects: Vec<ContinuousEffect> = self.continuous_effects.clone();
+        let mut all_effects: Vec<ContinuousEffect> = (*self.continuous_effects).clone();
         for card in &self.battlefield {
             // CR 613.7a — static-ability effects carry the source object's
         // timestamp (entry-stamped; id-order fallback for unstamped objects).
@@ -7876,7 +7882,51 @@ impl GameState {
 
     // ── Main action dispatch ──────────────────────────────────────────────────
 
+    /// Transactional entry point (TODO "Rollback / Undo" Phase 1): every
+    /// rejected action restores the exact pre-action state, structurally
+    /// killing the partial-mutation bug family (under-paid costs,
+    /// mid-loop combat corruption, half-applied casts). The checkpoint is
+    /// a CoW snapshot (`crate::cow`) — reference bumps, not deep copies —
+    /// so a failing action only ever pays for the zones it touched before
+    /// erroring.
+    ///
+    /// Suspension is NOT failure: a mid-action `pending_decision` /
+    /// `suspend_signal` exit returns `Ok` and keeps its partial state for
+    /// the resume path. And the *live* decider survives a restore — the
+    /// checkpoint's clone holds a fresh decider (see `Clone for
+    /// GameState`), and swapping that blank box in would wipe a
+    /// `ScriptedDecider` mid-script on any rejected action.
     pub fn perform_action(&mut self, action: GameAction) -> Result<Vec<GameEvent>, GameError> {
+        // The no-mutation rejections skip the checkpoint entirely — they
+        // are the hot rejection paths under bot polling.
+        if self.is_game_over() {
+            return Err(GameError::GameAlreadyOver);
+        }
+        if !matches!(action, GameAction::SubmitDecision(_)) && self.pending_decision.is_some() {
+            return Err(GameError::DecisionPending);
+        }
+        let mut checkpoint = self.clone();
+        let result = self.perform_action_inner(action);
+        // `ManualTapRequired` is a suspension dressed as an `Err`: the
+        // engine deliberately leaves the forced pips auto-tapped and their
+        // mana floating for the client's pending-cast driver to finish the
+        // payment. Rolling that back would break the interactive tap flow.
+        if matches!(&result, Err(e) if !matches!(e, GameError::ManualTapRequired { .. })) {
+            std::mem::swap(&mut checkpoint.decider, &mut self.decider);
+            *self = checkpoint;
+        }
+        result
+    }
+
+    /// [`perform_action`] without the transaction checkpoint. Directly
+    /// used by the affordance probes (`would_accept*`): a probe's state is
+    /// thrown away either way, so restoring it on `Err` is pure waste.
+    ///
+    /// [`perform_action`]: Self::perform_action
+    pub(crate) fn perform_action_inner(
+        &mut self,
+        action: GameAction,
+    ) -> Result<Vec<GameEvent>, GameError> {
         if self.is_game_over() {
             return Err(GameError::GameAlreadyOver);
         }
@@ -11446,7 +11496,7 @@ impl GameState {
 
     fn shuffle_hand_to_library(&mut self, seat: usize) {
         use rand::seq::SliceRandom;
-        let hand = std::mem::take(&mut self.players[seat].hand);
+        let hand = std::mem::take(&mut *self.players[seat].hand);
         for card in hand {
             self.players[seat].library.push(card);
         }
@@ -11633,7 +11683,7 @@ impl GameState {
                             return Err(GameError::DecisionAnswerMismatch);
                         }
                         let exiled: Vec<crate::card::CardInstance> =
-                            std::mem::take(&mut self.players[player].hand);
+                            std::mem::take(&mut *self.players[player].hand);
                         for card in exiled {
                             self.exile.push(card);
                         }

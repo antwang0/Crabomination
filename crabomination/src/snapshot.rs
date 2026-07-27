@@ -386,11 +386,13 @@ impl GameSnapshot {
         state.battlefield = battlefield
             .into_iter()
             .map(restore_card)
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>, _>>()?
+            .into();
         state.exile = exile
             .into_iter()
             .map(restore_card)
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>, _>>()?
+            .into();
 
         let mut restored_stack = Vec::with_capacity(stack.len());
         for s in stack {
@@ -406,7 +408,7 @@ impl GameSnapshot {
                 uncounterable: s.uncounterable,
             });
         }
-        state.stack = restored_stack;
+        state.stack = restored_stack.into();
 
         state.step = step;
         state.active_player_idx = active_player_idx;
@@ -441,17 +443,20 @@ fn restore_player(ps: PlayerSnapshot) -> Result<Player, LoadError> {
         .library
         .into_iter()
         .map(restore_card)
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()?
+        .into();
     p.hand = ps
         .hand
         .into_iter()
         .map(restore_card)
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()?
+        .into();
     p.graveyard = ps
         .graveyard
         .into_iter()
         .map(restore_card)
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()?
+        .into();
     p.lands_played_this_turn = ps.lands_played_this_turn;
     p.spells_cast_this_turn = ps.spells_cast_this_turn;
     p.first_spell_tax_charges = ps.first_spell_tax_charges;
