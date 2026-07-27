@@ -1476,14 +1476,20 @@ fn duel_tactics_pings_and_grants_cant_block() {
         "Bear should have CantBlock granted EOT");
 }
 
-/// Soaring Stoneglider: the printed alt cost {2}{W} + exile two cards
-/// from your graveyard is wired via the new `exile_from_graveyard_count`
-/// field. With 2 cards in gy and {2}{W} available, the alt cast succeeds
-/// and both gy cards land in exile.
+/// Soaring Stoneglider (pool audit 2026-07): the registered cost is the
+/// printed {2}{W} (mana value 3 — the pay half is no longer folded into
+/// the base, which had distorted the MV to 5). The additional cost is
+/// `ExileFromGraveyardOrPay`: with 2+ graveyard cards a plain cast
+/// auto-exiles the two lowest-MV cards and pays only {2}{W}.
 #[test]
-fn soaring_stoneglider_alt_cost_exiles_two_from_graveyard() {
+fn soaring_stoneglider_additional_cost_exiles_two_from_graveyard() {
     let mut g = two_player_game();
-    // Seed graveyard with 2 cards (lowest-CMC picker: takes both).
+    assert_eq!(
+        catalog::soaring_stoneglider().cost.cmc(),
+        3,
+        "printed mana value is 3 ({{2}}{{W}})"
+    );
+    // Seed graveyard with 2 cards (lowest-MV picker: takes both).
     let bolt_id = g.next_id();
     let mut bolt = crabomination::card::CardInstance::new(bolt_id, catalog::lightning_bolt(), 0);
     bolt.controller = 0;
@@ -1496,34 +1502,28 @@ fn soaring_stoneglider_alt_cost_exiles_two_from_graveyard() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
 
-    g.perform_action(GameAction::CastSpellAlternative {
-        card_id: id,
-        pitch_card: None,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Soaring Stoneglider alt-castable at {2}{W} with 2 cards in gy");
+    .expect("Stoneglider castable for {2}{W} + exile two from graveyard");
     drain_stack(&mut g);
 
-    // Soaring Stoneglider on battlefield.
     let on_bf = g.battlefield.iter().any(|c| c.definition.name == "Soaring Stoneglider");
-    assert!(on_bf, "Stoneglider ETBs after alt cast");
-    // Both gy cards in exile.
+    assert!(on_bf, "Stoneglider ETBs");
     assert!(g.exile.iter().any(|c| c.id == bolt_id),
-        "Lightning Bolt should be exiled as alt cost");
+        "Lightning Bolt should be exiled as the additional cost");
     assert!(g.exile.iter().any(|c| c.id == bears_id),
-        "Grizzly Bears should be exiled as alt cost");
+        "Grizzly Bears should be exiled as the additional cost");
     assert!(g.players[0].graveyard.is_empty(), "Graveyard drained by 2");
 }
 
-/// Soaring Stoneglider: alt cost rejected when graveyard has < 2 cards.
-/// The caller can fall back to the printed mana cost.
+/// Soaring Stoneglider: with fewer than two graveyard cards the pay
+/// half joins the cost ({2} generic — the printed {1}{W} with the pip
+/// relaxed). {2}{W} alone is now short; {2}{W} + {2} casts.
 #[test]
-fn soaring_stoneglider_alt_cost_rejects_with_insufficient_graveyard() {
+fn soaring_stoneglider_pay_half_joins_cost_without_graveyard() {
     let mut g = two_player_game();
-    // Only one card in gy — alt cost requires two.
+    // Only one card in gy — the exile half needs two.
     let bolt_id = g.next_id();
     let mut bolt = crabomination::card::CardInstance::new(bolt_id, catalog::lightning_bolt(), 0);
     bolt.controller = 0;
@@ -1532,18 +1532,27 @@ fn soaring_stoneglider_alt_cost_rejects_with_insufficient_graveyard() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
 
-    let res = g.perform_action(GameAction::CastSpellAlternative {
-        card_id: id,
-        pitch_card: None,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     });
-    assert!(res.is_err(), "Alt cast should reject with only 1 gy card");
-    // The Stoneglider is still in hand (rolled back cleanly).
+    assert!(res.is_err(), "{{2}}{{W}} alone is short — the pay half adds {{2}}");
     assert!(g.players[0].hand.iter().any(|c| c.id == id),
-        "Stoneglider should remain in hand on rejected alt cast");
+        "Stoneglider remains in hand on the rejected cast");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt_id),
+        "the lone graveyard card is untouched by the rejected cast");
+
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("{2}{W} + {2} pays the base plus the pay half");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Soaring Stoneglider"),
+        "Stoneglider ETBs via the pay half",
+    );
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt_id),
+        "paying mana leaves the graveyard alone");
 }
 
 #[test]

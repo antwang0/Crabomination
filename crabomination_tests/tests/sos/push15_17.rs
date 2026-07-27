@@ -355,6 +355,173 @@ fn sundering_archaic_etb_converge_cap_blocks_high_mv_target() {
         "Bear should not be in exile");
 }
 
+/// Pool audit 2026-07: the converge cap is enforced at TARGET SELECTION,
+/// not just resolution. With three colors of mana spent (converge 3) and
+/// an opponent board of a 2-MV bear and a 6-MV dragon, the auto-targeted
+/// ETB must exile the bear — the old cap-blind picker aimed at the
+/// biggest permanent and the exile fizzled almost every game.
+#[test]
+fn sundering_archaic_auto_target_respects_converge_cap() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // MV 6
+    let id = g.add_card_to_hand(0, catalog::sundering_archaic());
+    // {6} paid with W + U + B + 3 colorless → converge 3.
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Sundering Archaic castable for {6}");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "the ≤3-MV bear is the legal converge target and gets exiled");
+    assert!(g.battlefield.iter().any(|c| c.id == dragon),
+        "the 6-MV dragon is over the cap and must not be targeted");
+}
+
+/// Pool audit 2026-07: Rubble Rouser's "when you do, deal 1 to each
+/// opponent" is a real CR 603.7 reflexive trigger — the mana resolves
+/// immediately, the damage rides the stack and waits for priority.
+#[test]
+fn rubble_rouser_mana_ability_damage_rides_the_stack() {
+    let mut g = two_player_game();
+    let rouser = g.add_card_to_battlefield(0, catalog::rubble_rouser());
+    {
+        let c = g.battlefield.iter_mut().find(|c| c.id == rouser).unwrap();
+        c.tapped = false;
+        c.summoning_sick = false; // {T} cost needs an unsick body
+    }
+    let bolt_id = g.next_id();
+    let mut bolt = crabomination::card::CardInstance::new(bolt_id, catalog::lightning_bolt(), 0);
+    bolt.controller = 0;
+    g.players[0].graveyard.push(bolt);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rouser, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("Rubble Rouser mana ability activatable");
+    assert_eq!(
+        g.players[0].mana_pool.amount(Color::Red), 1,
+        "the mana resolves immediately (mana abilities don't stack)"
+    );
+    assert_eq!(g.players[1].life, 20, "the damage has NOT resolved yet");
+    assert!(!g.stack.is_empty(), "the reflexive damage trigger waits on the stack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "the reflexive trigger resolves for 1 to each opponent");
+}
+
+/// Pool audit 2026-07: Scolding Administrator's dies-trigger passes on
+/// "those counters" — counters of EVERY kind. With ONLY a stun counter
+/// the old +1/+1-gated version didn't even fire; now the trigger fires
+/// and the stun counter lands on the chosen heir.
+#[test]
+fn scolding_administrator_dies_passes_all_counter_kinds() {
+    let mut g = two_player_game();
+    let admin = g.add_card_to_battlefield(0, catalog::scolding_administrator());
+    let heir = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield
+        .iter_mut()
+        .find(|c| c.id == admin)
+        .unwrap()
+        .counters
+        .insert(CounterType::Stun, 1);
+    // Bolt the 2/2 (a stun counter grants no stats): it dies.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(admin)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt the Administrator");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == admin), "Administrator died");
+    let h = g.battlefield.iter().find(|c| c.id == heir).expect("bears alive");
+    assert_eq!(
+        h.counter_count(CounterType::Stun), 1,
+        "the stun counter transfers — 'those counters' means every kind"
+    );
+}
+
+/// Pool audit 2026-07: Burrog Barrage's damage half is a one-sided
+/// fight — the pumped creature is the damage SOURCE, so its deathtouch
+/// and lifelink apply ("it deals damage equal to its power"). A 2/3
+/// Nighthawk swinging at a 5/5: the dragon dies to deathtouch and the
+/// caster gains 2 from lifelink — neither happened when the spell dealt
+/// the damage itself.
+#[test]
+fn burrog_barrage_damage_carries_source_deathtouch_and_lifelink() {
+    let mut g = two_player_game();
+    let hawk = g.add_card_to_battlefield(0, catalog::vampire_nighthawk()); // 2/3 DT+LL
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5
+    let id = g.add_card_to_hand(0, catalog::burrog_barrage());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(hawk)),
+        additional_targets: vec![Target::Permanent(dragon)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Burrog Barrage castable at {1}{G}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == dragon),
+        "2 deathtouch damage from the Nighthawk destroys the 5/5"
+    );
+    assert_eq!(g.players[0].life, 22, "lifelink credits the Nighthawk's controller");
+}
+
+/// Pool audit 2026-07: Follow the Lumarets' infusion mode looks at ONE
+/// four-card window and takes two from it — the old chained-pull shape
+/// let the second pull see past the printed top four.
+#[test]
+fn follow_the_lumarets_infusion_window_is_the_top_four() {
+    let mut g = two_player_game();
+    // Top-to-bottom: bear, bolt, bolt, bear | bear (5th, outside the window).
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let fifth = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].life_gained_this_turn = 1; // infusion on
+    let id = g.add_card_to_hand(0, catalog::follow_the_lumarets());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Follow the Lumarets castable at {1}{G}");
+    drain_stack(&mut g);
+
+    // Cast −1, took the two bears from the window +2.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "infusion takes two cards");
+    assert_eq!(
+        g.players[0].hand.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        2,
+        "both in-window creatures taken",
+    );
+    // The fifth card never entered the window: still in the library, and
+    // the two bolts were bottomed (library = bolt/bolt/bear in some order,
+    // with the fifth bear NOT in hand).
+    assert!(
+        g.players[0].library.iter().any(|c| c.id == fifth),
+        "the fifth card stays in the library — the window is exactly four",
+    );
+    assert_eq!(g.players[0].library.len(), 3, "two bolts bottomed + the untouched fifth");
+}
+
 #[test]
 fn sundering_archaic_two_mana_bottoms_graveyard_card() {
     // Activated `{2}` ability moves a graveyard card to the bottom of its

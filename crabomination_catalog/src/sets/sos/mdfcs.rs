@@ -117,10 +117,10 @@ fn becomes_prepared() -> Effect {
 /// Then if an opponent controls more creatures than you, this creature
 /// becomes prepared."
 ///
-/// Approximation: the engine's `Effect::CreateToken` mints for a
-/// `PlayerRef`, and a trigger-scoped "target player" slot isn't wired
-/// for it — the token is minted for *you* instead of a chosen target
-/// player. The conditional "becomes prepared" rider is faithful via
+/// The "target player" token slot is real (`CreateToken` with a
+/// `PlayerRef::Target` player slot — the auto-decider mints for the
+/// controller; a UI caster may gift it). The conditional "becomes
+/// prepared" rider is faithful via
 /// `Predicate::AnOpponentControlsMoreCreatures`.
 ///
 /// Prepare spell: instant — exile target creature; its controller gains

@@ -225,6 +225,9 @@ impl Effect {
             | Effect::AddManaAtNextMainPhase { .. }
             // Free-cast offers pick their own targets at cast time.
             | Effect::CastAnyOrderWithoutPaying { .. }
+            // A reflexive sub-trigger's body picks its targets when it's
+            // pushed (CR 603.7d), not at the containing cast/activation.
+            | Effect::ReflexiveTrigger { .. }
             | Effect::PutResolvingSpellInLibraryFromTop(_)
             // Group / each-player effects with no cast-time target slot.
             | Effect::EachPlayerPutsHandCardOnTop { .. }

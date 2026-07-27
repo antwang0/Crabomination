@@ -55,6 +55,11 @@ fn is_mana_ability(effect: &Effect) -> bool {
             // Incidental non-targeting self-counter (Twitching Doll's "put a
             // nest counter on this creature") — CR 605.1a rider, no stack use.
             Effect::AddCounter { what: crate::effect::Selector::This, .. } => true,
+            // CR 605.1a/603.7 — a reflexive "when you do" rider triggers OFF
+            // the mana ability; it goes on the stack itself but doesn't stop
+            // the ability being a mana ability (Rubble Rouser's "Add {R}.
+            // When you do, deal 1 to each opponent").
+            Effect::ReflexiveTrigger { .. } => true,
             Effect::Seq(steps) => steps.iter().all(mana_compatible),
             // A board-state-conditional that only ever adds mana on both
             // branches is still a mana ability (Ilysian Caryatid's "add one
@@ -266,6 +271,17 @@ pub fn extra_cost_for_spell(
                         && state.evaluate_requirement_on_card(filter, c, caster)
                 });
                 if !has_match {
+                    tax += pay;
+                }
+            }
+            // Too few matching graveyard cards → the pay half joins the cost.
+            crate::card::AdditionalCastCost::ExileFromGraveyardOrPay { filter, count, pay } => {
+                let matches = state.players[caster]
+                    .graveyard
+                    .iter()
+                    .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
+                    .count() as u32;
+                if matches < *count {
                     tax += pay;
                 }
             }
@@ -5688,11 +5704,13 @@ impl GameState {
                     .count()
                     >= *count as usize
             }
-            // Reveal-or-pay / sacrifice-or-pay are always announceable: with
-            // no match the pay half is folded into the spell's cost
-            // (`extra_cost_for_spell`) and mana payment enforces it.
+            // Reveal-or-pay / sacrifice-or-pay / exile-or-pay are always
+            // announceable: with no match the pay half is folded into the
+            // spell's cost (`extra_cost_for_spell`) and mana payment
+            // enforces it.
             A::RevealFromHandOrPay { .. } => true,
             A::SacrificeOrPay { .. } => true,
+            A::ExileFromGraveyardOrPay { .. } => true,
             A::ProcessExile => self
                 .exile
                 .iter()
@@ -6000,6 +6018,28 @@ impl GameState {
                 // Knowledge-only when a matching card is in hand; the pay
                 // half was already folded into the cost.
                 A::RevealFromHandOrPay { .. } => {}
+                A::ExileFromGraveyardOrPay { filter, count, .. } => {
+                    // With enough matching graveyard cards the exile half is
+                    // paid (reusing the ExileFromGraveyard machinery);
+                    // otherwise the pay half was already folded into the cost.
+                    let matches = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .count() as u32;
+                    if matches >= *count {
+                        let (mut ev, sp) = self.pay_additional_costs(
+                            p,
+                            &[A::ExileFromGraveyard { filter: filter.clone(), count: *count }],
+                            chosen_override.take(),
+                            None,
+                        );
+                        events.append(&mut ev);
+                        if sac_power.is_none() {
+                            sac_power = sp;
+                        }
+                    }
+                }
                 A::SacrificeOrPay { filter, .. } => {
                     // With a matching permanent the sacrifice half is paid
                     // (reusing the SacrificePermanent machinery); otherwise

@@ -64,13 +64,32 @@ impl GameState {
         avoid: &[CardId],
         x: u32,
     ) -> Option<Target> {
+        self.auto_target_for_effect_avoiding_set_xc(eff, controller, avoid, x, 0)
+    }
+
+    /// Like [`auto_target_for_effect_avoiding_set_x`] but also concretizes
+    /// `ManaValueAtMostConverged` against the cast's converge count before
+    /// picking (Sundering Archaic's "exile target nonland permanent … with
+    /// mana value ≤ the number of colors of mana spent"). Without this the
+    /// converge atom evaluates false-for-everything at selection time, and
+    /// a resolve-time-only gate lets the picker aim at over-cap permanents
+    /// whose exile then fizzles.
+    pub fn auto_target_for_effect_avoiding_set_xc(
+        &self,
+        eff: &Effect,
+        controller: usize,
+        avoid: &[CardId],
+        x: u32,
+        converge: u32,
+    ) -> Option<Target> {
         let avoid_source = avoid.first().copied();
         // Effects with a bare `Selector::Target(0)` (e.g. Lightning Bolt's
         // "deal 3 damage to any target") have no surfaced primary filter —
         // they accept any legal entity. Fall back to `Any` so the picker
         // walks players + permanents instead of short-circuiting to None.
         let any_filter = crate::card::SelectionRequirement::Any;
-        let req_owned = eff.primary_target_filter().map(|f| f.resolve_x(x));
+        let req_owned =
+            eff.primary_target_filter().map(|f| f.resolve_x(x).resolve_converge(converge));
         let req = req_owned.as_ref().unwrap_or(&any_filter);
         // First opponent on a different team. Falls back to the next
         // seat in singleton-team / unknown-team cases so the legacy 1v1

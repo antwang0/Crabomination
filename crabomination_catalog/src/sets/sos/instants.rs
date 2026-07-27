@@ -1128,10 +1128,11 @@ pub fn silverquill_charm() -> CardDefinition {
 /// the power-as-damage. AutoDecider currently fills slot 0 only; the
 /// scripted tests can supply slot 1.
 ///
-/// Approximation: printed text has the pumped creature itself deal the
-/// damage ("it deals damage equal to its power"), so its deathtouch/
-/// lifelink would apply; here a plain `Effect::DealDamage` attributes
-/// the damage to the spell, losing that source attribution.
+/// The damage half is `Effect::DealDamageEqualToPower` (one-sided
+/// fight), so the pumped creature itself is the damage source — its
+/// deathtouch / lifelink / wither apply, matching the printed "it deals
+/// damage equal to its power". (An earlier revision used a plain
+/// `DealDamage` attributed to the spell, losing that.)
 pub fn burrog_barrage() -> CardDefinition {
     use crate::card::Predicate;
     use crate::mana::g;
@@ -1156,17 +1157,17 @@ pub fn burrog_barrage() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             },
-            // Slot 1: optional opp creature target gets damage equal to
-            // slot 0's power. When slot 1 isn't provided the damage half
-            // resolves to no-op via TargetFiltered's empty-selector
-            // behaviour.
-            Effect::DealDamage {
-                to: Selector::TargetFiltered {
+            // Slot 1: optional opp creature target takes damage FROM the
+            // pumped creature (one-sided fight — source attribution keeps
+            // its deathtouch/lifelink live). When either slot is missing
+            // the damage half no-ops via the empty-selector behaviour.
+            Effect::DealDamageEqualToPower {
+                source: Selector::Target(0),
+                target: Selector::TargetFiltered {
                     slot: 1,
                     filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByOpponent),
                 },
-                amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
         ]),
         ..Default::default()
@@ -1490,9 +1491,16 @@ pub fn fractalize() -> CardDefinition {
 /// "Return up to X target instant and/or sorcery cards from your graveyard
 /// to your hand. / Exile Divergent Equation."
 ///
-/// The "up to X" pick is player-chosen via `Effect::MoveChosen`
-/// (`Decision::ChooseCards`; auto decider maximizes). "Exile Divergent
-/// Equation" rides `exile_on_resolve`.
+/// DELIBERATE APPROXIMATION — the "up to X" pick is player-chosen at
+/// RESOLUTION via `Effect::MoveChosen` (`Decision::ChooseCards`; auto
+/// decider maximizes), not declared as cast-time targets. Printed
+/// wording targets at cast, which would need X-scaled target-slot
+/// counts in the cast pipeline (see TODO "ManaValueAtMostV /
+/// Value-keyed targets" — same gap as Mind into Matter). Behaviorally
+/// near-equivalent for graveyard cards (no protection/hexproof in
+/// yards); the observable difference is opponents responding without
+/// knowing the picks. "Exile Divergent Equation" rides
+/// `exile_on_resolve`.
 pub fn divergent_equation() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;

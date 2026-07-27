@@ -2064,31 +2064,31 @@ pub fn fix_whats_broken() -> CardDefinition {
 /// hand. Put the rest on the bottom of your library in a random
 /// order."
 ///
-/// Wired as a conditional `Effect::If(LifeGainedThisTurn)`:
-/// - Mainline (no life gain this turn): one `RevealUntilFind` over
-///   the top 4 cards, find a creature OR land → hand.
-/// - Infusion (life gained this turn): two `RevealUntilFind` calls
-///   back-to-back, each over the top 4 (after the first miss-mill).
-///
-/// Approximations:
-/// - Misses go to the bottom via `RevealMissDest::BottomRandom`, which
-///   now genuinely shuffles the miss batch before bottoming (the players
-///   saw the reveal order, so the printed "random order" is real).
-/// - The "you may reveal" optionality is collapsed to always-do (the
-///   `MayDo` wrapping would just mill 4 cards on a "no" answer, which
-///   is strictly worse).
+/// Wired as a conditional `Effect::If(LifeGainedThisTurn)` around a
+/// single `LookPickToHand` window: look at the SAME top four either
+/// way, take 1 (mainline) or 2 (infusion) creature/land cards, rest to
+/// the bottom in a genuinely random order. `optional: true` honors the
+/// printed "you may reveal" for UI players (the AutoDecider harness
+/// keeps the fill, so bot play always takes the cards). An earlier
+/// revision chained two `RevealUntilFind` pulls for infusion, letting
+/// the second pull see past the printed four-card window.
 pub fn follow_the_lumarets() -> CardDefinition {
-    use crate::effect::{Predicate, ZoneDest};
+    use crate::effect::Predicate;
     use crate::mana::g;
     let creature_or_land =
         SelectionRequirement::Creature.or(SelectionRequirement::Land);
-    let single_pull = Effect::RevealUntilFind {
+    let look = |take: i32| Effect::LookPickToHand {
         who: PlayerRef::You,
-        find: creature_or_land.clone(),
-        to: ZoneDest::Hand(PlayerRef::You),
-        cap: Value::Const(4),
-        life_per_revealed: 0,
-        miss_dest: crate::effect::RevealMissDest::BottomRandom,
+        count: Value::Const(4),
+        rest_to_graveyard: false,
+        pick_filter: Some(creature_or_land.clone()),
+        take: Some(Value::Const(take)),
+        to_battlefield: false,
+        gain_life_if_pick: None,
+        gain_life_greatest_power_rest: false,
+        optional: true,
+        picked_lands_to_battlefield: false,
+        rest_bottom_random: true,
     };
     CardDefinition {
         name: "Follow the Lumarets",
@@ -2099,13 +2099,10 @@ pub fn follow_the_lumarets() -> CardDefinition {
                 who: PlayerRef::You,
                 at_least: Value::Const(1),
             },
-            // Infusion: pull two creature/land cards.
-            then: Box::new(Effect::Seq(vec![
-                single_pull.clone(),
-                single_pull.clone(),
-            ])),
-            // Mainline: pull one creature/land card.
-            else_: Box::new(single_pull),
+            // Infusion: take two creature/land cards from the four.
+            then: Box::new(look(2)),
+            // Mainline: take one.
+            else_: Box::new(look(1)),
         },
         ..Default::default()
     }

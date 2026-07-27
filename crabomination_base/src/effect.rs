@@ -4308,6 +4308,17 @@ pub enum Effect {
     /// Move every counter (all kinds) from `from` onto `to` (The Ozolith's
     /// begin-combat transfer). Relocation, not creation — no doublers.
     MoveAllCounters { from: Selector, to: Selector },
+    /// CR 603.7 — a reflexive "when you do, …" sub-trigger: push `body`
+    /// onto the stack as a triggered ability of the same source and
+    /// controller instead of resolving it inline. The containing
+    /// effect/ability finishes resolving first (mana abilities resolve
+    /// immediately), then the body waits for priority like any trigger —
+    /// so opponents get a response window the inline fold denied them.
+    /// The body's targets are auto-picked at push time (a reflexive
+    /// trigger targets when it triggers, CR 603.7d). Rubble Rouser's
+    /// "{T}, Exile a card from your graveyard: Add {R}. When you do,
+    /// this creature deals 1 damage to each opponent."
+    ReflexiveTrigger { body: Box<Effect> },
     /// CR 701.34a — Proliferate. "Choose any number of permanents and/or
     /// players that have a counter, then give each another counter of a
     /// kind already there." The auto-decider implements a strategic

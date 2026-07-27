@@ -17073,7 +17073,14 @@ pub fn brain_freeze() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Storm],
-        effect: Effect::Mill { who: Selector::Target(0), amount: Value::Const(3) },
+        effect: Effect::Mill {
+            // Printed "target player" — a bare `Target(0)` had no filter,
+            // so any object was a legal target and the mill silently
+            // fizzled on a non-player pick (same defect fixed on Emeritus
+            // of Ideation's Ancestral Recall).
+            who: crate::effect::shortcut::target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }

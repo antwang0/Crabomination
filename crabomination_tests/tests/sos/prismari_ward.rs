@@ -742,11 +742,12 @@ fn pensive_professor_secondary_counter_trigger_draws_a_card() {
     );
 }
 
-/// Pensive Professor's secondary rider defaults to no-draw under the
-/// auto-decider (the printed "you may" makes the draw opt-in). The
-/// counter still lands.
+/// Pensive Professor's secondary rider is a MANDATORY draw — the
+/// printed text has no "you may" (pool audit 2026-07: an earlier
+/// revision wrapped it in `MayDo` from a misquote). The counter lands
+/// and the draw always happens, decider or no.
 #[test]
-fn pensive_professor_secondary_counter_trigger_skips_under_auto_decider() {
+fn pensive_professor_secondary_counter_trigger_draws_unconditionally() {
     let mut g = two_player_game();
     let prof = place_creature(&mut g, 0, catalog::pensive_professor());
     g.add_card_to_library(0, catalog::island());
@@ -766,13 +767,13 @@ fn pensive_professor_secondary_counter_trigger_skips_under_auto_decider() {
     assert_eq!(
         c.counter_count(CounterType::PlusOnePlusOne),
         1,
-        "Increment counter still lands without the optional draw"
+        "Increment counter lands"
     );
-    // Bears moved from hand to battlefield (- 1). No draw under auto.
+    // Bears moved from hand to battlefield (-1), mandatory draw (+1).
     assert_eq!(
         g.players[0].hand.len(),
-        hand_before - 1,
-        "Default auto-decider declines the optional draw"
+        hand_before,
+        "the counter trigger's draw is mandatory (net hand size unchanged)"
     );
 }
 

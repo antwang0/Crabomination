@@ -1387,6 +1387,9 @@ impl GameState {
 fn is_mana_ability_effect(effect: &Effect) -> bool {
     match effect {
         Effect::AddMana { .. } => true,
+        // CR 605.1a/603.7 — a reflexive "when you do" rider doesn't stop
+        // the ability being a mana ability (mirrors `actions::is_mana_ability`).
+        Effect::ReflexiveTrigger { .. } => true,
         Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability_effect),
         // A board-state-conditional whose every branch only adds mana is still
         // a mana ability (Ilysian Caryatid, Raucous Audience). Mirrors

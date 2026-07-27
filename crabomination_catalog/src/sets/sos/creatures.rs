@@ -1082,39 +1082,32 @@ pub fn scolding_administrator() -> CardDefinition {
                 amount: Value::Const(1),
             }),
             // Dies → if it had counters, put those counters on a target
-            // creature. CR 603.4 — the intervening 'if' lives in
-            // `event.filter` (trigger-time check, read off the graveyard
-            // CardInstance via the cross-zone `CountersOn` lookup); the
-            // inner `Effect::If` re-checks at resolution (the dies-trigger
-            // path doesn't re-check filters).
+            // creature. Printed "those counters" means counters of EVERY
+            // kind (a stunned Administrator passes its stun counter on
+            // too), so the gate counts `TotalCountersOn` and the body is
+            // `MoveAllCounters` (which reads the death-LKI snapshot — same
+            // shape as Parish-Blade Trainee). CR 603.4 — the intervening
+            // 'if' lives in `event.filter` (trigger-time check); the inner
+            // `Effect::If` re-checks at resolution (the dies-trigger path
+            // doesn't re-check filters).
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource)
                     .with_filter(Predicate::ValueAtLeast(
-                        Value::CountersOn {
-                            what: Box::new(Selector::This),
-                            kind: CounterType::PlusOnePlusOne,
-                        },
+                        Value::TotalCountersOn { what: Box::new(Selector::This) },
                         Value::Const(1),
                     )),
                 effect: Effect::If {
                     cond: Predicate::ValueAtLeast(
-                        Value::CountersOn {
-                            what: Box::new(Selector::This),
-                            kind: CounterType::PlusOnePlusOne,
-                        },
+                        Value::TotalCountersOn { what: Box::new(Selector::This) },
                         Value::Const(1),
                     ),
                     then: Box::new(Effect::ApplyToTargets {
                         max_targets: 1,
                         min_targets: 0,
                         filter: SelectionRequirement::Creature,
-                        effect: Box::new(Effect::AddCounter {
-                            what: Selector::Target(0),
-                            kind: CounterType::PlusOnePlusOne,
-                            amount: Value::CountersOn {
-                                what: Box::new(Selector::This),
-                                kind: CounterType::PlusOnePlusOne,
-                            },
+                        effect: Box::new(Effect::MoveAllCounters {
+                            from: Selector::This,
+                            to: Selector::Target(0),
                         }),
                     }),
                     else_: Box::new(Effect::Noop),
@@ -2012,8 +2005,9 @@ pub fn hungry_graffalon() -> CardDefinition {
 /// Increment wired via `shortcut::increment_self_plus_one()`. The
 /// secondary "whenever one or more +1/+1 counters are put on this
 /// creature, you may draw a card" rider is wired via
-/// `EventKind::CounterAdded(PlusOnePlusOne)` + SelfSource, with the
-/// draw wrapped in `Effect::MayDo` to honor the printed optionality.
+/// `EventKind::CounterAdded(PlusOnePlusOne)` + SelfSource. The draw is
+/// MANDATORY on the printed card ("draw a card", no "may") — an earlier
+/// revision wrapped it in `MayDo` from a misquote of the text.
 pub fn pensive_professor() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::shortcut::increment_self_plus_one;
@@ -2030,23 +2024,16 @@ pub fn pensive_professor() -> CardDefinition {
         triggered_abilities: vec![
             increment_self_plus_one(),
             // Secondary rider: "Whenever one or more +1/+1 counters are
-            // put on this creature, you may draw a card." Wired via
+            // put on this creature, draw a card." Wired via
             // `EventKind::CounterAdded(PlusOnePlusOne)` + `SelfSource`
             // event scope so it only fires when counters land on the
-            // Professor itself. Wrapped in `Effect::MayDo` to honor the
-            // printed "you may" optionality.
+            // Professor itself. The printed draw is mandatory (no "may").
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::CounterAdded(CounterType::PlusOnePlusOne),
                     EventScope::SelfSource,
                 ),
-                effect: Effect::MayDo {
-                    description: "Draw a card?".into(),
-                    body: Box::new(Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    }),
-                },
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
             },
         ],
         ..Default::default()
@@ -2773,14 +2760,16 @@ pub fn transcendent_archaic() -> CardDefinition {
 /// of colors of mana spent to cast this creature. / {2}: Put target card
 /// from a graveyard on the bottom of its owner's library."
 ///
-/// Push (modern_decks): the converge-scaled mana-value cap is **now
-/// wired** via `Effect::If { cond: ValueAtMost(ManaValueOf(Target(0)),
-/// ConvergedValue), then: Exile(Target(0)), else_: Noop }`. The trigger
-/// no-ops cleanly when the target's MV exceeds ConvergedValue (e.g.
-/// mono-colorless cast → ConvergedValue = 0 → only MV-0 permanents
-/// are legitimate exile targets; at 1 color → MV ≤ 1; at 5 colors →
-/// MV ≤ 5). Auto-target picks any legal opp permanent first; the
-/// resolve-time gate then enforces the cap.
+/// The converge-scaled mana-value cap is enforced at BOTH ends: the
+/// target filter carries `ManaValueAtMostConverged` (concretized by the
+/// converge-aware auto-target picker, so target selection is restricted
+/// to legal ≤-cap permanents — the printed targeting rule), and the
+/// `If { ValueAtMost(ManaValueOf(Target(0)), ConvergedValue) }` gate
+/// re-checks at resolution (CR 608.2b-style: an MV that grew past the
+/// cap in response fizzles the exile instead of resolving it). Before
+/// the filter existed, auto-target aimed at the biggest opponent
+/// permanent — usually over-cap — and the exile fizzled almost every
+/// game under bot play.
 ///
 /// The `{2}: graveyard → bottom of owner's library` activated ability
 /// is unchanged.
@@ -2833,7 +2822,8 @@ pub fn sundering_archaic() -> CardDefinition {
                     what: crate::effect::shortcut::target_filtered(
                         SelectionRequirement::Permanent
                             .and(SelectionRequirement::Nonland)
-                            .and(SelectionRequirement::ControlledByOpponent),
+                            .and(SelectionRequirement::ControlledByOpponent)
+                            .and(SelectionRequirement::ManaValueAtMostConverged),
                     ),
                 }),
                 else_: Box::new(Effect::Noop),
@@ -3435,26 +3425,19 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
 /// "As an additional cost to cast this spell, exile two cards from your
 /// graveyard or pay {1}{W}. / Flying, vigilance"
 ///
-/// Push (modern_decks): the alt additional cost (exile two cards from
-/// your graveyard) is **now wired** via the new
-/// `AlternativeCost.exile_from_graveyard_count: u32` field. The
-/// pay-mana fork of the additional cost is folded into the default
-/// cost, modeled as **{3}{W}** — base {2}{W} + the {1}{W} additional
-/// cost with the second white pip relaxed to generic (an exact fold
-/// would be {3}{W}{W}; {3}{W} keeps the mana-value distortion
-/// smaller). The alt cost path {2}{W} with
-/// `exile_from_graveyard_count: 2` is available when the caster's
-/// graveyard has at least 2 cards. Auto-picker takes the lowest-CMC
-/// cards. Body (4/3 Flying + Vigilance) unchanged.
+/// Modeled with `AdditionalCastCost::ExileFromGraveyardOrPay`: the
+/// registered cost stays the printed {2}{W} (mana value 3 — an earlier
+/// revision folded the pay half into the base cost, distorting the MV
+/// to 5). With 2+ graveyard cards the exile half is auto-paid
+/// (lowest-MV picks); otherwise {2} generic joins the cost — the pay
+/// half's white pip relaxed to generic, the only remaining
+/// approximation. Body (4/3 Flying + Vigilance) unchanged.
 pub fn soaring_stoneglider() -> CardDefinition {
-    use crate::card::AlternativeCost;
+    use crate::card::AdditionalCastCost;
     use crate::mana::w;
     CardDefinition {
         name: "Soaring Stoneglider",
-        // Pay-mana fork of the additional cost folded into the base cost:
-        // {2}{W} base + "pay {1}{W}" = {3}{W}{W} (audit fix: the second
-        // white pip was relaxed to generic).
-        cost: cost(&[generic(3), w(), w()]),
+        cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elephant, CreatureType::Cleric],
@@ -3463,26 +3446,11 @@ pub fn soaring_stoneglider() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[generic(2), w()]),
-            life_cost: 0,
-            exile_filter: None,
-            evoke_sacrifice: false,
-            not_your_turn_only: false,
-            target_filter: None,
-            condition: None,
-            exile_from_graveyard_count: 2,
-            return_to_hand: None,
-            sacrifice_permanents: None,
-            effect_override: None,
-            dash: false,
-            blitz: false,
-            flash: false,
-            marks_kicked: false,
-            emerge: None,
-            impending: 0,
-            offering: None,
-            warp: false,        }),
+        additional_cast_cost: vec![AdditionalCastCost::ExileFromGraveyardOrPay {
+            filter: SelectionRequirement::Any,
+            count: 2,
+            pay: 2,
+        }],
         ..Default::default()
     }
 }
@@ -4350,16 +4318,14 @@ pub fn ambitious_augmenter() -> CardDefinition {
 /// graveyard: Add {R}. When you do, this creature deals 1 damage to
 /// each opponent.`
 ///
-/// Push (modern_decks): the `{T}, Exile a card from your graveyard:`
-/// activation is **now wired** via the existing
-/// `ActivatedAbility.exile_other_filter: Some(Any)` field (engine's
-/// "exile another card from your gy as cost" primitive, same one
-/// powering Postmortem Professor + Lorehold Pledgemage). The body
-/// folds the `When you do` sub-trigger into the activation's main
-/// effect — once the cost is paid the engine resolves `AddMana` plus
-/// the 1-damage-each-opp simultaneously (CR 603's separate sub-trigger
-/// would resolve them on the stack independently; this approximation
-/// preserves the printed payoff with a slightly tighter timing).
+/// The `{T}, Exile a card from your graveyard:` activation is wired via
+/// `ActivatedAbility.exile_other_filter: Some(Any)` (engine's "exile
+/// another card from your gy as cost" primitive, same one powering
+/// Postmortem Professor + Lorehold Pledgemage). The `When you do`
+/// sub-trigger is a real `Effect::ReflexiveTrigger` (CR 603.7): the
+/// mana resolves immediately, the 1-damage-each-opponent goes on the
+/// stack and waits for priority. (An earlier revision folded the damage
+/// inline, denying opponents the response window.)
 pub fn rubble_rouser() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::ManaPayload;
@@ -4384,9 +4350,15 @@ pub fn rubble_rouser() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Colors(vec![Color::Red]),
                 },
-                Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(1),
+                // "When you do, this creature deals 1 damage to each
+                // opponent" — a real CR 603.7 reflexive trigger: the mana
+                // resolves immediately (mana abilities don't stack), the
+                // damage goes on the stack and waits for priority.
+                Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(1),
+                    }),
                 },
             ]),
             once_per_turn: false,

@@ -9139,6 +9139,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReflexiveTrigger { body } => {
+                // CR 603.7 — the "when you do" payoff goes on the stack as
+                // its own trigger; targets are picked now (603.7d).
+                let Some(src) = ctx.source else { return Ok(()) };
+                let (slot0, additional) =
+                    self.auto_targets_for_effect_all_slots(body, ctx.controller, None);
+                self.stack.push(
+                    crate::game::TriggerPush::new(src, ctx.controller, (**body).clone())
+                        .target(slot0)
+                        .additional_targets(additional)
+                        .x_value(ctx.x_value)
+                        .converged_value(ctx.converged_value)
+                        .trigger_source(Some(EntityRef::Permanent(src)))
+                        .build(),
+                );
+                Ok(())
+            }
+
             Effect::MoveAllCounters { from, to } => {
                 // CR 122.5 — relocation, not creation (no doublers).
                 let src = self.resolve_selector(from, ctx).into_iter().find_map(|e| e.as_permanent_id());

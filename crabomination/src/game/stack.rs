@@ -1432,11 +1432,15 @@ impl GameState {
                         // under Elesh Norn aims at a fresh creature.
                         let mut avoid = vec![card_id];
                         for _ in 0..etb_multiplier {
-                            let auto_target = self.auto_target_for_effect_avoiding_set_x(
+                            // Converge-aware: an ETB trigger reading the
+                            // cast's converge count (Sundering Archaic)
+                            // must pick its target under the concrete cap.
+                            let auto_target = self.auto_target_for_effect_avoiding_set_xc(
                                 &effect,
                                 caster,
                                 &avoid,
                                 x_value,
+                                converged_value,
                             );
                             if let Some(Target::Permanent(tid)) = &auto_target {
                                 avoid.push(*tid);

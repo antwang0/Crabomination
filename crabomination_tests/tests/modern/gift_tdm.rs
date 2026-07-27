@@ -3076,6 +3076,22 @@ fn brain_freeze_mills_three() {
     assert_eq!(g.players[1].graveyard.len(), before + 3, "target player milled 3");
 }
 
+/// Pool audit 2026-07: Brain Freeze's slot-0 filter is `Player` — the
+/// bare `Target(0)` accepted any object, so the auto-targeter could aim
+/// the mill at a permanent and silently fizzle (the defect previously
+/// fixed on Emeritus of Ideation's Ancestral Recall).
+#[test]
+fn brain_freeze_auto_target_is_a_player() {
+    let mut g = two_player_game();
+    // A juicy permanent that the unfiltered picker used to grab.
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let picked = g.auto_target_for_effect(&catalog::brain_freeze().effect, 0);
+    assert!(
+        matches!(picked, Some(Target::Player(_))),
+        "the mill must auto-target a player, got {picked:?}",
+    );
+}
+
 #[test]
 fn defile_scales_with_swamps() {
     let mut g = two_player_game();
