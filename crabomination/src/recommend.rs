@@ -1145,6 +1145,25 @@ pub fn per_card_attribution(
     rows
 }
 
+/// [`per_card_attribution`] restricted to the samples whose build plays
+/// `anchor` — the build-around lens. A card whose delta INSIDE anchor
+/// decks beats its global delta is a synergy partner (Professor Dellian
+/// Fel's emblem turning every lifegain trigger into a drain). Returns
+/// the subset size alongside the rows so callers can report the sample.
+pub fn per_card_attribution_within(
+    samples: &[(&CandidateBuild, f64)],
+    anchor: &str,
+    min_side: usize,
+) -> (usize, Vec<CardAttribution>) {
+    let subset: Vec<(&CandidateBuild, f64)> = samples
+        .iter()
+        .filter(|(c, _)| c.main.iter().chain(c.duals.iter()).any(|&f| f().name == anchor))
+        .map(|(c, w)| (*c, *w))
+        .collect();
+    let n = subset.len();
+    (n, per_card_attribution(&subset, min_side))
+}
+
 /// A single-swap child of `parent`: `main[out_idx]` goes to the bench,
 /// `in_card` comes off it, and the basics re-split for the new pips. The
 /// spell count (and so the 40-card total) is unchanged by construction.

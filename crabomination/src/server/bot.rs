@@ -4574,7 +4574,21 @@ fn eval_material(state: &GameState, seat: usize) -> i32 {
         // Lands are worth a small flat amount — enough that ramp/fetch
         // registers and land destruction isn't free, without a flooded
         // board dominating the material count.
-        let pv = if c.definition.is_land() { 2 } else { 3 * permanent_value(state, c.id) };
+        let pv = if c.definition.is_land() {
+            2
+        } else {
+            let mut pv = permanent_value(state, c.id);
+            // Loyalty is a spendable RESOURCE, not material: counting it
+            // here made every plus ability self-rewarding (+2 loyalty
+            // read as +6 material for free) and every ultimate
+            // self-punishing (−6 loyalty read as −18), so walkers ticked
+            // up forever. `permanent_value` keeps the loyalty term for
+            // removal targeting — a fat walker is still the best target.
+            if c.definition.is_planeswalker() {
+                pv -= c.counter_count(crate::card::CounterType::Loyalty) as i32;
+            }
+            3 * pv
+        };
         if c.controller == seat {
             v += pv;
         } else if !state.same_team(c.controller, seat) {
@@ -4585,7 +4599,15 @@ fn eval_material(state: &GameState, seat: usize) -> i32 {
         if !p.is_alive() {
             continue;
         }
-        let material = 2 * p.hand.len() as i32 + state.effective_life(i);
+        // A hand card at 4 ≈ half an average permanent — enough that
+        // "draw a card" beats "gain 3 life" (a card is a future play;
+        // three life at a healthy total is nearly nothing). Emblems are
+        // always ultimates and always game-bending: 25 apiece clears the
+        // ~3×loyalty board-value drop the walker pays to make one, so
+        // the outcome eval actually presses a −6.
+        let material = 4 * p.hand.len() as i32
+            + state.effective_life(i)
+            + 25 * p.emblems.len() as i32;
         if i == seat {
             v += material;
         } else if !state.same_team(i, seat) {
@@ -5154,6 +5176,34 @@ mod tests {
         let _ = charm;
     }
 
+    /// With the ultimate affordable, the emblem-aware eval presses it:
+    /// Dellian Fel at 7 loyalty fires −6 (emblem = 25 material, and
+    /// loyalty spent is a resource, not a material loss).
+    #[test]
+    fn bot_walker_ults_when_affordable() {
+        use crate::card::CounterType;
+        let mut g = two_player_game();
+        let pw = g.add_card_to_battlefield(0, catalog::professor_dellian_fel());
+        g.battlefield
+            .iter_mut()
+            .find(|c| c.id == pw)
+            .unwrap()
+            .counters
+            .insert(CounterType::Loyalty, 7);
+        g.add_card_to_library(0, catalog::island());
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = pick_loyalty_ability(&g, 0).expect("walker activates something");
+        match action {
+            GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
+                assert_eq!(card_id, pw);
+                assert_eq!(ability_index, 3, "the −6 emblem ultimate, not the +2 lifegain");
+            }
+            other => panic!("expected a loyalty activation, got {other:?}"),
+        }
+    }
+
     /// The bot can activate a *statically-granted* loyalty ability (one the
     /// walker doesn't print itself), matching the engine's effective-list
     /// activation path.
@@ -5197,24 +5247,25 @@ mod tests {
         }
     }
 
-    /// The bot activates The Wandering Emperor's +1 onto its OWN creature
-    /// (a friendly +1/+1 buff), not the opponent's.
+    /// The Wandering Emperor's +1 (a friendly +1/+1 buff) auto-targets the
+    /// bot's OWN creature, never the opponent's — the targeting regression
+    /// this test originally caught. (Which ability the walker fires is the
+    /// outcome eval's call and pinned elsewhere; here we probe the +1's
+    /// target choice directly.)
     #[test]
     fn bot_wandering_emperor_plus_one_targets_own_creature() {
         let mut g = two_player_game();
         let emp = g.add_card_to_battlefield(0, catalog::the_wandering_emperor());
         let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-        let action = pick_loyalty_ability(&g, 0).expect("bot activates a loyalty ability");
-        match action {
-            GameAction::ActivateLoyaltyAbility { card_id, ability_index, target, .. } => {
-                assert_eq!(card_id, emp);
-                assert_eq!(ability_index, 0, "the +1 (a self-buff) is preferred");
-                assert_eq!(target, Some(Target::Permanent(mine)),
-                    "buffs its own creature, not {theirs:?}");
-            }
-            _ => panic!("expected a loyalty activation"),
-        }
+        let plus_one = &catalog::the_wandering_emperor().loyalty_abilities[0];
+        let picked = g.auto_target_for_effect(&plus_one.effect, 0);
+        assert_eq!(
+            picked,
+            Some(Target::Permanent(mine)),
+            "the +1 buffs its own creature, not {theirs:?}",
+        );
+        let _ = emp;
     }
 
     #[test]
@@ -5913,14 +5964,16 @@ mod tests {
         }
     }
 
-    /// Bot activates a planeswalker's loyalty ability when one is available,
-    /// preferring +loyalty abilities that preserve the walker for next turn.
+    /// Bot activates a planeswalker's loyalty ability when one is
+    /// available, picking by OUTCOME: on an empty board Karn's -2
+    /// Construct token (a real body that also protects the walker)
+    /// out-values the +1's slow card. Karn at 5 loyalty afterward sits
+    /// at a healthy 3 — this is development, not a suicide-ult.
     #[test]
     fn bot_activates_planeswalker_loyalty_ability() {
         let mut g = two_player_game();
-        // Karn has a +1 (reveal two, opponent picks one for your hand) at
+        // Karn: +1 (reveal two, opponent picks one for your hand) at
         // index 0, a -1 at index 1, and a -2 (Construct token) at index 2.
-        // Sorted by descending loyalty cost, the bot should pick the +1.
         let karn = g.add_card_to_battlefield(0, catalog::karn_scion_of_urza());
         g.clear_sickness(karn);
         // Stock the library so the +1 has cards to reveal.
@@ -5932,8 +5985,8 @@ mod tests {
         match action {
             GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
                 assert_eq!(card_id, karn, "bot should target the Karn it controls");
-                assert_eq!(ability_index, 0,
-                    "+1 loyalty preferred over -1 / -2 (don't suicide-ult)");
+                assert_eq!(ability_index, 2,
+                    "the -2 Construct (board presence) out-values the +1's slow card");
             }
             other => panic!("expected ActivateLoyaltyAbility, got {:?}", other),
         }

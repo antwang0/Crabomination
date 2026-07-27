@@ -48,6 +48,41 @@ fn print_attribution(rec: &recommend::Recommendation) {
     }
 }
 
+/// The build-around lens: attribution restricted to variants playing
+/// `anchor`. Cards whose in-anchor delta beats their global delta are the
+/// anchor's synergy partners.
+fn print_anchor_attribution(rec: &recommend::Recommendation, anchor: &str) {
+    let n = rec.evals.len();
+    if n < 6 {
+        return;
+    }
+    let samples: Vec<(&recommend::CandidateBuild, f64)> = rec.candidates[..n]
+        .iter()
+        .zip(&rec.evals)
+        .map(|(c, e)| (c, e.win_rate()))
+        .collect();
+    let (subset, rows) = recommend::per_card_attribution_within(&samples, anchor, 3);
+    if subset < 6 {
+        println!("\n(anchor \"{anchor}\": only {subset} variants play it — no conditional table)");
+        return;
+    }
+    println!(
+        "\nper-card attribution WITHIN the {subset} decks playing {anchor} \
+         (build-around lens):"
+    );
+    for r in rows {
+        println!(
+            "  {:+5.1}  {:5.1}% (in {:>2})  vs {:5.1}% (out {:>2})  {}",
+            r.delta() * 100.0,
+            r.mean_in * 100.0,
+            r.n_in,
+            r.mean_out * 100.0,
+            r.n_out,
+            r.name,
+        );
+    }
+}
+
 fn print_ranking(rec: &recommend::Recommendation) {
     for (rank, &i) in rec.ranking.iter().enumerate() {
         let e = &rec.evals[i];
@@ -73,7 +108,7 @@ fn main() {
         eprintln!(
             "usage: recommend_pool <pool.txt> [seed] [games_per_pairing] [candidate_cap] \
              [pin,labels] [refine_top] [variants_per_shape] [racing_rounds] [search_gens] \
-             [gauntlet_size]"
+             [gauntlet_size] [anchor_card]"
         );
         std::process::exit(2);
     };
@@ -96,6 +131,10 @@ fn main() {
     // Opposing field size (independent sealed pools). Racing rounds widen
     // the sampled opponent set up to this cap: min(5·2^round, gauntlet).
     let gauntlet_size: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(20);
+    // Build-around lens: a card name; a second attribution table is
+    // printed restricted to variants that PLAY this card, exposing its
+    // synergy partners ("Professor Dellian Fel").
+    let anchor: Option<String> = args.next();
 
     // `random:SEED` generates a synthetic sealed pool (6 SOS packs) instead
     // of reading a file — for calibrating what a typical pool's best build
@@ -202,6 +241,9 @@ fn main() {
         println!("\nrefined ranking (win rate vs the field ± 95% CI):");
         print_ranking(&refined);
         print_attribution(&refined);
+        if let Some(anchor) = &anchor {
+            print_anchor_attribution(&refined, anchor);
+        }
         refined
     } else {
         rec
