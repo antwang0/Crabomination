@@ -4601,13 +4601,9 @@ fn eval_material(state: &GameState, seat: usize) -> i32 {
         }
         // A hand card at 4 ≈ half an average permanent — enough that
         // "draw a card" beats "gain 3 life" (a card is a future play;
-        // three life at a healthy total is nearly nothing). Emblems are
-        // always ultimates and always game-bending: 25 apiece clears the
-        // ~3×loyalty board-value drop the walker pays to make one, so
-        // the outcome eval actually presses a −6.
-        let material = 4 * p.hand.len() as i32
-            + state.effective_life(i)
-            + 25 * p.emblems.len() as i32;
+        // three life at a healthy total is nearly nothing).
+        let emblems: i32 = p.emblems.iter().map(|e| emblem_value(state, i, e)).sum();
+        let material = 4 * p.hand.len() as i32 + state.effective_life(i) + emblems;
         if i == seat {
             v += material;
         } else if !state.same_team(i, seat) {
@@ -4615,6 +4611,61 @@ fn eval_material(state: &GameState, seat: usize) -> i32 {
         }
     }
     v
+}
+
+/// Material value of one emblem for `seat`. Emblems are ultimates and
+/// usually game-bending — but a CONDITIONAL emblem is only worth what
+/// the deck can feed it. A lifegain-triggered emblem (Professor Dellian
+/// Fel's "whenever you gain life, target opponent loses that much") is
+/// priced by the seat's visible lifegain sources: with none it's nearly
+/// dead (2 — below a +2 ability's gain-3, so the walker holds the fort
+/// instead of ulting into nothing), and each source adds 6, capped at
+/// 32. A flat price made the bot ult indiscriminately and Fel's fleet
+/// attribution DROPPED — the build-around emblem needs the build.
+/// Unconditional emblems keep the flat 25.
+fn emblem_value(state: &GameState, seat: usize, emblem: &crate::player::Emblem) -> i32 {
+    use crate::effect::EventKind;
+    let lifegain_triggered =
+        emblem.triggered.iter().any(|t| matches!(t.event.kind, EventKind::LifeGained));
+    if !lifegain_triggered {
+        return 25;
+    }
+    2 + 6 * lifegain_sources(state, seat).min(5)
+}
+
+/// Visible lifegain sources for `seat`: battlefield lifelink bodies, and
+/// battlefield/hand cards whose effect trees gain the controller life
+/// (GainLife, Drain). Loyalty abilities are deliberately NOT scanned —
+/// the emblem-maker mustn't count itself as its own payoff.
+fn lifegain_sources(state: &GameState, seat: usize) -> i32 {
+    fn gains_life(e: &Effect) -> bool {
+        match e {
+            Effect::GainLife { .. } | Effect::Drain { .. } => true,
+            Effect::Seq(v) => v.iter().any(gains_life),
+            Effect::If { then, else_, .. } => gains_life(then) || gains_life(else_),
+            Effect::MayDo { body, .. } => gains_life(body),
+            Effect::ChooseMode(modes) => modes.iter().any(gains_life),
+            Effect::ApplyToTargets { effect, .. } => gains_life(effect),
+            _ => false,
+        }
+    }
+    fn card_gains_life(def: &CardDefinition) -> bool {
+        def.keywords.contains(&crate::card::Keyword::Lifelink)
+            || gains_life(&def.effect)
+            || def.triggered_abilities.iter().any(|t| gains_life(&t.effect))
+            || def.activated_abilities.iter().any(|a| gains_life(&a.effect))
+    }
+    let battlefield = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && card_gains_life(&c.definition))
+        .count();
+    let hand = state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| card_gains_life(&c.definition))
+        .count();
+    (battlefield + hand) as i32
 }
 
 /// Dry-run `action` to quiescence on a full-state clone (libraries kept —
@@ -5176,11 +5227,45 @@ mod tests {
         let _ = charm;
     }
 
-    /// With the ultimate affordable, the emblem-aware eval presses it:
-    /// Dellian Fel at 7 loyalty fires −6 (emblem = 25 material, and
-    /// loyalty spent is a resource, not a material loss).
+    /// With the ultimate affordable AND lifegain to feed the emblem,
+    /// the eval presses it: Dellian Fel at 7 loyalty with a Melancholic
+    /// Poet and a lifelink body on board fires −6 (emblem priced by
+    /// visible lifegain sources; loyalty spent is a resource, not a
+    /// material loss).
     #[test]
-    fn bot_walker_ults_when_affordable() {
+    fn bot_walker_ults_when_the_deck_feeds_the_emblem() {
+        use crate::card::CounterType;
+        let mut g = two_player_game();
+        let pw = g.add_card_to_battlefield(0, catalog::professor_dellian_fel());
+        g.battlefield
+            .iter_mut()
+            .find(|c| c.id == pw)
+            .unwrap()
+            .counters
+            .insert(CounterType::Loyalty, 7);
+        // Three visible lifegain sources: emblem value 2 + 6×3 = 20.
+        g.add_card_to_battlefield(0, catalog::melancholic_poet());
+        g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
+        g.add_card_to_hand(0, catalog::melancholic_poet());
+        g.add_card_to_library(0, catalog::island());
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = pick_loyalty_ability(&g, 0).expect("walker activates something");
+        match action {
+            GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
+                assert_eq!(card_id, pw);
+                assert_eq!(ability_index, 3, "the −6 emblem ultimate, not the +2 lifegain");
+            }
+            other => panic!("expected a loyalty activation, got {other:?}"),
+        }
+    }
+
+    /// …and WITHOUT lifegain sources the emblem is nearly dead (2 < the
+    /// +2's gain-3), so the walker holds the fort instead of ulting into
+    /// nothing — the indiscriminate flat-price ult measurably HURT Fel.
+    #[test]
+    fn bot_walker_holds_ult_without_lifegain() {
         use crate::card::CounterType;
         let mut g = two_player_game();
         let pw = g.add_card_to_battlefield(0, catalog::professor_dellian_fel());
@@ -5198,7 +5283,10 @@ mod tests {
         match action {
             GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
                 assert_eq!(card_id, pw);
-                assert_eq!(ability_index, 3, "the −6 emblem ultimate, not the +2 lifegain");
+                assert_ne!(
+                    ability_index, 3,
+                    "no lifegain to feed the emblem — don't ult into nothing"
+                );
             }
             other => panic!("expected a loyalty activation, got {other:?}"),
         }
