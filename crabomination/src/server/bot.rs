@@ -3561,18 +3561,21 @@ fn pick_loyalty_ability(state: &GameState, seat: usize) -> Option<GameAction> {
         if card.loyalty_uses_this_turn >= allowed {
             continue;
         }
-        // Walk abilities in order; prefer non-suicidal positive-loyalty
-        // abilities first, then negative-loyalty ones the walker can afford.
-        // Use the *effective* list (printed + statically-granted, e.g. Kasmina
+        // Gather every affordable ability and pick by OUTCOME, not by
+        // loyalty-cost order. The old plus-first walk meant a walker with
+        // a strong minus never used it — Professor Dellian Fel spent whole
+        // games on "+2: gain 3 life" while "−3: destroy target creature"
+        // sat unused (its attribution read neutral for a bomb). Use the
+        // *effective* list (printed + statically-granted, e.g. Kasmina
         // Enigma Sage / Ichormoon Gauntlet) so the bot can activate granted
         // loyalty abilities too — the engine indexes the same list.
+        // Ultimates whose payoff the material eval can't see (emblems)
+        // still lose to a plus — a known limitation.
         let current_loyalty =
             card.counter_count(crate::card::CounterType::Loyalty) as i32;
         let effective = crate::game::effective_loyalty_abilities(card, &state.battlefield);
-        let mut indexed: Vec<(usize, &crate::effect::LoyaltyAbility)> =
-            effective.iter().enumerate().collect();
-        indexed.sort_by_key(|(_, a)| -a.loyalty_cost);
-        for (idx, ability) in indexed {
+        let mut finalists: Vec<(i32, GameAction)> = Vec::new();
+        for (idx, ability) in effective.iter().enumerate() {
             if current_loyalty + ability.loyalty_cost < 0 {
                 continue;
             }
@@ -3596,8 +3599,11 @@ fn pick_loyalty_ability(state: &GameState, seat: usize) -> Option<GameAction> {
                 x_value,
             };
             if state.would_accept(action.clone()) {
-                return Some(action);
+                finalists.push((score_candidate(state, seat, &action), action));
             }
+        }
+        if let Some(best) = pick_by_outcome(state, seat, finalists) {
+            return Some(best);
         }
     }
     None
@@ -4565,14 +4571,14 @@ fn eval_material(state: &GameState, seat: usize) -> i32 {
     }
     let mut v = 0i32;
     for c in &state.battlefield {
-        if c.definition.is_land() {
-            continue;
-        }
-        let pv = permanent_value(state, c.id);
+        // Lands are worth a small flat amount — enough that ramp/fetch
+        // registers and land destruction isn't free, without a flooded
+        // board dominating the material count.
+        let pv = if c.definition.is_land() { 2 } else { 3 * permanent_value(state, c.id) };
         if c.controller == seat {
-            v += 3 * pv;
+            v += pv;
         } else if !state.same_team(c.controller, seat) {
-            v -= 3 * pv;
+            v -= pv;
         }
     }
     for (i, p) in state.players.iter().enumerate() {
@@ -4633,8 +4639,67 @@ fn pick_by_outcome(
     let baseline = eval_material(state, seat);
     finalists
         .into_iter()
-        .max_by_key(|(s, a)| (evaluate_action_outcome(state, seat, a).unwrap_or(baseline), *s))
+        .max_by_key(|(s, a)| {
+            // Known-temporary casts (bounce, until-EOT stat changes) are
+            // pinned to the baseline: the post-resolution snapshot can't
+            // see the effect reversing, so evaluating it would sell a
+            // bounce as removal. They win only on static score against
+            // other no-eval-gain lines.
+            let ev = if action_outcome_is_temporary(state, a) {
+                baseline
+            } else {
+                evaluate_action_outcome(state, seat, a).unwrap_or(baseline)
+            };
+            (ev, *s)
+        })
         .map(|(_, a)| a)
+}
+
+/// True when `e`'s tree contains a leaf whose apparent value REVERSES
+/// after the turn: an until-end-of-turn stat change, or a bounce of a
+/// battlefield permanent to hand (the permanent comes back next turn).
+/// The outcome evaluation snapshots the state right after resolution, so
+/// these leaves read as permanent gains — a bounced 4-drop looked like
+/// Doom Blade (+3×value) and a "base P/T 5/5 until end of turn" like a
+/// real +18 material swing, and the bot burned Proctor's Gaze / Quandrix
+/// Charm on them at sorcery speed for nothing. Graveyard/exile-to-hand
+/// moves (Regrowth) are real card advantage and are NOT temporary.
+fn contains_temporary_leaf(e: &Effect) -> bool {
+    use crate::effect::{Duration, ZoneDest};
+    match e {
+        Effect::PumpPT { duration: Duration::EndOfTurn | Duration::EndOfCombat, .. }
+        | Effect::SetBasePT { duration: Duration::EndOfTurn | Duration::EndOfCombat, .. }
+        | Effect::SwitchPT { duration: Duration::EndOfTurn | Duration::EndOfCombat, .. } => true,
+        Effect::Move { what, to: ZoneDest::Hand(_) } => {
+            // A bounce of a battlefield object; an off-board (graveyard /
+            // exile) retrieval keeps the card — permanent value.
+            match what {
+                crate::effect::Selector::TargetFiltered { filter, .. } => {
+                    !filter.mentions_offboard_zone()
+                }
+                _ => true,
+            }
+        }
+        Effect::Seq(v) => v.iter().any(contains_temporary_leaf),
+        Effect::If { then, else_, .. } => {
+            contains_temporary_leaf(then) || contains_temporary_leaf(else_)
+        }
+        Effect::MayDo { body, .. } => contains_temporary_leaf(body),
+        Effect::ApplyToTargets { effect, .. } => contains_temporary_leaf(effect),
+        _ => false,
+    }
+}
+
+/// True when `action` is a cast whose (mode-resolved) effect contains a
+/// temporary leaf — such candidates skip the outcome evaluation (see
+/// [`contains_temporary_leaf`]) and compete on static score alone.
+fn action_outcome_is_temporary(state: &GameState, action: &GameAction) -> bool {
+    let (card_id, mode) = match action {
+        GameAction::CastSpell { card_id, mode, .. } => (*card_id, *mode),
+        _ => return false,
+    };
+    let Some(card) = state.find_card_anywhere(card_id) else { return false };
+    contains_temporary_leaf(mode_branch(&card.definition.effect, mode))
 }
 
 /// A pure temporary-pump instant aimed at a target creature (Giant
@@ -4784,6 +4849,12 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction) -> i32 {
         GameAction::CastAdventureCreature { card_id, target, .. }
         | GameAction::CastPlotted { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
         GameAction::ActivateAbility { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
+        // Loyalty activations: the target term is what differentiates them
+        // (a −3 destroy at a 5-drop should out-score "+2: gain 3"); the
+        // outcome eval in `pick_loyalty_ability` is the primary judge.
+        GameAction::ActivateLoyaltyAbility { card_id, target, .. } => {
+            (*card_id, target.clone(), 0, 0)
+        }
         GameAction::CastPrepareSpell { creature_id, target, .. } => {
             (*creature_id, target.clone(), 0, 0)
         }
@@ -4848,6 +4919,15 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction) -> i32 {
                         } else {
                             v -= (dmg - cp.toughness).max(0);
                         }
+                    }
+                    // A bounce is tempo, not removal — the permanent comes
+                    // back next turn. A third of the value keeps target
+                    // selection sane without treating it as a kill.
+                    if let GameAction::CastSpell { mode, .. } = action
+                        && let Some(card) = state.find_card_anywhere(card_id)
+                        && contains_temporary_leaf(mode_branch(&card.definition.effect, *mode))
+                    {
+                        v /= 3;
                     }
                     score += v;
                 }
@@ -5017,6 +5097,61 @@ mod tests {
             }
             _ => panic!("expected a loyalty activation"),
         }
+    }
+
+    /// Loyalty abilities are picked by OUTCOME, not plus-first: Professor
+    /// Dellian Fel with an opposing 5/5 on the board fires "−3: destroy
+    /// target creature" instead of "+2: you gain 3 life" (the old
+    /// cost-ordered walk never pressed a minus, piloting the pool's best
+    /// bomb as a lifegain trinket).
+    #[test]
+    fn bot_walker_presses_removal_over_lifegain() {
+        let mut g = two_player_game();
+        let pw = g.add_card_to_battlefield(0, catalog::professor_dellian_fel());
+        let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+        g.add_card_to_library(0, catalog::island());
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = pick_loyalty_ability(&g, 0).expect("walker activates something");
+        match action {
+            GameAction::ActivateLoyaltyAbility {
+                card_id, ability_index, target, ..
+            } => {
+                assert_eq!(card_id, pw);
+                assert_eq!(ability_index, 2, "the −3 destroy, not the +2 lifegain");
+                assert_eq!(
+                    target,
+                    Some(crate::game::Target::Permanent(dragon)),
+                    "aimed at the opposing dragon",
+                );
+            }
+            other => panic!("expected a loyalty activation, got {other:?}"),
+        }
+    }
+
+    /// Known-temporary casts skip the outcome eval: with Quandrix Charm
+    /// (whose mode 2 is "base P/T 5/5 until end of turn") and a real
+    /// creature both castable, the bot develops instead of burning the
+    /// Charm as a fake main-phase pump.
+    #[test]
+    fn bot_prefers_development_over_temp_buff() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::grizzly_bears()); // pump target
+        let charm = g.add_card_to_hand(0, catalog::quandrix_charm());
+        let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, .. } if card_id == bears),
+            "cast the creature, not the Charm's temp buff, got {action:?}",
+        );
+        let _ = charm;
     }
 
     /// The bot can activate a *statically-granted* loyalty ability (one the
