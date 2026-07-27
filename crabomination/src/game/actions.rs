@@ -136,6 +136,33 @@ fn collect_self_cast_triggers(
 
 /// Count distinct colors of mana that decreased between two pool
 /// snapshots — i.e. the spell's converge value.
+/// Colored "or pay" halves of additional cast costs whose resource half
+/// isn't available right now (`ExileFromGraveyardOrPay` with a thin
+/// graveyard): the printed pay cost joins the spell's cost
+/// symbol-for-symbol — colored pips included, which the generic
+/// [`extra_cost_for_spell`] tax channel can't express.
+pub(crate) fn or_pay_cost_symbols(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+) -> Vec<crate::mana::ManaSymbol> {
+    let mut out = Vec::new();
+    for c in &card.definition.additional_cast_cost {
+        if let crate::card::AdditionalCastCost::ExileFromGraveyardOrPay { filter, count, pay } = c
+        {
+            let matches = state.players[caster]
+                .graveyard
+                .iter()
+                .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
+                .count() as u32;
+            if matches < *count {
+                out.extend(pay.symbols.iter().cloned());
+            }
+        }
+    }
+    out
+}
+
 fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool) -> u32 {
     use crate::mana::Color;
     let mut count = 0u32;
@@ -271,17 +298,6 @@ pub fn extra_cost_for_spell(
                         && state.evaluate_requirement_on_card(filter, c, caster)
                 });
                 if !has_match {
-                    tax += pay;
-                }
-            }
-            // Too few matching graveyard cards → the pay half joins the cost.
-            crate::card::AdditionalCastCost::ExileFromGraveyardOrPay { filter, count, pay } => {
-                let matches = state.players[caster]
-                    .graveyard
-                    .iter()
-                    .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
-                    .count() as u32;
-                if matches < *count {
                     tax += pay;
                 }
             }
@@ -5337,6 +5353,7 @@ impl GameState {
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
+        cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
         // Apply static cost-reduction effects (Killian's "spells that target
         // a creature cost {2} less"). Tax is applied first so reductions
         // never make the spell free of its tax.
@@ -7826,6 +7843,7 @@ impl GameState {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(tax));
         }
+        cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
         let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
         if reduction > 0 {
             cost.reduce_generic(reduction);
@@ -8192,6 +8210,7 @@ impl GameState {
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
+        mana_cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
         // CR 601.2f: cost reductions apply uniformly across cast paths
         // (hand cast / flashback / alt-cost), and `cost_reduction_for_
         // spell` returns the same delta in each. The alt cost is often

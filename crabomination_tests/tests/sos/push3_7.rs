@@ -1517,11 +1517,12 @@ fn soaring_stoneglider_additional_cost_exiles_two_from_graveyard() {
     assert!(g.players[0].graveyard.is_empty(), "Graveyard drained by 2");
 }
 
-/// Soaring Stoneglider: with fewer than two graveyard cards the pay
-/// half joins the cost ({2} generic — the printed {1}{W} with the pip
-/// relaxed). {2}{W} alone is now short; {2}{W} + {2} casts.
+/// Soaring Stoneglider: with fewer than two graveyard cards the printed
+/// pay half joins the cost symbol-for-symbol — {1}{W}, a REAL white
+/// pip. {2}{W} + {2} generic is not enough (only one white source);
+/// {2}{W} + {1}{W} casts.
 #[test]
-fn soaring_stoneglider_pay_half_joins_cost_without_graveyard() {
+fn soaring_stoneglider_pay_half_demands_the_white_pip() {
     let mut g = two_player_game();
     // Only one card in gy — the exile half needs two.
     let bolt_id = g.next_id();
@@ -1529,23 +1530,25 @@ fn soaring_stoneglider_pay_half_joins_cost_without_graveyard() {
     bolt.controller = 0;
     g.players[0].graveyard.push(bolt);
     let id = g.add_card_to_hand(0, catalog::soaring_stoneglider());
+    // {W} + {4} generic: five mana total, but only ONE white — the joined
+    // {1}{W} pay half demands a second white pip.
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(4);
 
     let res = g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     });
-    assert!(res.is_err(), "{{2}}{{W}} alone is short — the pay half adds {{2}}");
+    assert!(res.is_err(), "one white source can't pay {{2}}{{W}} + {{1}}{{W}}");
     assert!(g.players[0].hand.iter().any(|c| c.id == id),
         "Stoneglider remains in hand on the rejected cast");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt_id),
         "the lone graveyard card is untouched by the rejected cast");
 
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("{2}{W} + {2} pays the base plus the pay half");
+    .expect("{2}{W} + {1}{W} pays the base plus the printed pay half");
     drain_stack(&mut g);
     assert!(
         g.battlefield.iter().any(|c| c.definition.name == "Soaring Stoneglider"),

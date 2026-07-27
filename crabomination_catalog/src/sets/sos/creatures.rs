@@ -3429,9 +3429,10 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
 /// registered cost stays the printed {2}{W} (mana value 3 — an earlier
 /// revision folded the pay half into the base cost, distorting the MV
 /// to 5). With 2+ graveyard cards the exile half is auto-paid
-/// (lowest-MV picks); otherwise {2} generic joins the cost — the pay
-/// half's white pip relaxed to generic, the only remaining
-/// approximation. Body (4/3 Flying + Vigilance) unchanged.
+/// (lowest-MV picks); otherwise the printed {1}{W} joins the cost
+/// symbol-for-symbol — the white pip is real. Remaining approximation:
+/// the exile-vs-pay choice is resource-driven, not caster-chosen
+/// (same as `SacrificeOrPay`). Body (4/3 Flying + Vigilance) unchanged.
 pub fn soaring_stoneglider() -> CardDefinition {
     use crate::card::AdditionalCastCost;
     use crate::mana::w;
@@ -3449,7 +3450,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::ExileFromGraveyardOrPay {
             filter: SelectionRequirement::Any,
             count: 2,
-            pay: 2,
+            pay: cost(&[generic(1), w()]),
         }],
         ..Default::default()
     }

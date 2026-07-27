@@ -2815,20 +2815,20 @@ pub enum AdditionalCastCost {
         count: u32,
     },
     /// "As an additional cost to cast this spell, exile [count] [filter]
-    /// card(s) from your graveyard or pay {pay}." SOS Soaring Stoneglider
-    /// ("exile two cards from your graveyard or pay {1}{W}" — the pay
-    /// half's colored pip is relaxed to `pay` generic so the registered
-    /// cost, and therefore the card's mana value, stays at the printed
-    /// base). With enough matching graveyard cards the exile half is paid
-    /// (lowest-MV picks, reusing the `ExileFromGraveyard` machinery);
-    /// otherwise `pay` generic joins the cost via `extra_cost_for_spell`.
-    /// A "which half?" chooser for `wants_ui` seats is a follow-up, same
-    /// as `SacrificeOrPay`.
+    /// card(s) from your graveyard or pay [pay]." SOS Soaring Stoneglider
+    /// ("exile two cards from your graveyard or pay {1}{W}"). The
+    /// registered cost — and therefore the card's mana value — stays at
+    /// the printed base. With enough matching graveyard cards the exile
+    /// half is paid (lowest-MV picks, reusing the `ExileFromGraveyard`
+    /// machinery); otherwise `pay` joins the spell's cost
+    /// symbol-for-symbol (colored pips included — see
+    /// `or_pay_cost_symbols`). A "which half?" chooser for `wants_ui`
+    /// seats is a follow-up, same as `SacrificeOrPay`.
     ExileFromGraveyardOrPay {
         filter: SelectionRequirement,
         #[serde(default = "one_u32")]
         count: u32,
-        pay: u32,
+        pay: crate::mana::ManaCost,
     },
     /// "As an additional cost to cast this spell, reveal a [filter] card from
     /// your hand or pay {pay}." Silvergill Adept. When the caster's hand
