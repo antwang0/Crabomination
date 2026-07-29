@@ -131,6 +131,13 @@ Veil**, which needs per-turn loyalty-activation tracking
 (`Player.loyalty_activated_this_turn` + a "reset the per-walker activation
 flag" effect).
 
+**Spectra Ward's CR 704.5n exception.** The printed "This effect doesn't
+remove Auras" carves the enchanting Aura out of the protection legality check.
+The engine's SBA drops any Aura whose host has protection from its color, so
+Spectra Ward would fall off on resolution — it's the one M15 Aura left out.
+Wants a per-`EquipBonus` "ignore this bonus for the attachment-legality check"
+flag (or a linked-Aura exemption in `check_state_based_actions`).
+
 **Noticed this run (JOU wave 2/3), deferred each on one primitive:**
 - **"You control target player during their next turn"** (Worst Fears,
   Mindslaver, Emrakul). Needs the decision + priority router to hand another

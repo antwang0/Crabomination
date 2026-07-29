@@ -401,3 +401,89 @@ fn siege_dragon_eats_walls() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(wall).is_none() && g.battlefield_find(bear).is_some());
 }
+
+/// Ensoul Artifact animates its host as a 5/5 that keeps being an artifact.
+#[test]
+fn ensoul_artifact_makes_a_five_five() {
+    let mut g = main_phase();
+    let armory = g.add_card_to_battlefield(0, catalog::sacred_armory());
+    cast(
+        &mut g,
+        catalog::ensoul_artifact(),
+        Some(Target::Permanent(armory)),
+        1,
+        &[(Color::Blue, 1)],
+    );
+    let cp = g.computed_permanent(armory).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Artifact));
+}
+
+/// Burning Anger turns the host into a repeatable cannon.
+#[test]
+fn burning_anger_arms_the_host() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    cast(&mut g, catalog::burning_anger(), Some(Target::Permanent(bear)), 4, &[(Color::Red, 1)]);
+    let life = g.players[1].life;
+    activate(&mut g, bear, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 2, "power 2 = 2 damage");
+}
+
+/// Brood Keeper mints a Dragon whenever an Aura lands on it.
+#[test]
+fn brood_keeper_hatches_on_each_aura() {
+    let mut g = main_phase();
+    let keeper = g.add_card_to_battlefield(0, catalog::brood_keeper());
+    cast(
+        &mut g,
+        catalog::marked_by_honor(),
+        Some(Target::Permanent(keeper)),
+        3,
+        &[(Color::White, 1)],
+    );
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Dragon").count(),
+        1
+    );
+}
+
+/// Necromancer's Stockpile pays off extra for a discarded Zombie.
+#[test]
+fn necromancers_stockpile_rewards_zombies() {
+    let mut g = main_phase();
+    let pile = g.add_card_to_battlefield(0, catalog::necromancers_stockpile());
+    g.add_card_to_hand(0, catalog::carrion_crow()); // Zombie Bird
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    activate(&mut g, pile, 0, None);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count(),
+        1,
+        "the discarded Zombie minted a token"
+    );
+}
+
+/// Avarice Amulet's upkeep draw rides the equipped creature.
+#[test]
+fn avarice_amulet_draws_each_upkeep() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let amulet = g.add_card_to_battlefield(0, catalog::avarice_amulet());
+    g.battlefield_find_mut(amulet).unwrap().attached_to = Some(bear);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 2));
+    assert!(cp.keywords.contains(&Keyword::Vigilance));
+    let hand = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}

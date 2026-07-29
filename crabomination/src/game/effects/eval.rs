@@ -1315,6 +1315,9 @@ impl GameState {
                         .unwrap_or(0)
                         > 0
                 }),
+            Predicate::LastDiscardedHasCreatureType(ct) => {
+                self.last_discarded_creature_types.contains(ct)
+            }
             Predicate::DiscardedThisEffect { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

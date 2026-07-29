@@ -456,6 +456,11 @@ pub struct GameState {
     /// `discard_card`.
     #[serde(default)]
     pub(crate) last_discarded_card_types: u32,
+    /// Creature types on the most recently discarded card
+    /// (`Predicate::LastDiscardedHasCreatureType` — Necromancer's Stockpile).
+    /// Stamped in `discard_card`.
+    #[serde(default)]
+    pub(crate) last_discarded_creature_types: Vec<crate::card::CreatureType>,
     /// Mana value of the last card discarded during the current resolution
     /// (Argentum Masticore's "MV ≤ the discarded card" reflexive gate).
     pub(crate) last_discarded_mana_value: Option<u32>,
@@ -1337,6 +1342,7 @@ impl Clone for GameState {
             sacrificed_card: self.sacrificed_card,
             last_discarded_was_multicolored: self.last_discarded_was_multicolored,
             last_discarded_card_types: self.last_discarded_card_types,
+            last_discarded_creature_types: self.last_discarded_creature_types.clone(),
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
             last_discarded_mana_value: self.last_discarded_mana_value,
@@ -1537,6 +1543,7 @@ impl GameState {
             sacrificed_card: None,
             last_discarded_was_multicolored: None,
             last_discarded_card_types: 0,
+            last_discarded_creature_types: Vec::new(),
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
             last_discarded_mana_value: None,
@@ -8795,6 +8802,8 @@ impl GameState {
         self.greatest_discarded_mv_this_resolution =
             self.greatest_discarded_mv_this_resolution.max(card.definition.cost.cmc());
         self.last_discarded_card_types = card.definition.card_types.len() as u32;
+        self.last_discarded_creature_types =
+            card.definition.subtypes.creature_types.clone();
         self.last_discarded_was_multicolored = Some(card.definition.cost.distinct_colors() >= 2);
         *self
             .cards_discarded_per_player_this_resolution

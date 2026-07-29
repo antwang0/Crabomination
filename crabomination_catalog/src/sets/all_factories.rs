@@ -8815,6 +8815,13 @@ static M15: &[Factory] = &[
     super::m15::hot_soup,
     super::m15::sliver_hive,
     super::m15::genesis_hydra,
+    super::m15::burning_anger,
+    super::m15::ensoul_artifact,
+    super::m15::brood_keeper,
+    super::m15::necromancers_stockpile,
+    super::m15::first_response,
+    super::m15::feast_on_the_fallen,
+    super::m15::avarice_amulet,
 ];
 static MH3: &[Factory] = &[
     super::mh3::accursed_marauder,

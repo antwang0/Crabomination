@@ -1780,3 +1780,212 @@ pub fn genesis_hydra() -> CardDefinition {
         )
     }
 }
+
+// ── The M15 tail ─────────────────────────────────────────────────────────────
+
+/// Burning Anger — {4}{R} Aura. Enchanted creature has "{T}: deal damage
+/// equal to its power to any target."
+pub fn burning_anger() -> CardDefinition {
+    aura(
+        "Burning Anger",
+        cost(&[generic(4), r()]),
+        R::Creature,
+        EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::PowerOf(Box::new(Selector::This)),
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    )
+}
+
+/// Ensoul Artifact — {1}{U} Aura on an artifact. The host becomes a 5/5
+/// creature in addition to its other types.
+pub fn ensoul_artifact() -> CardDefinition {
+    aura(
+        "Ensoul Artifact",
+        cost(&[generic(1), u()]),
+        R::Artifact,
+        EquipBonus {
+            set_base_pt: Some((5, 5)),
+            set_card_types: Some(vec![CardType::Artifact, CardType::Creature]),
+            ..Default::default()
+        },
+    )
+}
+
+/// Brood Keeper — {3}{R} 2/3 Human Shaman. An Aura landing on it mints a
+/// firebreathing 2/2 Dragon.
+pub fn brood_keeper() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AuraAttached, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Dragon".into(),
+                    power: 2,
+                    toughness: 2,
+                    colors: vec![Color::Red],
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Dragon],
+                        ..Default::default()
+                    },
+                    keywords: vec![Keyword::Flying],
+                    activated_abilities: vec![ActivatedAbility {
+                        mana_cost: cost(&[r()]),
+                        effect: Effect::PumpPT {
+                            what: Selector::This,
+                            power: Value::Const(1),
+                            toughness: Value::Const(0),
+                            duration: Duration::EndOfTurn,
+                        },
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                },
+            },
+        }],
+        ..creature(
+            "Brood Keeper",
+            cost(&[generic(3), r()]),
+            2,
+            3,
+            vec![CreatureType::Human, CreatureType::Shaman],
+            vec![],
+        )
+    }
+}
+
+/// Necromancer's Stockpile — {1}{B} Enchantment. {1}{B}, discard a creature
+/// card: draw; a discarded Zombie also mints a tapped 2/2 Zombie.
+pub fn necromancers_stockpile() -> CardDefinition {
+    CardDefinition {
+        name: "Necromancer's Stockpile",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            discard_cost: Some((R::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::If {
+                    cond: Predicate::LastDiscardedHasCreatureType(CreatureType::Zombie),
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: TokenDefinition {
+                            name: "Zombie".into(),
+                            power: 2,
+                            toughness: 2,
+                            colors: vec![Color::Black],
+                            card_types: vec![CardType::Creature],
+                            subtypes: Subtypes {
+                                creature_types: vec![CreatureType::Zombie],
+                                ..Default::default()
+                            },
+                            static_abilities: vec![StaticAbility {
+                                description: "This token enters tapped.",
+                                effect: StaticEffect::EntersTapped {
+                                    applies_to: Selector::This,
+                                },
+                            }],
+                            ..Default::default()
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// First Response — {3}{W} Enchantment. Losing life mints a Soldier at the
+/// next upkeep. (The engine's life-loss tally is turn-scoped, so the check
+/// reads "this turn" rather than the printed "last turn".)
+pub fn first_response() -> CardDefinition {
+    CardDefinition {
+        name: "First Response",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::You }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Soldier".into(),
+                    power: 1,
+                    toughness: 1,
+                    colors: vec![Color::White],
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Soldier],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Feast on the Fallen — {2}{B} Enchantment. An opponent's life loss grows a
+/// creature you control at the next upkeep. (Same turn-scoped tally caveat as
+/// First Response.)
+pub fn feast_on_the_fallen() -> CardDefinition {
+    CardDefinition {
+        name: "Feast on the Fallen",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Avarice Amulet — {4} Equipment. +2/+0, vigilance, and an upkeep draw;
+/// equip {2}.
+pub fn avarice_amulet() -> CardDefinition {
+    equipment(
+        "Avarice Amulet",
+        cost(&[generic(4)]),
+        cost(&[generic(2)]),
+        EquipBonus {
+            power: 2,
+            keywords: vec![Keyword::Vigilance],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            }],
+            ..Default::default()
+        },
+    )
+}

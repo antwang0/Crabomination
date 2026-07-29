@@ -30,7 +30,6 @@ online.
 | Feature | Status | Notes |
 |---|---|---|
 | Face-down permanents (morph/manifest) | 🟡 | `face_up_def` stashes the real card behind a vanilla 2/2; Manifest/ManifestDread, `CastFaceDown` ({3}), `TurnFaceUp`. Disguise ✅ (warded 2/2), Cloak ✅ (`CardInstance.cloaked`). |
-| Token-copy of permanent | 🟡 | Populate, `CreateTokenCopyOf`, clone-enter (`BecomeCopyOf`) and continuous "becomes a copy" (`BecomeCopyOfFor`) all ship. Remaining: Helm of the Host's per-combat mint is approximated (no layer-1 continuous copy). |
 
 ## Plan
 

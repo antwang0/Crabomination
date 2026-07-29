@@ -825,6 +825,32 @@ fn helm_of_the_host_copies_equipped_creature_with_haste() {
     assert!(token.has_keyword(&Keyword::Haste), "the copy has haste");
 }
 
+/// CR 707.2 — the token copies the host's *copiable* values, so counters and
+/// until-end-of-turn pumps on the host don't ride along.
+#[test]
+fn helm_of_the_host_copies_only_copiable_values() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().counters.insert(CounterType::PlusOnePlusOne, 3);
+    g.battlefield_find_mut(bear).unwrap().power_bonus = 5;
+    let helm = g.add_card_to_battlefield(0, catalog::helm_of_the_host());
+    g.battlefield_find_mut(helm).unwrap().attached_to = Some(bear);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let token = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Grizzly Bears" && c.is_token)
+        .expect("token copy");
+    assert_eq!(
+        g.computed_permanent(token.id).map(|c| (c.power, c.toughness)),
+        Some((2, 2)),
+        "a plain 2/2 — the host's counters and pump aren't copiable"
+    );
+}
+
 /// CR 707.2e — Helm's copy of a *legendary* host isn't legendary, so the
 /// legend-rule SBA doesn't destroy the original alongside it.
 #[test]

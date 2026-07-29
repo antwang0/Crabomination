@@ -1273,11 +1273,11 @@ Each unblocks a large swath of cards.
    Fiend Hunter, Oblivion Ring, Brain Maggot, Tidehollow Sculler). Monarch-linked
    sibling (CR 724 — `Effect::ExileUntilOpponentMonarch` + `ExileLink.monarch_guard`,
    returns when the monarchy moves rather than when the source leaves; Palace Jailer).
-5. 🟡 **Copy of a permanent (clone).** `Effect::BecomeCopyOf` +
+5. ✅ **Copy of a permanent (clone).** `Effect::BecomeCopyOf` +
    `enters_as_copy` ship Clone, Phantasmal Image, Mirror Image, Stunt Double;
-   token copies via `CreateTokenCopyOf`; continuous "becomes a copy" ✅
-   (`BecomeCopyOfFor` — Mirrorform, Vesuva). Remaining: Helm of the Host's
-   per-combat mint is approximated (no layer-1 continuous copy).
+   token copies via `CreateTokenCopyOf` (CR 707.2 copiable values only, CR
+   707.2e non-legendary rider — Helm of the Host); continuous "becomes a copy"
+   via `BecomeCopyOfFor` (Mirrorform, Vesuva).
 6. ✅ **Copy-a-spell-on-the-stack.** `Effect::CopySpell` /
    `CopySpellMayChooseTargets` (new-target choice) — Storm cards, Reverberate, Fork.
 

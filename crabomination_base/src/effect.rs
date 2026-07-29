@@ -1167,6 +1167,10 @@ pub enum Predicate {
     /// `GameState.cards_discarded_per_player_this_resolution`. Gates "if you
     /// discarded a card this way, …" riders (Fanatic of the Harrowing).
     DiscardedThisEffect { who: PlayerRef },
+    /// The most recently discarded card (cost or effect) had this creature
+    /// type — Necromancer's Stockpile's "if the discarded card was a Zombie".
+    /// Backed by `GameState.last_discarded_creature_types`.
+    LastDiscardedHasCreatureType(crate::card::CreatureType),
     /// `who` has had at least `at_least` cards leave their graveyard
     /// this turn. Backed by `Player.cards_left_graveyard_this_turn`.
     /// Used by Lorehold "if a card left your graveyard this turn"
