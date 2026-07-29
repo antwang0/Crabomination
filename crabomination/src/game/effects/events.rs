@@ -45,6 +45,8 @@ pub(crate) fn event_matches_spec(
         // `BecomesBlocked`.
         (EventKind::Blocks, GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::BecomesBlocked, GameEvent::BlockerDeclared { .. }) => true,
+        (EventKind::BlocksNOrMore(_), GameEvent::BlockerDeclared { .. }) => true,
+        (EventKind::BecomesBlockedByNOrMore(_), GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::AttacksAndIsntBlocked, GameEvent::AttackerWentUnblocked { .. }) => true,
         // Enrage (CR 702.130): keyed on the damaged permanent, so we only
         // match `DamageDealt` events that hit a card (not a player).
@@ -213,9 +215,12 @@ pub(crate) fn event_matches_spec(
             //     ("when this becomes blocked"). Source must equal
             //     `attacker`.
             matches!(event, GameEvent::BlockerDeclared { blocker, .. }
-                if matches!(spec.kind, EventKind::Blocks) && *blocker == source.id)
+                if matches!(spec.kind, EventKind::Blocks | EventKind::BlocksNOrMore(_))
+                    && *blocker == source.id)
             || matches!(event, GameEvent::BlockerDeclared { attacker, .. }
-                if matches!(spec.kind, EventKind::BecomesBlocked) && *attacker == source.id)
+                if matches!(spec.kind, EventKind::BecomesBlocked
+                    | EventKind::BecomesBlockedByNOrMore(_))
+                    && *attacker == source.id)
             || matches!(event, GameEvent::AttackerWentUnblocked { attacker }
                 if matches!(spec.kind, EventKind::AttacksAndIsntBlocked) && *attacker == source.id)
         ) || matches!(
@@ -492,7 +497,12 @@ pub(crate) fn actor_for_scope(
     kind: &EventKind,
 ) -> Option<usize> {
     if let GameEvent::BlockerDeclared { blocker, attacker } = event {
-        let cid = if matches!(kind, EventKind::BecomesBlocked) { *attacker } else { *blocker };
+        let cid = if matches!(kind, EventKind::BecomesBlocked | EventKind::BecomesBlockedByNOrMore(_))
+        {
+            *attacker
+        } else {
+            *blocker
+        };
         return state.battlefield_find(cid).map(|c| c.controller);
     }
     event_actor(state, event)
@@ -619,7 +629,11 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::CreatureLeftWithoutDying { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::AttackerDeclared(card_id) => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BlockerDeclared { blocker, attacker } => Some(EntityRef::Permanent(
-            if matches!(kind, EventKind::BecomesBlocked) { *attacker } else { *blocker },
+            if matches!(kind, EventKind::BecomesBlocked | EventKind::BecomesBlockedByNOrMore(_)) {
+                *attacker
+            } else {
+                *blocker
+            },
         )),
         GameEvent::AttackerWentUnblocked { attacker } => Some(EntityRef::Permanent(*attacker)),
         GameEvent::LandPlayed { card_id, .. } => Some(EntityRef::Permanent(*card_id)),

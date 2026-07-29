@@ -459,7 +459,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     // this turn with a tap + heal + remove-from-combat. Surface the count
     // so the player knows how many destructions the creature can shrug off
     // before it actually dies.
-    if p.regeneration_shields > 1 {
+    if p.cant_regenerate {
+        // CR 701.15g — the shields are still on the permanent but inert, so
+        // say so rather than promising a save it can no longer make.
+        lines.push(String::from("(can't be regenerated this turn)"));
+    } else if p.regeneration_shields > 1 {
         lines.push(format!(
             "(regen ×{}: absorbs {} destructions this turn)",
             p.regeneration_shields, p.regeneration_shields
@@ -1371,6 +1375,7 @@ mod tests {
             stun_counter_count: 0,
             finality_counter_count: 0,
             regeneration_shields: 0,
+            cant_regenerate: false,
             equippable: false,
             equip_token_cost: None,
             crew_value: 0,
@@ -1746,6 +1751,12 @@ mod tests {
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("(regen ×3: absorbs 3 destructions this turn)"),
             "expected plural regen badge: {body}");
+
+        // CR 701.15g — a blanked shield must not promise a save.
+        p.cant_regenerate = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("(can't be regenerated this turn)") && !body.contains("(regen"),
+            "expected the regen badge to be replaced: {body}");
     }
 
     #[test]

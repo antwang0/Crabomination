@@ -2665,3 +2665,37 @@ fn amplifire_doubles_the_revealed_creatures_pt() {
     let cp = g.computed_permanent(amp).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 6), "twice the Hill Giant's 3/3");
 }
+
+/// Captive Audience enters under an opponent's control (CR 614) and its upkeep
+/// trigger never repeats a mode it has already chosen.
+#[test]
+fn captive_audience_lands_on_an_opponent_and_never_repeats_a_mode() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let audience = g.add_card_to_hand(0, catalog::captive_audience());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: audience,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(audience).unwrap().controller, 1, "the opponent gets it");
+
+    // Three upkeeps burn all three modes; a fourth is a no-op.
+    g.active_player_idx = 1;
+    for expected in 1..=3 {
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(audience).unwrap().modes_chosen.len(), expected);
+    }
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(audience).unwrap().modes_chosen.len(), 3, "modes run out");
+}

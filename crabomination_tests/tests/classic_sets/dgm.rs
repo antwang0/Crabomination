@@ -1283,8 +1283,11 @@ fn goblin_test_pilot_hits_something_at_random() {
     .expect("tap for 2");
     drain_stack(&mut g);
     let after: i32 = g.players.iter().map(|p| p.life).sum();
-    let hit_a_creature = g.battlefield_find(pilot).is_some_and(|c| c.damage > 0);
-    assert!(after == before - 2 || hit_a_creature, "the 2 damage landed somewhere");
+    // The pool is the two players plus the Pilot itself, so "somewhere" is a
+    // life total, marked damage, or the 0/2 dying to its own shot.
+    let hit_itself =
+        g.battlefield_find(pilot).is_none_or(|c| c.damage > 0);
+    assert!(after == before - 2 || hit_itself, "the 2 damage landed somewhere");
 }
 
 /// Release edicts one permanent of each of the five types from every player.

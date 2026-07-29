@@ -10264,6 +10264,8 @@ impl GameState {
                         | crate::effect::EventKind::AnyCounterAdded
                         | crate::effect::EventKind::Blocks
                         | crate::effect::EventKind::BecomesBlocked
+                        | crate::effect::EventKind::BlocksNOrMore(_)
+                        | crate::effect::EventKind::BecomesBlockedByNOrMore(_)
                         | crate::effect::EventKind::AttacksAndIsntBlocked
                         | crate::effect::EventKind::LifeGained
                         | crate::effect::EventKind::LifeLost
@@ -10316,9 +10318,23 @@ impl GameState {
                             ta.event.kind,
                             crate::effect::EventKind::Blocks
                                 | crate::effect::EventKind::BecomesBlocked
+                                | crate::effect::EventKind::BlocksNOrMore(_)
+                                | crate::effect::EventKind::BecomesBlockedByNOrMore(_)
                         ) && let Some(crate::game::effects::EntityRef::Permanent(sid)) = subject
                         {
-                            if block_sides_seen.contains(&sid) {
+                            // CR 509.3e — the count gate reads the finished
+                            // block assignment, so the whole batch is visible
+                            // regardless of which pair carried the event.
+                            let reached = match ta.event.kind {
+                                crate::effect::EventKind::BlocksNOrMore(n) => {
+                                    self.attackers_blocked_by(sid).len() as u32 >= n
+                                }
+                                crate::effect::EventKind::BecomesBlockedByNOrMore(n) => {
+                                    self.blocker_count_of(sid) as u32 >= n
+                                }
+                                _ => true,
+                            };
+                            if !reached || block_sides_seen.contains(&sid) {
                                 continue;
                             }
                             block_sides_seen.push(sid);

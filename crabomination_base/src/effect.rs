@@ -1857,6 +1857,13 @@ pub enum EventKind {
     Blocks,
     /// A creature became blocked.
     BecomesBlocked,
+    /// CR 509.3e — "whenever this creature blocks N or more creatures". Fires
+    /// once, when blockers are declared, if the source is blocking at least `n`
+    /// attackers (Lairwatch Giant).
+    BlocksNOrMore(u32),
+    /// CR 509.3e — the attacker-side mirror: "whenever this creature becomes
+    /// blocked by N or more creatures".
+    BecomesBlockedByNOrMore(u32),
     /// An attacking creature finished the declare-blockers step
     /// without any blockers assigned to it (CR 509.3g — "Whenever
     /// [creature] attacks and isn't blocked"). Fires once per
@@ -2490,6 +2497,11 @@ pub enum Effect {
     /// `target`, then `additional_targets`). A plain `CastSpell { mode }`
     /// falls back to running that single mode (bot / back-compat path).
     ChooseModesCast { modes: Vec<Effect>, min: u8, max: u8, allow_repeats: bool },
+    /// "Choose one that hasn't been chosen —" (Captive Audience). Picks a mode
+    /// at RESOLUTION from the ones the source hasn't used yet, records it on
+    /// `CardInstance.modes_chosen`, and runs it. Does nothing once every mode
+    /// has been chosen.
+    ChooseUnchosenMode { modes: Vec<Effect> },
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
     /// `description` string is shown to the player (and serialized into

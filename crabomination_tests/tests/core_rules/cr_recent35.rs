@@ -228,3 +228,20 @@ fn advance_until_active(g: &mut GameState, seat: usize) {
     }
     panic!("never reached seat {seat}");
 }
+
+/// CR 509.3e — "whenever this creature blocks two or more creatures" fires
+/// once the block assignment reaches the count, and not on a single block.
+#[test]
+fn cr_509_3e_blocks_two_or_more_counts_the_batch() {
+    let (mut g, a1, _a2, b) = two_attackers(catalog::lairwatch_giant);
+    let evs = g.declare_blockers(vec![(b, a1)]).expect("single block");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(b).unwrap().keywords.contains(&Keyword::FirstStrike));
+
+    let (mut g, a1, a2, b) = two_attackers(catalog::lairwatch_giant);
+    let evs = g.declare_blockers(vec![(b, a1), (b, a2)]).expect("blocks both");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::FirstStrike));
+}

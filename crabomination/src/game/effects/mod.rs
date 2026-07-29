@@ -2583,6 +2583,39 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseUnchosenMode { modes } => {
+                // CR 700.2 — the controller picks at resolution, restricted to
+                // modes this permanent hasn't chosen before; the pick is
+                // recorded on the source so it can't repeat (Captive Audience).
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let used: Vec<u8> = self
+                    .battlefield_find(source)
+                    .map(|c| c.modes_chosen.clone())
+                    .unwrap_or_default();
+                let available: Vec<usize> =
+                    (0..modes.len()).filter(|i| !used.contains(&(*i as u8))).collect();
+                if available.is_empty() {
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&Decision::ChooseMode {
+                    source,
+                    num_modes: available.len(),
+                    mode_texts: available
+                        .iter()
+                        .map(|i| modes[*i].effect_short_text())
+                        .collect(),
+                });
+                let pick = match answer {
+                    DecisionAnswer::Mode(i) => available[i.min(available.len() - 1)],
+                    _ => available[0],
+                };
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.modes_chosen.push(pick as u8);
+                }
+                self.run_effect(&modes[pick].clone(), ctx, events)
+            }
+
             Effect::MayDo { description, body } => {
                 // Yes/no decision via `Decision::OptionalTrigger`, asked of
                 // the *controller* of the effect (`ctx.controller`). A

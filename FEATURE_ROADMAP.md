@@ -23,9 +23,10 @@ exercising each) was elided in a compaction pass; recover it from
   seat). `PermanentView.blocking_attackers` is a Vec; the combat-math preview
   and the bot's block planner both follow; the client's damage order/assign
   modals are noun-aware (a blocker orders "attackers", not "blockers").
-  Cards: Guardian of the Gateless,
-  Knight of Sorrows, Valor Made Real, Lumbering Battlement. Tests in
-  `core_rules/cr_recent35`.
+  Block triggers follow CR 509.3a–e (once per creature for the bare wordings,
+  whole-partner-set for the per-object ones, count-gated for "N or more").
+  Cards: Guardian of the Gateless, Knight of Sorrows, Valor Made Real,
+  Lumbering Battlement, Lairwatch Giant. Tests in `core_rules/cr_recent35`.
 - **RNA + GTC complete (both sets at zero `set_gaps.py` gaps):** Dovin Grand
   Arbiter, Gideon Champion of Justice, Teysa Karlov, Mass Manipulation,
   Lavinia Azorius Renegade, Mirror March, Amplifire, Lazav Dimir Mastermind,
@@ -1203,6 +1204,10 @@ Each unblocks a large swath of cards.
 
 1. 🟡 **Replacement-effect framework.** `replacement.rs` models zone-change
    replacements (Commander → command zone); the rest is per-card. Shipped:
+   enters-under-an-opponent's-control (`CardDefinition.enters_under_opponent_control`,
+   applied at the battlefield hop before any ETB trigger reads a controller —
+   Captive Audience), "can't be regenerated this turn" (CR 701.15g —
+   `Effect::CantBeRegeneratedThisTurn` blanks existing and future shields),
    enters-tapped (`StaticEffect::EntersTapped`, incl. self-source) and the
    enters-*untapped* override (`StaticEffect::LandsEnterUntapped` — Spelunking),
    exile-instead
@@ -1243,6 +1248,10 @@ Each unblocks a large swath of cards.
 - ✅ **APNAP trigger ordering** — inter-player (`apnap_rank`) plus
   same-controller ordering with a real server suspend (`ResumeContext::
   TriggerOrder`), so networked seats are prompted.
+- ✅ **Block-trigger conformance (CR 509.3a–e)** — "whenever this blocks" /
+  "becomes blocked" fire once per creature under a multi-block; the per-object
+  wordings reach every partner from one instance; `EventKind::BlocksNOrMore` /
+  `BecomesBlockedByNOrMore` gate on the finished assignment (Lairwatch Giant).
 - 🟡 **Divided damage / counters** — `Effect::DealDamageDivided` +
   `Effect::DistributeCounters` (Jugan) share `Decision::DivideDamage` (the modal
   is noun-aware). Forked Bolt, Pyrokinesis, Crackle with Power. Remaining:

@@ -1476,6 +1476,11 @@ pub struct PermanentView {
     /// client can badge a "regen-shielded" creature.
     #[serde(default)]
     pub regeneration_shields: u32,
+    /// CR 701.15g — this permanent can't be regenerated for the rest of the
+    /// turn, so any shields it carries are inert (Rage of Purphoros). Surfaced
+    /// so the client doesn't promise a save the shield can no longer make.
+    #[serde(default)]
+    pub cant_regenerate: bool,
     /// True when this permanent is an Equipment that carries an equip ability
     /// (`Keyword::Equip`). Lets the client offer the "equip" action (CR
     /// 702.6) on the permanent without decoding its keyword list. Populated

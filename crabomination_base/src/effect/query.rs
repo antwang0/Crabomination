@@ -466,7 +466,10 @@ impl Effect {
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             // Spree targets are supplied per chosen mode at cast time and
             // consumed at resolution; no fixed cast-time slot is demanded.
-            Effect::Spree { .. } | Effect::Tiered { .. } | Effect::ChooseModesCast { .. } => false,
+            Effect::Spree { .. }
+            | Effect::Tiered { .. }
+            | Effect::ChooseModesCast { .. }
+            | Effect::ChooseUnchosenMode { .. } => false,
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::CapTargetsAt { body, .. } => body.requires_target(),

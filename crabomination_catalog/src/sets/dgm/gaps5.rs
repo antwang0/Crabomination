@@ -142,3 +142,30 @@ pub fn catch_release() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Lairwatch Giant — {5}{W} 4/4 Giant Warrior (LRW). Blocks an additional
+/// creature each combat; when it blocks two or more creatures it gains first
+/// strike (CR 509.3e). Filed with the multi-block cluster.
+pub fn lairwatch_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Lairwatch Giant",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::CanBlockAdditional(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BlocksNOrMore(2), EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}

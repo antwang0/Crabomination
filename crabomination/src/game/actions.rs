@@ -2025,6 +2025,30 @@ impl GameState {
     /// in play. Called from [`fire_self_etb_triggers`], the universal "a
     /// permanent entered" hook, so every enter path (cast, token, reanimate,
     /// land drop) is covered.
+    /// CR 614 — a permanent printed `enters_under_opponent_control` enters
+    /// under an opponent of its controller's choice. Applied at the entry hook,
+    /// before any ETB trigger reads a controller. With one opponent alive the
+    /// choice is forced; with several the controller picks the first alive
+    /// opponent in seat order (a bot-policy default, like the other
+    /// auto-resolved entry choices).
+    pub(crate) fn apply_enters_under_opponent_control(&mut self, card_id: CardId) {
+        let Some(c) = self.battlefield_find(card_id) else { return };
+        // The guard keeps the replacement one-shot: every entry path funnels
+        // through here, and once applied the controller is no longer the owner.
+        if !c.definition.enters_under_opponent_control || c.controller != c.owner {
+            return;
+        }
+        let owner = c.controller;
+        let Some(victim) = (0..self.players.len())
+            .find(|&p| p != owner && self.players[p].is_alive() && !self.same_team(p, owner))
+        else {
+            return;
+        };
+        if let Some(c) = self.battlefield_find_mut(card_id) {
+            c.controller = victim;
+        }
+    }
+
     pub(crate) fn apply_enters_tapped_replacement(&mut self, card_id: CardId) {
         use crate::effect::StaticEffect;
         use crate::game::layers::{AffectedPermanents, affected_includes};
@@ -2151,6 +2175,10 @@ impl GameState {
     }
 
     pub fn fire_self_etb_triggers(&mut self, card_id: CardId, controller: usize) {
+        // CR 614 — "enters under the control of an opponent of your choice"
+        // (Captive Audience). A control-setting entry replacement, so it lands
+        // before enters-tapped and before any ETB trigger sees a controller.
+        self.apply_enters_under_opponent_control(card_id);
         // CR 614.13 — apply enters-tapped replacements before ETB triggers fire.
         self.apply_enters_tapped_replacement(card_id);
         // CR 702.179 — a "Start your engines!" permanent entering gives its

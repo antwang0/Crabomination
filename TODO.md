@@ -738,46 +738,59 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
-- **Multi-block follow-ups (this run).** Engine + client both ship (the
+- **Noticed but not tackled this run:**
+  - `DelayedKind::NextCombat` ("at the beginning of the next combat") — blocks
+    Legion's Initiative and the exile-and-return-at-combat shape generally.
+  - `Effect::ChooseUnchosenMode` auto-picks the first unused mode for bots and
+    for a `wants_ui` seat alike (it uses the synchronous decider rather than a
+    suspend). A human controller should get the real modal.
+  - `apply_enters_under_opponent_control` picks the first alive opponent in seat
+    order instead of asking; the printed text is "an opponent of your choice",
+    which matters only in multiplayer.
+  - `Selector::RandomAmong` re-rolls per resolution and can pick the source
+    itself; a "chosen at random" that must exclude the source would need a
+    filter-side `OtherThanSource` at the call site (Goblin Test Pilot doesn't).
+  - THS is down to 32 `set_gaps.py` entries; the remainder is the rare/mythic
+    tail (Ashen Rider, Curse of the Swine, Gift of Immortality, Medomai,
+    Polukranos, Triad of Fates, Triton Tactics, Xenagos the Reveler, …), each
+    needing one new primitive.
+
+- **Multi-block follow-ups — CLOSED.** Engine + client both ship (the
   order/assign modals are noun-aware via `damage_recipient_noun`, reading
-  `PermanentView.attacking` / `.blocking_attackers`). Still open: "whenever
-  this creature blocks two or more creatures" batch counting (CR 509.3e), and
-  Umezawa's Jitte over-counts charge counters under a multi-block (it fires
-  once per damaged creature).
+  `PermanentView.attacking` / `.blocking_attackers`). CR 509.3a–e is now wired
+  (see the CR audit). Umezawa's Jitte does *not* over-count: its
+  `DealsCombatDamageToCreature` trigger isn't in the fan-out set, so it mints
+  one instance per damage sub-step.
 - **RNA/DGM cards deferred, each blocked on one primitive:**
   - **Domri, Chaos Bringer** — "+1: add {R} or {G}. If that mana is spent on a
     creature spell, it gains riot." Needs mana provenance (a rider attached to
     a specific mana unit, checked at the spell it pays for). Same blocker as
     the roadmap's "mana provenance" item.
-  - **Captive Audience** — needs `CardDefinition.enters_under_opponent_control`
-    (a CR 614 control-setting ETB replacement) plus a "choose a mode that
-    hasn't been chosen" modal that remembers picks on the permanent.
+  - **Captive Audience — SHIPPED** (`CardDefinition.enters_under_opponent_control`
+    + `Effect::ChooseUnchosenMode` backed by `CardInstance.modes_chosen`).
   - **Theater of Horrors** — the exile half works with
     `ExileTopAndGrantMayPlay`, but "during your turn, if an opponent lost life
     this turn, you may play cards exiled with this" needs a CONDITION on
     `MayPlayPermission` (the struct is `Copy`, so it wants a small Copy-able
     gate enum rather than a `Predicate`).
-  - **Melek, Izzet Paragon** — "whenever you cast an I/S spell from your
-    library, copy it" needs a cast-origin flag on the spell
-    (`CardInstance.cast_from_library`, stamped at the library-top hop in
-    `cast_spell`) plus a `Predicate::CastSpellFromLibrary`.
-  - **Goblin Test Pilot** — random targeting (`random_target` on effects).
+  - **Melek, Izzet Paragon — SHIPPED** (`CardInstance.cast_from_library` +
+    `Predicate::CastSpellFromLibrary`; the library-top cast hops through hand,
+    so the origin rides `GameState.casting_from_library_top`).
+  - **Goblin Test Pilot — SHIPPED** (`Selector::RandomAmong(filter)`).
   - **Legion's Initiative** — exile-all-your-creatures returning at the next
     combat with haste.
-  - **Reap Intellect**, **Plasm Capture** (extend `AddManaAtNextMainPhase` to
-    key on the countered spell's MV rather than mana spent), **Catch // Release**
-    (five-type edict), **Flesh // Blood** (fused split) — the DGM tail.
-- **`EffectDuration::UntilNextTurn` was never expired** — nothing swept it, so
-  every effect using it behaved as `Indefinite`. Both it and the new
-  `UntilYourNextTurn { player, installed_turn }` (CR 611.2b — Amplifire) are now
-  cleared at the untap step of the turn they name. Worth auditing whether any
-  existing card wanted the old (buggy) permanence.
-- **Illusionist's Bracers** — the ability copy inherits the original's targets;
-  the printed "you may choose new targets for the copy" prompt isn't offered
-  (`Effect::CopySpellMayChooseTargets` has the spell-side machinery to reuse).
-- **Erebos's Emissary (THS)** — its "if this permanent is an Aura, enchanted
-  creature gets +2/+2 instead" pump needs an is-bestowed branch inside an
-  activated ability.
+  - **Plasm Capture — SHIPPED** (`Value::CounteredSpellManaValue` +
+    `AddManaAtNextMainPhase { any_color }`); **Catch // Release — SHIPPED**
+    (five-type edict off existing primitives). Still open: **Reap Intellect**,
+    **Flesh // Blood** (fused split), **Legion's Initiative** (needs a
+    "beginning of the next combat" delayed-trigger kind).
+- **`EffectDuration::UntilNextTurn` was never expired** — fixed; both it and
+  `UntilYourNextTurn { player, installed_turn }` (CR 611.2b — Amplifire) now
+  clear at the untap step of the turn they name. The 18 catalog sites were
+  re-read against their oracle text: all of them print a real "until your next
+  turn" clause, so none wanted the old permanence.
+- **Erebos's Emissary (THS) — SHIPPED** (`Predicate::SourceIsBestowedAura`
+  branches the pump between the source and its host).
 
 - **RNA batch-7 leftovers (each needs one primitive):** Persistent Petitioners' "tap four untapped
   Advisors: mill 12" (a tap-N-other-of-a-type activation cost); Rakdos, the
@@ -799,20 +812,14 @@ factory doc comment:
   open on top of it: "blocks two or more creatures" batch counting (CR 509.3e),
   and the client has no UI yet for assigning a multi-blocker's damage split
   (the engine suspends correctly; the panel reuses the attacker-side modal).
-- **Remaining DGM gap cards (need new primitives).** Melek, Izzet Paragon
-  (copy-on-cast-from-*library* trigger — `SpellCast` filtered on cast-zone;
-  `Effect::CopySpell` exists); Varolz (grant Scavenge to every creature card in
-  your graveyard — a static that installs a graveyard-scoped activated ability);
-  Boros Battleshaper (each-combat trigger granting MustAttack+MustBlock to one
-  target and CantAttack+CantBlock to another — needs "up to one target" optional
-  slots on a `BeginCombat` trigger, verified to auto-fill); Legion's Initiative
-  (exile-all-your-creatures then return at next combat with haste); Notion Thief
-  (opponent extra-draw → your draw replacement); Reap Intellect; Goblin Test
-  Pilot (random targeting — `random_target` on abilities/effects, generally
-  useful); Plasm Capture (counter + add mana = spell MV at next main —
-  `AddManaAtNextMainPhase` exists but keyed on `CounteredSpellManaSpent`; extend
-  to spell MV); the remaining Fuse splits (Catch//Release — multi-type edict;
-  Flesh//Blood — exile-gy-and-counter-by-power).
+- **Remaining DGM gap cards.** Shipped since this list was written: Melek,
+  Izzet Paragon; Varolz; Notion Thief; Goblin Test Pilot; Plasm Capture;
+  Catch // Release. Still open: Boros Battleshaper (a `BeginCombat` trigger with
+  two "up to one target" slots granting MustAttack+MustBlock / CantAttack+
+  CantBlock, verified to auto-fill); Legion's Initiative (exile all your
+  creatures, return them at the *next* combat with haste — needs a
+  `DelayedKind::NextCombat`); Reap Intellect; Flesh // Blood (the last fused
+  split — exile-graveyard + damage-by-power).
 - **New primitives that would unblock batches of gap cards (recent274–279 run):**
   - **Enlist** (CR 702.148) — no keyword yet; blocks the DMU Enlist commons
     (Barkweave Crusher, Coalition Warbrute, Argivian Cavalier, …). `Effect::Enlist`
@@ -4104,6 +4111,14 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `Effect::CreaturesYouControlDying/DealingCombatDamageThisTurn`, expiring at
   cleanup) — Waltz of Rage, Mistway Spy. Tests in `recent240`/`recent241`.
 - ✅ CR 702.148 — Cleave
+- ✅ CR 701.15g — "it can't be regenerated this turn". `Effect::CantBeRegeneratedThisTurn`
+  sets a transient `CardInstance.cant_regenerate_this_turn` consulted at both
+  regeneration sites (the `Destroy` funnel and the lethal-damage SBA), so existing
+  shields go inert and new ones do nothing (Rage of Purphoros). Surfaced to the
+  client as `PermanentView.cant_regenerate` — the tooltip stops promising a save.
+- ✅ CR 401.6 — cast-from-library provenance. The library-top cast hops the card
+  through hand, so `GameState.casting_from_library_top` preserves the true origin
+  for `CardInstance.cast_from_library` / `Predicate::CastSpellFromLibrary` (Melek).
 - ✅ CR 702.47 — Splice
 - ✅ CR 704.5k — world rule
 - ✅ CR 614.5 / 701.10f — mana-production multipliers compose
@@ -4363,7 +4378,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   step too, Stun counters still interpose; Thousand Moons Infantry,
   `thousand_moons_infantry_untaps_on_opponent_untap`).
 - ✅ **CR 510 — Combat Damage Step** — blocker-side damage division ✅ (510.1e / 509.2 — a creature blocking several attackers orders them and divides its power; the defending player decides and a `wants_ui` seat suspends, mirroring the attacker-side order/assign pair). remains-blocked ✅ (`blocked_attackers`, 510.1c); excess non-trample damage assigned to the last blocker ✅ (510.1d); lethal accounts for marked damage ✅ (510.1c, double-strike tramplers); blocker strike-back per-source ✅ (702.90 / 615.6 — infect/deathtouch/scaling/shields/lifelink apply per blocker event, tests `cr_702_90_*`). **Assigns combat damage equal to toughness** ✅ (510.1c — `Keyword::AssignsCombatDamageByToughness`, read by `combat_damage_value` for attackers, blockers, and the cached-assignment path; Doran, Tapestry Warden, Bill the Pony, `tests/recent23.rs`). **"Whenever combat damage is dealt to you"** ✅ (`EventKind::ControllerDealtCombatDamage` — recipient-keyed `SelfSource` listeners fire off the damaged player's own permanents, carrying the amount as `event_amount`; Risona sheds an indestructible counter — `tests/recent100.rs`).
-- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); "blocks two or more" batch counting (509.3e). **Multi-block ✅** (509.1b — `block_map` is blocker → `Vec<attacker>`; `Keyword::CanBlockAdditional(n)` / `CanBlockAnyNumber` set the per-combat cap; Guardian of the Gateless, Knight of Sorrows, Valor Made Real; tests `core_rules/cr_recent35`). Put-onto-battlefield-blocking (509.4) ✅ — `Effect::CreateTokenBlocking` + the `cast_only_after_blockers` gate (Flash Foliage; test `cr_509_4_flash_foliage_blocks_the_attacker`). Blocker legality now reads the computed view ✅ (509.1a — animated manlands / crewed Vehicles block). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas). Power-based block restriction ✅ (`Keyword::CantBeBlockedByPowerLess` — Formation Breaker; inverse of Skulk, `formation_breaker_blocks_only_by_equal_or_greater_power`). The bot's block planner now satisfies the minimum-blocker count for Menace **and** `CantBeBlockedExceptByN(n)` (tops up or drops the block), so it never submits an illegal under-filled multi-block. Protection-by-mana-value block restriction ✅ (`Keyword::ProtectionFromManaValueExcept` — Haktos can't be blocked by a creature whose MV isn't the chosen number; test `cr_509_1b_protection_from_mv_restricts_blockers`). Protection-by-mana-value-**parity** ✅ (`Keyword::ProtectionFromManaValueParity { odd }` — Lavabrink Venturer's ETB odd/even choice; gates targeting, blocking, and combat-damage prevention CR 702.16e; tests `lavabrink_venturer_parity_protection`, `cr_702_16e_parity_protection_prevents_combat_damage`). Blocker-side "can block only creatures with flying" ✅ (`Keyword::CanBlockOnlyFlying` — Wanderlight Spirit, Shacklegeist, Pinnacle Emissary's Drone; test `cr_509_1b_can_block_only_flying_restriction`). Conditional attack/block gates (509.1a / 508.1a) ✅ — `Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)` (Hazoret the Fervent), `Keyword::CantAttackOrBlockUnlessDelirium` (Patchwork Beastie, via `GameState::delirium_active`), and `Keyword::CantAttackOrBlockUnlessDescend(n)` (The Ancient One, via `GameState::descend_count`), enforced in `declare_attackers` + `blocker_can_block_attacker` + `legal_attackers`/affordances and surfaced as client chips. "Can't attack or block alone" (509.1c) ✅ — `Keyword::CantAttackOrBlockAlone` rejects a lone-attacker / lone-blocker batch (Toby's Beast token; tests `cant_attack_or_block_alone_*`, `cant_block_alone_*`).
+- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f). **509.3a–e ✅**: "whenever this blocks" / "becomes blocked" fire ONCE per creature (the `BlockerDeclared` fan-out dedupes on the trigger's own side of the pair), `Selector::BlockedAttacker` resolves every attacker a multi-blocker is blocking so the per-object wordings (509.3b/d) reach all of them from one instance, and `EventKind::{BlocksNOrMore,BecomesBlockedByNOrMore}` gate on the finished block assignment (509.3e — Lairwatch Giant). Tests `core_rules/cr_recent35::cr_509_3*`. **Multi-block ✅** (509.1b — `block_map` is blocker → `Vec<attacker>`; `Keyword::CanBlockAdditional(n)` / `CanBlockAnyNumber` set the per-combat cap; Guardian of the Gateless, Knight of Sorrows, Valor Made Real; tests `core_rules/cr_recent35`). Put-onto-battlefield-blocking (509.4) ✅ — `Effect::CreateTokenBlocking` + the `cast_only_after_blockers` gate (Flash Foliage; test `cr_509_4_flash_foliage_blocks_the_attacker`). Blocker legality now reads the computed view ✅ (509.1a — animated manlands / crewed Vehicles block). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas). Power-based block restriction ✅ (`Keyword::CantBeBlockedByPowerLess` — Formation Breaker; inverse of Skulk, `formation_breaker_blocks_only_by_equal_or_greater_power`). The bot's block planner now satisfies the minimum-blocker count for Menace **and** `CantBeBlockedExceptByN(n)` (tops up or drops the block), so it never submits an illegal under-filled multi-block. Protection-by-mana-value block restriction ✅ (`Keyword::ProtectionFromManaValueExcept` — Haktos can't be blocked by a creature whose MV isn't the chosen number; test `cr_509_1b_protection_from_mv_restricts_blockers`). Protection-by-mana-value-**parity** ✅ (`Keyword::ProtectionFromManaValueParity { odd }` — Lavabrink Venturer's ETB odd/even choice; gates targeting, blocking, and combat-damage prevention CR 702.16e; tests `lavabrink_venturer_parity_protection`, `cr_702_16e_parity_protection_prevents_combat_damage`). Blocker-side "can block only creatures with flying" ✅ (`Keyword::CanBlockOnlyFlying` — Wanderlight Spirit, Shacklegeist, Pinnacle Emissary's Drone; test `cr_509_1b_can_block_only_flying_restriction`). Conditional attack/block gates (509.1a / 508.1a) ✅ — `Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)` (Hazoret the Fervent), `Keyword::CantAttackOrBlockUnlessDelirium` (Patchwork Beastie, via `GameState::delirium_active`), and `Keyword::CantAttackOrBlockUnlessDescend(n)` (The Ancient One, via `GameState::descend_count`), enforced in `declare_attackers` + `blocker_can_block_attacker` + `legal_attackers`/affordances and surfaced as client chips. "Can't attack or block alone" (509.1c) ✅ — `Keyword::CantAttackOrBlockAlone` rejects a lone-attacker / lone-blocker batch (Toby's Beast token; tests `cant_attack_or_block_alone_*`, `cant_block_alone_*`).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6). Board-conditional self cost reduction ✅ (CR 601.2f — `StaticEffect::SelfCostReducedIfControlEach`, discounts a spell while you control a permanent matching each filter — Of One Mind's Human + non-Human). Opponent target-tax ✅ (`StaticEffect::TaxOpponentSpellsTargeting`, threaded through `extra_cost_for_spell` with the spell's chosen target — Jubilant Skybonder, Callaphe Beloved of the Sea). Mana-spent-vs-MV gate ✅ (`Effect::CounterSpellDrawIfUnderpaid` reads the countered spell's stored `mana_spent` against its mana value — Unravel draws only on a cost-reduced/alt-cast spell). Total-power self-reduction ✅ (`StaticEffect::SelfCostReducedByTotalPower` — Ghalta, Primal Hunger; `ghalta_costs_less_per_total_power`). Per-graveyard-creature self-reduction ✅ (`StaticEffect::SelfCostReducedPerCreatureInGraveyard` — Ghoultree; `ghoultree_costs_less_per_graveyard_creature`). Death-gated self-reduction ✅ (`StaticEffect::SelfCostReducedIfCreatureDiedThisTurn` — Bone Picker; `bone_picker_is_cheap_after_a_death`). Player-wide predicate-gated reduction ✅ (`StaticEffect::CostReductionWhile { filter, amount, condition }` — Gran-Gran's "noncreature spells you cast cost {1} less while 3+ Lessons in your gy"; generic-only clamp tested in `cr_601_2f_gran_gran_lesson_discount_is_generic_only`). Source-power-scaled reduction ✅ (`StaticEffect::CostReductionBySourcePower` — "Aura and Equipment spells cost {X} less, X = this creature's power" — Golden-Tail Trainer). Board-count "affinity for [type]" reduction (`SelfCostReducedPerPermanentMatching`) now evaluates board-state filters (`IsModified`, tapped, …) through `evaluate_requirement_static`, so Walking Skyscraper's "costs {1} less per modified creature" works; `tests/recent100.rs`. **CR 107.16 variable {E} cost ✅** — `ActivatedAbility.energy_x_cost` spends the activation's chosen `x_value` in energy and threads that X into resolution so `ManaValueExactlyXFromCost` gates the target (Chthonian Nightmare; `cr_107_16_variable_energy_cost_pays_chosen_x`). Value-amount energy pay/upkeep ✅ (`Effect::PayEnergyValue`, `Effect::PayEnergyOrElseValue` — Jolted Awake, Volatile Stormdrake). **CR 107.16 variable life cost ✅** — `ActivatedAbility.x_life_cost` drains the chosen X in life and threads that X into resolution (Krumar Initiate's "Pay X life: endure X"; `cr_107_16_pay_x_life_variable_activation_cost`). Card-level "costs {N} less if you've cast another spell this turn" ✅ (`self_cost_reduction_if_cast_spell` — Rally the Monastery).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); full ability removal (113.10b); "can't have" anti-grant (113.11). Counter-target-ability (113.9) ✅ — `Effect::CounterAbility` (Consign to Memory, Stifle) with precise targeting via `SelectionRequirement::HasAbilityOnStack`.
 - 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6 — **blocked**: many targeted spells are cast with `target: None` and auto-target at resolution (counterspells → top of stack; "target player" discard → an opponent), so a naive "requires_target ⇒ reject None" gate breaks Pact of Negation / Pyroblast / Cabal Therapy / Metallurgic Summonings. A real fix must make cast-time supply the target for every targeted spell first); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal. "Up to N target" triggers now fill every slot ✅ (115.1c) on both the **Attacks** path (combat.rs — Lagorin's "up to two Mounts/Vehicles"; `cr_115_1c_attack_trigger_fills_all_target_slots`) and the **ETB** path (stack.rs's `auto_extra_targets_for` — Azorius Justiciar detains two; `cr_115_1c_etb_trigger_fills_all_target_slots`). "Counter target spell that targets you or a permanent you control" ✅ via `SelectionRequirement::SpellTargetsControllerOrControlled`, which reads a stack spell's chosen targets (Hindering Light).

@@ -1062,8 +1062,10 @@ impl GameState {
                             c.protected_by = protector;
                         }
                     }
-                    // CR 614.13 — enters-tapped replacements (Imposing
-                    // Sovereign, Urabrask) apply to cast permanents too.
+                    // CR 614 — control-setting and enters-tapped replacements
+                    // (Captive Audience; Imposing Sovereign, Urabrask) apply to
+                    // cast permanents too.
+                    self.apply_enters_under_opponent_control(card_id);
                     self.apply_enters_tapped_replacement(card_id);
                     // CR 709.5d — a Room enters with the cast door unlocked
                     // (709.5h: its unlock trigger fires).

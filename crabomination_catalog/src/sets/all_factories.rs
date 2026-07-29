@@ -7218,6 +7218,7 @@ static DGM: &[Factory] = &[
     super::dgm::plasm_capture,
     super::dgm::goblin_test_pilot,
     super::dgm::catch_release,
+    super::dgm::lairwatch_giant,
     super::dgm::boros_battleshaper,
     super::dgm::varolz_the_scar_striped,
 ];
@@ -10035,6 +10036,7 @@ static RNA: &[Factory] = &[
     super::rna2::amplifire,
     super::rna2::lazav_dimir_mastermind,
     super::rna2::illusionists_bracers,
+    super::rna2::captive_audience,
     super::rna::angel_of_grace,
     super::rna::rhythm_of_the_wild,
     super::rna::galloping_lizrog,

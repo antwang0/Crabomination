@@ -2256,6 +2256,11 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub affinity_filter: Option<SelectionRequirement>,
+    /// CR 614 — "This permanent enters under the control of an opponent of your
+    /// choice." A control-setting entry replacement applied at the battlefield
+    /// hop (Captive Audience). Defaults to `false`.
+    #[serde(default)]
+    pub enters_under_opponent_control: bool,
     /// "This spell costs {1} less to cast for each [filter] card in your
     /// graveyard" — the graveyard-counting sibling of `affinity_filter`.
     /// Generic-only, clamped by the caller. Powers Tolarian Terror /
@@ -4122,6 +4127,9 @@ pub struct CardInstance {
     /// "whenever you cast a spell from your library" payoffs (Melek, Izzet
     /// Paragon). Cleared when the card leaves the stack.
     pub cast_from_library: bool,
+    /// Modes this permanent has already picked for a "choose one that hasn't
+    /// been chosen" ability (Captive Audience). Persists across turns.
+    pub modes_chosen: Vec<u8>,
     /// One-shot permission to cast this MDFC's **back face from the
     /// graveyard** (Pestilent Cauldron's "sacrifice, then cast Restorative
     /// Burst transformed"). Set by `Effect::GrantCastBackFromGraveyard` once
@@ -4528,6 +4536,7 @@ impl CardInstance {
             cast_collected_evidence: false,
             cast_from_exile: false,
             cast_from_library: false,
+            modes_chosen: Vec::new(),
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
             chosen_land_type: None,
@@ -5110,6 +5119,8 @@ struct CardInstanceWire {
     #[serde(default)]
     cast_from_library: bool,
     #[serde(default)]
+    modes_chosen: Vec<u8>,
+    #[serde(default)]
     may_cast_back_from_graveyard: bool,
     chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
@@ -5340,6 +5351,7 @@ impl serde::Serialize for CardInstance {
             cast_collected_evidence: self.cast_collected_evidence,
             cast_from_exile: self.cast_from_exile,
             cast_from_library: self.cast_from_library,
+            modes_chosen: self.modes_chosen.clone(),
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
             chosen_land_type: self.chosen_land_type,
@@ -5489,6 +5501,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_collected_evidence = wire.cast_collected_evidence;
         c.cast_from_exile = wire.cast_from_exile;
         c.cast_from_library = wire.cast_from_library;
+        c.modes_chosen = wire.modes_chosen;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.chosen_land_type = wire.chosen_land_type;
         c.chosen_number = wire.chosen_number;

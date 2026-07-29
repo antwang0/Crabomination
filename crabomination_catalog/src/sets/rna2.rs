@@ -7,7 +7,7 @@ use crate::card::{
     Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, StaticEffect};
-use crate::mana::{b, cost, u, w, x, Color, generic};
+use crate::mana::{b, cost, r, u, w, x, Color, generic};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
     Subtypes { creature_types: t, ..Default::default() }
@@ -340,6 +340,47 @@ pub fn illusionists_bracers() -> CardDefinition {
             }],
             ..Default::default()
         }),
+        ..Default::default()
+    }
+}
+
+/// Captive Audience — {5}{B}{R} Enchantment. Enters under an opponent's
+/// control; at their upkeep it picks a punishment it hasn't picked before.
+pub fn captive_audience() -> CardDefinition {
+    CardDefinition {
+        name: "Captive Audience",
+        cost: cost(&[generic(5), b(), r()]),
+        card_types: vec![CardType::Enchantment],
+        enters_under_opponent_control: true,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::ChooseUnchosenMode {
+                modes: vec![
+                    Effect::SetLifeTotal { who: Selector::You, amount: Value::Const(4) },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::HandSizeOf(PlayerRef::You),
+                        random: false,
+                    },
+                    Effect::CreateToken {
+                        who: PlayerRef::EachOpponent,
+                        count: Value::Const(5),
+                        definition: TokenDefinition {
+                            name: "Zombie".into(),
+                            power: 2,
+                            toughness: 2,
+                            card_types: vec![CardType::Creature],
+                            colors: vec![Color::Black],
+                            subtypes: Subtypes {
+                                creature_types: vec![CreatureType::Zombie],
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    },
+                ],
+            },
+        }],
         ..Default::default()
     }
 }

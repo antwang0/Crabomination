@@ -484,6 +484,20 @@ fn route(
     (status, content_type, body, NO_STORE)
 }
 
+/// Per-connection read/write budget for the status listener. The loop serves
+/// one connection at a time, so an unbounded read would let a single stalled
+/// peer take the endpoint down.
+const IO_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Split the first line of a request into `(method, path)`. Returns `None` for
+/// an empty read (a stalled or timed-out peer) and for a line that doesn't
+/// carry both tokens, so those get a 400 instead of being routed as `("", "")`.
+fn parse_request_line(buf: &[u8]) -> Option<(&str, &str)> {
+    let line = std::str::from_utf8(buf).ok()?.lines().next()?;
+    let mut parts = line.split_whitespace();
+    Some((parts.next()?, parts.next()?))
+}
+
 /// Spawn the status listener thread if `CRAB_STATUS_BIND` is set. Bind
 /// failures are non-fatal (the match server keeps running without telemetry).
 pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
@@ -500,21 +514,25 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
     std::thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { continue };
-            // Read just enough for the request line; ignore errors — a
-            // malformed probe gets the full status page.
+            // The endpoint serves one connection at a time, so a peer that
+            // connects and then stalls would wedge telemetry for everyone.
+            // Bound both directions; a stalled peer just gets dropped.
+            let _ = stream.set_read_timeout(Some(IO_TIMEOUT));
+            let _ = stream.set_write_timeout(Some(IO_TIMEOUT));
             let mut buf = [0u8; 512];
             let n = stream.read(&mut buf).unwrap_or(0);
-            let request_line = std::str::from_utf8(&buf[..n])
-                .unwrap_or("")
-                .lines()
-                .next()
-                .unwrap_or("");
-            let mut parts = request_line.split_whitespace();
-            let method = parts.next().unwrap_or("");
-            let path = parts.next().unwrap_or("");
-            let (status, content_type, body, extra_headers) = route(method, path, started, &slots);
-            // HEAD gets headers only (CR-agnostic HTTP nicety for probes).
-            let payload = if method == "HEAD" { "" } else { &body };
+            let (status, content_type, body, extra_headers) = match parse_request_line(&buf[..n]) {
+                Some((method, path)) => route(method, path, started, &slots),
+                None => (
+                    "400 Bad Request",
+                    "text/plain",
+                    "bad request\n".to_string(),
+                    "Cache-Control: no-store\r\n",
+                ),
+            };
+            // HEAD gets headers only (an HTTP nicety for probes).
+            let head_only = parse_request_line(&buf[..n]).is_some_and(|(m, _)| m == "HEAD");
+            let payload = if head_only { "" } else { &body };
             let _ = write!(
                 stream,
                 "HTTP/1.0 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n{}Connection: close\r\n\r\n{}",
@@ -531,6 +549,15 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_request_line_rejects_empty_and_partial_reads() {
+        assert_eq!(parse_request_line(b"GET /status HTTP/1.1\r\n"), Some(("GET", "/status")));
+        assert_eq!(parse_request_line(b"HEAD /healthz HTTP/1.0\r\n"), Some(("HEAD", "/healthz")));
+        // A stalled peer (read timed out) and a one-token line are both 400s.
+        assert_eq!(parse_request_line(b""), None);
+        assert_eq!(parse_request_line(b"GET\r\n"), None);
+    }
 
     #[test]
     fn render_status_includes_uptime_stats_and_slots() {
