@@ -1424,11 +1424,20 @@ impl GameState {
                     // ETB-trigger expressions like `Effect::AddCounter
                     // { amount: Value::XFromCost }` (Pterafractyl, Static
                     // Prison) read the actual paid X.
-                    let etb_multiplier = crate::game::actions::etb_trigger_multiplier(
+                    let base_mult = crate::game::actions::etb_trigger_multiplier(
                         self,
                         caster,
                         Some(card_id),
                     );
+                    // Subtype/supertype-keyed trigger doublers (Harmonic
+                    // Prodigy, Annie Joins Up) apply to the entrant's own ETB
+                    // on the cast path too, not only to `fire_self_etb_triggers`.
+                    let etb_multiplier = if base_mult == 0 {
+                        0
+                    } else {
+                        base_mult
+                            + crate::game::actions::ally_trigger_extra_fires(self, caster, card_id)
+                    };
                     for (effect, filter) in etb_triggers {
                         // CR 603.4 — honor the trigger's intervening-`if`
                         // (`event.filter`) now that the source is on the

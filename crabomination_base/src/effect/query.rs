@@ -1509,6 +1509,7 @@ impl Effect {
                 let t = self.target_phrase();
                 match to {
                     ZoneDest::Exile => format!("exile {t}"),
+                    ZoneDest::ExilePlotted => format!("exile {t}; it becomes plotted"),
                     ZoneDest::Hand(_) => format!("return {t} to its owner's hand"),
                     ZoneDest::Graveyard => format!("put {t} into its owner's graveyard"),
                     ZoneDest::Battlefield { .. } => format!("put {t} onto the battlefield"),

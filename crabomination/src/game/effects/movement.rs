@@ -1331,7 +1331,7 @@ impl GameState {
                 controller: flatten(controller),
                 tapped: *tapped,
             },
-            ZoneDest::Graveyard | ZoneDest::Exile => dest.clone(),
+            ZoneDest::Graveyard | ZoneDest::Exile | ZoneDest::ExilePlotted => dest.clone(),
         }
     }
 
@@ -1357,7 +1357,7 @@ impl GameState {
             ZoneDest::Library { .. } => crate::card::Zone::Library,
             ZoneDest::Battlefield { .. } => crate::card::Zone::Battlefield,
             ZoneDest::Graveyard => crate::card::Zone::Graveyard,
-            ZoneDest::Exile => crate::card::Zone::Exile,
+            ZoneDest::Exile | ZoneDest::ExilePlotted => crate::card::Zone::Exile,
         };
         // CR 702.47e — a spell loses its splice changes once it leaves the
         // stack for any reason.
@@ -1500,6 +1500,16 @@ impl GameState {
             ZoneDest::Graveyard => {
                 // CR 614.6 — graveyard-hate statics redirect to exile.
                 self.route_to_graveyard(card, events);
+            }
+            ZoneDest::ExilePlotted => {
+                // CR 702.170 — exile it face up and mark it plotted so its
+                // owner may cast it for free as a sorcery on a later turn.
+                let cid = card.id;
+                self.exile.push(card);
+                self.plotted_cards.insert(cid);
+                self.plotted_this_turn.insert(cid);
+                events.push(GameEvent::PermanentExiled { card_id: cid });
+                self.fire_becomes_plotted_triggers(cid, default_player);
             }
             ZoneDest::Exile => {
                 let cid = card.id;

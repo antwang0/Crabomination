@@ -1,4 +1,4 @@
-//! CR 702.158 Space Sculptor. Tests in `recent_b/recent_308`.
+//! CR 702.158 Space Sculptor. Tests in `core_rules/cr_recent36`.
 
 use crate::card::{
     CardDefinition, CardType, CounterType, Keyword, LoyaltyAbility, PlaneswalkerSubtype, Subtypes,

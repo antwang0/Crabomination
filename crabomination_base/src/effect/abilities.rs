@@ -1053,6 +1053,10 @@ pub enum StaticEffect {
         #[serde(default)]
         exclude_source: bool,
     },
+    /// "If a triggered ability of a legendary creature you control triggers,
+    /// that ability triggers an additional time" (Annie Joins Up). The
+    /// supertype-keyed sibling of `DoubleControllerTriggersOfType`.
+    DoubleControllerLegendaryCreatureTriggers,
     /// CR 614.x — "Creatures entering the battlefield don't cause triggered
     /// abilities to trigger." Torpor Orb, Tocatli Honor Guard. When any
     /// permanent with this static is in play, an entering **creature**
@@ -1088,6 +1092,11 @@ pub enum StaticEffect {
     /// Oracle of Mul Daya lands, Mystic Forge artifact+colorless spells).
     /// Checked in `play_land_with_face` and `cast_spell`.
     PlayFromLibraryTop { filter: crate::card::SelectionRequirement },
+    /// CR 702.170 — "The top card of your library has plot; you may plot
+    /// nonland cards from the top of your library" (Fblthp, Lost on the
+    /// Range). `plot_card` accepts the library's top card, charging the
+    /// card's own mana cost as its plot cost.
+    MayPlotFromLibraryTop,
     /// Like `PlayFromLibraryTop`, but capped at one cast/play from the library
     /// top per turn (Johann, Apprentice Sorcerer — "Once each turn, you may cast
     /// an instant or sorcery spell from the top of your library"). Tracked via

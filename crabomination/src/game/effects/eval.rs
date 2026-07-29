@@ -864,6 +864,34 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].mounts_vehicles_entered_this_turn as i32)
                 .unwrap_or(0),
+            // Geralf, the Fleshwright — count this turn's arrivals of a type,
+            // excluding the trigger's own subject. The entrant may have left,
+            // so look it up anywhere rather than on the battlefield.
+            Value::OtherCreaturesOfTypeEnteredThisTurn(ct) => {
+                let subject = ctx.trigger_source.and_then(|e| e.as_permanent_id());
+                self.players[ctx.controller]
+                    .creatures_entered_this_turn
+                    .iter()
+                    .filter(|id| Some(**id) != subject)
+                    .filter(|id| {
+                        self.find_card_anywhere(**id).is_some_and(|c| {
+                            c.definition.subtypes.creature_types.contains(ct)
+                                || c.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                        })
+                    })
+                    .count() as i32
+            }
+            // Selvala, Eager Trailblazer — distinct computed powers.
+            Value::DistinctPowersAmongCreaturesControlled(p) => {
+                let Some(seat) = self.resolve_player(p, ctx) else { return 0 };
+                let powers: std::collections::HashSet<i32> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
+                    .collect();
+                powers.len() as i32
+            }
             Value::PoisonCountersOf(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].poison_counters as i32)

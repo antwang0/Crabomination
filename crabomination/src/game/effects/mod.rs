@@ -10697,6 +10697,13 @@ impl GameState {
                             CounteredSpellZone::Exile => {
                                 self.exile.push(*card);
                             }
+                            CounteredSpellZone::ExilePlotted => {
+                                let cid = card.id;
+                                self.exile.push(*card);
+                                self.plotted_cards.insert(cid);
+                                self.plotted_this_turn.insert(cid);
+                                self.fire_becomes_plotted_triggers(cid, owner);
+                            }
                         }
                     }
                 }

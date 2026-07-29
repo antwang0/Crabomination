@@ -774,6 +774,15 @@ pub enum Value {
     /// (`Player.mounts_vehicles_entered_this_turn`) — Cloudspire Coordinator's
     /// X token count.
     MountsVehiclesEnteredThisTurn(PlayerRef),
+    /// Creatures of `1` (other than the resolution's trigger source) that
+    /// entered under the controller's control this turn — Geralf, the
+    /// Fleshwright's "+1/+1 counter for each other Zombie that entered the
+    /// battlefield under your control this turn".
+    OtherCreaturesOfTypeEnteredThisTurn(crate::card::CreatureType),
+    /// The number of distinct power values among creatures `0` controls
+    /// ("one mana of that color for each different power among creatures you
+    /// control" — Selvala, Eager Trailblazer).
+    DistinctPowersAmongCreaturesControlled(PlayerRef),
     /// The player's poison counters (Vraska's −9 "counters equal to the
     /// difference" top-up).
     PoisonCountersOf(PlayerRef),
@@ -1733,6 +1742,11 @@ pub enum ZoneDest {
     Library { who: PlayerRef, pos: LibraryPosition },
     Graveyard,
     Exile,
+    /// CR 702.170 — exile face up and mark **plotted**, so the card's owner
+    /// may cast it for free as a sorcery on a later turn. The effect-granted
+    /// half of plot: no plot cost is paid (Kellan Joins Up, Jace Reawakened,
+    /// Make Your Own Luck, Aven Interrupter).
+    ExilePlotted,
     /// Battlefield under `controller`, optionally tapped.
     Battlefield { controller: PlayerRef, tapped: bool },
 }
@@ -1752,6 +1766,9 @@ pub enum CounteredSpellZone {
     OwnerHand,
     /// Exile (Spell Crumple).
     Exile,
+    /// CR 702.170 — exile and mark plotted, so its owner may cast it for free
+    /// as a sorcery on a later turn (Aven Interrupter).
+    ExilePlotted,
 }
 
 /// What mana to add to a pool.
@@ -6531,7 +6548,7 @@ fn zonedest_has_target(z: &ZoneDest) -> bool {
     match z {
         ZoneDest::Hand(p) | ZoneDest::Library { who: p, .. } => matches!(p, PlayerRef::Target(_)),
         ZoneDest::Battlefield { controller, .. } => matches!(controller, PlayerRef::Target(_)),
-        ZoneDest::Graveyard | ZoneDest::Exile => false,
+        ZoneDest::Graveyard | ZoneDest::Exile | ZoneDest::ExilePlotted => false,
     }
 }
 

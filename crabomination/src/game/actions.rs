@@ -1293,7 +1293,8 @@ pub(crate) fn creature_etb_triggers_suppressed(state: &crate::game::GameState) -
 /// controls a subtype-keyed trigger doubler: `DoubleControllerAllyTriggers`
 /// (Katara, the Fearless — Allies) or the general
 /// `DoubleControllerTriggersOfType` (Harmonic Prodigy — Shaman / another
-/// Wizard). 0 unless the source is a matching creature `controller` controls.
+/// Wizard) or `DoubleControllerLegendaryCreatureTriggers` (Annie Joins Up).
+/// 0 unless the source is a matching creature `controller` controls.
 pub(crate) fn ally_trigger_extra_fires(
     state: &crate::game::GameState,
     controller: usize,
@@ -1302,13 +1303,14 @@ pub(crate) fn ally_trigger_extra_fires(
     use crate::effect::StaticEffect;
     // The triggering source's current creature types (read live off the
     // battlefield; a source no longer in play or not `controller`'s → 0).
-    let source_types = match state.computed_permanent(source) {
-        Some(cp) if state.battlefield_find(source).is_some_and(|c| c.controller == controller) => {
-            cp.subtypes.creature_types.clone()
-        }
-        _ => return 0,
-    };
+    let Some(cp) = state.computed_permanent(source) else { return 0 };
+    if state.battlefield_find(source).is_none_or(|c| c.controller != controller) {
+        return 0;
+    }
+    let source_types = cp.subtypes.creature_types.clone();
     let is_ally = source_types.contains(&crate::card::CreatureType::Ally);
+    let legendary_creature = cp.card_types.contains(&crate::card::CardType::Creature)
+        && cp.supertypes.contains(&crate::card::Supertype::Legendary);
     state
         .battlefield
         .iter()
@@ -1323,6 +1325,7 @@ pub(crate) fn ally_trigger_extra_fires(
                         (!*exclude_source || c.id != source)
                             && types.iter().any(|t| source_types.contains(t))
                     }
+                    StaticEffect::DoubleControllerLegendaryCreatureTriggers => legendary_creature,
                     _ => false,
                 })
                 .count()
@@ -4672,12 +4675,23 @@ impl GameState {
     /// face-up. Special action; main phase + empty stack only (sorcery speed).
     pub(crate) fn plot_card(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        let mut cost = self.players[p]
-            .hand
-            .iter()
-            .find(|c| c.id == card_id)
-            .and_then(|c| c.definition.plot_cost.clone())
-            .ok_or(GameError::CardNotInHand(card_id))?;
+        // CR 702.170 — Fblthp, Lost on the Range grants the top card of your
+        // library plot for its mana cost; that card is plotted from the
+        // library rather than from hand.
+        let from_library_top = self.may_plot_from_library_top(p)
+            && self.players[p].library.first().is_some_and(|c| {
+                c.id == card_id && !c.definition.card_types.contains(&CardType::Land)
+            });
+        let mut cost = if from_library_top {
+            self.players[p].library[0].definition.cost.clone()
+        } else {
+            self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == card_id)
+                .and_then(|c| c.definition.plot_cost.clone())
+                .ok_or(GameError::CardNotInHand(card_id))?
+        };
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
@@ -4699,10 +4713,13 @@ impl GameState {
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mut events = receipt.auto_events;
-        let card = self
-            .players[p]
-            .remove_from_hand(card_id)
-            .ok_or(GameError::CardNotInHand(card_id))?;
+        let card = if from_library_top {
+            self.players[p].library.remove(0)
+        } else {
+            self.players[p]
+                .remove_from_hand(card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?
+        };
         // CR 702.170 — "When this card becomes plotted, …" self-triggers fire
         // from exile as the card is plotted (Aloe Alchemist, Longhorn
         // Sharpshooter). Gather them off the card before it settles in exile.
@@ -4717,12 +4734,42 @@ impl GameState {
         self.plotted_cards.insert(card_id);
         self.plotted_this_turn.insert(card_id);
         events.push(GameEvent::PermanentExiled { card_id });
-        for effect in plot_triggers {
-            let auto_target = self.auto_target_for_effect_avoiding(&effect, p, Some(card_id));
+        self.push_plot_triggers(card_id, p, plot_triggers);
+        Ok(events)
+    }
+
+    /// CR 702.170 — fire a freshly-plotted card's "when this becomes plotted"
+    /// self-triggers from exile. `ZoneDest::ExilePlotted` gathers them itself.
+    pub(crate) fn fire_becomes_plotted_triggers(&mut self, card_id: CardId, controller: usize) {
+        let effects: Vec<crate::effect::Effect> = self
+            .exile
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| {
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .filter(|t| t.event.kind == crate::effect::EventKind::BecomesPlotted)
+                    .map(|t| t.effect.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        self.push_plot_triggers(card_id, controller, effects);
+    }
+
+    fn push_plot_triggers(
+        &mut self,
+        card_id: CardId,
+        controller: usize,
+        effects: Vec<crate::effect::Effect>,
+    ) {
+        for effect in effects {
+            let auto_target =
+                self.auto_target_for_effect_avoiding(&effect, controller, Some(card_id));
             self.push_pending_trigger(
                 crate::game::types::PendingTriggerPush {
                     source: card_id,
-                    controller: p,
+                    controller,
                     effect,
                     subject: Some(crate::game::effects::EntityRef::Card(card_id)),
                     event_amount: 0,
@@ -4732,7 +4779,16 @@ impl GameState {
                 auto_target,
             );
         }
-        Ok(events)
+    }
+
+    /// True when `p` controls a `MayPlotFromLibraryTop` grant (Fblthp).
+    pub(crate) fn may_plot_from_library_top(&self, p: usize) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::MayPlotFromLibraryTop)
+                })
+        })
     }
 
     /// CR 702.170d — cast a plotted card from exile without paying its mana

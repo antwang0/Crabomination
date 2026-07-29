@@ -198,6 +198,11 @@ pub enum AffectedPermanents {
         /// `#[serde(default)]` keeps old snapshots valid.
         #[serde(default)]
         token: Option<bool>,
+        /// Optional ownership filter relative to the permanent's controller
+        /// ("creatures you control but don't own" — Laughing Jasper Flint).
+        /// `None` = either; `Some(false)` = borrowed permanents only.
+        #[serde(default)]
+        owned_by_controller: Option<bool>,
         /// "Colorless only" filter (Ruination Guide's "other colorless
         /// creatures you control"). Devoid-aware (CR 702.114). `#[serde(default)]`
         /// keeps old snapshots valid.
@@ -650,7 +655,15 @@ fn affected_includes_gated(
     match affected {
         AffectedPermanents::Source => source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
-        AffectedPermanents::All { controller, card_types, exclude_source, color, token, colorless } => {
+        AffectedPermanents::All {
+            controller,
+            card_types,
+            exclude_source,
+            color,
+            token,
+            colorless,
+            owned_by_controller,
+        } => {
             if *exclude_source && source == card.id {
                 return false;
             }
@@ -668,7 +681,9 @@ fn affected_includes_gated(
                 || !card.definition.cost.symbols.iter()
                     .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_)));
             let token_ok = token.is_none_or(|want| card.is_token == want);
-            ctrl_ok && type_ok && color_ok && colorless_ok && token_ok
+            let own_ok =
+                owned_by_controller.is_none_or(|want| (card.owner == card.controller) == want);
+            ctrl_ok && type_ok && color_ok && colorless_ok && token_ok && own_ok
         }
         AffectedPermanents::AllOpponents { source_controller, card_types, friendly_seats } => {
             // Empty `friendly_seats` → legacy 1v1 check (snapshots from

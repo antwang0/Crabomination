@@ -6267,6 +6267,7 @@ impl GameState {
                         color: Some(color),
                         token: None,
                         colorless: false,
+                        owned_by_controller: None,
                     },
                     layer: Layer::L7PowerTough,
                     sublayer: Some(PtSublayer::Modify),
@@ -7099,6 +7100,7 @@ impl GameState {
                                 color: None,
                                 token: None,
                                 colorless: false,
+                                owned_by_controller: None,
                             },
                             layer: Layer::L6Ability,
                             sublayer: None,
@@ -14586,6 +14588,7 @@ fn static_effect_to_effects(
                             color: None,
                             token: None,
                             colorless: false,
+                            owned_by_controller: None,
                         },
                         layer: Layer::L4Type,
                         sublayer: None,
@@ -14627,6 +14630,7 @@ fn static_effect_to_effects(
                     color: None,
                     token: None,
                     colorless: false,
+                    owned_by_controller: None,
                 },
                 layer: Layer::L6Ability,
                 sublayer: None,
@@ -14824,6 +14828,7 @@ fn static_effect_to_effects(
             // `ally_trigger_extra_fires`; no layer effect.
             | StaticEffect::DoubleControllerAllyTriggers
             | StaticEffect::DoubleControllerTriggersOfType { .. }
+            | StaticEffect::DoubleControllerLegendaryCreatureTriggers
             | StaticEffect::DoubleControllerDeathTriggers
             | StaticEffect::DoubleControllerAttackTriggers
             // SuppressCreatureEtbTriggers — read at trigger dispatch via
@@ -14838,6 +14843,7 @@ fn static_effect_to_effects(
             // PlayFromLibraryTop / TopOfLibraryRevealed — read by the play/
             // cast paths and the view projection; no layer effect.
             | StaticEffect::PlayFromLibraryTop { .. }
+            | StaticEffect::MayPlotFromLibraryTop
             | StaticEffect::PlayFromLibraryTopOncePerTurn { .. }
             | StaticEffect::PlayFromLibraryTopPayLife { .. }
             | StaticEffect::TopOfLibraryRevealed
@@ -15490,6 +15496,7 @@ fn affected_from_requirement(
     // [type] you control" wording.
     let mut other_than_source = false;
     let mut opponent = false;
+    let mut owned_by_controller: Option<bool> = None;
     let mut walk = vec![req];
     while let Some(r) = walk.pop() {
         match r {
@@ -15515,6 +15522,8 @@ fn affected_from_requirement(
             R::IsToken => token_filter = Some(true),
             R::NotToken => token_filter = Some(false),
             R::OtherThanSource => other_than_source = true,
+            R::OwnedByYou => owned_by_controller = Some(true),
+            R::Not(inner) if matches!(**inner, R::OwnedByYou) => owned_by_controller = Some(false),
             R::Any | R::Permanent => {}
             _ => return None,
         }
@@ -15552,6 +15561,7 @@ fn affected_from_requirement(
         color: color_filter,
         token: token_filter,
         colorless: colorless_filter,
+        owned_by_controller,
     })
 }
 
