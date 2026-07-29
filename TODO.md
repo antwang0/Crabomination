@@ -5,12 +5,14 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Client / UI follow-ups (M15 run)
 
-- **Convoke/Improvise cast UI.** The engine and the bot both drive
-  `GameAction::CastSpellConvoke` now (the bot taps helpers when the pool
-  can't cover the spell, including Chief Engineer's *granted* convoke),
-  but the client has no helper-picker: a human seat can only cast convoke
-  cards at full price. Wants a "tap creatures to help" modal on the cast
-  path, plus a hand-card hint when a static grants convoke.
+- ✅ ~~**Convoke/Improvise cast UI**~~ — shipped. Right-clicking a convokable
+  hand card opens the helper picker (`HelperTapState` +
+  `spawn_helper_tap_modal`); confirming submits `CastSpellConvoke` (or
+  `CastSpellWaterbend`) with the ticked helpers, arming the targeting cursor
+  first for targeted spells. Backed by `HandAffordances.convokable` (a
+  full-helper dry-run probe) plus `KnownCard.has_convoke` / `has_improvise`
+  so the picker knows which permanent types can help. Residual: the picker
+  lists candidates but doesn't preview how much each tap saves.
 - **Interactive color choice for prevention.** `Effect::PreventAllDamage
   FromChosenColorThisTurn` (Avacyn) resolves its `Decision::ChooseColor`
   synchronously off `self.decider`; a UI seat gets the auto-picked color
@@ -18,6 +20,34 @@ Items are grouped by area and roughly ordered by impact within each group.
 - **Master of Predicaments' hand pick.** The chosen card is auto-picked
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
+
+## Noticed this run (modern_decks — Ravnica-block gap sweep)
+
+- **Divided-damage abilities and the UI cursor.** `Effect::DealDamageDivided`
+  now reports slots past the first as optional (`min_targets_in_mode` = 1), so
+  an activated divided-damage ability accepts one target (Living Inferno). The
+  client still can't *collect* more than one target for an ability, so the
+  multi-target half of those abilities is bot/auto-only.
+- **`AnthemForFilterIf`'s predicate is source-scoped.** The new conditional
+  anthem evaluates its `Predicate` with an ability context anchored on the
+  source, so predicates that need a per-affected-permanent subject (rather
+  than the anthem's own source) can't be expressed yet.
+- **War's Toll's land trigger fires on any tap**, not just a tap for mana —
+  there is no `EventKind::TappedForMana`. Adding one would also let
+  "whenever a player taps a land for mana" cards be exact.
+- **Rakdos Riteknife's granted line lives on the Equipment.** The printed
+  ability is granted to the equipped creature; `equipped_bonus.
+  activated_abilities` has no way to name the granting Equipment from the
+  host's context (`Selector::This` binds to the host), so the counter-add is
+  modeled as an Equipment ability with a tap-an-equipped-creature cost.
+  Wants a `Selector::AttachmentGranting` (or equivalent).
+- **Remaining Ravnica-block gap cards**, each blocked on real machinery:
+  Aetherplasm (put a creature from hand onto the battlefield *blocking*),
+  Djinn Illuminatus (a static granting replicate to your I/S spells),
+  Ink-Treader Nephilim (copy-for-each-other-legal-target), Mimeofacture
+  (search an opponent's library by a target permanent's name), Azorius
+  Aethermage (needs a "a permanent is returned to your hand" event),
+  Experiment Kraj, and the DIS split cards.
 
 ## Tier 4 — remaining SOS/SOA audit simplifications (2026-07)
 
@@ -45,10 +75,9 @@ machinery:
   precombat-main grant on one pre-picked card. Faithful support: a
   whole-hand, once-consumable may-play permission valid any time during
   your turn.
-- **Fractalize's type/color rewrite** — "becomes a green and blue
-  Fractal" needs layer-4 `SetCreatureTypes` / layer-5 `SetColors`
-  duration effects (`BecomeCreature` animates noncreatures but doesn't
-  overwrite an existing creature's types/colors).
+- ✅ ~~**Fractalize's type/color rewrite**~~ — wired via the existing
+  `Effect::BecomeColor` (layer 5) + `Effect::BecomeCreatureType` (layer 4)
+  alongside the base-P/T override.
 - Multiplayer "target player" collapses (Ral Zarek, Guest Lecturer's
   −1/−7 and friends) — tracked in the dedicated multiplayer worklist
   table at the bottom of this file.
@@ -57,9 +86,9 @@ machinery:
 - **Filtered exile-free-cast** — Epic Experiment (RTR): exile top X, free-cast
   I/S with MV ≤ X, rest to graveyard (a filtered `ExileTopAndGrantMayPlay` that
   bins non-cast cards).
-- **Colour-add layer** — Grave Betrayal reanimates as a *black* Zombie; the
-  Zombie subtype is added but the added black colour is unmodeled (`CardDefinition`
-  has no `colors` field; colour derives from cost).
+- ✅ ~~**Colour-add layer**~~ — Grave Betrayal's reanimated creature now carries
+  a real layer-5 `Modification::AddColor(Black)` continuous effect, sourced to
+  the creature so it is swept when that creature leaves.
 - Others needing bespoke work: Experiment Kraj (dynamic "has all activated
   abilities of counter-bearing creatures"), Rakdos Riteknife (blood counters),
   Search the City (name-replay → extra turn), the DIS split cards (Bound //

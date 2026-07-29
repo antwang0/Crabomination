@@ -2038,3 +2038,117 @@ fn bronze_bombshell_punishes_theft() {
     assert!(g.battlefield_find(bomb).is_none(), "thief sacrifices it");
     assert_eq!(g.players[1].life, life - 7, "thief takes 7 damage");
 }
+
+// ── Gap wave 8 ──────────────────────────────────────────────────────────────
+
+/// War's Toll taps out an opponent who taps a land, and forces their attacks.
+#[test]
+fn wars_toll_taps_the_rest_of_their_lands() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::wars_toll());
+    let a = g.add_card_to_battlefield(1, catalog::forest());
+    let b = g.add_card_to_battlefield(1, catalog::forest());
+    let c = g.add_card_to_battlefield(1, catalog::island());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: a, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    for land in [a, b, c] {
+        assert!(g.battlefield_find(land).unwrap().tapped, "every land tapped");
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::MustAttack),
+        "their creatures must attack",
+    );
+}
+
+/// Rakdos Riteknife grows the host by one point per blood counter and its
+/// sacrifice ability makes the target sacrifice that many permanents.
+#[test]
+fn rakdos_riteknife_scales_with_blood_counters() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let knife = g.add_card_to_battlefield(0, catalog::rakdos_riteknife());
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(knife).unwrap().attached_to = Some(host);
+    g.battlefield_find_mut(knife).unwrap().counters.insert(CounterType::Blood, 2);
+    assert_eq!(g.computed_permanent(host).unwrap().power, 4, "+1/+0 per blood counter");
+    for _ in 0..3 {
+        g.add_card_to_battlefield(1, catalog::forest());
+    }
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: knife,
+        ability_index: 1,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 1).count(),
+        1,
+        "two of the three permanents sacrificed",
+    );
+}
+
+/// Rakdos Riteknife's granted line taps the host and eats a creature for a
+/// blood counter.
+#[test]
+fn rakdos_riteknife_banks_a_blood_counter() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let knife = g.add_card_to_battlefield(0, catalog::rakdos_riteknife());
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let fodder = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.battlefield_find_mut(knife).unwrap().attached_to = Some(host);
+    g.clear_sickness(host);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: knife, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(knife).unwrap().counter_count(CounterType::Blood), 1);
+    assert!(g.battlefield_find(host).unwrap().tapped, "the host paid the tap");
+    assert!(g.battlefield_find(fodder).is_none(), "a creature was eaten");
+}
+
+/// Brace for Impact turns prevented damage into +1/+1 counters.
+#[test]
+fn brace_for_impact_banks_prevented_damage_as_counters() {
+    use crabomination::card::CounterType;
+    use crabomination::game::effects::EntityRef;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    // A gold creature so the "multicolored" target filter is satisfied.
+    let gold = g.add_card_to_battlefield(0, catalog::gleancrawler());
+    let brace = g.add_card_to_hand(0, catalog::brace_for_impact());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: brace,
+        target: Some(Target::Permanent(gold)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(gold), 3, None, &mut evs);
+    assert_eq!(g.battlefield_find(gold).unwrap().damage, 0, "all prevented");
+    assert_eq!(
+        g.battlefield_find(gold).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "one counter per point prevented",
+    );
+}

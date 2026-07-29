@@ -1406,3 +1406,253 @@ fn bioplasm_grows_from_creature() {
     let cp = g.computed_permanent(bio).unwrap();
     assert_eq!((cp.power, cp.toughness), (10, 8), "4/4 + 6/4 exiled = 10/8");
 }
+
+// ── Gap wave 8 ──────────────────────────────────────────────────────────────
+
+/// Petrified Wood-Kin's Bloodthirst X scales off the damage dealt to opponents.
+#[test]
+fn petrified_wood_kin_bloodthirst_scales_with_damage() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].damage_taken_this_turn = 4;
+    let kin = g.add_card_to_hand(0, catalog::petrified_wood_kin());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: kin, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(kin).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        4,
+    );
+    let def = catalog::petrified_wood_kin();
+    assert!(def.keywords.contains(&Keyword::CantBeCountered));
+    assert!(def.keywords.contains(&Keyword::ProtectionFromInstants));
+}
+
+/// Necromancer's Magemark pumps your enchanted creatures and bounces them
+/// instead of letting them die.
+#[test]
+fn necromancers_magemark_returns_the_enchanted_creature_to_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::necromancers_magemark());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1");
+    let mut events = Vec::new();
+    g.destroy_permanent(bear, false, &mut events);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bounced, not buried");
+}
+
+/// Beastmaster's Magemark pumps the enchanted attacker by its blocker count.
+#[test]
+fn beastmasters_magemark_pumps_per_blocker() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::beastmasters_magemark());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.clear_sickness(bear);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, bear), (b2, bear)]))
+        .expect("block");
+    drain_stack(&mut g);
+    // 2/2 base + 1/1 anthem + 2/2 for the two blockers.
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5);
+}
+
+/// Nivix banks the top card of your library as a castable exile.
+#[test]
+fn nivix_exiles_the_top_card_with_a_cast_permission() {
+    let mut g = two_player_game();
+    let nivix = g.add_card_to_battlefield(0, catalog::nivix_aerie_of_the_firemind());
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nivix, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == top), "exiled off the top");
+}
+
+/// Nivix's first ability is a plain colorless mana ability.
+#[test]
+fn nivix_taps_for_colorless() {
+    let mut g = two_player_game();
+    let nivix = g.add_card_to_battlefield(0, catalog::nivix_aerie_of_the_firemind());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nivix, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("tap");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+}
+
+/// Living Inferno splits its power among blockers and takes their power back.
+#[test]
+fn living_inferno_trades_damage_with_its_targets() {
+    let mut g = two_player_game();
+    let inferno = g.add_card_to_battlefield(0, catalog::living_inferno());
+    g.clear_sickness(inferno);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: inferno,
+        ability_index: 0,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate");
+    let _ = b;
+    drain_stack(&mut g);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(a).is_none() || g.battlefield_find(b).is_none(), "at least one died");
+    // Retaliation: the survivors swung back at the 8/5.
+    assert!(g.battlefield_find(inferno).unwrap().damage > 0, "took damage back");
+}
+
+/// Mizzium Transreliquat copies another artifact until end of turn.
+#[test]
+fn mizzium_transreliquat_copies_an_artifact() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_battlefield(0, catalog::mizzium_transreliquat());
+    let other = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: relic,
+        ability_index: 0,
+        target: Some(Target::Permanent(other)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(relic).unwrap().id, relic);
+    assert_eq!(g.battlefield_find(relic).unwrap().definition.name, "Sol Ring");
+}
+
+/// Killer Instinct cheats a revealed creature in with haste, then sacrifices it.
+#[test]
+fn killer_instinct_deploys_and_sacrifices_the_revealed_creature() {
+    use crabomination::card::Keyword as K;
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::killer_instinct());
+    for _ in 0..30 {
+        g.add_card_to_library(0, catalog::forest());
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let creature = g.add_card_to_library(0, catalog::grizzly_bears());
+    let top = g.players[0].library.len() - 1;
+    g.players[0].library.swap(0, top);
+    // Run to the controller's next upkeep.
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.turn_number > 1) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(creature).is_some(), "put onto the battlefield");
+    assert!(
+        g.computed_permanent(creature).unwrap().keywords.contains(&K::Haste),
+        "gained haste",
+    );
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(creature).is_none(), "sacrificed at the end step");
+}
+
+/// Sword of the Paruns' two anthems switch on with the host's tap state.
+#[test]
+fn sword_of_the_paruns_anthems_follow_the_host() {
+    let mut g = two_player_game();
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_the_paruns());
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(host);
+    // Host untapped → untapped creatures get +0/+2.
+    let cp = g.computed_permanent(other).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 4));
+    // Host tapped → tapped creatures get +2/+0 instead.
+    g.battlefield_find_mut(host).unwrap().tapped = true;
+    g.battlefield_find_mut(other).unwrap().tapped = true;
+    let cp = g.computed_permanent(other).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 2));
+}
+
+/// Predatory Focus lets a blocked attacker hit the player anyway.
+#[test]
+fn predatory_focus_assigns_damage_past_blockers() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let focus = g.add_card_to_hand(0, catalog::predatory_focus());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: focus, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, bear)])).expect("block");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.resolve_combat().expect("damage");
+    assert_eq!(g.players[1].life, life - 2, "the whole 2 got through");
+}
+
+/// Moratorium Stone exiles a card out of a graveyard.
+#[test]
+fn moratorium_stone_exiles_a_graveyard_card() {
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(0, catalog::moratorium_stone());
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone,
+        ability_index: 0,
+        target: Some(Target::Permanent(dead)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == dead));
+}

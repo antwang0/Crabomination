@@ -133,6 +133,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         replicatable_hand: affordances.replicatable,
         conspirable_hand: affordances.conspirable,
         multikickable_hand: affordances.multikickable,
+        convokable_hand: affordances.convokable,
         dashable_hand: affordances.dashable,
         blitzable_hand: affordances.blitzable,
         warpable_hand: affordances.warpable,
@@ -953,6 +954,9 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .gift
             .as_ref()
             .is_some_and(|g| g.gifted_effect.requires_target()),
+        has_convoke: card.definition.keywords.contains(&crate::card::Keyword::Convoke)
+            || state.is_some_and(|st| st.spell_granted_convoke(card.owner, card)),
+        has_improvise: card.definition.keywords.contains(&crate::card::Keyword::Improvise),
         has_waterbend: card.definition.waterbend.is_some(),
         waterbend_amount: card.definition.waterbend.as_ref().and_then(|wb| match wb.amount {
             crate::effect::Value::Const(n) => Some(n.max(0) as u32),

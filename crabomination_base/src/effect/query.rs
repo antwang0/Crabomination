@@ -208,6 +208,8 @@ impl Effect {
             | Effect::GrantExtraLoyaltyActivations
             | Effect::GuessManaValueAboveElseCastFree { .. }
             | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }
+            | Effect::EachPlayerKeepsNSacrificesRest { .. }
+            | Effect::RevealTopDeployIfMatch { .. }
             | Effect::ExchangeControlWithTriggeringSpell { .. }
             | Effect::ExileAnyNumberUntilSourceLeaves { .. }
             | Effect::RevealUntilCreatureDoubleBasePt
@@ -590,6 +592,9 @@ impl Effect {
             Effect::DiscardAnyNumber { who } => sel_has_target(who),
             Effect::SetNoMaxHandSize { who }
             | Effect::PutCardFromHandOnTopOfLibrary { who } => sel_has_target(who),
+            Effect::LookTopExileOneOfN { who, .. } | Effect::BottomHandThenDrawThatMany { who } => {
+                matches!(who, PlayerRef::Target(_))
+            }
             Effect::SetMaxHandSize { who, size } => sel_has_target(who) || value_has_target(size),
             Effect::Scry { who, amount }
             | Effect::Surveil { who, amount }
@@ -953,6 +958,7 @@ impl Effect {
                 sel_has_target(target) || value_has_target(amount)
             }
             Effect::PreventAllDamageThisTurn { target }
+            | Effect::PreventAllDamageThisTurnWithCounters { target }
             | Effect::PreventAllDamageFromChosenColorThisTurn { target }
             | Effect::PreventDamageToAndByUntilYourNextTurn { target } => sel_has_target(target),
             Effect::PreventAllDamageBetweenThisTurn { from, to } => {
@@ -2249,6 +2255,7 @@ impl Effect {
                 Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target }
+                | Effect::PreventAllDamageThisTurnWithCounters { target }
                 | Effect::PreventAllDamageFromChosenColorThisTurn { target }
                 | Effect::PreventDamageToAndByUntilYourNextTurn { target }
                 | Effect::ReplaceNextDamageWithDestroy { target }
@@ -2527,6 +2534,12 @@ impl Effect {
             // "up to one instant and/or up to one sorcery" — both optional.
             Effect::FinaleOfPromise => Some(0),
             Effect::OptionalTargets { min, .. } => Some(*min),
+            // "divided as you choose among any number of targets" — one target
+            // is required, the rest are the caster's option (CR 115.3).
+            Effect::DealDamageDivided { .. }
+            | Effect::DealDamageDividedEvenly { .. }
+            | Effect::DistributeCounters { .. }
+            | Effect::SupportCounters { .. } => Some(1),
             Effect::Seq(v) => v.iter().find_map(|e| e.min_targets_in_mode(None)),
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes.get(m).and_then(|e| e.min_targets_in_mode(None)),

@@ -309,6 +309,7 @@ impl GameState {
         let mut spent_one_event: Vec<usize> = Vec::new();
         // Ria Ivor — (seat, prevented) mite mints owed after the loop.
         let mut mite_mints: Vec<(usize, u32)> = Vec::new();
+        let mut counters_for_target: u32 = 0;
         // Kill-Suit Cultist — the permanent to destroy after the shield pass
         // when a `destroy` shield soaks this event.
         let mut destroy_after: Option<crate::card::CardId> = None;
@@ -345,6 +346,9 @@ impl GameState {
             if soak > 0 && let Some(seat) = shield.mint_mites_for {
                 mite_mints.push((seat, soak));
             }
+            if soak > 0 && shield.counters_on_target {
+                counters_for_target += soak;
+            }
             prevented += soak;
             if shield.gain_life {
                 life_gain += soak;
@@ -372,6 +376,18 @@ impl GameState {
         });
         if prevented > 0 {
             events.push(GameEvent::DamagePrevented { amount: prevented, to_player, to_card });
+        }
+        // Brace for Impact — one +1/+1 counter per point the shield soaked.
+        if counters_for_target > 0
+            && let Some(cid) = to_card
+            && let Some(c) = self.battlefield_find_mut(cid)
+        {
+            c.add_counters(CounterType::PlusOnePlusOne, counters_for_target);
+            events.push(GameEvent::CounterAdded {
+                card_id: cid,
+                counter_type: CounterType::PlusOnePlusOne,
+                count: counters_for_target,
+            });
         }
         if life_gain > 0 && let Some(p) = to_player {
             let applied = self.adjust_life_applied(p, life_gain as i32);
@@ -697,6 +713,8 @@ impl GameState {
                 // (combat or not, incl. infect→poison) marks them damaged
                 // this turn.
                 self.players[p].was_dealt_damage_this_turn = true;
+                self.players[p].damage_taken_this_turn =
+                    self.players[p].damage_taken_this_turn.saturating_add(amount);
                 // Record the damaging creature so "destroy target creature
                 // that dealt damage to you this turn" (Spear of Heliod) can
                 // filter targets. Only track battlefield creatures.
@@ -894,6 +912,11 @@ impl GameState {
             }
             _ => {}
         }
+        // Running total for "equal to the damage dealt this way" riders
+        // (Brightflame). Same gate as `damaged_this_resolution`: only damage
+        // that actually landed counts.
+        self.damage_dealt_this_resolution =
+            self.damage_dealt_this_resolution.saturating_add(amount);
         // CR 702.15 — lifelink on the non-combat damage path: if the source is
         // a lifelink permanent (a ping ability) or an instant/sorcery spell
         // whose controller has "your spells have lifelink" (Radiant
@@ -1082,6 +1105,16 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) {
+        // CR 400.4a — a nonpermanent card that would enter the battlefield
+        // remains in its previous zone. Face-down cards are exempt: they enter
+        // as 2/2 creatures (CR 708.2a), whatever the real card's types are.
+        if matches!(dest, ZoneDest::Battlefield { .. })
+            && self.find_card_anywhere(cid).is_some_and(|c| {
+                !c.face_down && !c.definition.is_permanent() && c.definition.back_face.is_none()
+            })
+        {
+            return;
+        }
         // Grafdigger's Cage / Soulless Jailer — locked cards in graveyards
         // and libraries can't enter the battlefield.
         if matches!(dest, ZoneDest::Battlefield { .. }) {

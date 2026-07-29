@@ -1288,6 +1288,20 @@ pub enum StaticEffect {
         #[serde(default)]
         scale_by_counters_on_self: Option<crate::card::CounterType>,
     },
+    /// Condition-gated sibling of `AnthemForFilter`: "as long as [condition],
+    /// [filter] you control get +P/+T and have [keywords]" (Sword of the
+    /// Paruns' tapped/untapped halves). The predicate is evaluated against the
+    /// source each layer pass; when it fails the anthem contributes nothing.
+    AnthemForFilterIf {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        power: i32,
+        #[serde(default)]
+        toughness: i32,
+        #[serde(default)]
+        keywords: Vec<Keyword>,
+        condition: Predicate,
+    },
     /// "As long as [condition], this has [keyword]" — the self keyword-grant
     /// sibling of `SetBasePtIf` / `PumpSelfIf`, gated on a live `Predicate`
     /// (source as ability context). Freya Crescent's "During your turn, Freya
@@ -1806,6 +1820,11 @@ pub enum StaticEffect {
     /// `remove_from_battlefield_to_graveyard_raw`; the printed "may" is
     /// auto-taken. Pulmonic Sliver ("All Slivers have …").
     DiesToLibraryTopInstead { filter: crate::card::SelectionRequirement },
+    /// CR 614 — "If [a matching permanent] would die, return it to its owner's
+    /// hand instead." Sibling of `DiesToLibraryTopInstead`, consulted at the
+    /// same site. Necromancer's Magemark ("If a creature you control that's
+    /// enchanted would die, return it to its owner's hand instead").
+    DiesToOwnersHandInstead { filter: crate::card::SelectionRequirement },
     /// CR 614.5 — "If an opponent would mill one or more cards, they mill
     /// twice that many cards instead." (Bruvac the Grandiloquent.) Consulted
     /// by `GameState::mill_count_for` at every mill site.

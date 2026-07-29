@@ -2161,6 +2161,18 @@ impl GameState {
             // deterministic default (CardId = declaration-order proxy) and use
             // the cached order when present.
             let mut blocker_ids = self.blockers_of(atk.id);
+            // CR 510.1a — "assigns its combat damage as though it weren't
+            // blocked" (Predatory Focus): drop the blocker list so the whole
+            // hit lands on the defending player. The blockers still deal
+            // theirs, which the blocker loop below handles.
+            if self
+                .computed_permanent(atk.id)
+                .is_some_and(|cp| cp.keywords.contains(
+                    &crate::card::Keyword::AssignsDamageAsThoughUnblocked))
+            {
+                blocker_ids.clear();
+                self.blocked_attackers.retain(|id| *id != atk.id);
+            }
             if blocker_ids.len() > 1
                 && let Some(order) = self.combat_damage_order.get(&atk.id)
             {
@@ -2765,6 +2777,8 @@ impl GameState {
                 // filter targets.
                 if amount > 0 {
                     self.players[p].was_dealt_damage_this_turn = true;
+                    self.players[p].damage_taken_this_turn =
+                        self.players[p].damage_taken_this_turn.saturating_add(amount);
                     if !self.players[p].creatures_that_damaged_me_this_turn.contains(&atk.id) {
                         self.players[p].creatures_that_damaged_me_this_turn.push(atk.id);
                     }

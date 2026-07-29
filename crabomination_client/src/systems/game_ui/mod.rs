@@ -21,10 +21,10 @@ pub use player_stats::{
     update_player_stats_chips, LifeFlashTracker,
 };
 pub use popups::{
-    handle_ability_menu, handle_alt_cast_buttons, handle_pay_times_buttons,
-    handle_split_cast_buttons, handle_spree_cast_buttons, spawn_ability_menu,
-    spawn_alt_cast_modal, spawn_pay_times_modal, spawn_spree_cast_modal,
-    spawn_split_cast_modal, trigger_reveal_animation,
+    handle_ability_menu, handle_alt_cast_buttons, handle_helper_tap_buttons,
+    handle_pay_times_buttons, handle_split_cast_buttons, handle_spree_cast_buttons,
+    spawn_ability_menu, spawn_alt_cast_modal, spawn_helper_tap_modal, spawn_pay_times_modal,
+    spawn_spree_cast_modal, spawn_split_cast_modal, trigger_reveal_animation,
 };
 
 use std::collections::{HashMap, HashSet};
@@ -87,6 +87,7 @@ pub struct GameInputResources<'w> {
     pub pay_times: ResMut<'w, crate::game::PayTimesState>,
     pub split_cast: ResMut<'w, crate::game::SplitCastState>,
     pub spree_cast: ResMut<'w, crate::game::SpreeCastState>,
+    pub helper_tap: ResMut<'w, crate::game::HelperTapState>,
 }
 /// Process `SwapFrontMaterial` markers: walk each entity's children,
 /// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
@@ -3688,6 +3689,7 @@ pub fn handle_game_input(
                             targeting.pending_omen,
                             targeting.pending_kicked,
                             targeting.pending_spree_modes.clone(),
+                            targeting.pending_helpers.clone(),
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3741,6 +3743,7 @@ pub fn handle_game_input(
                             targeting.pending_omen,
                             targeting.pending_kicked,
                             targeting.pending_spree_modes.clone(),
+                            targeting.pending_helpers.clone(),
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3807,6 +3810,7 @@ pub fn handle_game_input(
                             targeting.pending_omen,
                             targeting.pending_kicked,
                             targeting.pending_spree_modes.clone(),
+                            targeting.pending_helpers.clone(),
                     );
                     outbox.submit(action);
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3914,6 +3918,52 @@ pub fn handle_game_input(
                                 card_id, target: None, additional_targets: vec![],
                                 mode: None, x_value: None,
                             });
+                        }
+                    } else if cv.convokable_hand.contains(&card_id) || k.has_waterbend {
+                        // CR 702.51 / 702.126 / 701.67 — right-click opens the
+                        // helper picker: tick untapped creatures (convoke /
+                        // waterbend) or artifacts (improvise / waterbend) to
+                        // help pay, then Cast.
+                        let want_creatures = k.has_convoke || k.has_waterbend;
+                        let want_artifacts = k.has_improvise || k.has_waterbend;
+                        let candidates: Vec<(CardId, String)> = cv
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == your_seat
+                                    && !c.tapped
+                                    && (want_creatures
+                                        && c.card_types
+                                            .contains(&crabomination::card::CardType::Creature)
+                                        || want_artifacts
+                                            && c.card_types
+                                                .contains(&crabomination::card::CardType::Artifact))
+                            })
+                            .map(|c| {
+                                let label = if c
+                                    .card_types
+                                    .contains(&crabomination::card::CardType::Creature)
+                                {
+                                    format!("{} ({}/{})", c.name, c.power, c.toughness)
+                                } else {
+                                    c.name.clone()
+                                };
+                                (c.id, label)
+                            })
+                            .collect();
+                        if !candidates.is_empty() {
+                            let mechanic = if k.has_waterbend && !k.has_convoke && !k.has_improvise
+                            {
+                                crate::game::HelperMechanic::Waterbend
+                            } else {
+                                crate::game::HelperMechanic::Convoke
+                            };
+                            r.helper_tap.cap = k.waterbend_amount.filter(|_| {
+                                mechanic == crate::game::HelperMechanic::Waterbend
+                            });
+                            r.helper_tap.selected = vec![false; candidates.len()];
+                            r.helper_tap.candidates = candidates;
+                            r.helper_tap.pending = Some((card_id, mechanic));
                         }
                     } else if cv.kickable_hand.contains(&card_id) {
                         // CR 702.32 / 702.166 — right-click a Kicker/Offspring
@@ -4326,7 +4376,12 @@ fn build_pending_cast(
     omen: bool,
     kicked: bool,
     spree_modes: Option<Vec<u8>>,
+    helpers: Option<(Vec<CardId>, crate::game::HelperMechanic)>,
 ) -> GameAction {
+    // CR 702.51 / 702.126 / 701.67 — tapped helpers ride their own cast action.
+    if let Some((helpers, mechanic)) = helpers {
+        return popups::helper_cast_action(mechanic, card_id, helpers, target, mode);
+    }
     // CR 702.172 — a Spree/Tiered cast carries its chosen mode indices.
     if let Some(spree_modes) = spree_modes {
         return GameAction::CastSpellSpree {
@@ -4392,6 +4447,7 @@ fn cancel_targeting(
     targeting.pending_gift = false;
     targeting.pending_omen = false;
     targeting.pending_kicked = false;
+    targeting.pending_helpers = None;
     legal.permanents.clear();
     legal.players.clear();
     legal.source_name.clear();

@@ -995,6 +995,7 @@ impl GameState {
         self.exiled_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;
         self.excess_damage_this_resolution = 0;
+        self.damage_dealt_this_resolution = 0;
         self.damaged_this_resolution.clear();
         self.countered_spell_mana_spent = 0;
         self.countered_spell_mana_value = 0;
@@ -4896,6 +4897,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopDeployIfMatch { filter, haste, sacrifice_at_next_end_step } => {
+                let p = ctx.controller;
+                let Some(top) = self.players[p].library.first() else { return Ok(()) };
+                let (cid, name, is_land, matches) = (
+                    top.id,
+                    top.definition.name,
+                    top.definition.is_land(),
+                    self.evaluate_requirement_on_card(filter, top, p),
+                );
+                events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
+                if !matches {
+                    return Ok(());
+                }
+                let card = self.players[p].library.remove(0);
+                self.place_card_in_dest(
+                    card,
+                    p,
+                    &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                    events,
+                );
+                if *haste && let Some(c) = self.battlefield_find_mut(cid) {
+                    c.granted_keywords_eot.push(crate::card::Keyword::Haste);
+                }
+                if *sacrifice_at_next_end_step {
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: p,
+                        source: ctx.source.unwrap_or(cid),
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::SacrificePermanent { what: Selector::Target(0) },
+                        target: Some(Target::Permanent(cid)),
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::ExileTopSelfPumpIfCreature => {
                 let p = ctx.controller;
                 let Some(src) = ctx.source else { return Ok(()) };
@@ -4950,6 +4988,97 @@ impl GameState {
                         && let Some(card) = Self::take_card(&mut self.players[p].hand, *cid)
                     {
                         self.players[p].library.insert(0, card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::BottomHandThenDrawThatMany { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    let n = self.players[p].hand.len();
+                    if n == 0 {
+                        continue;
+                    }
+                    let hand: Vec<_> = self.players[p].hand.drain(..).collect();
+                    self.players[p].library.extend(hand);
+                    let mut evs = self.resolve_effect(
+                        &Effect::Draw {
+                            who: Selector::Player(PlayerRef::Seat(p)),
+                            amount: crate::effect::Value::Const(n as i32),
+                        },
+                        ctx,
+                    )?;
+                    events.append(&mut evs);
+                }
+                Ok(())
+            }
+
+            Effect::LookTopExileOneOfN { who, count } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let source = ctx.source.unwrap_or(CardId(0));
+                for p in self.resolve_players(who, ctx) {
+                    let cands: Vec<(CardId, String)> = self.players[p]
+                        .library
+                        .iter()
+                        .take(n)
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if cands.is_empty() {
+                        continue;
+                    }
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Exile which of these cards?".to_string(),
+                        candidates: cands,
+                        min: 1,
+                        max: 1,
+                    });
+                    if let DecisionAnswer::Cards(picked) = answer
+                        && let Some(cid) = picked.first()
+                        && let Some(card) = Self::take_card(&mut self.players[p].library, *cid)
+                    {
+                        self.exile.push(card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerKeepsNSacrificesRest { keep } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let keep = self.evaluate_value(keep, ctx).max(0) as usize;
+                let source = ctx.source.unwrap_or(CardId(0));
+                // APNAP order; each player picks their own keepers, then every
+                // unpicked permanent is sacrificed by its controller.
+                let seats = self.apnap_sort((0..self.players.len()).collect());
+                let mut doomed: Vec<CardId> = Vec::new();
+                for p in seats {
+                    let mine: Vec<(CardId, String)> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p)
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if mine.len() <= keep {
+                        continue;
+                    }
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: format!("Choose {keep} permanents to keep"),
+                        candidates: mine.clone(),
+                        min: keep as u32,
+                        max: keep as u32,
+                    });
+                    let kept = match answer {
+                        DecisionAnswer::Cards(picked) => picked,
+                        _ => mine.iter().take(keep).map(|(id, _)| *id).collect(),
+                    };
+                    doomed.extend(mine.iter().map(|(id, _)| *id).filter(|id| !kept.contains(id)));
+                }
+                for cid in doomed {
+                    let who = self.battlefield_find(cid).map(|c| c.controller);
+                    if let Some(who) = who {
+                        self.sacrifice_one(cid, who, events);
                     }
                 }
                 Ok(())
@@ -8548,29 +8677,46 @@ impl GameState {
 
             Effect::ReplaceColorWord { what, duration } => {
                 // CR 612 — two ChooseColor prompts pick the word to replace
-                // and its replacement; applied as a layer-3 text change.
+                // and its replacement; applied as a layer-3 text change. The
+                // legal `from` set is narrowed to the color words the target
+                // actually prints, so an auto seat can't waste the rewrite on
+                // a word that isn't there (CR 612.2).
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
-                let legal = vec![
+                let all = vec![
                     Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
                 ];
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
+                    let present = self.printed_color_words(cid);
+                    let legal = if present.is_empty() { all.clone() } else { present };
                     let from = match self.decider.decide(&Decision::ChooseColor {
                         source: cid,
                         legal: legal.clone(),
                     }) {
                         DecisionAnswer::Color(c) => c,
-                        _ => Color::White,
+                        _ => legal[0],
+                    };
+                    // Rewriting a foe's protection is only useful when the new
+                    // word names a color the rewriter *doesn't* attack with.
+                    let friendly = self
+                        .battlefield
+                        .iter()
+                        .find(|c| c.id == cid)
+                        .is_some_and(|c| self.same_team(c.controller, ctx.controller));
+                    let want = if friendly {
+                        self.densest_color_among_opponents(ctx.controller)
+                    } else {
+                        self.sparsest_color_of(ctx.controller)
                     };
                     let to = match self.decider.decide(&Decision::ChooseColor {
                         source: cid,
-                        legal: legal.clone(),
+                        legal: vec![want],
                     }) {
                         DecisionAnswer::Color(c) => c,
-                        _ => Color::Blue,
+                        _ => want,
                     };
                     let ts = self.next_timestamp();
                     self.add_continuous_effect(ContinuousEffect {
@@ -8588,7 +8734,10 @@ impl GameState {
 
             Effect::ReplaceBasicLandType { what, duration } => {
                 // CR 612 / 305.7 — the from/to basic land types ride the
-                // ChooseColor decision (basics map 1:1 onto colors).
+                // ChooseColor decision (basics map 1:1 onto colors). `from` is
+                // narrowed to the basic types the target actually prints so an
+                // auto seat rewrites a type line that exists; `to` follows the
+                // rewriter's own mana needs.
                 use crate::card::LandType;
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;
@@ -8599,26 +8748,57 @@ impl GameState {
                     Color::Red => LandType::Mountain,
                     Color::Green => LandType::Forest,
                 };
+                let color_for = |l: LandType| match l {
+                    LandType::Plains => Color::White,
+                    LandType::Island => Color::Blue,
+                    LandType::Swamp => Color::Black,
+                    LandType::Mountain => Color::Red,
+                    _ => Color::Green,
+                };
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
-                let legal = vec![
+                let all = vec![
                     Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
                 ];
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
+                    let present: Vec<Color> = self
+                        .computed_permanent(cid)
+                        .map(|cp| {
+                            cp.subtypes
+                                .land_types
+                                .iter()
+                                .filter(|l| l.is_basic_type())
+                                .map(|l| color_for(*l))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    let legal = if present.is_empty() { all.clone() } else { present };
                     let from = match self.decider.decide(&Decision::ChooseColor {
                         source: cid,
                         legal: legal.clone(),
                     }) {
                         DecisionAnswer::Color(c) => land_for(c),
-                        _ => LandType::Forest,
+                        _ => land_for(legal[0]),
+                    };
+                    // A land you control should start producing what your hand
+                    // wants; an opponent's should stop producing their densest.
+                    let friendly = self
+                        .battlefield
+                        .iter()
+                        .find(|c| c.id == cid)
+                        .is_some_and(|c| self.same_team(c.controller, ctx.controller));
+                    let want = if friendly {
+                        self.densest_color_of(ctx.controller)
+                    } else {
+                        self.sparsest_color_of(ctx.controller)
                     };
                     let to = match self.decider.decide(&Decision::ChooseColor {
                         source: cid,
-                        legal: legal.clone(),
+                        legal: vec![want],
                     }) {
                         DecisionAnswer::Color(c) => land_for(c),
-                        _ => LandType::Island,
+                        _ => land_for(want),
                     };
                     let ts = self.next_timestamp();
                     self.add_continuous_effect(ContinuousEffect {
@@ -13612,14 +13792,25 @@ impl GameState {
                 );
                 if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
                     *c.counters.entry(crate::card::CounterType::PlusOnePlusOne).or_insert(0) += 1;
-                    // "…a black Zombie in addition to its other types" — the added
-                    // Zombie subtype; the added black colour derives from the
-                    // reanimated card's own cost (colour-add layer unmodeled).
+                    // "…a black Zombie in addition to its other types."
                     let def = std::sync::Arc::make_mut(&mut c.definition);
                     if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie) {
                         def.subtypes.creature_types.push(crate::card::CreatureType::Zombie);
                     }
                 }
+                // The added black is a layer-5 colour-add. Sourced to the
+                // reanimated creature so it is swept when that creature leaves
+                // (the one-shot doesn't depend on the Betrayal sticking around).
+                let ts = self.next_timestamp();
+                self.add_continuous_effect(ContinuousEffect {
+                    timestamp: ts,
+                    source: id,
+                    affected: AffectedPermanents::Specific(vec![id]),
+                    layer: Layer::L5Color,
+                    sublayer: None,
+                    duration: EffectDuration::Indefinite,
+                    modification: Modification::AddColor(crate::mana::Color::Black),
+                });
                 Ok(())
             }
 
@@ -18009,6 +18200,17 @@ impl GameState {
                 for s in self.prevention_targets(target, ctx) {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
+                        ..Default::default()
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::PreventAllDamageThisTurnWithCounters { target } => {
+                for s in self.prevention_targets(target, ctx) {
+                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                        target: s,
+                        counters_on_target: true,
                         ..Default::default()
                     });
                 }

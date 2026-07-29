@@ -29,7 +29,7 @@ online.
 
 | Feature | Status | Notes |
 |---|---|---|
-| Face-down permanents (morph/manifest) | 🟡 | `face_up_def` stashes the real card behind a vanilla 2/2; Manifest/ManifestDread, `CastFaceDown` ({3}), `TurnFaceUp`. Disguise ✅ (warded 2/2), Cloak ✅ (`CardInstance.cloaked`). |
+| Face-down permanents (morph/manifest) | 🟡 | `face_up_def` stashes the real card behind a vanilla 2/2 (CR 708.2a); Manifest/ManifestDread, `CastFaceDown` ({3}), `TurnFaceUp`, Disguise (warded 2/2), Cloak. CR 708.2b/708.8 conformance in `core_rules/cr_recent40`. **Missing:** no effect turns an already-face-up permanent face down (Ixidron, Kheru Spellsnatcher) — there is no `Effect::TurnFaceDown`. |
 
 ## Plan
 

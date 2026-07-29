@@ -259,6 +259,7 @@ mod tests {
             replicatable_hand: vec![],
             conspirable_hand: vec![],
             multikickable_hand: vec![],
+            convokable_hand: vec![],
             dashable_hand: vec![],
             blitzable_hand: vec![],
             warpable_hand: vec![],

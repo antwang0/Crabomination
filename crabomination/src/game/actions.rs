@@ -1794,6 +1794,84 @@ impl crate::game::GameState {
         best.1
     }
 
+    /// Colored-pip weight of everything `p` holds and controls, per color.
+    /// Feeds the needs-aware CR 612 text-change picks (and any other auto
+    /// "name a color" that should key on what a seat is actually playing).
+    fn color_weights(&self, p: usize) -> [(ManaColor, u32); 5] {
+        let mut out = [
+            (ManaColor::White, 0),
+            (ManaColor::Blue, 0),
+            (ManaColor::Black, 0),
+            (ManaColor::Red, 0),
+            (ManaColor::Green, 0),
+        ];
+        let costs = self.players[p]
+            .hand
+            .iter()
+            .chain(self.battlefield.iter().filter(|c| c.controller == p))
+            .map(|c| &c.definition.cost);
+        for cost in costs {
+            for (color, weight) in out.iter_mut() {
+                *weight += crate::draft::colored_pip_count(cost, *color);
+            }
+        }
+        out
+    }
+
+    /// The color `p` is most invested in (ties break in WUBRG order).
+    pub(crate) fn densest_color_of(&self, p: usize) -> ManaColor {
+        let w = self.color_weights(p);
+        w.iter().max_by_key(|(_, n)| *n).map(|(c, _)| *c).unwrap_or(ManaColor::White)
+    }
+
+    /// The color `p` is least invested in — what you want an opponent's
+    /// protection or land type rewritten *to*.
+    pub(crate) fn sparsest_color_of(&self, p: usize) -> ManaColor {
+        let w = self.color_weights(p);
+        w.iter().min_by_key(|(_, n)| *n).map(|(c, _)| *c).unwrap_or(ManaColor::White)
+    }
+
+    /// The color `p`'s opponents are most invested in — what you want your own
+    /// creature's protection rewritten *to*.
+    pub(crate) fn densest_color_among_opponents(&self, p: usize) -> ManaColor {
+        let mut totals = [
+            (ManaColor::White, 0u32),
+            (ManaColor::Blue, 0),
+            (ManaColor::Black, 0),
+            (ManaColor::Red, 0),
+            (ManaColor::Green, 0),
+        ];
+        for seat in 0..self.players.len() {
+            if self.same_team(seat, p) {
+                continue;
+            }
+            for (i, (_, n)) in self.color_weights(seat).iter().enumerate() {
+                totals[i].1 += n;
+            }
+        }
+        totals.iter().max_by_key(|(_, n)| *n).map(|(c, _)| *c).unwrap_or(ManaColor::White)
+    }
+
+    /// The color words a permanent actually prints (CR 612.2) — today the
+    /// `Protection(color)` keywords, the only place a color word appears in a
+    /// modeled rules text.
+    pub(crate) fn printed_color_words(&self, cid: CardId) -> Vec<ManaColor> {
+        self.battlefield
+            .iter()
+            .find(|c| c.id == cid)
+            .map(|c| {
+                c.definition
+                    .keywords
+                    .iter()
+                    .filter_map(|kw| match kw {
+                        crate::card::Keyword::Protection(col) => Some(*col),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     /// CR 605.1b — resolve `ExtraManaOnLandTap` triggered mana abilities
     /// after `land_id` (controlled by `p`) was tapped for mana. `resolved`
     /// is the tapping ability's event batch — `Mirror` reads the produced
@@ -10086,6 +10164,37 @@ impl GameState {
         out
     }
 
+    /// CR 305.6 / CR 612 — a basic land's printed `{T}: Add <color>` is really
+    /// the intrinsic ability its type line grants, so it goes away once a type
+    /// rewrite takes that basic type off the *computed* type line (Spreading
+    /// Seas, Blood Moon, a Trait Doctoring color/land-word change). Printed
+    /// mana abilities that aren't a basic type's intrinsic ability are real
+    /// rules text and survive.
+    pub(crate) fn printed_land_mana_ability_lost(&self, card_id: CardId, index: usize) -> bool {
+        use crate::card::LandType;
+        let Some(card) = self.battlefield_find(card_id) else { return false };
+        if !card.definition.is_land() {
+            return false;
+        }
+        let Some(ability) = card.definition.activated_abilities.get(index) else { return false };
+        let color = match &ability.effect {
+            Effect::AddMana { pool: ManaPayload::Colors(cs), .. } if cs.len() == 1 => cs[0],
+            _ => return false,
+        };
+        let basic = match color {
+            ManaColor::White => LandType::Plains,
+            ManaColor::Blue => LandType::Island,
+            ManaColor::Black => LandType::Swamp,
+            ManaColor::Red => LandType::Mountain,
+            ManaColor::Green => LandType::Forest,
+        };
+        if !card.definition.subtypes.land_types.contains(&basic) {
+            return false;
+        }
+        self.computed_permanent(card_id)
+            .is_some_and(|cp| !cp.subtypes.land_types.contains(&basic))
+    }
+
     /// `(index, ability)` for every mana-producing activated ability a
     /// battlefield permanent can currently use — printed, granted, and
     /// intrinsic basic-land — in `activate_ability`'s index order. The
@@ -10102,7 +10211,7 @@ impl GameState {
         let printed_count = card.definition.activated_abilities.len();
         let mut out: Vec<(usize, crate::effect::ActivatedAbility)> = Vec::new();
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
-            if is_mana_ability(&a.effect) {
+            if is_mana_ability(&a.effect) && !self.printed_land_mana_ability_lost(card_id, i) {
                 out.push((i, a.clone()));
             }
         }
@@ -10557,6 +10666,11 @@ impl GameState {
                 if stripped && !is_mana_ability(&raw.effect) {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
+                // CR 305.6 / 612 — a basic's intrinsic mana ability follows its
+                // *computed* type line, so a rewritten type takes it away.
+                if self.printed_land_mana_ability_lost(card_id, ability_index) {
+                    return Err(GameError::AbilityIndexOutOfBounds);
+                }
                 raw
             } else if ability_index < printed_count + granted.len() {
                 let g = granted[ability_index - printed_count].clone();
@@ -10967,11 +11081,12 @@ impl GameState {
         // given (a two-target ability invoked with too few targets — the
         // bot / affordance path passes only slot 0). Without this the extra
         // slot resolves to nothing and the effect half-fires.
+        // A divided-damage / "up to N targets" ability's slots past its minimum
+        // are optional (CR 115.3), so only a genuinely required slot rejects.
+        let next_slot = 1 + additional_targets.len() as u8;
         if target.is_some()
-            && ability
-                .effect
-                .target_filter_for_slot(1 + additional_targets.len() as u8)
-                .is_some()
+            && ability.effect.target_filter_for_slot(next_slot).is_some()
+            && !ability.effect.target_slot_optional(next_slot, None)
         {
             return Err(GameError::SelectionRequirementViolated);
         }

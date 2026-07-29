@@ -709,6 +709,79 @@ impl GameState {
         out
     }
 
+    /// Untapped permanents `seat` controls that could help pay a
+    /// convoke / improvise / waterbend cost on `spell` (CR 702.51 / 702.126 /
+    /// 701.67): creatures for convoke, artifacts for improvise, either for
+    /// waterbend. Empty when the spell has none of the three.
+    pub fn helper_tap_candidates(&self, seat: usize, spell: CardId) -> Vec<CardId> {
+        use crate::card::Keyword;
+        let Some(card) = self.players[seat].hand.iter().find(|c| c.id == spell) else {
+            return Vec::new();
+        };
+        let convoke = card.definition.keywords.contains(&Keyword::Convoke)
+            || self.spell_granted_convoke(seat, card);
+        let improvise = card.definition.keywords.contains(&Keyword::Improvise);
+        let waterbend = card.definition.waterbend.is_some();
+        if !convoke && !improvise && !waterbend {
+            return Vec::new();
+        }
+        self.battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == seat
+                    && !c.tapped
+                    && ((convoke || waterbend) && c.definition.is_creature()
+                        || (improvise || waterbend) && c.definition.is_artifact())
+            })
+            .map(|c| c.id)
+            .collect()
+    }
+
+    /// Hand cards `seat` could cast right now by tapping helpers for convoke /
+    /// improvise (CR 702.51 / 702.126), so the client can offer the
+    /// "tap creatures to help" picker. Dry-run-probed with every eligible
+    /// helper tapped — the picker itself lets the caster tap fewer.
+    fn convokable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        use crate::card::Keyword;
+        let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| {
+                c.definition.keywords.contains(&Keyword::Convoke)
+                    || c.definition.keywords.contains(&Keyword::Improvise)
+                    || self.spell_granted_convoke(caster, c)
+            })
+            .map(|c| {
+                let needs_target = c.definition.effect.requires_target();
+                (c.id, needs_target, needs_target.then(|| c.definition.effect.clone()))
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, needs_target, effect) in &hand {
+            let helpers = self.helper_tap_candidates(caster, *id);
+            if helpers.is_empty() {
+                continue;
+            }
+            let (target, additional_targets) = match effect {
+                Some(eff) if *needs_target => {
+                    self.auto_targets_for_effect_all_slots(eff, caster, None)
+                }
+                _ => (None, Vec::new()),
+            };
+            if Self::would_accept_on(template, GameAction::CastSpellConvoke {
+                card_id: *id,
+                target,
+                additional_targets,
+                mode: None,
+                x_value: None,
+                convoke_creatures: helpers,
+            }) {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
     /// [`buyback_hand_cards`] against a prebuilt probe template; the caller
     /// owns the priority short-circuit.
     ///
@@ -1150,6 +1223,7 @@ impl GameState {
             replicatable: self.replicatable_hand_cards_on(&template, seat),
             conspirable: self.conspirable_hand_cards_on(&template, seat),
             multikickable: self.multikickable_hand_cards_on(&template, seat),
+            convokable: self.convokable_hand_cards_on(&template, seat),
             miracle: self.miracle_hand_cards(seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
             hand_activatable: self.hand_activatable_cards(seat),

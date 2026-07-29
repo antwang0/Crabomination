@@ -218,6 +218,10 @@ pub struct HandAffordances {
     /// CR 702.33c — hand cards with Multikicker castable paying the kicker
     /// cost at least once, so the client can offer a "kick N times?" stepper.
     pub multikickable: Vec<CardId>,
+    /// CR 702.51 / 702.126 — hand cards with Convoke (printed or granted) or
+    /// Improvise castable by tapping helpers, so the client can offer the
+    /// "tap creatures/artifacts to help" picker.
+    pub convokable: Vec<CardId>,
     /// CR 702.94 — hand cards with a live Miracle window (revealed as the
     /// turn's first draw): castable for the cheaper miracle cost via
     /// `GameAction::CastFromZoneWithoutPaying`.
@@ -670,6 +674,12 @@ pub struct GameState {
     /// reset between resolutions.
     #[serde(skip)]
     pub damaged_this_resolution: Vec<crate::game::effects::EntityRef>,
+    /// Transient: total damage that actually landed during the current
+    /// resolution, for "gain life equal to the damage dealt this way" riders
+    /// (Brightflame). Read by `Value::DamageDealtThisResolution`; reset
+    /// between resolutions alongside the other per-resolution tallies.
+    #[serde(skip)]
+    pub damage_dealt_this_resolution: u32,
     /// Total mana spent to cast the spell most recently countered during
     /// the current resolution (Mana Sculpt's "amount of mana spent to cast
     /// that spell"). Reset at each resolution start; stamped by
@@ -1375,6 +1385,7 @@ impl Clone for GameState {
             exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             excess_damage_this_resolution: self.excess_damage_this_resolution,
+            damage_dealt_this_resolution: self.damage_dealt_this_resolution,
             damaged_this_resolution: self.damaged_this_resolution.clone(),
             countered_spell_mana_spent: self.countered_spell_mana_spent,
             countered_spell_mana_value: self.countered_spell_mana_value,
@@ -1576,6 +1587,7 @@ impl GameState {
             exiled_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             excess_damage_this_resolution: 0,
+            damage_dealt_this_resolution: 0,
             damaged_this_resolution: Vec::new(),
             countered_spell_mana_spent: 0,
             countered_spell_mana_value: 0,
@@ -6292,12 +6304,27 @@ impl GameState {
         // Ardyn, the Usurper (Demons).
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::AnthemForFilter {
-                    filter, power, toughness, keywords, opponents, only_your_turn,
-                    scale_by_counters_on_self,
-                } = &sa.effect
-                else {
-                    continue;
+                // `AnthemForFilterIf` shares this gather; its predicate gate is
+                // re-evaluated here so the anthem switches off live.
+                let (filter, power, toughness, keywords, opponents, only_your_turn,
+                     scale_by_counters_on_self) = match &sa.effect {
+                    crate::effect::StaticEffect::AnthemForFilter {
+                        filter, power, toughness, keywords, opponents, only_your_turn,
+                        scale_by_counters_on_self,
+                    } => (filter, power, toughness, keywords, opponents, only_your_turn,
+                          scale_by_counters_on_self),
+                    crate::effect::StaticEffect::AnthemForFilterIf {
+                        filter, power, toughness, keywords, condition,
+                    } => {
+                        let ctx = crate::game::effects::EffectContext::for_ability(
+                            card.id, card.controller, None,
+                        );
+                        if !self.evaluate_predicate(condition, &ctx) {
+                            continue;
+                        }
+                        (filter, power, toughness, keywords, &false, &false, &None)
+                    }
+                    _ => continue,
                 };
                 // "During your turn" anthems switch off outside the controller's
                 // turn (CR 611.2c live re-evaluation).
@@ -14959,6 +14986,7 @@ fn static_effect_to_effects(
             // AnthemForFilter / SelfHasKeywordIf — need live game state
             // (opponents / predicate eval); resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForFilter { .. }
+            | StaticEffect::AnthemForFilterIf { .. }
             | StaticEffect::SelfHasKeywordIf { .. }
             | StaticEffect::SelfIsCreatureIf { .. }
             // GrantKeywordToChosenType — reads the source's live chosen type;
@@ -15031,6 +15059,7 @@ fn static_effect_to_effects(
             // DiesToLibraryTopInstead (Pulmonic Sliver) — consulted in
             // `remove_from_battlefield_to_graveyard_raw`; no layer effect.
             | StaticEffect::DiesToLibraryTopInstead { .. }
+            | StaticEffect::DiesToOwnersHandInstead { .. }
             // OpponentsCantCastChosenColor (Iona) — gated at the cast
             // dispatch; no layer effect.
             | StaticEffect::OpponentsCantCastChosenColor

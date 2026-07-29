@@ -390,11 +390,10 @@ pub enum GameAction {
         x_value: Option<u32>,
     },
     /// Cast a spell with `Keyword::Convoke`, tapping each creature in
-    /// `convoke_creatures` to contribute {1} generic mana toward the cost
-    /// (real Magic also allows tapping for one colored mana matching the
-    /// creature's identity — we collapse to generic for now; converge
-    /// tracking still counts the creature's colors). Each must be an
-    /// untapped creature controlled by the caster.
+    /// `convoke_creatures` toward the cost (CR 702.51): each pays one mana of
+    /// a color it is where the cost still wants that color, otherwise {1}.
+    /// Each must be an untapped creature controlled by the caster. Improvise
+    /// (CR 702.126) and waterbend helpers ride the same slot as artifacts.
     CastSpellConvoke {
         card_id: CardId,
         target: Option<Target>,
@@ -1553,6 +1552,10 @@ pub struct PreventionShield {
     /// this shield prevents.
     #[serde(default)]
     pub mint_mites_for: Option<usize>,
+    /// Brace for Impact — "for each 1 damage prevented this way, put a +1/+1
+    /// counter on that creature." Applies to the shielded permanent itself.
+    #[serde(default)]
+    pub counters_on_target: bool,
     /// Kill-Suit Cultist — "destroy that creature instead". When a shield
     /// on a permanent target soaks damage, destroy that permanent after the
     /// shield pass. Pairs with `one_event` (soaks the next event, then gone).

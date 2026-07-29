@@ -2291,6 +2291,7 @@ impl GameState {
         // cast on your turn reads damage dealt since this turn began.
         for pl in &mut self.players {
             pl.was_dealt_damage_this_turn = false;
+            pl.damage_taken_this_turn = 0;
             pl.poison_capped_this_turn = false;
             pl.lost_life_this_turn = false;
             pl.life_lost_this_turn = 0;
@@ -3830,6 +3831,25 @@ impl GameState {
                             filter, &card, src.controller))
                 })
             });
+            // CR 614 — "…would die, return it to its owner's hand instead"
+            // (Necromancer's Magemark). Same site as the library-top redirect.
+            let hand_redirect = self
+                .battlefield
+                .iter()
+                .filter_map(|src| {
+                    src.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                        crate::effect::StaticEffect::DiesToOwnersHandInstead { filter } => {
+                            Some((filter.clone(), src.controller))
+                        }
+                        _ => None,
+                    })
+                })
+                .collect::<Vec<_>>()
+                .iter()
+                // The stateful evaluator, not `requirement_matches_card` — the
+                // filter is typically `IsEnchanted`, which has to scan the
+                // battlefield for the Aura still attached to the dying card.
+                .any(|(filter, ctrl)| self.evaluate_requirement_on_card(filter, &card, *ctrl));
             let initial_to = if card.counter_count(crate::card::CounterType::Finality) > 0
                 || self.dies_to_exile_eot.contains(&id)
                 || card.definition.dies_to_exile
@@ -3838,6 +3858,8 @@ impl GameState {
                 crate::card::Zone::Exile
             } else if library_top_redirect {
                 crate::card::Zone::Library
+            } else if hand_redirect {
+                crate::card::Zone::Hand
             } else {
                 crate::card::Zone::Graveyard
             };

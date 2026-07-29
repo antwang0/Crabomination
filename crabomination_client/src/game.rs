@@ -189,6 +189,10 @@ pub struct TargetingState {
     /// through `GameAction::CastSpellKicked`. Set by the right-click
     /// "Cast with kicker/Offspring" affordance.
     pub pending_kicked: bool,
+    /// When `Some`, the pending cast taps these helpers for Convoke /
+    /// Improvise / waterbend — the eventual submit routes through
+    /// `CastSpellConvoke` / `CastSpellWaterbend`. Set by the helper picker.
+    pub pending_helpers: Option<(Vec<CardId>, HelperMechanic)>,
 }
 
 /// Which split-card cast shape the half-picker selected.
@@ -299,6 +303,40 @@ pub struct SpreeCastState {
     pub selected: Vec<bool>,
     /// Tiered: exactly one mode may be chosen.
     pub single_mode: bool,
+}
+
+/// Convoke / Improvise / waterbend helper picker (CR 702.51 / 702.126 /
+/// 701.67). Set when the user right-clicks a hand card with one of those,
+/// listing the untapped permanents that could help pay; confirming submits
+/// `CastSpellConvoke` (or `CastSpellWaterbend`) with the ticked helpers.
+#[derive(Resource, Default)]
+pub struct HelperTapState {
+    /// The spell whose helper picker is open, and which cast action it uses.
+    pub pending: Option<(CardId, HelperMechanic)>,
+    /// Candidate helpers as `(id, "Name (2/2)")`, in battlefield order.
+    pub candidates: Vec<(CardId, String)>,
+    /// Which candidates are currently ticked; parallel to `candidates`.
+    pub selected: Vec<bool>,
+    /// Waterbend {N} clamp on the number of helpers; `None` when unbounded.
+    pub cap: Option<u32>,
+}
+
+/// Which helper-tap cast shape the picker is configuring.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperMechanic {
+    /// Convoke and/or Improvise — `GameAction::CastSpellConvoke`.
+    Convoke,
+    /// A "waterbend {N}" additional cost — `GameAction::CastSpellWaterbend`.
+    Waterbend,
+}
+
+impl HelperMechanic {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Convoke => "Convoke",
+            Self::Waterbend => "Waterbend",
+        }
+    }
 }
 
 /// Squad / Replicate / Multikicker "pay N times" stepper (CR 702.157 /

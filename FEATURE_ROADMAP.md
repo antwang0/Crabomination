@@ -110,6 +110,33 @@ exercising each) was elided in a compaction pass; recover it from
   `core_rules/cr_recent34` (118.8 pay-life, 614.16 counter-doubling, 508.1g
   temporary attack tax).
 
+- **Ravnica-block gap sweep (modern_decks, this run — 25 cards across RAV/GPT/DIS)**
+  plus the CR 612 / 400 / 708 conformance pass. New engine:
+  `Modification::AddColor` on a real continuous effect for Grave Betrayal's
+  black Zombie (and Fractalize's printed type/colour rewrite now ships via
+  `BecomeColor` + `BecomeCreatureType`), `StaticEffect::DiesToOwnersHandInstead`
+  (Necromancer's Magemark) and `StaticEffect::AnthemForFilterIf` (a
+  predicate-gated team anthem — Sword of the Paruns' tapped/untapped halves),
+  `Keyword::AssignsDamageAsThoughUnblocked` (CR 510.1a — Predatory Focus),
+  `Effect::{BottomHandThenDrawThatMany, LookTopExileOneOfN,
+  EachPlayerKeepsNSacrificesRest, RevealTopDeployIfMatch,
+  PreventAllDamageThisTurnWithCounters}`, `PreventionShield.counters_on_target`
+  (Brace for Impact), `Value::{DamageDealtThisResolution, DamageTakenThisTurn}`
+  + `Player.damage_taken_this_turn`, `CounterType::Plague`,
+  `SelectionRequirement::PutIntoGraveyardFromBattlefieldThisTurn`
+  (Gleancrawler), and `LandType::is_basic_type`. Fixes: CR 400.4a (a
+  nonpermanent card can no longer be put onto the battlefield), CR 305.6/612
+  (a basic's intrinsic mana ability follows its *computed* type line, so a
+  rewritten Forest taps for blue and not green), `EventScope::EnchantedBySource`
+  now covers block events, `evaluate_requirement_on_card` answers
+  `IsEnchanted` / `IsEquipped` off live state, the CR 612 text-change auto
+  picks are needs-aware instead of always White→Blue, and a divided-damage
+  activated ability accepts a single target (CR 115.3). Client: the
+  convoke/improvise/waterbend **helper-tap picker** (`HelperTapState`) closes
+  the last M15-run UI gap; `ClientView.convokable_hand` + `KnownCard.
+  has_convoke`/`has_improvise` back it. Tests in `classic_sets/{rav,gpt,dis}`
+  and `core_rules/cr_recent40`.
+
 - **BNG complete (modern_decks, this run — all 165 cards, `set_gaps.py bng` = 0)**
   plus **CR 303.4a "enchant player" Auras** (the Curse cycle + Psychic
   Possession). New primitives: `Effect::GainActivatedAbility { duration }` (the

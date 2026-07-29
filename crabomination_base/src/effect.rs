@@ -457,6 +457,10 @@ pub enum Value {
     /// opponent has lost this turn" (Spinerock Knoll's hideaway gate).
     /// Backed by `Player.life_lost_this_turn`.
     LifeLostThisTurn(PlayerRef),
+    /// Damage dealt to a player this turn (`Player.damage_taken_this_turn`) —
+    /// "Bloodthirst X, where X is the damage dealt to your opponents this
+    /// turn" (Petrified Wood-Kin). Sums across the resolved players.
+    DamageTakenThisTurn(PlayerRef),
     /// Number of cards `who` owns in the exile zone (Kaya, Orzhov Usurper's −5).
     CardsInExileOwnedBy(PlayerRef),
     /// Distinct card types among cards in `who`'s graveyard (the delirium
@@ -551,6 +555,9 @@ pub enum Value {
     /// Last Agni Kai, Razor Rings). Backed by
     /// `GameState.excess_damage_this_resolution`.
     ExcessDamageDealtThisResolution,
+    /// Total damage that actually landed during this resolution — "gain life
+    /// equal to the damage dealt this way" (Brightflame).
+    DamageDealtThisResolution,
     /// Total mana spent to cast the spell most recently countered during
     /// the CURRENT resolution (`GameState.countered_spell_mana_spent`,
     /// stamped by `Effect::CounterSpell`). Mana Sculpt's "add an amount of
@@ -3075,6 +3082,18 @@ pub enum Effect {
     /// (CR 701). No-op if the hand is empty. Enter the Infinite's "then put a
     /// card from your hand on top of your library."
     PutCardFromHandOnTopOfLibrary { who: Selector },
+    /// "Put the cards in your hand on the bottom of your library in any order,
+    /// then draw that many cards" (Mindmoil). The hand order is the caster's,
+    /// so the bottoming order is the hand order.
+    BottomHandThenDrawThatMany { who: PlayerRef },
+    /// "Look at the top `count` cards of `who`'s library, then exile one of
+    /// them" (Thoughtpicker Witch). The rest stay on top in their original
+    /// order; the auto picker exiles the highest-mana-value card.
+    LookTopExileOneOfN { who: PlayerRef, count: Value },
+    /// "Each player chooses `keep` permanents they control, then sacrifices the
+    /// rest" (Razia's Purification). Each player's own pick — the auto picker
+    /// keeps their highest-mana-value permanents.
+    EachPlayerKeepsNSacrificesRest { keep: Value },
     /// CR 402.2b — set each resolved player's maximum hand size to a specific
     /// number (`Player.max_hand_size = Some(size)`). Used by "your maximum
     /// hand size is N" cards such as Null Profusion (zero) or Library of Leng
@@ -3394,6 +3413,16 @@ pub enum Effect {
         who: PlayerRef,
         #[serde(default)]
         you_gain: bool,
+    },
+    /// "Reveal the top card of your library. If it matches `filter`, put it
+    /// onto the battlefield" — optionally with haste and a next-end-step
+    /// sacrifice (Killer Instinct). A non-matching card stays on top.
+    RevealTopDeployIfMatch {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        haste: bool,
+        #[serde(default)]
+        sacrifice_at_next_end_step: bool,
     },
     /// Gonti, Lord of Luxury's ETB: look at the top `count` cards of target
     /// opponent's library, exile one face down (auto-pick: highest MV) with
@@ -6304,6 +6333,10 @@ pub enum Effect {
     /// (CR 615) A fog scoped to one player/permanent — Pradesh Gypsies,
     /// "you don't lose / prevent all damage to you". Non-combat path.
     PreventAllDamageThisTurn { target: Selector },
+    /// "Prevent all damage that would be dealt to `target` this turn. For each
+    /// 1 damage prevented this way, put a +1/+1 counter on it." Brace for
+    /// Impact — the counter rider rides the shield (`counters_on_target`).
+    PreventAllDamageThisTurnWithCounters { target: Selector },
 
     /// CR 615 — "Prevent all damage that `from` would deal to `to` this turn."
     /// A source-restricted fog (Stonewise Fortifier's "prevent all damage that

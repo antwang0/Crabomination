@@ -1946,3 +1946,352 @@ fn szadek_mills_instead_of_damaging() {
         "grew by 5",
     );
 }
+
+// ── Gap wave 19 ─────────────────────────────────────────────────────────────
+
+/// Petrified Wood-Kin's Bloodthirst X scales off the damage dealt to opponents.
+#[test]
+fn petrified_wood_kin_bloodthirst_scales_with_damage() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.players[1].damage_taken_this_turn = 4;
+    let kin = g.add_card_to_hand(0, catalog::petrified_wood_kin());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: kin,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(kin).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        4,
+    );
+    let def = catalog::petrified_wood_kin();
+    assert!(def.keywords.contains(&Keyword::CantBeCountered));
+    assert!(def.keywords.contains(&Keyword::ProtectionFromInstants));
+}
+
+/// Brightflame's radiance hits every creature sharing a color and its
+/// controller gains that much life.
+#[test]
+fn brightflame_gains_life_equal_to_damage_dealt() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let bolt = g.add_card_to_hand(0, catalog::brightflame());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 dies to 2");
+    assert!(g.battlefield_find(other).is_none(), "green Elves share green");
+    assert_eq!(g.players[0].life, life + 4, "gained 2 per creature hit");
+}
+
+/// Necromancer's Magemark pumps your enchanted creatures and bounces them
+/// instead of letting them die.
+#[test]
+fn necromancers_magemark_returns_the_enchanted_creature_to_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::necromancers_magemark());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1");
+    let mut events = Vec::new();
+    g.destroy_permanent(bear, false, &mut events);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bounced, not buried");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != bear));
+}
+
+/// Beastmaster's Magemark pumps the enchanted attacker by its blocker count.
+#[test]
+fn beastmasters_magemark_pumps_per_blocker() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::beastmasters_magemark());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.clear_sickness(bear);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, bear), (b2, bear)]))
+        .expect("block");
+    drain_stack(&mut g);
+    // 2/2 base + 1/1 from the Magemark anthem + 2/2 from the two blockers.
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5);
+}
+
+/// Gleancrawler returns only the creatures that hit the graveyard from the
+/// battlefield this turn — not ones that were discarded.
+#[test]
+fn gleancrawler_returns_this_turns_battlefield_deaths() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gleancrawler());
+    let died = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let discarded = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let mut events = Vec::new();
+    g.destroy_permanent(died, false, &mut events);
+    g.step = TurnStep::EndCombat;
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == died), "battlefield death returns");
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == discarded),
+        "a card that never hit the battlefield stays put",
+    );
+}
+
+/// Mindmoil bottoms the caster's hand and refills it to the same size.
+#[test]
+fn mindmoil_recycles_the_hand_on_each_cast() {
+    let mut g = two_player_game();
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::mindmoil());
+    for _ in 0..12 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let keep: Vec<_> = (0..3).map(|_| g.add_card_to_hand(0, catalog::grizzly_bears())).collect();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 3, "same hand size");
+    assert!(
+        keep.iter().all(|id| !g.players[0].hand.iter().any(|c| c.id == *id)),
+        "the old hand went to the bottom",
+    );
+}
+
+/// Thoughtpicker Witch exiles one of the top two cards of an opponent's library.
+#[test]
+fn thoughtpicker_witch_exiles_off_the_top() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let witch = g.add_card_to_battlefield(0, catalog::thoughtpicker_witch());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let lib = g.players[1].library.len();
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: witch,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "a creature was sacrificed");
+    assert_eq!(g.players[1].library.len(), lib - 1);
+    assert_eq!(g.exile.len(), 1, "the picked card is exiled, not milled");
+}
+
+/// Razia's Purification leaves each player exactly three permanents.
+#[test]
+fn razias_purification_keeps_three_each() {
+    let mut g = two_player_game();
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    }
+    let purge = g.add_card_to_hand(0, catalog::razias_purification());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: purge,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    for seat in 0..2 {
+        assert_eq!(
+            g.battlefield.iter().filter(|c| c.controller == seat).count(),
+            3,
+            "seat {seat} keeps three",
+        );
+    }
+}
+
+/// Plague Boiler wipes the board once it reaches three plague counters.
+#[test]
+fn plague_boiler_pops_at_three_counters() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    let boiler = g.add_card_to_battlefield(0, catalog::plague_boiler());
+    g.battlefield_find_mut(boiler).unwrap().counters.insert(CounterType::Plague, 2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    // Next upkeep adds the third counter and the reflexive wipe fires.
+    while g.turn_number < 3 || g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        if g.turn_number >= 3 && g.step == TurnStep::Upkeep {
+            break;
+        }
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(boiler).is_none(), "sacrificed itself");
+    assert!(g.battlefield_find(bear).is_none(), "nonlands destroyed");
+    assert!(g.battlefield_find(land).is_some(), "lands survive");
+}
+
+/// Bloodletter Quill's draw costs one life per blood counter it carries.
+#[test]
+fn bloodletter_quill_scales_its_life_cost() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let quill = g.add_card_to_battlefield(0, catalog::bloodletter_quill());
+    g.battlefield_find_mut(quill).unwrap().counters.insert(CounterType::Blood, 2);
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: quill,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 3, "three blood counters after the add");
+}
+
+/// Drake Familiar sacrifices itself when there's no enchantment to bounce.
+#[test]
+fn drake_familiar_sacrifices_without_an_enchantment() {
+    fn cast_drake(g: &mut GameState) -> crabomination::card::CardId {
+        g.step = crabomination::game::types::TurnStep::PreCombatMain;
+        let drake = g.add_card_to_hand(0, catalog::drake_familiar());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: drake,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        drake
+    }
+    let mut g = two_player_game();
+    let drake = cast_drake(&mut g);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(drake).is_none(), "no enchantment — sacrificed");
+
+    let mut g = two_player_game();
+    let aura = g.add_card_to_battlefield(0, catalog::glorious_anthem());
+    let drake = cast_drake(&mut g);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(drake).is_some(), "kept — the enchantment bounced");
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura));
+}
+
+/// Leashling pays a card off the top of its own library to bounce itself.
+#[test]
+fn leashling_bounces_itself_for_a_card() {
+    let mut g = two_player_game();
+    let dog = g.add_card_to_battlefield(0, catalog::leashling());
+    let pitched = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dog,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dog), "Leashling bounced");
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(pitched));
+}
+
+/// Instill Furor sacrifices a couch-potato enchanted creature at its
+/// controller's end step.
+#[test]
+fn instill_furor_sacrifices_a_creature_that_didnt_attack() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::instill_furor());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    // Run to the enchanted creature's controller's end step.
+    while !(g.active_player_idx == 1 && g.step == TurnStep::End) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "never attacked — sacrificed");
+}
+
+/// Lurking Informant mills the top card of a target player's library.
+#[test]
+fn lurking_informant_mills_the_top_card() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let spy = g.add_card_to_battlefield(0, catalog::lurking_informant());
+    g.clear_sickness(spy);
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let lib = g.players[1].library.len();
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spy,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - 1);
+}

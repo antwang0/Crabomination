@@ -269,6 +269,13 @@ impl GameState {
                 .map(|&p| self.players[p].life_lost_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            // Summed across the resolved set: "damage dealt to your opponents
+            // this turn" counts every opponent's total (Petrified Wood-Kin).
+            Value::DamageTakenThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].damage_taken_this_turn as i32)
+                .sum(),
             Value::CardsInExileOwnedBy(p) => self
                 .resolve_players(p, ctx)
                 .iter()
@@ -520,6 +527,7 @@ impl GameState {
                 })
                 .sum(),
             Value::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution as i32,
+            Value::DamageDealtThisResolution => self.damage_dealt_this_resolution as i32,
             Value::CounteredSpellManaSpent => self.countered_spell_mana_spent as i32,
             Value::CounteredSpellManaValue => self.countered_spell_mana_value as i32,
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
@@ -2457,6 +2465,9 @@ impl GameState {
                     R::IsEnchanted => self.battlefield.iter().any(|o| {
                         o.attached_to == Some(*cid) && o.definition.is_enchantment()
                     }),
+                    R::PutIntoGraveyardFromBattlefieldThisTurn => {
+                        self.graveyard_from_battlefield_this_turn.contains(cid)
+                    }
                     // CR 301.5 — "equipped" = an Equipment is attached.
                     R::IsEquipped => self.attached_equipment_count(*cid) > 0,
                     // CR 701.60 — suspected.
@@ -2746,6 +2757,9 @@ impl GameState {
             R::Not(inner) => !self.evaluate_requirement_on_card(inner, card, controller),
             R::ControlledByYou => card.controller == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
+            R::PutIntoGraveyardFromBattlefieldThisTurn => {
+                self.graveyard_from_battlefield_this_turn.contains(&card.id)
+            }
             R::OwnedByYou => card.owner == controller,
             R::Creature => {
                 // CR 604.3 — Grist is a creature everywhere but the battlefield.
@@ -3003,14 +3017,24 @@ impl GameState {
             R::BlockedThisTurn => card.blocked_this_turn,
             // CR 701.60 — the suspected flag lives on the instance.
             R::IsSuspected => card.suspected,
+            // Answerable off live state even for a card that has left the
+            // battlefield: the Aura's `attached_to` still points at it during
+            // the death replacement (Necromancer's Magemark).
+            R::IsEnchanted => self
+                .battlefield
+                .iter()
+                .any(|o| o.attached_to == Some(card.id) && o.definition.is_enchantment()),
+            // CR 301.5 — same reasoning for "equipped" (Rakdos Riteknife's
+            // tap-an-equipped-creature cost).
+            R::IsEquipped => self.attached_equipment_count(card.id) > 0,
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_) | R::WithAnyCounter
             | R::IsUnblocked | R::IsBlocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
             | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
-            | R::DealtDamageToControllerThisTurn | R::IsEnchanted | R::IsBestowed
-            | R::IsEquipped | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
+            | R::DealtDamageToControllerThisTurn | R::IsBestowed
+            | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::PlayerDamagedBySourceThisTurn => false,
         }
     }

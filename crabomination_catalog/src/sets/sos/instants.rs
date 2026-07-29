@@ -1455,35 +1455,34 @@ pub fn homesickness() -> CardDefinition {
     }
 }
 
-/// Fractalize — {X}{U} Instant.
-/// "Until end of turn, target creature becomes a green and blue Fractal
-/// with base power and toughness each equal to X plus 1."
-///
-/// Push (modern_decks): base-P/T rewrite now wired via the engine's
-/// `Effect::SetBasePT` layer-7b primitive (same path used by Square Up
-/// and Mercurial Transformation). At X=2 the creature becomes base 3/3
-/// until end of turn — counters and +N/+M still stack on top per
-/// CR 613.7c-f. The printed "becomes a Fractal" creature-type rewrite
-/// (layer 4) and the color rewrite (layer 5) are still omitted (no
-/// `Effect::SetTypes` primitive); type-matters payoffs that read off
-/// the original creature type may see the wrong value. The headline
-/// pump-and-reset shape — usable to shrink a 7/7 with deathtouch into
-/// a (X+1)/(X+1) (still a problem at X=4+ when the target is bigger)
-/// or to grow a 1/1 token into a (X+1)/(X+1) attacker — plays
-/// correctly via the base-P/T override.
+/// Fractalize — {X}{U} Instant. "Until end of turn, target creature becomes a
+/// green and blue Fractal with base power and toughness each equal to X plus 1."
 pub fn fractalize() -> CardDefinition {
-    use crate::effect::Duration;
-    use crate::mana::{u, x};
+    use crate::card::CreatureType;
+    use crate::mana::{u, x, Color};
     CardDefinition {
         name: "Fractalize",
         cost: cost(&[x(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::SetBasePT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Sum(vec![Value::XFromCost, Value::Const(1)]),
-            toughness: Value::Sum(vec![Value::XFromCost, Value::Const(1)]),
-            duration: Duration::EndOfTurn,
-        },
+        effect: Effect::Seq(vec![
+            Effect::BecomeColor {
+                what: Selector::Target(0),
+                colors: vec![Color::Green, Color::Blue],
+                duration: Duration::EndOfTurn,
+                additive: false,
+            },
+            Effect::BecomeCreatureType {
+                what: Selector::Target(0),
+                creature_types: vec![CreatureType::Fractal],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::SetBasePT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Sum(vec![Value::XFromCost, Value::Const(1)]),
+                toughness: Value::Sum(vec![Value::XFromCost, Value::Const(1)]),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         ..Default::default()
     }
 }

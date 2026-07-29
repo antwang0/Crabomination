@@ -1148,3 +1148,232 @@ pub fn handle_spree_cast_buttons(
         state.pending = None;
     }
 }
+
+// ── Convoke / Improvise / waterbend helper picker ────────────────────────────
+
+#[derive(Component)]
+pub struct HelperTapModal;
+
+#[derive(Component)]
+pub struct HelperTapToggle {
+    pub index: usize,
+}
+
+/// Marker on a candidate row's tick text so toggles update in place.
+#[derive(Component)]
+pub struct HelperTapTick {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct HelperTapConfirmButton;
+
+#[derive(Component)]
+pub struct HelperTapCancelButton;
+
+/// Spawn or despawn the helper-tap picker based on `HelperTapState`.
+pub fn spawn_helper_tap_modal(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    ui_fonts: Res<UiFonts>,
+    state: Res<crate::game::HelperTapState>,
+    existing: Query<Entity, With<HelperTapModal>>,
+) {
+    let want_open = state.pending.is_some();
+    let is_open = !existing.is_empty();
+    if want_open == is_open {
+        return;
+    }
+    for e in &existing {
+        commands.entity(e).despawn();
+    }
+    let Some((spell_id, mechanic)) = state.pending else { return };
+    let Some(cv) = &view.0 else { return };
+    let name = cv
+        .players
+        .get(cv.your_seat)
+        .and_then(|p| {
+            p.hand.iter().find_map(|h| match h {
+                crabomination::net::HandCardView::Known(k) if k.id == spell_id => {
+                    Some(k.name.clone())
+                }
+                _ => None,
+            })
+        })
+        .unwrap_or_default();
+    let header = match state.cap {
+        Some(n) => format!("Cast {name} — tap up to {n} to help ({}):", mechanic.label()),
+        None => format!("Cast {name} — tap helpers ({}):", mechanic.label()),
+    };
+
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            HelperTapModal,
+        ))
+        .with_children(|root| {
+            root.spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(20.0)),
+                    row_gap: Val::Px(8.0),
+                    align_items: AlignItems::Stretch,
+                    min_width: Val::Px(380.0),
+                    ..default()
+                },
+                BackgroundColor(theme::PANEL_BG),
+            ))
+            .with_children(|panel| {
+                panel.spawn((
+                    Text::new(header),
+                    ui_fonts.tf(15.0),
+                    TextColor(theme::TEXT_PRIMARY),
+                ));
+                for (i, (_, label)) in state.candidates.iter().enumerate() {
+                    let ticked = state.selected.get(i).copied().unwrap_or(false);
+                    panel
+                        .spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                                column_gap: Val::Px(8.0),
+                                ..default()
+                            },
+                            BackgroundColor(theme::BUTTON_INFO_BG),
+                            HelperTapToggle { index: i },
+                        ))
+                        .with_children(|b| {
+                            b.spawn((
+                                Text::new(if ticked { "[x]" } else { "[ ]" }),
+                                ui_fonts.tf(13.0),
+                                TextColor(theme::TEXT_PRIMARY),
+                                HelperTapTick { index: i },
+                                bevy::picking::Pickable::IGNORE,
+                            ));
+                            b.spawn((
+                                Text::new(label.clone()),
+                                ui_fonts.tf(13.0),
+                                TextColor(theme::TEXT_PRIMARY),
+                                bevy::picking::Pickable::IGNORE,
+                            ));
+                        });
+                }
+                for (marker, bg, text) in [
+                    (0u8, theme::BUTTON_INFO_BG, "Cast"),
+                    (1u8, theme::BUTTON_DANGER_BG, "Cancel"),
+                ] {
+                    let mut btn = panel.spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                            justify_content: JustifyContent::Center,
+                            ..default()
+                        },
+                        BackgroundColor(bg),
+                    ));
+                    if marker == 0 {
+                        btn.insert(HelperTapConfirmButton);
+                    } else {
+                        btn.insert(HelperTapCancelButton);
+                    }
+                    btn.with_children(|b| {
+                        b.spawn((
+                            Text::new(text),
+                            ui_fonts.tf(13.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            bevy::picking::Pickable::IGNORE,
+                        ));
+                    });
+                }
+            });
+        });
+}
+
+/// Toggle / confirm / cancel handling for the helper picker. Confirm submits
+/// directly for untargeted spells; targeted ones arm the targeting cursor with
+/// the chosen helpers so the click-submit routes through the helper cast action.
+pub fn handle_helper_tap_buttons(
+    mut state: ResMut<crate::game::HelperTapState>,
+    mut targeting: ResMut<TargetingState>,
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    toggle_q: Query<(&Interaction, &HelperTapToggle), Changed<Interaction>>,
+    confirm_q: Query<&Interaction, (Changed<Interaction>, With<HelperTapConfirmButton>)>,
+    cancel_q: Query<&Interaction, (Changed<Interaction>, With<HelperTapCancelButton>)>,
+    mut ticks: Query<(&mut Text, &HelperTapTick)>,
+) {
+    if cancel_q.iter().any(|i| *i == Interaction::Pressed) {
+        state.pending = None;
+        return;
+    }
+    for (interaction, btn) in &toggle_q {
+        if *interaction == Interaction::Pressed && btn.index < state.selected.len() {
+            let on = !state.selected[btn.index];
+            // Waterbend {N} caps the helper count; refuse the (N+1)th tick.
+            let ticked = state.selected.iter().filter(|s| **s).count() as u32;
+            if on && state.cap.is_some_and(|cap| ticked >= cap) {
+                continue;
+            }
+            state.selected[btn.index] = on;
+            for (mut t, tick) in &mut ticks {
+                let on = state.selected.get(tick.index).copied().unwrap_or(false);
+                *t = Text::new(if on { "[x]" } else { "[ ]" });
+            }
+        }
+    }
+    if confirm_q.iter().any(|i| *i == Interaction::Pressed)
+        && let Some((spell_id, mechanic)) = state.pending
+    {
+        let helpers: Vec<CardId> = state
+            .candidates
+            .iter()
+            .zip(&state.selected)
+            .filter_map(|((id, _), on)| on.then_some(*id))
+            .collect();
+        let needs_target = view.0.as_ref().is_some_and(|cv| {
+            cv.players.get(cv.your_seat).is_some_and(|p| {
+                p.hand.iter().any(|h| matches!(h,
+                    crabomination::net::HandCardView::Known(k)
+                    if k.id == spell_id && k.needs_target))
+            })
+        });
+        if needs_target {
+            targeting.active = true;
+            targeting.pending_card_id = Some(spell_id);
+            targeting.pending_helpers = Some((helpers, mechanic));
+        } else if let Some(outbox) = &outbox {
+            outbox.submit(helper_cast_action(mechanic, spell_id, helpers, None, None));
+        }
+        state.pending = None;
+    }
+}
+
+/// Build the cast action for a helper-tap mechanic.
+pub fn helper_cast_action(
+    mechanic: crate::game::HelperMechanic,
+    card_id: CardId,
+    helpers: Vec<CardId>,
+    target: Option<Target>,
+    mode: Option<usize>,
+) -> GameAction {
+    match mechanic {
+        crate::game::HelperMechanic::Convoke => GameAction::CastSpellConvoke {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+            convoke_creatures: helpers,
+        },
+        crate::game::HelperMechanic::Waterbend => GameAction::CastSpellWaterbend {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+            helpers,
+        },
+    }
+}

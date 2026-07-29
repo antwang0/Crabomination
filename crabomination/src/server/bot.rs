@@ -1776,17 +1776,12 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
         if !convoke && !improvise {
             continue;
         }
-        let generic_pips: u32 = c
-            .definition
-            .cost
-            .symbols
-            .iter()
-            .filter_map(|s| match s {
-                crate::mana::ManaSymbol::Generic(n) => Some(*n),
-                _ => None,
-            })
-            .sum();
-        let helpers: Vec<CardId> = state
+        // CR 702.51 — convoke pays colored pips too, so the cap is the whole
+        // mana value, not just the generic part. Rank candidates so the least
+        // useful bodies tap first: summoning-sick creatures (which can't attack
+        // anyway) before healthy ones, then by ascending power.
+        let cap = c.definition.cost.cmc() as usize;
+        let mut candidates: Vec<(bool, i32, CardId)> = state
             .battlefield
             .iter()
             .filter(|h| {
@@ -1795,10 +1790,12 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
                     && ((convoke && h.definition.is_creature())
                         || (improvise && h.definition.is_artifact()))
             })
-            .map(|h| h.id)
-            .take(generic_pips as usize)
+            .map(|h| (!h.summoning_sick, h.power(), h.id))
             .collect();
-        if helpers.is_empty() {
+        candidates.sort_by_key(|(healthy, pow, _)| (*healthy, *pow));
+        candidates.truncate(cap);
+        let ranked: Vec<CardId> = candidates.into_iter().map(|(_, _, id)| id).collect();
+        if ranked.is_empty() {
             continue;
         }
         let effect = &c.definition.effect;
@@ -1811,16 +1808,21 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
         } else {
             (None, vec![])
         };
-        let action = GameAction::CastSpellConvoke {
-            card_id: c.id,
-            target,
-            additional_targets,
-            mode: None,
-            x_value: None,
-            convoke_creatures: helpers,
-        };
-        if GameState::would_accept_on(&probe, action.clone()) {
-            castable.push(action);
+        // Tap the fewest helpers that make the cast legal — over-tapping throws
+        // away blockers for nothing.
+        for n in 1..=ranked.len() {
+            let action = GameAction::CastSpellConvoke {
+                card_id: c.id,
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                mode: None,
+                x_value: None,
+                convoke_creatures: ranked[..n].to_vec(),
+            };
+            if GameState::would_accept_on(&probe, action.clone()) {
+                castable.push(action);
+                break;
+            }
         }
     }
 
@@ -7316,6 +7318,37 @@ mod tests {
             GameAction::CastSpellConvoke { card_id, convoke_creatures, .. } => {
                 assert_eq!(card_id, id);
                 assert_eq!(convoke_creatures.len(), 4);
+            }
+            other => panic!("expected a convoke cast, got {other:?}"),
+        }
+    }
+
+    /// The convoke planner taps the fewest (and least useful) helpers it needs.
+    #[test]
+    fn bot_taps_the_minimum_number_of_convoke_helpers() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::triplicate_spirits()); // {4}{W}{W}
+        g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+        g.players[0].mana_pool.add_colorless(2);
+        // Six bodies available but only {2} of the generic is unpaid, and the
+        // summoning-sick ones should be spent first.
+        let mut sick = Vec::new();
+        for i in 0..6 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            if i < 2 {
+                sick.push(c);
+            } else {
+                g.battlefield_find_mut(c).unwrap().summoning_sick = false;
+            }
+        }
+        match main_phase_action(&g, 0) {
+            GameAction::CastSpellConvoke { card_id, convoke_creatures, .. } => {
+                assert_eq!(card_id, id);
+                assert_eq!(convoke_creatures.len(), 2, "only the unpaid {{2}} needs help");
+                assert!(
+                    convoke_creatures.iter().all(|c| sick.contains(c)),
+                    "the summoning-sick bodies tap first",
+                );
             }
             other => panic!("expected a convoke cast, got {other:?}"),
         }

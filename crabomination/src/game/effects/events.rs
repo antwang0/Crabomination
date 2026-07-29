@@ -451,6 +451,13 @@ pub(crate) fn event_matches_spec(
                     .and_then(|a| a.attached_to)
                     .is_some_and(|host| host == *cid)
             }
+            // "Whenever enchanted creature becomes blocked" (Beastmaster's
+            // Magemark). Either side of the block can be the host; the
+            // trigger's own `EventKind` picks which, so match both.
+            GameEvent::BlockerDeclared { blocker, attacker } => state
+                .battlefield_find(source.id)
+                .and_then(|a| a.attached_to)
+                .is_some_and(|host| host == *blocker || host == *attacker),
             // CR 303.4a — "whenever enchanted PLAYER …" (Psychic Possession,
             // the Curse cycle). Player-anchored Auras match on the seat.
             GameEvent::CardDrawn { player, .. } => state

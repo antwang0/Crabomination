@@ -367,6 +367,11 @@ pub struct ClientView {
     /// snapshot back-compat.
     #[serde(default)]
     pub multikickable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand castable by tapping helpers for Convoke
+    /// (printed or granted) or Improvise (CR 702.51 / 702.126). Drives the
+    /// client's helper-tap picker. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub convokable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could cast via their Dash
     /// alternative cost right now (CR 702.110). Lets the client offer a
     /// "dash?" affordance distinct from the plain castable highlight.
@@ -1016,6 +1021,15 @@ pub struct KnownCard {
     /// client knows to arm the targeting cursor before submitting `CastGift`.
     #[serde(default)]
     pub gift_needs_target: bool,
+    /// CR 702.51 — true if this spell has Convoke, printed or granted by a
+    /// permanent the viewer controls (Chief Engineer). Tells the client's
+    /// helper picker that untapped *creatures* can help pay.
+    #[serde(default)]
+    pub has_convoke: bool,
+    /// CR 702.126 — true if this spell has Improvise, so untapped *artifacts*
+    /// can help pay.
+    #[serde(default)]
+    pub has_improvise: bool,
     /// CR 701.67 — true if this card has a "waterbend {N}" additional cast cost.
     /// Drives the client's right-click "Cast (waterbend)" affordance, which
     /// submits `GameAction::CastSpellWaterbend` with the chosen helpers.

@@ -290,6 +290,11 @@ pub struct Player {
     /// back-compat.
     #[serde(default)]
     pub was_dealt_damage_this_turn: bool,
+    /// How much damage this player has been dealt this turn, for
+    /// "Bloodthirst X"-style riders that scale with the amount (Petrified
+    /// Wood-Kin). Cleared with `was_dealt_damage_this_turn` at turn start.
+    #[serde(default)]
+    pub damage_taken_this_turn: u32,
     /// True if this player has lost life this turn (damage or direct life
     /// loss). Set in `adjust_life` on a negative delta, reset at the active
     /// player's `do_untap`. Powers Spectacle (CR 702.111). Defaults to false
@@ -798,6 +803,7 @@ impl Player {
             pending_creature_etb_keywords: Vec::new(),
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
+            damage_taken_this_turn: 0,
             lost_life_this_turn: false,
             graveyard_cast_types_this_turn: Vec::new(),
             play_from_top_this_turn: false,

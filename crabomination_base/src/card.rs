@@ -227,6 +227,17 @@ pub enum LandType {
     Sphere,
 }
 
+impl LandType {
+    /// CR 205.3i — one of the five basic land types (the only ones that carry an
+    /// intrinsic mana ability and can be rewritten by a CR 612 text change).
+    pub fn is_basic_type(self) -> bool {
+        matches!(
+            self,
+            Self::Plains | Self::Island | Self::Swamp | Self::Mountain | Self::Forest
+        )
+    }
+}
+
 /// Artifact subtypes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ArtifactSubtype {
@@ -344,6 +355,9 @@ pub enum CounterType {
     /// Blood counter — Font of Agonies banks one per point of life paid;
     /// remove four to destroy a creature. Not the Blood artifact token.
     Blood,
+    /// Plague counter — Plague Boiler's upkeep tally; at three it sacrifices
+    /// itself and destroys every nonland permanent.
+    Plague,
     /// Fuse counter — Goblin Bomb's upkeep coin-flip tally; remove five to
     /// deal 20. Distinct from `Charge` so the two don't share a pool.
     Fuse,
@@ -1095,6 +1109,11 @@ pub enum Keyword {
     /// attacker must be assigned to block one of them. Enforced in
     /// `declare_blockers` (blocker side; mirror of `MustAttack`).
     MustBlock,
+    /// CR 510.1a — "This creature assigns its combat damage as though it
+    /// weren't blocked." A blocked attacker with this keyword assigns its
+    /// damage to the defending player instead of its blockers (the blockers
+    /// still deal theirs). Predatory Focus grants it for the turn.
+    AssignsDamageAsThoughUnblocked,
     /// CR 508.1d — "This creature attacks each combat if able." Enforced in
     /// `declare_attackers`: an untapped, non-sick creature carrying this
     /// keyword whose controller declares attackers must be among them when
@@ -1542,6 +1561,11 @@ pub enum SelectionRequirement {
     /// whose `attached_to` points at the candidate. Powers Kestia's
     /// "whenever an enchanted creature … you control attacks" trigger.
     IsEnchanted,
+    /// True for a graveyard card that got there from the battlefield this turn
+    /// (`GameState.graveyard_from_battlefield_this_turn`) — Gleancrawler's
+    /// "all creature cards in your graveyard that were put there from the
+    /// battlefield this turn".
+    PutIntoGraveyardFromBattlefieldThisTurn,
     /// True when the candidate permanent has an Equipment attached
     /// (CR 301.5 "equipped"). Battlefield-only. Kor Duelist.
     IsEquipped,
