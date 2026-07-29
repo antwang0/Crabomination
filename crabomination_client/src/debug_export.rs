@@ -182,6 +182,8 @@ mod tests {
                 graveyard: vec![],
                 hand: vec![],
                 lands_played_this_turn: 0,
+                land_plays_remaining: 1,
+                extra_loyalty_activations: 0,
                 skip_next_combat: 0,
                 first_spell_tax_charges: 0,
                 life_gained_this_turn: 0,

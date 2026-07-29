@@ -6725,7 +6725,11 @@ impl GameState {
                 // CR 603.6e — exile the resolved card(s) and link each to
                 // the ability's source. When that source leaves the
                 // battlefield, `return_linked_exiles` brings them back.
-                let Some(source) = ctx.source else {
+                // CR 610.3a/b — if the source already left before this
+                // resolved (a Fiend Hunter sacrificed in response to its own
+                // ETB), nothing moves: the return half could never happen.
+                let Some(source) = ctx.source.filter(|s| self.battlefield_find(*s).is_some())
+                else {
                     return Ok(());
                 };
                 for ent in self.resolve_selector(what, ctx) {

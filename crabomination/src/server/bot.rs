@@ -1763,6 +1763,67 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
         }
     }
 
+    // Convoke / Improvise (CR 702.51 / 702.126): tap untapped creatures
+    // (or artifacts) to pay {1} each. Without this the bot never taps a
+    // helper, so every convoke card sat in hand at full price. Helpers are
+    // capped at the spell's generic pips and drawn from creatures that
+    // aren't already committed to combat; `would_accept` is the final gate,
+    // so an unaffordable-even-with-help spell just doesn't make the list.
+    for c in state.players[seat].hand.iter() {
+        let convoke = c.definition.keywords.contains(&crate::card::Keyword::Convoke)
+            || state.spell_granted_convoke(seat, c);
+        let improvise = c.definition.keywords.contains(&crate::card::Keyword::Improvise);
+        if !convoke && !improvise {
+            continue;
+        }
+        let generic_pips: u32 = c
+            .definition
+            .cost
+            .symbols
+            .iter()
+            .filter_map(|s| match s {
+                crate::mana::ManaSymbol::Generic(n) => Some(*n),
+                _ => None,
+            })
+            .sum();
+        let helpers: Vec<CardId> = state
+            .battlefield
+            .iter()
+            .filter(|h| {
+                h.controller == seat
+                    && !h.tapped
+                    && ((convoke && h.definition.is_creature())
+                        || (improvise && h.definition.is_artifact()))
+            })
+            .map(|h| h.id)
+            .take(generic_pips as usize)
+            .collect();
+        if helpers.is_empty() {
+            continue;
+        }
+        let effect = &c.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastSpellConvoke {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+            convoke_creatures: helpers,
+        };
+        if GameState::would_accept_on(&probe, action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Gift (CR 702.165): a spell/permanent with a gift can be cast via
     // `CastGift`, promising the gift to resolve its enhanced `gifted_effect`
     // (or, for permanent gifts, unlock a `SourceGiftPromised`-gated ETB). A
@@ -7236,6 +7297,44 @@ mod tests {
         // a direct call to the helper is the most reliable assertion.
         assert_eq!(max_affordable_x(&g, 0, &card), 3,
             "{{R}} + {{3}} in pool, fixed cost {{R}} => X = 3");
+    }
+
+    /// CR 702.51 — the bot taps creatures for convoke when the pool alone
+    /// can't cover the spell.
+    #[test]
+    fn bot_taps_creatures_for_convoke() {
+        // Triplicate Spirits ({4}{W}{W}, convoke) with only {W}{W} floating:
+        // unaffordable outright, castable by tapping four creatures.
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::triplicate_spirits());
+        g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+        for _ in 0..4 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.battlefield_find_mut(c).unwrap().summoning_sick = false;
+        }
+        match main_phase_action(&g, 0) {
+            GameAction::CastSpellConvoke { card_id, convoke_creatures, .. } => {
+                assert_eq!(card_id, id);
+                assert_eq!(convoke_creatures.len(), 4);
+            }
+            other => panic!("expected a convoke cast, got {other:?}"),
+        }
+    }
+
+    /// Chief Engineer's granted convoke reaches the bot's planner too.
+    #[test]
+    fn bot_taps_creatures_for_granted_convoke() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::perilous_vault()); // {4} artifact
+        g.add_card_to_battlefield(0, catalog::chief_engineer());
+        for _ in 0..4 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.battlefield_find_mut(c).unwrap().summoning_sick = false;
+        }
+        match main_phase_action(&g, 0) {
+            GameAction::CastSpellConvoke { card_id, .. } => assert_eq!(card_id, id),
+            other => panic!("expected a granted-convoke cast, got {other:?}"),
+        }
     }
 
     #[test]

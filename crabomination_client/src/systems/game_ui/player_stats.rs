@@ -90,6 +90,11 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Skipped combat (CR 506 — Stonehorn Dignitary) — a muted stone grey
         // so a player knows their next swing is off the table.
         StatChipKind::SkipCombat => (Color::srgba(0.24, 0.24, 0.26, 1.0), theme::TEXT_PRIMARY),
+        // Land drop (CR 305.2) — an earthy green that reads as "resource".
+        StatChipKind::LandDrop => (Color::srgba(0.16, 0.24, 0.14, 1.0), theme::TEXT_PRIMARY),
+        // Banked loyalty activations (CR 606.3 — The Chain Veil) — the same
+        // violet family the loyalty counters use.
+        StatChipKind::Loyalty => (Color::srgba(0.26, 0.18, 0.34, 1.0), theme::TEXT_PRIMARY),
         // Blanket damage immunity (CR 615 — Glacial Chasm) — a cool warding
         // blue so total prevention reads as a hard shield, not a partial one.
         StatChipKind::Shield => (Color::srgba(0.12, 0.22, 0.36, 1.0), theme::TEXT_PRIMARY),
@@ -158,6 +163,24 @@ pub(super) enum StatChipKind {
     /// Possession). They sit on no permanent, so the chip is the only place
     /// they show up.
     Cursed,
+    /// CR 305.2 — the land drop, shown only when it's off-baseline: locked
+    /// out (Aggressive Mining) or extended (Exploration, Azusa).
+    LandDrop,
+    /// CR 606.3 — loyalty activations banked past the per-turn limit
+    /// (The Chain Veil).
+    Loyalty,
+}
+
+/// Label for the land-drop chip (CR 305.2). `None` on the ordinary
+/// one-land-per-turn baseline — the chip only earns space when the seat is
+/// locked out of land plays or has extra ones banked.
+pub(super) fn land_drop_chip_body(remaining: u32, played: u32) -> Option<String> {
+    match (remaining, played) {
+        (0, 0) => Some("\u{1F726} no land drops".to_string()),
+        (0, _) => None,
+        (1, 0) => None,
+        (n, _) => Some(format!("\u{1F726} {n} land drops")),
+    }
 }
 
 /// Label for the "enchanted player" chip (CR 303.4a): the Aura names while
@@ -747,6 +770,19 @@ pub fn update_player_stats_chips(
                 format!("◌ phased ×{}", p.phased_out.len())
             };
             spawn_stat_chip(row, &ui_fonts, StatChipKind::PhasedOut, label);
+        }
+        // CR 305.2 — the land drop, only when it's off-baseline.
+        if let Some(label) = land_drop_chip_body(p.land_plays_remaining, p.lands_played_this_turn) {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::LandDrop, label);
+        }
+        // CR 606.3 — loyalty activations The Chain Veil banked for this turn.
+        if p.extra_loyalty_activations > 0 {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Loyalty,
+                format!("\u{1F702} +{} loyalty", p.extra_loyalty_activations),
+            );
         }
         // CR 303.4a — Auras enchanting this player. Named when few, counted
         // when many; they live on no permanent, so this is the only place the
@@ -1372,7 +1408,7 @@ pub fn animate_life_flash(
 
 #[cfg(test)]
 mod tests {
-    use super::{commander_damage_style, commander_short_name, commander_tax_label, deck_chip_kind, hand_chip_label, poison_chip_style, storm_chip_visible, StatChipKind};
+    use super::{commander_damage_style, commander_short_name, commander_tax_label, deck_chip_kind, hand_chip_label, land_drop_chip_body, poison_chip_style, storm_chip_visible, StatChipKind};
 
     #[test]
     fn hand_chip_flags_no_max_and_over_cap() {
@@ -1397,6 +1433,17 @@ mod tests {
         let to_lin = |c: bevy::prelude::Color| c.to_srgba();
         assert!(to_lin(danger).red > to_lin(safe).red);
         assert!(to_lin(danger).green < to_lin(warn).green);
+    }
+
+    #[test]
+    fn land_drop_chip_only_shows_off_baseline() {
+        // The ordinary one-drop turn (unspent or spent) stays off the HUD.
+        assert_eq!(land_drop_chip_body(1, 0), None);
+        assert_eq!(land_drop_chip_body(0, 1), None);
+        // Locked out with nothing played (Aggressive Mining) and extra drops
+        // (Exploration) both earn a chip.
+        assert!(land_drop_chip_body(0, 0).is_some_and(|s| s.contains("no land")));
+        assert!(land_drop_chip_body(3, 0).is_some_and(|s| s.contains('3')));
     }
 
     #[test]

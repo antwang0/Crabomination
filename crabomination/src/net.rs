@@ -580,6 +580,16 @@ pub struct PlayerView {
     /// (id only). The vec length equals the player's hand size.
     pub hand: Vec<HandCardView>,
     pub lands_played_this_turn: u32,
+    /// CR 305.2 — land plays this player has left this turn, after extra-land
+    /// statics (Exploration, Azusa) and absolute locks (Aggressive Mining's
+    /// "you can't play lands"). Pre-derived so the HUD can show the land drop
+    /// without re-deriving the cap. `#[serde(default)]`.
+    #[serde(default)]
+    pub land_plays_remaining: u32,
+    /// CR 606.3 — loyalty activations banked past the one-per-planeswalker
+    /// limit this turn (The Chain Veil). `#[serde(default)]`.
+    #[serde(default)]
+    pub extra_loyalty_activations: u32,
     /// Pending Chancellor-of-the-Annex-style tax charges. Each charge taxes
     /// the player's next spell {1} more (consumed on the next successful
     /// cast). Surfaced to the client so the cast UI can preview the bumped

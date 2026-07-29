@@ -612,6 +612,12 @@ fn project_player(
             .map(|c| project_hand_card(c, state, player_seat, viewer_seat))
             .collect(),
         lands_played_this_turn: player.lands_played_this_turn,
+        land_plays_remaining: if state.can_player_play_land(player_seat) {
+            state.max_lands_per_turn(player_seat).saturating_sub(player.lands_played_this_turn)
+        } else {
+            0
+        },
+        extra_loyalty_activations: player.extra_loyalty_activations,
         first_spell_tax_charges: player.first_spell_tax_charges,
         life_gained_this_turn: player.life_gained_this_turn,
         cards_drawn_this_turn: player.cards_drawn_this_turn,

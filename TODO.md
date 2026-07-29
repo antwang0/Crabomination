@@ -3,6 +3,22 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Client / UI follow-ups (M15 run)
+
+- **Convoke/Improvise cast UI.** The engine and the bot both drive
+  `GameAction::CastSpellConvoke` now (the bot taps helpers when the pool
+  can't cover the spell, including Chief Engineer's *granted* convoke),
+  but the client has no helper-picker: a human seat can only cast convoke
+  cards at full price. Wants a "tap creatures to help" modal on the cast
+  path, plus a hand-card hint when a static grants convoke.
+- **Interactive color choice for prevention.** `Effect::PreventAllDamage
+  FromChosenColorThisTurn` (Avacyn) resolves its `Decision::ChooseColor`
+  synchronously off `self.decider`; a UI seat gets the auto-picked color
+  rather than a prompt, like the other implicit-choice effects.
+- **Master of Predicaments' hand pick.** The chosen card is auto-picked
+  (the mana value furthest from the line) and the guess is asked of the
+  resolving decider rather than routed to the guesser's seat.
+
 ## Tier 4 — remaining SOS/SOA audit simplifications (2026-07)
 
 The 2026-07 SOS/SOA correctness audit fixed every WRONG card and the
