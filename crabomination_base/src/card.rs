@@ -2244,6 +2244,15 @@ pub struct CardDefinition {
     /// decision at ETB. Corrupted Shapeshifter.
     #[serde(default)]
     pub enters_as_choice: Option<Vec<EntersChoiceMode>>,
+    /// CR 614 — "As this permanent enters, [effect]." A one-shot replacement
+    /// resolved during the battlefield hop, *before* the first state-based
+    /// action sweep and before any enters-the-battlefield trigger, so a
+    /// printed `*/*` body whose CDA depends on the effect never dies as a 0/0
+    /// (Ixidron's "as this creature enters, turn all other nontoken creatures
+    /// face down"). Distinct from an `EntersBattlefield` trigger, which uses
+    /// the stack and can be responded to.
+    #[serde(default)]
+    pub as_enters_effect: Option<crate::effect::Effect>,
     /// CR 614 — "As this enters, choose [mode A] or [mode B]." A *persistent*
     /// mode choice (unlike `enters_as_choice`, which only sets P/T): the
     /// controller picks one mode as the permanent enters and that mode's

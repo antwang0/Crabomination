@@ -22,6 +22,7 @@ mod gaps16;
 mod gaps17;
 mod gaps18;
 mod gaps19;
+mod gaps20;
 mod instants;
 
 pub use creatures::*;
@@ -44,4 +45,5 @@ pub use gaps16::*;
 pub use gaps17::*;
 pub use gaps18::*;
 pub use gaps19::*;
+pub use gaps20::*;
 pub use instants::*;

@@ -528,6 +528,11 @@ impl GameState {
                 .sum(),
             Value::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution as i32,
             Value::DamageDealtThisResolution => self.damage_dealt_this_resolution as i32,
+            Value::FaceDownCreatures => self
+                .battlefield
+                .iter()
+                .filter(|c| c.face_down && c.definition.is_creature())
+                .count() as i32,
             Value::CounteredSpellManaSpent => self.countered_spell_mana_spent as i32,
             Value::CounteredSpellManaValue => self.countered_spell_mana_value as i32,
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),

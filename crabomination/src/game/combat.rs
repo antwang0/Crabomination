@@ -3181,6 +3181,28 @@ impl GameState {
                     }
                 }
             }
+            // Auras on the attacker with an `EnchantedBySource` combat-damage
+            // trigger ("whenever enchanted creature deals combat damage to a
+            // player" — Pollenbright Wings). The trigger fires off the *Aura*,
+            // so `Selector::AttachedTo(This)` reaches the host.
+            for aura in &self.battlefield {
+                if aura.attached_to != Some(source) || !aura.definition.is_enchantment() {
+                    continue;
+                }
+                for t in &aura.definition.triggered_abilities {
+                    if t.event.kind == kind
+                        && t.event.scope == crate::effect::EventScope::EnchantedBySource
+                    {
+                        triggers.push((
+                            aura.id,
+                            t.effect.clone(),
+                            aura.controller,
+                            t.event.filter.clone(),
+                            false,
+                        ));
+                    }
+                }
+            }
             // CR 702.95 — Soulbond-granted combat-damage triggers. A paired
             // creature carrying `soulbond_bonus.triggered_abilities` grants
             // them to BOTH members; a `DealsCombatDamageToPlayer` one fires off

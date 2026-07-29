@@ -135,7 +135,20 @@ exercising each) was elided in a compaction pass; recover it from
   convoke/improvise/waterbend **helper-tap picker** (`HelperTapState`) closes
   the last M15-run UI gap; `ClientView.convokable_hand` + `KnownCard.
   has_convoke`/`has_improvise` back it. Tests in `classic_sets/{rav,gpt,dis}`
-  and `core_rules/cr_recent40`.
+  and `core_rules/cr_recent40`. Wave 2 (+8 cards): Dream Leash, Auratouched
+  Mage, Flame Fusillade, Pollenbright Wings, Chant of Vitu-Ghazi, Moonlight
+  Bargain, Tunnel Vision, Concerted Effort — plus
+  `Effect::{LookTopEachPayLifeOrBin, NameCardRevealUntilThenBin,
+  ShareKeywordsAmongYourCreatures}` and an `EnchantedBySource` combat-damage
+  trigger path (an Aura's "whenever enchanted creature deals combat damage to
+  a player" now fires off the Aura, so `AttachedTo(This)` reaches the host).
+  Tier-1 #1 gained a general **as-enters replacement**:
+  `CardDefinition.as_enters_effect` resolves during the battlefield hop, before
+  the first SBA sweep and before any ETB trigger, so a printed `*/*` body sized
+  off that effect never dies as a 0/0 — with `Effect::TurnFaceDown` (CR 708.2a),
+  `StaticEffect::SelfBasePtFromValue` (a state-driven CDA) and
+  `Value::FaceDownCreatures`, this closes the last 🟡 engine row in
+  `CUBE_FEATURES.md` (Ixidron).
 
 - **BNG complete (modern_decks, this run — all 165 cards, `set_gaps.py bng` = 0)**
   plus **CR 303.4a "enchant player" Auras** (the Curse cycle + Psychic
@@ -1289,7 +1302,8 @@ Each unblocks a large swath of cards.
    Counter-placement replacements (Hardened Scales, Doubling Season, Mowu's
    self-scoped `ExtraPlusOneCounterOnSelf`) now also apply on the **proliferate**
    path (CR 614.16), via `scaled_counter_count_on`. Still to generalize:
-   as-a-copy ETB, draw replacement breadth. (Devouring Hellion / Rescuer Sphinx's
+   as-a-copy ETB, draw replacement breadth. A *general* as-enters one-shot now
+   ships (`CardDefinition.as_enters_effect`, resolved pre-SBA — Ixidron). (Devouring Hellion / Rescuer Sphinx's
    as-enters reflexive shape now ship via `devour` / a reflexive ETB.)
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes`;
    pick-from-revealed via `Effect::LookPickToHand` (Impulse, Strategic Planning).

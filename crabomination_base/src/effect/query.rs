@@ -210,6 +210,8 @@ impl Effect {
             | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }
             | Effect::EachPlayerKeepsNSacrificesRest { .. }
             | Effect::RevealTopDeployIfMatch { .. }
+            | Effect::LookTopEachPayLifeOrBin { .. }
+            | Effect::ShareKeywordsAmongYourCreatures { .. }
             | Effect::ExchangeControlWithTriggeringSpell { .. }
             | Effect::ExileAnyNumberUntilSourceLeaves { .. }
             | Effect::RevealUntilCreatureDoubleBasePt
@@ -592,7 +594,9 @@ impl Effect {
             Effect::DiscardAnyNumber { who } => sel_has_target(who),
             Effect::SetNoMaxHandSize { who }
             | Effect::PutCardFromHandOnTopOfLibrary { who } => sel_has_target(who),
-            Effect::LookTopExileOneOfN { who, .. } | Effect::BottomHandThenDrawThatMany { who } => {
+            Effect::LookTopExileOneOfN { who, .. }
+            | Effect::NameCardRevealUntilThenBin { who }
+            | Effect::BottomHandThenDrawThatMany { who } => {
                 matches!(who, PlayerRef::Target(_))
             }
             Effect::SetMaxHandSize { who, size } => sel_has_target(who) || value_has_target(size),
@@ -958,6 +962,7 @@ impl Effect {
                 sel_has_target(target) || value_has_target(amount)
             }
             Effect::PreventAllDamageThisTurn { target }
+            | Effect::TurnFaceDown { what: target }
             | Effect::PreventAllDamageThisTurnWithCounters { target }
             | Effect::PreventAllDamageFromChosenColorThisTurn { target }
             | Effect::PreventDamageToAndByUntilYourNextTurn { target } => sel_has_target(target),

@@ -5,9 +5,10 @@ creatures, interaction, value engines, and combo lines (see the maybeboard at
 the end).
 
 The catalog already implements the BRG / Goryo's demo decks
-(`DECK_FEATURES.md` is source of truth there); some overlap the cube. Most of
-the cube is still ⏳. Done (✅) cards and engine features are elided — only
-remaining 🟡/⏳ work is listed.
+(`DECK_FEATURES.md` is source of truth there); some overlap the cube. Every
+card in the maybeboard below is now in the catalog (verified by grepping the
+list against `crabomination_catalog/src`). Done (✅) cards and engine features
+are elided — only remaining 🟡/⏳ work is listed.
 
 ## Legend
 
@@ -23,28 +24,17 @@ color table only when a card is in-progress (🟡) but not finished.
 
 ## Engine features needed
 
-The engine features already done (Pact / Flashback / Convoke / Rebound / etc.)
-are in `DECK_FEATURES.md`. This is the remaining work to bring most of the cube
-online.
-
-| Feature | Status | Notes |
-|---|---|---|
-| Face-down permanents (morph/manifest) | 🟡 | `face_up_def` stashes the real card behind a vanilla 2/2 (CR 708.2a); Manifest/ManifestDread, `CastFaceDown` ({3}), `TurnFaceUp`, Disguise (warded 2/2), Cloak. CR 708.2b/708.8 conformance in `core_rules/cr_recent40`. **Missing:** no effect turns an already-face-up permanent face down (Ixidron, Kheru Spellsnatcher) — there is no `Effect::TurnFaceDown`. |
+None outstanding. Face-down permanents (the last 🟡) closed with
+`Effect::TurnFaceDown` + the general `as_enters_effect` replacement — CR
+708.2a/2b/8 conformance lives in `core_rules/cr_recent40`. The rest of the
+engine checklist is in `DECK_FEATURES.md` / `FEATURE_ROADMAP.md`.
 
 ## Plan
 
-The cube is too large to wire card-by-card. Most leverage comes from finishing
-the engine features above, then sweeping card groups in batches:
-
-1. **Token primitives** (Treasure/Blood/Clue/Food) — ~25 cards in one batch.
-2. **Equipment + Vehicles** (equip cost / crew).
-3. **Cascade / Storm / Madness / Delve / Cycling** — small features, 3–5 cards each.
-4. **DFC / Split-card / Adventure** infrastructure — a wide swath of modern lands.
-5. **Multi-pick decisions** — promotes Atraxa to ✅, unlocks blue payoffs.
-6. **Counters / charge-mana / proliferate** — Mossborn Hydra, Heliod, Coalition Relic.
-
-Promote cards ⏳ → 🟡 → ✅ as their dependent feature lands; update the engine row
-alongside.
+The original batch plan (token primitives, Equipment/Vehicles, cascade/storm/
+madness/delve/cycling, DFC/split/adventure, multi-pick decisions, counters and
+proliferate) is fully worked through. Promote cards ⏳ → 🟡 → ✅ as any future
+dependent feature lands, and add an engine row back when something goes 🟡.
 
 ## Maybeboard (raw)
 

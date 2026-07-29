@@ -13,9 +13,6 @@ use crate::effect::{
 use crate::game::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, x};
 
-/// Petrified Wood-Kin — {6}{G} 3/3 Elemental Warrior. Can't be countered,
-/// Bloodthirst X (X = damage dealt to your opponents this turn), protection
-
 /// Brightflame — {X}{R}{R}{W}{W} Sorcery. Radiance — deal X damage to target
 /// creature and each other creature that shares a color with it; gain life
 /// equal to the damage dealt this way.
@@ -37,11 +34,6 @@ pub fn brightflame() -> CardDefinition {
         ..Default::default()
     }
 }
-
-/// Beastmaster's Magemark — {2}{G} Aura. Enchant creature. Your enchanted
-/// creatures get +1/+1; when one becomes blocked it gets +1/+1 until end of
-
-/// Necromancer's Magemark — {2}{B} Aura. Enchant creature. Your enchanted
 
 /// Lurking Informant — {1}{U/B} 1/2 Human Rogue. {2}, {T}: look at the top
 /// card of target player's library; you may put it into their graveyard.

@@ -198,3 +198,32 @@ fn cr_708_8_turning_face_up_keeps_effects_applied_while_face_down() {
     assert_eq!(cp.power, 7, "6/6 base plus the counter it kept");
     assert!(cp.keywords.contains(&Keyword::Vigilance), "printed abilities are back");
 }
+
+/// CR 708.2a / 604.3 — Ixidron turns the other nontoken creatures into
+/// vanilla 2/2s and sizes itself off the resulting face-down count.
+#[test]
+fn cr_708_2a_turned_face_down_creatures_become_vanilla_two_twos() {
+    let mut g = main_phase();
+    let gargaroth = g.add_card_to_battlefield(0, catalog::elder_gargaroth());
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let ixidron = g.add_card_to_hand(0, catalog::ixidron());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ixidron,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    for id in [gargaroth, foe] {
+        let cp = g.computed_permanent(id).expect("computed");
+        assert_eq!((cp.power, cp.toughness), (2, 2), "vanilla 2/2 body");
+        assert!(cp.keywords.is_empty(), "no abilities while face down");
+    }
+    // Ixidron itself isn't face down, so its CDA reads the two it flipped.
+    let cp = g.computed_permanent(ixidron).expect("computed");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "two face-down creatures");
+}

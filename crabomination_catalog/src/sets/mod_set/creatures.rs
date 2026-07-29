@@ -9505,3 +9505,31 @@ pub fn fleshwrither() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ixidron — {3}{U}{U} */* Illusion. As it enters, every other nontoken
+/// creature is turned face down; its own power and toughness each equal the
+/// number of face-down creatures on the battlefield (CR 604.3 / 708.2a).
+pub fn ixidron() -> CardDefinition {
+    use crate::card::{SelectionRequirement as R, StaticAbility, Value};
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Ixidron",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Illusion],
+            ..Default::default()
+        },
+        static_abilities: vec![StaticAbility {
+            description: "Ixidron's power and toughness are each equal to the number of face-down creatures on the battlefield.",
+            effect: StaticEffect::SelfBasePtFromValue {
+                power: Value::FaceDownCreatures,
+                toughness: Value::FaceDownCreatures,
+            },
+        }],
+        as_enters_effect: Some(Effect::TurnFaceDown {
+            what: Selector::EachPermanent(R::Creature.and(R::NotToken).and(R::OtherThanSource)),
+        }),
+        ..Default::default()
+    }
+}

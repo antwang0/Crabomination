@@ -2295,3 +2295,245 @@ fn lurking_informant_mills_the_top_card() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib - 1);
 }
+
+// ── Gap wave 20 ─────────────────────────────────────────────────────────────
+
+/// Dream Leash only aims at a tapped permanent, and steals what it enchants.
+#[test]
+fn dream_leash_steals_a_tapped_permanent() {
+    use crabomination::game::types::{Target, TurnStep};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let leash = g.add_card_to_hand(0, catalog::dream_leash());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    // Untapped → illegal target.
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: leash,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "can't choose an untapped permanent",
+    );
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.perform_action(GameAction::CastSpell {
+        card_id: leash,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen");
+}
+
+/// Auratouched Mage fetches an Aura out of the library and suits up.
+#[test]
+fn auratouched_mage_fetches_and_attaches_an_aura() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let aura = g.add_card_to_library(0, catalog::glorious_anthem());
+    let holy = g.add_card_to_library(0, catalog::clinging_darkness());
+    let mage = g.add_card_to_hand(0, catalog::auratouched_mage());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mage, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let _ = aura; // Glorious Anthem isn't an Aura, so it can't be chosen.
+    assert_eq!(
+        g.battlefield_find(holy).map(|c| c.attached_to),
+        Some(Some(mage)),
+        "the fetched Aura came down attached",
+    );
+}
+
+/// Flame Fusillade turns every permanent you control into a pinger.
+#[test]
+fn flame_fusillade_arms_your_permanents() {
+    use crabomination::game::types::{Target, TurnStep};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::flame_fusillade());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    let abilities = g.granted_abilities_for(land).len();
+    assert!(abilities > 0, "the land picked up a granted ability");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: g.battlefield_find(land).unwrap().definition.activated_abilities.len(),
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+}
+
+/// Pollenbright Wings grants flying and mints Saprolings on the connect.
+#[test]
+fn pollenbright_wings_mints_saprolings_on_damage() {
+    use crabomination::card::Keyword as K;
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wings = g.add_card_to_battlefield(0, catalog::pollenbright_wings());
+    g.battlefield_find_mut(wings).unwrap().attached_to = Some(bear);
+    g.clear_sickness(bear);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&K::Flying));
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.resolve_combat().expect("damage");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count(),
+        2,
+        "one Saproling per point of combat damage",
+    );
+}
+
+/// Chant of Vitu-Ghazi fogs the combat.
+#[test]
+fn chant_of_vitu_ghazi_fogs_combat() {
+    use crabomination::card::Keyword as K;
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    assert!(catalog::chant_of_vitu_ghazi().keywords.contains(&K::Convoke));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let chant = g.add_card_to_hand(0, catalog::chant_of_vitu_ghazi());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: chant, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.resolve_combat().expect("damage");
+    assert_eq!(g.players[1].life, life, "no combat damage got through");
+}
+
+/// Moonlight Bargain buys the cards it can afford and bins the rest.
+#[test]
+fn moonlight_bargain_pays_life_for_the_top_five() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    // Buy the first two, decline the rest.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(false),
+    ]));
+    let bargain = g.add_card_to_hand(0, catalog::moonlight_bargain());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bargain, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 4, "2 life per bought card");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "the two bought cards");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.is_land()).count(), 3);
+}
+
+/// Tunnel Vision mills a player down to a named card.
+#[test]
+fn tunnel_vision_mills_down_to_the_named_card() {
+    use crabomination::game::types::{Target, TurnStep};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    // Four Forests then a Bear: the densest name is Forest, so nothing above
+    // the first Forest is milled — stack a Bear on top to prove the walk.
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let bear = g.add_card_to_library(1, catalog::grizzly_bears());
+    let top = g.players[1].library.len() - 1;
+    g.players[1].library.swap(0, top);
+    let tunnel = g.add_card_to_hand(0, catalog::tunnel_vision());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tunnel,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "the Bear above got binned");
+    assert!(
+        g.players[1].library.first().is_some_and(|c| c.definition.name == "Forest"),
+        "the named card is on top",
+    );
+}
+
+/// Concerted Effort spreads one creature's flying across the whole team.
+#[test]
+fn concerted_effort_shares_keywords_at_upkeep() {
+    use crabomination::card::Keyword as K;
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::concerted_effort());
+    let flyer = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let ground = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(ground).unwrap().keywords.contains(&K::Flying));
+    while !(g.step == TurnStep::Upkeep && g.turn_number > 1) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let kws = g.computed_permanent(ground).unwrap().keywords;
+    assert!(kws.contains(&K::Flying), "shared from Serra Angel");
+    assert!(kws.contains(&K::Vigilance), "and vigilance");
+    let _ = flyer;
+}

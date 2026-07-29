@@ -737,6 +737,23 @@ impl GameState {
     /// granted, all before the first SBA sweep (so a printed `*/*` body never
     /// dies as a 0/0). No-op when the card has no such spec. Corrupted
     /// Shapeshifter.
+    /// CR 614 — resolve a permanent's `as_enters_effect` replacement during the
+    /// battlefield hop. Runs before the first SBA sweep, so an effect the
+    /// permanent's own CDA reads (Ixidron's mass turn-face-down) has already
+    /// happened by the time its 0/0 body would be checked.
+    pub(crate) fn apply_as_enters_effect(&mut self, card_id: CardId) {
+        let Some((effect, controller)) = self
+            .battlefield_find(card_id)
+            .and_then(|c| {
+                c.definition.as_enters_effect.clone().map(|e| (e, c.controller))
+            })
+        else {
+            return;
+        };
+        let ctx = EffectContext::for_ability(card_id, controller, None);
+        let _ = self.resolve_effect(&effect, &ctx);
+    }
+
     pub(crate) fn apply_enters_as_choice(&mut self, card_id: CardId) -> bool {
         let modes = self
             .battlefield
@@ -4893,6 +4910,127 @@ impl GameState {
                             }
                         }
                     }
+                }
+                Ok(())
+            }
+
+            Effect::LookTopEachPayLifeOrBin { count, life } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let p = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let looked: Vec<CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                for cid in looked {
+                    let name = self
+                        .players[p]
+                        .library
+                        .iter()
+                        .find(|c| c.id == cid)
+                        .map(|c| c.definition.name.to_string())
+                        .unwrap_or_default();
+                    // Buy the card whenever the life is affordable; the auto
+                    // decider says yes, so bots keep the cards they can pay for.
+                    let can_pay = self.players[p].life > *life as i32;
+                    let pay = can_pay
+                        && matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source,
+                                description: format!("Pay {life} life to keep {name}?"),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        );
+                    if pay {
+                        self.pay_life_cost(p, *life);
+                    } else if let Some(card) =
+                        Self::take_card(&mut self.players[p].library, cid)
+                    {
+                        self.players[p].send_to_graveyard(card);
+                    }
+                }
+                // Everything still on top (the bought cards) goes to hand.
+                let keep: Vec<CardId> = self.players[p]
+                    .library
+                    .iter()
+                    .take(n)
+                    .map(|c| c.id)
+                    .collect();
+                for cid in keep {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, cid) {
+                        self.players[p].hand.push(card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::TurnFaceDown { what } => {
+                // CR 708.2a/708.2b — `turn_face_down` stashes the real card and
+                // swaps in the vanilla 2/2 body; it no-ops if already face down.
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.turn_face_down();
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ShareKeywordsAmongYourCreatures { keywords } => {
+                let p = ctx.controller;
+                let mine: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                // Snapshot first, so a keyword granted in this pass doesn't
+                // widen the shared set mid-sweep.
+                let shared: Vec<crate::card::Keyword> = keywords
+                    .iter()
+                    .filter(|kw| {
+                        mine.iter().any(|id| {
+                            self.computed_permanent(*id)
+                                .is_some_and(|cp| cp.keywords.contains(kw))
+                        })
+                    })
+                    .cloned()
+                    .collect();
+                for id in mine {
+                    for kw in &shared {
+                        self.grant_keyword_eot(id, kw.clone());
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::NameCardRevealUntilThenBin { who } => {
+                use rand::seq::SliceRandom;
+                // The namer picks the densest name in the victim's library, so
+                // an auto seat's Tunnel Vision actually hits something.
+                let Some(victim) = self.resolve_players(who, ctx).first().copied() else {
+                    return Ok(());
+                };
+                let named = rank_names_by_frequency(
+                    self.players[victim].library.iter().map(|c| c.definition.name),
+                )
+                .into_iter()
+                .next();
+                let Some(named) = named else { return Ok(()) };
+                let hit = self.players[victim]
+                    .library
+                    .iter()
+                    .position(|c| c.definition.name == named);
+                match hit {
+                    Some(pos) => {
+                        // Everything above the named card is binned; it stays on top.
+                        let binned: Vec<_> =
+                            self.players[victim].library.drain(..pos).collect();
+                        for card in binned {
+                            self.players[victim].send_to_graveyard(card);
+                        }
+                    }
+                    None => self.players[victim].library.shuffle(&mut rand::rng()),
                 }
                 Ok(())
             }

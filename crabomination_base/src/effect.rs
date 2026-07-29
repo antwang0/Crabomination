@@ -555,6 +555,9 @@ pub enum Value {
     /// Last Agni Kai, Razor Rings). Backed by
     /// `GameState.excess_damage_this_resolution`.
     ExcessDamageDealtThisResolution,
+    /// Face-down creatures on the battlefield, any controller (Ixidron's
+    /// characteristic-defining power/toughness).
+    FaceDownCreatures,
     /// Total damage that actually landed during this resolution — "gain life
     /// equal to the damage dealt this way" (Brightflame).
     DamageDealtThisResolution,
@@ -3449,6 +3452,25 @@ pub enum Effect {
         #[serde(default)]
         sacrifice_at_next_end_step: bool,
     },
+    /// "Look at the top `count` cards of your library. For each, put it into
+    /// your graveyard unless you pay `life` life. Then put the rest into your
+    /// hand." Moonlight Bargain. The auto payer buys every card it can afford
+    /// while staying above 1 life.
+    LookTopEachPayLifeOrBin { count: Value, life: u32 },
+    /// CR 708.2a — turn each resolved permanent face down: it becomes a 2/2
+    /// creature with no name, types, or abilities. A no-op on a permanent
+    /// that is already face down (CR 708.2b). Ixidron.
+    TurnFaceDown { what: Selector },
+    /// "Creatures you control gain each of `keywords` until end of turn if a
+    /// creature you control already has it" (Concerted Effort's upkeep sweep).
+    /// Reads the controller's *computed* keywords once, then grants the union
+    /// to every creature they control.
+    ShareKeywordsAmongYourCreatures { keywords: Vec<Keyword> },
+    /// "Choose a card name. Target player reveals cards from the top of their
+    /// library until one with that name is revealed. If it is, the rest of the
+    /// revealed cards go to their graveyard and the named card goes back on
+    /// top. Otherwise they shuffle." Tunnel Vision.
+    NameCardRevealUntilThenBin { who: PlayerRef },
     /// Gonti, Lord of Luxury's ETB: look at the top `count` cards of target
     /// opponent's library, exile one face down (auto-pick: highest MV) with
     /// a while-exiled cast permission for you, and bottom the rest randomly.

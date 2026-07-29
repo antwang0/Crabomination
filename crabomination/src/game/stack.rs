@@ -1202,6 +1202,10 @@ impl GameState {
                     // cost enters with N time counters (and isn't a creature
                     // until they tick off).
                     self.apply_impending_etb(card_id, &mut events);
+                    // CR 614 — "As this permanent enters, [effect]" (Ixidron).
+                    // Before the first SBA sweep so a `*/*` body sized off the
+                    // effect never dies as a 0/0.
+                    self.apply_as_enters_effect(card_id);
                     // CR 614 — "As this enters, it becomes your choice of …"
                     // (Corrupted Shapeshifter). Applied before SBA so a
                     // printed */* body never dies as a 0/0.

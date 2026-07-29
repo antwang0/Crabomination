@@ -6948,6 +6948,35 @@ impl GameState {
         }
         // CR 702.87 — Level up: the band matching the creature's level-counter
         // count sets its base P/T (layer 7a CDA) and grants its keywords.
+        // CR 604.3 — `SelfBasePtFromValue`: a state-driven CDA on the source's
+        // own base P/T (Ixidron's "equal to the number of face-down creatures").
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::SelfBasePtFromValue { power, toughness } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    card.id,
+                    card.controller,
+                    None,
+                );
+                let (p, t) = (
+                    self.evaluate_value(power, &ctx),
+                    self.evaluate_value(toughness, &ctx),
+                );
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::CharDefining),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::SetPowerToughness(p, t),
+                });
+            }
+        }
         for card in &self.battlefield {
             if card.definition.level_bands.is_empty() {
                 continue;
@@ -15011,6 +15040,7 @@ fn static_effect_to_effects(
             // (opponents / predicate eval); resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForFilter { .. }
             | StaticEffect::AnthemForFilterIf { .. }
+            | StaticEffect::SelfBasePtFromValue { .. }
             | StaticEffect::SelfHasKeywordIf { .. }
             | StaticEffect::SelfIsCreatureIf { .. }
             // GrantKeywordToChosenType — reads the source's live chosen type;

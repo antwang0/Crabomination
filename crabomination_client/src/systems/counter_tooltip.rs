@@ -1218,6 +1218,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Blood => "Blood",
         CounterType::Plague => "Plague",
         CounterType::Fuse => "Fuse",
+        CounterType::Plague => "Plague",
         CounterType::Age => "Age",
         CounterType::Level => "Level",
         CounterType::Energy => "Energy",

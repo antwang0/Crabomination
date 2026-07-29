@@ -41,13 +41,33 @@ Items are grouped by area and roughly ordered by impact within each group.
   host's context (`Selector::This` binds to the host), so the counter-add is
   modeled as an Equipment ability with a tap-an-equipped-creature cost.
   Wants a `Selector::AttachmentGranting` (or equivalent).
+- **Chant of Vitu-Ghazi's lifegain rider** — `PreventAllCombatDamageThisTurn`
+  is a turn flag, not a set of shields, so there is no per-point hook to gain
+  life from. Either give the flag a `gain_life_for: Option<usize>` companion or
+  express the fog as prevention shields (which already carry `gain_life`).
+- **Concerted Effort drops landwalk and protection** from its shared set: both
+  are parameterized keywords (`Landwalk(LandType)` / `Protection(Color)`), so
+  "share it if a creature you control has that ability" needs the *instance*
+  discovered at resolution rather than a fixed keyword list.
+- **Tunnel Vision / the NameCard family auto-pick the densest name.** A
+  `wants_ui` caster should be prompted for the name (the same residual as
+  Petrified Hamlet's `NameCard`).
 - **Remaining Ravnica-block gap cards**, each blocked on real machinery:
   Aetherplasm (put a creature from hand onto the battlefield *blocking*),
   Djinn Illuminatus (a static granting replicate to your I/S spells),
   Ink-Treader Nephilim (copy-for-each-other-legal-target), Mimeofacture
   (search an opponent's library by a target permanent's name), Azorius
   Aethermage (needs a "a permanent is returned to your hand" event),
-  Experiment Kraj, and the DIS split cards.
+  Bloodbond March, Bottled Cloister (return-cards-exiled-with-this),
+  Breath of Fury, Chorus of the Conclave (a "pay any amount of mana as an
+  additional cost" static), Circu, Cloudstone Curio (a shares-a-permanent-type
+  filter), Crown of Convergence, Dimir Doppelganger, Dimir Machinations
+  (+ Transmute, which is a whole unimplemented keyword), Eye of the Storm,
+  Flickerform, Gaze of the Gorgon, Master Warcraft, Mindleech Mass,
+  Reroute (retarget an activated ability), Sins of the Past, Sisters of Stone
+  Death, Sunforger, Warp World, Experiment Kraj, and the DIS split cards.
+  `scripts/set_gaps.py {rav,gpt,dis}` is the live list — after this run
+  RAV is at 20 gaps (was 39), GPT at 4 (was 14), DIS at 5 (was 8).
 
 ## Tier 4 — remaining SOS/SOA audit simplifications (2026-07)
 
@@ -7416,8 +7436,8 @@ stalled games via `eval_material`.
 - **Whims of the Fates piles are engine-chosen.** A shuffled round-robin split;
   the printed card lets each player build their own three piles. Wants a
   `Decision::PartitionPermanents`.
-- **CR coverage gaps.** `scripts/cr_coverage.py` → `CR_COVERAGE.md` now maps
-  CR section → conformance test; 81 numbered sections still have none. The
-  highest-value untested blocks are 610 (one-shot "until" effects), 612
-  (text-changing effects), 703 (turn-based actions) and the 8xx multiplayer
-  rules.
+- **CR coverage gaps.** `scripts/cr_coverage.py` → `CR_COVERAGE.md` maps CR
+  section → conformance test; 75 numbered sections still have none (610 and 612
+  came off the list this run). The highest-value untested blocks left are 703
+  (turn-based actions), 404/406 (graveyard and exile), 501–513 (the individual
+  turn steps) and the 8xx multiplayer rules.

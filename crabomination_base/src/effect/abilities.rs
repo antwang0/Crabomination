@@ -105,6 +105,11 @@ pub enum StaticEffect {
     /// +N/+M still stack on top per CR 613.7c/f). Snowmelt Stag
     /// ("During your turn, this creature has base power and toughness 5/2").
     SetBasePtIf { condition: Predicate, power: i32, toughness: i32 },
+    /// CR 604.3 — a characteristic-defining ability setting this permanent's own
+    /// base power/toughness from live game state ("this creature's power and
+    /// toughness are each equal to …" — Ixidron). Emitted as a layer-7a
+    /// `SetPowerToughness`, so +N/+N and counters still stack on top.
+    SelfBasePtFromValue { power: Value, toughness: Value },
     /// "This creature can attack as though it didn't have defender as long as
     /// [condition]." A self-static gating defender-bypass on a live predicate
     /// (controller as context). Drowsing Tyrannodon ("…as long as you control
