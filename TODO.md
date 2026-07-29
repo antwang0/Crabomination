@@ -750,10 +750,24 @@ factory doc comment:
   - `Selector::RandomAmong` re-rolls per resolution and can pick the source
     itself; a "chosen at random" that must exclude the source would need a
     filter-side `OtherThanSource` at the call site (Goblin Test Pilot doesn't).
-  - THS is down to 32 `set_gaps.py` entries; the remainder is the rare/mythic
-    tail (Ashen Rider, Curse of the Swine, Gift of Immortality, Medomai,
-    Polukranos, Triad of Fates, Triton Tactics, Xenagos the Reveler, …), each
-    needing one new primitive.
+  - THS is down to 16 `set_gaps.py` entries, each blocked on one primitive:
+    - **Xenagos, the Reveler** — an "exile the top N; put any number of
+      matching cards onto the battlefield" effect (no `ExileTopPickToBattlefield`).
+    - **Medomai the Ageless** ships without its "can't attack during extra
+      turns" rider — needs an is-extra-turn `Predicate`.
+    - **Prophet of Kruphix** — "untap all creatures and lands you control
+      during each other player's untap step" (no cross-turn untap static;
+      the creature-spells-have-flash half already exists).
+    - **Underworld Cerberus** — "cards in graveyards can't be the targets of
+      spells or abilities" (a graveyard-untargetable static).
+    - **Curse of the Swine** — exile X creatures, each *controller* creates a
+      Boar (per-victim-controller token minting).
+    - **Polukranos, World Eater** — divided damage where each damaged creature
+      deals its power back to the source.
+    - **Shipbreaker Kraken** — "don't untap for as long as you control this".
+    - Also open: Ashen Rider, Artisan of Forms, Chained to the Rocks, Daxos of
+      Meletis, Gift of Immortality, Polis Crusher, Psychic Intrusion, Rescue
+      from the Underworld, Triad of Fates, Triton Tactics.
 
 - **Multi-block follow-ups — CLOSED.** Engine + client both ship (the
   order/assign modals are noun-aware via `damage_recipient_noun`, reading

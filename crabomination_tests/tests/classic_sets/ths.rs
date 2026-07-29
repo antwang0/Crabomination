@@ -1094,3 +1094,251 @@ fn ths_batch3_scry_spells() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), 2);
 }
+
+// ── batch 4 ─────────────────────────────────────────────────────────────────
+
+/// Abhorrent Overlord's ETB scales with devotion and its upkeep eats a body.
+#[test]
+fn abhorrent_overlord_makes_harpies_then_feeds() {
+    let mut g = main_phase();
+    let overlord = g.add_card_to_hand(0, catalog::abhorrent_overlord());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    cast_at(&mut g, overlord, None);
+    // Only the Overlord's own {B}{B} counts toward devotion.
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Harpy").count(), 2);
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Harpy").count(), 1);
+}
+
+/// Akroan Horse enters under the opponent's control and gifts them a Soldier.
+#[test]
+fn akroan_horse_changes_sides() {
+    let mut g = main_phase();
+    let horse = g.add_card_to_hand(0, catalog::akroan_horse());
+    g.players[0].mana_pool.add_colorless(4);
+    cast_at(&mut g, horse, None);
+    assert_eq!(g.battlefield_find(horse).unwrap().controller, 1);
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count(), 1);
+}
+
+/// Colossus of Akros only attacks once it's monstrous.
+#[test]
+fn colossus_of_akros_attacks_when_monstrous() {
+    let mut g = main_phase();
+    let colossus = g.add_card_to_battlefield(0, catalog::colossus_of_akros());
+    g.clear_sickness(colossus);
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.declare_attackers(vec![Attack { attacker: colossus, target: AttackTarget::Player(1) }])
+            .is_err(),
+        "defender until monstrous"
+    );
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: colossus,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("monstrosity 10");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(colossus).unwrap().keywords.contains(&Keyword::Trample));
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: colossus, target: AttackTarget::Player(1) }])
+        .expect("attacks now");
+}
+
+/// Hythonia's monstrosity wipes every non-Gorgon.
+#[test]
+fn hythonia_wipes_non_gorgons() {
+    let mut g = main_phase();
+    let hythonia = g.add_card_to_battlefield(0, catalog::hythonia_the_cruel());
+    let gorgon = g.add_card_to_battlefield(1, catalog::keepsake_gorgon());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hythonia,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("monstrosity");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none());
+    assert!(g.battlefield_find(gorgon).is_some(), "Gorgons are spared");
+    assert!(g.battlefield_find(hythonia).is_some());
+}
+
+/// Rageblood Shaman pumps other Minotaurs but not itself.
+#[test]
+fn rageblood_shaman_pumps_other_minotaurs() {
+    let mut g = main_phase();
+    let shaman = g.add_card_to_battlefield(0, catalog::rageblood_shaman());
+    let other = g.add_card_to_battlefield(0, catalog::minotaur_skullcleaver());
+    let cp = g.computed_permanent(other).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert_eq!(g.computed_permanent(shaman).unwrap().power, 2, "not itself");
+}
+
+/// Reaper of the Wilds scries when another creature dies and buys keywords.
+#[test]
+fn reaper_of_the_wilds_scries_and_grants() {
+    let mut g = main_phase();
+    let reaper = g.add_card_to_battlefield(0, catalog::reaper_of_the_wilds());
+    g.add_card_to_library(0, catalog::mountain());
+    let doomed = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let evs = vec![crabomination::game::GameEvent::CreatureDied { card_id: doomed }];
+    g.remove_from_battlefield_to_graveyard_raw(doomed);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: reaper,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("deathtouch");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(reaper).unwrap().keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Tymaret flings a body, then buys himself back out of the graveyard.
+#[test]
+fn tymaret_flings_then_returns() {
+    let mut g = main_phase();
+    let tymaret = g.add_card_to_battlefield(0, catalog::tymaret_the_murder_king());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tymaret,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("fling");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+
+    g.remove_from_battlefield_to_graveyard_raw(tymaret);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tymaret,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("rebuy");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == tymaret));
+}
+
+/// Time to Feed fights, and the delayed rider pays off when the victim dies.
+#[test]
+fn time_to_feed_fights_and_pays_off() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::abhorrent_overlord()); // 6/6
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let feed = g.add_card_to_hand(0, catalog::time_to_feed());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: feed,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![Target::Permanent(mine)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+    assert_eq!(g.players[0].life, life + 3);
+}
+
+/// Bow of Nylea gives attackers deathtouch and its first mode grows a creature.
+#[test]
+fn bow_of_nylea_arms_the_team() {
+    let mut g = main_phase();
+    let bow = g.add_card_to_battlefield(0, catalog::bow_of_nylea());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch));
+
+    g.step = TurnStep::PostCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bow,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("mode 0");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Steam Augury splits five cards; the pile the opponent picks goes to hand.
+#[test]
+fn steam_augury_splits_five() {
+    let mut g = main_phase();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let augury = g.add_card_to_hand(0, catalog::steam_augury());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, augury, None);
+    assert_eq!(g.players[0].library.len(), 0, "all five left the library");
+}
+
+/// Stat / keyword lines for the batch-4 bodies.
+#[test]
+fn ths_batch4_stat_lines() {
+    let table: &[(fn() -> crabomination::card::CardDefinition, i32, i32, &[Keyword])] = &[
+        (catalog::abhorrent_overlord, 6, 6, &[Keyword::Flying]),
+        (catalog::akroan_horse, 0, 4, &[Keyword::Defender]),
+        (catalog::anthousa_setessan_hero, 4, 5, &[]),
+        (catalog::colossus_of_akros, 10, 10, &[Keyword::Defender, Keyword::Indestructible]),
+        (catalog::hythonia_the_cruel, 4, 6, &[Keyword::Deathtouch]),
+        (catalog::medomai_the_ageless, 4, 4, &[Keyword::Flying]),
+        (catalog::priest_of_iroas, 1, 1, &[]),
+        (catalog::rageblood_shaman, 2, 3, &[Keyword::Trample]),
+        (catalog::reaper_of_the_wilds, 4, 5, &[]),
+        (catalog::shipwreck_singer, 1, 2, &[Keyword::Flying]),
+        (catalog::tymaret_the_murder_king, 2, 2, &[]),
+    ];
+    for (f, p, t, kws) in table {
+        let d = f();
+        assert_eq!((d.power, d.toughness), (*p, *t), "{}", d.name);
+        for kw in *kws {
+            assert!(d.keywords.contains(kw), "{} lacks {:?}", d.name, kw);
+        }
+    }
+}
