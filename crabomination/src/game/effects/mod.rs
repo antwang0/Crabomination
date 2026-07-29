@@ -18434,11 +18434,21 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GainActivatedAbility { what, ability } => {
+            Effect::GainActivatedAbility { what, ability, duration } => {
+                // EOT grants ride `granted_activated_eot` (cleared at cleanup);
+                // permanent grants stay for as long as the object does.
+                let eot = matches!(
+                    duration,
+                    crate::effect::Duration::EndOfTurn | crate::effect::Duration::EndOfCombat
+                );
                 for ent in self.resolve_selector(what, ctx) {
                     let (EntityRef::Permanent(id) | EntityRef::Card(id)) = ent else { continue };
                     if let Some(c) = self.battlefield_find_mut(id) {
-                        c.granted_activated_abilities.push((**ability).clone());
+                        if eot {
+                            c.granted_activated_eot.push((**ability).clone());
+                        } else {
+                            c.granted_activated_abilities.push((**ability).clone());
+                        }
                     }
                 }
                 Ok(())

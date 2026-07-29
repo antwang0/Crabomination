@@ -5695,10 +5695,12 @@ pub enum Effect {
     /// Phyrexian Scriptures chapter I's "becomes an artifact".
     AddCardTypeIndefinitely { what: Selector, card_type: crate::card::CardType },
 
-    /// Grant `what` an activated ability for as long as it stays on the
-    /// battlefield (pushed onto `CardInstance.granted_activated_abilities`,
-    /// cleared when the permanent leaves). Urza's Saga chapters I/II.
-    GainActivatedAbility { what: Selector, ability: Box<ActivatedAbility> },
+    /// Grant `what` an activated ability. `Duration::Permanent` anchors the
+    /// grant to the permanent (`CardInstance.granted_activated_abilities`,
+    /// cleared when it leaves the battlefield — Urza's Saga chapters I/II);
+    /// `EndOfTurn`/`EndOfCombat` ride `granted_activated_eot`, cleared at
+    /// cleanup (Lightning Volley, Retraction Helix).
+    GainActivatedAbility { what: Selector, ability: Box<ActivatedAbility>, duration: Duration },
 
     // ── Delayed triggers and pact costs ──────────────────────────────────────
     /// Register a delayed triggered ability that fires later. `kind` selects

@@ -13,7 +13,7 @@ use super::super::{dual_land_with, fastland_etb_conditional_tap, shockland_pay_t
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, Effect, Keyword, LandType, Subtypes,
 };
-use crate::effect::{ManaPayload, PlayerRef, Value};
+use crate::effect::{Duration, ManaPayload, PlayerRef, Value};
 use crate::mana::{Color, ManaCost};
 
 /// Sacred Foundry — RW shockland (Plains/Mountain).
@@ -453,6 +453,7 @@ pub fn urzas_saga() -> CardDefinition {
                         },
                         ..Default::default()
                     }),
+                    duration: Duration::Permanent,
                 },
             ),
             (
@@ -469,6 +470,7 @@ pub fn urzas_saga() -> CardDefinition {
                         },
                         ..Default::default()
                     }),
+                    duration: Duration::Permanent,
                 },
             ),
             (

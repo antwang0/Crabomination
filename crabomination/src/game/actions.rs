@@ -10049,6 +10049,7 @@ impl GameState {
         // their indices must come before the battlefield-static grants.
         if let Some(c) = self.battlefield_find(card_id) {
             out.extend(c.granted_activated_abilities.iter().cloned());
+            out.extend(c.granted_activated_eot.iter().cloned());
         }
         for src in &self.battlefield {
             for sa in &src.definition.static_abilities {

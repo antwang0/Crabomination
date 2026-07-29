@@ -1542,6 +1542,7 @@ impl GameState {
         // that granted abilities to the permanent don't follow it.
         if let Some(c) = self.find_card_anywhere_mut(id) {
             c.granted_activated_abilities.clear();
+            c.granted_activated_eot.clear();
         }
         // CR 611.2c — continuous effects aimed at this specific permanent
         // end with it (don't re-attach if the same card re-enters).

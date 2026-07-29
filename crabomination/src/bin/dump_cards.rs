@@ -198,6 +198,9 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeBlockedByPowerAtMost(_)
         | Keyword::CantBeBlockedByPowerAtLeast(_)
         | Keyword::CantBeBlockedIfControllerCastSpells(_)
+        | Keyword::CantBeBlockedByPowerLessThanCount(_)
+        | Keyword::CantBeBlockedUnlessAllBlock
+        | Keyword::HexproofUnlessAttackingOrBlocking
         | Keyword::CanBlockOnlyFlying
         | Keyword::CantBeCounteredIfXAtLeast(_)
         | Keyword::ProtectionFromCreatures | Keyword::UmbraArmor => return None,

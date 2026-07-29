@@ -1244,6 +1244,19 @@ pub enum Keyword {
     /// in the stateful block-declaration path (`declare_blockers`) rather than
     /// the pure two-creature `can_block_attacker_computed`. CR 509.1b.
     CantBeBlockedIfControllerCastSpells(u32),
+    /// "Creatures with power less than the number of [filter] you control
+    /// can't block this creature" (Kraken of the Straits). The threshold is
+    /// the attacker controller's count of matching permanents, so it's
+    /// enforced in the stateful `declare_blockers` path (CR 509.1b).
+    CantBeBlockedByPowerLessThanCount(Box<SelectionRequirement>),
+    /// CR 509.1b — "This creature can't be blocked unless all creatures
+    /// defending player controls block it" (Tromokratis). Enforced against
+    /// the finished block assignment in `declare_blockers`.
+    CantBeBlockedUnlessAllBlock,
+    /// "This creature has hexproof unless it's attacking or blocking"
+    /// (Tromokratis). Read wherever hexproof is consulted; the grant lapses
+    /// while the bearer is an attacking or blocking creature.
+    HexproofUnlessAttackingOrBlocking,
     /// "This creature can block only creatures with flying." A blocker-side
     /// restriction (the inverse of the others here): when set, the bearer
     /// can't be declared as a blocker for an attacker that lacks Flying.
@@ -3974,6 +3987,9 @@ pub struct CardInstance {
     /// CR 400.7). Surfaced after the printed abilities in both
     /// `activate_ability` index space and the client view.
     pub granted_activated_abilities: Vec<ActivatedAbility>,
+    /// "Until end of turn" sibling of `granted_activated_abilities` — cleared
+    /// by `clear_end_of_turn_effects` (Lightning Volley, Retraction Helix).
+    pub granted_activated_eot: Vec<ActivatedAbility>,
     /// CR 702.33c — how many times this spell's Multikicker cost was paid.
     /// Persists onto the permanent so `Value::TimesKicked` can read it
     /// (Everflowing Chalice's enters-with-counters). Defaults to 0.
@@ -4538,6 +4554,7 @@ impl CardInstance {
             soulbond_partner: None,
             kicked: false,
             granted_activated_abilities: Vec::new(),
+            granted_activated_eot: Vec::new(),
             kick_count: 0,
             squad_count: 0,
             cast_mana_spent: 0,
@@ -4983,6 +5000,7 @@ impl CardInstance {
         self.once_per_turn_used.clear();
         self.granted_keywords_eot.clear();
         self.granted_keywords_eot_ts.clear();
+        self.granted_activated_eot.clear();
         self.removed_keywords_eot.clear();
         self.granted_flashback_eot = None;
         self.granted_harmonize_eot = None;
@@ -5089,6 +5107,10 @@ struct CardInstanceWire {
     /// for back-compat.
     #[serde(default)]
     granted_activated_abilities: Vec<ActivatedAbility>,
+    /// The EOT-duration half of the same grant. `#[serde(default)]` for
+    /// back-compat.
+    #[serde(default)]
+    granted_activated_eot: Vec<ActivatedAbility>,
     /// CR 702.27 buyback flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -5371,6 +5393,7 @@ impl serde::Serialize for CardInstance {
             encoded_on: self.encoded_on,
             cast_target_was_battlefield: self.cast_target_was_battlefield,
             granted_activated_abilities: self.granted_activated_abilities.clone(),
+            granted_activated_eot: self.granted_activated_eot.clone(),
             bought_back: self.bought_back,
             entwined: self.entwined,
             gift_promised: self.gift_promised,
@@ -5489,6 +5512,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.encoded_on = wire.encoded_on;
         c.cast_target_was_battlefield = wire.cast_target_was_battlefield;
         c.granted_activated_abilities = wire.granted_activated_abilities;
+        c.granted_activated_eot = wire.granted_activated_eot;
         c.bought_back = wire.bought_back;
         c.entwined = wire.entwined;
         c.gift_promised = wire.gift_promised;

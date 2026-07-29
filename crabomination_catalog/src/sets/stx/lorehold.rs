@@ -38,15 +38,8 @@ pub use crabomination_base::tokens::lorehold_spirit_token;
 /// until end of turn, Spirit creatures you control gain '{T}: This
 /// creature deals 1 damage to each opponent.'"
 ///
-/// Wired via `Effect::GainActivatedAbility` fanned over
-/// `Selector::EachPermanent(Spirit creature you control)`.
-/// KNOWN APPROXIMATION: `Effect::GainActivatedAbility` anchors the
-/// grant to the permanent (cleared when it leaves the battlefield) and
-/// has no `Duration` parameter, so the printed "until end of turn"
-/// expiry is not modelled — the tap ability persists past cleanup.
-/// Missing primitive: a duration-carrying activated-ability grant
-/// (the activated-ability sibling of `Effect::GrantTriggeredAbility
-/// { duration }`).
+/// Wired via `Effect::GainActivatedAbility { duration: EndOfTurn }` fanned
+/// over `Selector::EachPermanent(Spirit creature you control)`.
 pub fn lorehold_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice",
@@ -72,6 +65,7 @@ pub fn lorehold_apprentice() -> CardDefinition {
                 },
                 ..Default::default()
             }),
+            duration: crate::effect::Duration::EndOfTurn,
         })],
         ..Default::default()
     }

@@ -5868,6 +5868,7 @@ impl GameState {
                     per_power,
                     per_toughness,
                     count_graveyard,
+                    exclude_self,
                 } = &sa.effect
                 else {
                     continue;
@@ -5894,9 +5895,6 @@ impl GameState {
                         })
                         .count() as i32;
                 }
-                if count == 0 {
-                    continue;
-                }
                 for target in &self.battlefield {
                     if target.controller != card.controller
                         || !self.evaluate_requirement_static(
@@ -5906,6 +5904,22 @@ impl GameState {
                             Some(card.id),
                         )
                     {
+                        continue;
+                    }
+                    // "for each OTHER …" — the affected permanent doesn't
+                    // count itself.
+                    let count = if *exclude_self
+                        && self.evaluate_requirement_static(
+                            count_filter,
+                            &crate::game::types::Target::Permanent(target.id),
+                            card.controller,
+                            Some(card.id),
+                        ) {
+                        count - 1
+                    } else {
+                        count
+                    };
+                    if count == 0 {
                         continue;
                     }
                     all_effects.push(ContinuousEffect {
@@ -6813,6 +6827,31 @@ impl GameState {
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::AddKeyword(crate::card::Keyword::Annihilator(n)),
+                });
+            }
+        }
+        // "Has hexproof unless it's attacking or blocking" (Tromokratis) —
+        // injected as a computed layer-6 Hexproof so every existing
+        // targeting gate honors it.
+        for card in &self.battlefield {
+            if !card
+                .definition
+                .keywords
+                .contains(&crate::card::Keyword::HexproofUnlessAttackingOrBlocking)
+            {
+                continue;
+            }
+            let in_combat = self.attacking.iter().any(|a| a.attacker == card.id)
+                || self.block_map.contains_key(&card.id);
+            if !in_combat {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(crate::card::Keyword::Hexproof),
                 });
             }
         }

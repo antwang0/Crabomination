@@ -270,9 +270,8 @@ pub fn simic_basilisk() -> CardDefinition {
 }
 
 /// Evolution Vat — {3} Artifact. {3}, {T}: tap target creature and put a +1/+1
-/// counter on it; it gains "{2}{G}{U}: double its +1/+1 counters." (The grant
-/// is anchored to the creature rather than expiring end of turn — the same
-/// duration approximation as other `GainActivatedAbility` grants.)
+/// counter on it; it gains "{2}{G}{U}: double its +1/+1 counters" until end
+/// of turn.
 pub fn evolution_vat() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     use crate::effect::shortcut::target_filtered;
@@ -300,6 +299,7 @@ pub fn evolution_vat() -> CardDefinition {
                         },
                         ..Default::default()
                     }),
+                    duration: crate::effect::Duration::EndOfTurn,
                 },
             ]),
             ..Default::default()

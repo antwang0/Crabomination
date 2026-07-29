@@ -1683,6 +1683,12 @@ fn cr_601_2c_every_catalog_target_filter_is_surfaced() {
                     if k == "trigger" {
                         continue;
                     }
+                    // Likewise a `GainActivatedAbility`'s granted `ability`:
+                    // its targets are chosen when the grantee activates it
+                    // (Lightning Volley's tap-ping).
+                    if k == "ability" {
+                        continue;
+                    }
                     collect_slots(v, out);
                 }
             }

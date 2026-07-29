@@ -247,6 +247,11 @@ pub enum StaticEffect {
         per_toughness: i32,
         #[serde(default)]
         count_graveyard: bool,
+        /// "for each OTHER [count_filter] you control" — an affected permanent
+        /// that itself matches `count_filter` doesn't count itself (Heroes'
+        /// Podium). Defaults to false.
+        #[serde(default)]
+        exclude_self: bool,
     },
     /// "As long as this has `n` or more `kind` counters on it, it's an
     /// (artifact) creature." War Balloon (3+ fire counters). Emits a layer-4

@@ -1004,9 +1004,30 @@ impl GameState {
                     {
                         return Err(GameError::CannotBlock(blocker_id));
                     }
+                    // CR 509.1b — "creatures with power less than the number of
+                    // [filter] you control can't block" (Kraken of the Straits).
+                    if let Keyword::CantBeBlockedByPowerLessThanCount(f) = kw {
+                        let n = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == atk_ctl
+                                    && self.evaluate_requirement_static(
+                                        f,
+                                        &crate::game::types::Target::Permanent(c.id),
+                                        atk_ctl,
+                                        None,
+                                    )
+                            })
+                            .count() as i32;
+                        if blocker_cp.power < n {
+                            return Err(GameError::CannotBlock(blocker_id));
+                        }
+                    }
                 }
             }
         }
+
 
         // CR 509.1c — "can't block alone". A creature blocks alone if it's the
         // only creature blocking this combat; count the merged block set
@@ -1219,6 +1240,42 @@ impl GameState {
                 || assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == required);
             if !assigned {
                 return Err(GameError::MustBeBlockedIfAble(required));
+            }
+        }
+
+        // CR 509.1b — Tromokratis: once such an attacker is blocked at all,
+        // *every* untapped defending creature able to block it must also be
+        // assigned to it. Checked against the merged block set.
+        for atk in &self.attacking {
+            if !kws_of(atk.attacker).contains(&Keyword::CantBeBlockedUnlessAllBlock) {
+                continue;
+            }
+            let blocked = self.blocker_count_of(atk.attacker) > 0
+                || assignments.iter().any(|(_, aid)| *aid == atk.attacker);
+            if !blocked {
+                continue;
+            }
+            let Some(defender_idx) = self.defender_for(atk.target) else { continue };
+            let Some(attacker) = self.battlefield_find(atk.attacker) else { continue };
+            let atk_colors = cp_of(atk.attacker).map(|c| c.colors.clone()).unwrap_or_default();
+            let atk_power = cp_of(atk.attacker).map(|c| c.power).unwrap_or_else(|| attacker.power());
+            let unmet = self.battlefield.iter().any(|b| {
+                cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                    && self.same_team(b.controller, defender_idx)
+                    && !b.tapped
+                    && !kws_of(b.id).contains(&Keyword::CantBlock)
+                    && !self.blocks(b.id, atk.attacker)
+                    && !assignments
+                        .iter()
+                        .any(|(bid, aid)| *bid == b.id && *aid == atk.attacker)
+                    && cp_of(b.id).is_some_and(|bcp| {
+                        super::can_block_attacker_computed(
+                            b, bcp, kws_of(atk.attacker), &atk_colors, atk_power,
+                        )
+                    })
+            });
+            if unmet {
+                return Err(GameError::CannotBlock(atk.attacker));
             }
         }
 

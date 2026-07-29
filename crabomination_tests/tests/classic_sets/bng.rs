@@ -407,3 +407,378 @@ fn ashioks_adept_heroic_discards() {
     cast(&mut g, catalog::mortals_ardor(), Some(Target::Permanent(adept)), 0, &[(Color::White, 1)]);
     assert!(g.players[1].hand.is_empty(), "the opponent discarded");
 }
+
+// ── Wave 3 (bng2) ────────────────────────────────────────────────────────────
+
+/// Stat / keyword lines for the wave-3 bodies.
+#[test]
+fn bng2_stat_lines() {
+    let table: &[(fn() -> crabomination::card::CardDefinition, i32, i32, &[Keyword])] = &[
+        (catalog::swordwise_centaur, 3, 2, &[]),
+        (catalog::oreskos_sun_guide, 2, 2, &[]),
+        (catalog::sphinxs_disciple, 2, 2, &[Keyword::Flying]),
+        (catalog::setessan_oathsworn, 1, 1, &[]),
+        (catalog::vanguard_of_brimaz, 2, 2, &[Keyword::Vigilance]),
+        (catalog::black_oak_of_odunos, 0, 5, &[Keyword::Defender]),
+        (catalog::forlorn_pseudamma, 2, 1, &[Keyword::Intimidate]),
+        (catalog::pheres_band_raiders, 5, 5, &[]),
+        (catalog::eater_of_hope, 6, 4, &[Keyword::Flying]),
+        (catalog::silent_sentinel, 4, 6, &[Keyword::Flying]),
+        (catalog::fate_unraveler, 3, 4, &[]),
+        (catalog::tromokratis, 8, 8, &[Keyword::CantBeBlockedUnlessAllBlock]),
+    ];
+    for (f, p, t, kws) in table {
+        let d = f();
+        assert_eq!((d.power, d.toughness), (*p, *t), "{}", d.name);
+        for kw in *kws {
+            assert!(d.keywords.contains(kw), "{} lacks {:?}", d.name, kw);
+        }
+    }
+}
+
+/// Inspired token payoffs: the Raiders mint a 3/3 Centaur enchantment creature
+/// when the {2}{G} is paid.
+#[test]
+fn pheres_band_raiders_inspired_mints_a_centaur() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let raiders = g.add_card_to_battlefield(0, catalog::pheres_band_raiders());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = crabomination::game::effects::EffectContext::for_ability(raiders, 0, None);
+    g.resolve_effect(&catalog::pheres_band_raiders().triggered_abilities[0].effect, &ctx)
+        .expect("inspired body");
+    drain_stack(&mut g);
+    let token = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Centaur")
+        .expect("Centaur token minted");
+    assert_eq!((token.definition.power, token.definition.toughness), (3, 3));
+    assert!(
+        token.definition.card_types.contains(&crabomination::card::CardType::Enchantment),
+        "the token is an enchantment creature"
+    );
+}
+
+/// Fate Unraveler pings the opponent on each of their draws, not on yours.
+#[test]
+fn fate_unraveler_pings_opponent_draws() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::fate_unraveler());
+    g.add_card_to_library(1, catalog::great_hart());
+    g.add_card_to_library(0, catalog::great_hart());
+    let life = g.players[1].life;
+    let mut events = Vec::new();
+    g.draw_one(1, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "your own draw doesn't trigger");
+}
+
+/// Pain Seer's inspired trade: the top card lands in hand and costs its mana
+/// value in life.
+#[test]
+fn pain_seer_inspired_reveals_for_life() {
+    let mut g = main_phase();
+    let seer = g.add_card_to_battlefield(0, catalog::pain_seer());
+    g.battlefield_find_mut(seer).unwrap().tapped = true;
+    g.add_card_to_library(0, catalog::great_hart()); // {3}{W} — MV 4
+    let life = g.players[0].life;
+    for _ in 0..40 {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+        if g.active_player_idx == 0 && !g.battlefield_find(seer).unwrap().tapped {
+            break;
+        }
+    }
+    assert_eq!(g.players[0].life, life - 4, "lost life equal to the revealed mana value");
+}
+
+/// Lightning Volley's grant expires at cleanup (the EOT-duration activated
+/// ability grant).
+#[test]
+fn lightning_volley_grant_expires() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    cast(&mut g, catalog::lightning_volley(), None, 3, &[(Color::Red, 1)]);
+    assert_eq!(g.granted_abilities_for(bear).len(), 1, "the tap-ping is granted");
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+
+    for _ in 0..40 {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+        if g.step == TurnStep::PreCombatMain && g.active_player_idx == 1 {
+            break;
+        }
+    }
+    assert!(g.granted_abilities_for(bear).is_empty(), "the grant expired at cleanup");
+}
+
+/// Kraken of the Straits: small creatures can't block it once you have enough
+/// Islands.
+#[test]
+fn kraken_of_the_straits_gates_blockers_by_island_count() {
+    let mut g = main_phase();
+    let kraken = g.add_card_to_battlefield(0, catalog::kraken_of_the_straits());
+    g.battlefield_find_mut(kraken).unwrap().summoning_sick = false;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::Attack {
+        attacker: kraken,
+        target: crabomination::game::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(bear, kraken)])).is_err(),
+        "a 2-power blocker can't block under three Islands"
+    );
+}
+
+/// Tromokratis: hexproof off-combat, and blocking it requires every able
+/// defender.
+#[test]
+fn tromokratis_hexproof_and_gang_block() {
+    let mut g = main_phase();
+    let kraken = g.add_card_to_battlefield(0, catalog::tromokratis());
+    g.battlefield_find_mut(kraken).unwrap().summoning_sick = false;
+    assert!(
+        g.computed_permanent(kraken).unwrap().keywords.contains(&Keyword::Hexproof),
+        "hexproof while not in combat"
+    );
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::Attack {
+        attacker: kraken,
+        target: crabomination::game::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    assert!(
+        !g.computed_permanent(kraken).unwrap().keywords.contains(&Keyword::Hexproof),
+        "no hexproof while attacking"
+    );
+    g.step = TurnStep::DeclareBlockers;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(a, kraken)])).is_err(),
+        "one blocker isn't all of them"
+    );
+    g.perform_action(GameAction::DeclareBlockers(vec![(a, kraken), (b, kraken)]))
+        .expect("both defenders block");
+}
+
+/// Heroes' Podium's anthem counts only the *other* legendary creatures.
+#[test]
+fn heroes_podium_counts_other_legends() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::heroes_podium());
+    let one = g.add_card_to_battlefield(0, catalog::tromokratis());
+    assert_eq!(g.computed_permanent(one).map(|c| c.power), Some(8), "alone: no bonus");
+    let two = g.add_card_to_battlefield(0, catalog::tromokratis());
+    assert_eq!(g.computed_permanent(one).map(|c| c.power), Some(9), "+1 for the other legend");
+    assert_eq!(g.computed_permanent(two).map(|c| c.power), Some(9));
+}
+
+/// Astral Cornucopia enters with X charge counters and taps for that much
+/// mana of one chosen color.
+#[test]
+fn astral_cornucopia_scales_with_charge_counters() {
+    let mut g = main_phase();
+    let id = g.add_card_to_hand(0, catalog::astral_cornucopia());
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast for X=2");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counter_count(CounterType::Charge),
+        2,
+        "two charge counters"
+    );
+    g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2, "two mana of the chosen color");
+}
+
+/// Whelming Wave spares the sea monsters.
+#[test]
+fn whelming_wave_spares_krakens() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let kraken = g.add_card_to_battlefield(0, catalog::kraken_of_the_straits());
+    cast(&mut g, catalog::whelming_wave(), None, 2, &[(Color::Blue, 2)]);
+    assert!(g.battlefield_find(bear).is_none(), "the Bears bounced");
+    assert!(g.battlefield_find(kraken).is_some(), "the Kraken stayed");
+}
+
+/// Unravel the Aether shuffles the target back into its owner's library.
+#[test]
+fn unravel_the_aether_shuffles_away() {
+    let mut g = main_phase();
+    let lyre = g.add_card_to_battlefield(1, catalog::siren_song_lyre());
+    cast(
+        &mut g,
+        catalog::unravel_the_aether(),
+        Some(Target::Permanent(lyre)),
+        1,
+        &[(Color::Green, 1)],
+    );
+    assert!(g.battlefield_find(lyre).is_none());
+    assert!(g.players[1].library.iter().any(|c| c.id == lyre), "back in the library");
+}
+
+/// Gild exiles the creature and leaves a Gold token behind.
+#[test]
+fn gild_exiles_and_pays_gold() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast(&mut g, catalog::gild(), Some(Target::Permanent(bear)), 3, &[(Color::Black, 1)]);
+    assert!(g.battlefield_find(bear).is_none(), "exiled");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Gold"), "Gold token");
+}
+
+/// Scourge of Skola Vale enters with two counters and eats a creature for its
+/// toughness.
+#[test]
+fn scourge_of_skola_vale_eats_for_toughness() {
+    let mut g = main_phase();
+    let hydra = cast(&mut g, catalog::scourge_of_skola_vale(), None, 2, &[(Color::Green, 1)]);
+    g.battlefield_find_mut(hydra).unwrap().summoning_sick = false;
+    assert_eq!(g.battlefield_find(hydra).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    g.add_card_to_battlefield(0, catalog::great_hart()); // 2/4
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hydra,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("sac for counters");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(hydra).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        6,
+        "two starting plus the Hart's toughness"
+    );
+}
+
+/// Stratus Walk draws, grants flying, and limits the host to blocking fliers.
+#[test]
+fn stratus_walk_grants_flight_and_restricts_blocks() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    g.add_card_to_library(0, catalog::great_hart());
+    cast(&mut g, catalog::stratus_walk(), Some(Target::Permanent(bear)), 1, &[(Color::Blue, 1)]);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "ETB draw");
+    let kws = g.computed_permanent(bear).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Flying));
+    assert!(kws.contains(&Keyword::CanBlockOnlyFlying));
+}
+
+/// Raised by Wolves mints two Wolves and scales the host by the Wolf count.
+#[test]
+fn raised_by_wolves_scales_with_wolves() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast(
+        &mut g,
+        catalog::raised_by_wolves(),
+        Some(Target::Permanent(bear)),
+        3,
+        &[(Color::Green, 2)],
+    );
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Wolf").count(),
+        2,
+        "two Wolf tokens"
+    );
+    assert_eq!(g.computed_permanent(bear).map(|c| (c.power, c.toughness)), Some((4, 4)));
+}
+
+/// Sanguimancy and Skyreaping both read devotion.
+#[test]
+fn bng2_devotion_payoffs() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forlorn_pseudamma()); // {3}{B}
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::great_hart());
+    }
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    cast(&mut g, catalog::sanguimancy(), None, 4, &[(Color::Black, 1)]);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "drew devotion-to-black cards");
+    assert_eq!(g.players[0].life, life - 3);
+}
+
+/// Thassa's Rebuff taxes by your devotion to blue.
+#[test]
+fn thassas_rebuff_taxes_by_devotion() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::sphinxs_disciple()); // {3}{U}{U}
+    }
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    g.priority.player_with_priority = 0;
+    let rebuff = g.add_card_to_hand(0, catalog::thassas_rebuff());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rebuff,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("counter");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "unpaid tax — countered");
+}

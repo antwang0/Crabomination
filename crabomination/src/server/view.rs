@@ -1693,6 +1693,7 @@ fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
         // Instance-granted abilities (Urza's Saga chapters) surface after
         // the printed ones — same index order `activate_ability` resolves.
         .chain(card.granted_activated_abilities.iter())
+        .chain(card.granted_activated_eot.iter())
         .enumerate()
         .map(|(i, a)| {
             let (gate_label, gate_blocked) = match &a.condition {
