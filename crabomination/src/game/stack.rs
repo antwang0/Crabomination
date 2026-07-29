@@ -3079,7 +3079,7 @@ impl GameState {
                 .battlefield
                 .iter()
                 .find(|c| c.id == id)
-                .map(|c| c.regeneration_shields > 0)
+                .map(|c| c.regeneration_shields > 0 && !c.cant_regenerate_this_turn)
                 .unwrap_or(false);
             if has_regen && !dies_by_lethal_toughness {
                 self.apply_regeneration(id);

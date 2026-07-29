@@ -10269,6 +10269,16 @@ impl GameState {
                 // "Only once each turn" overrides fan-out: a single batch of
                 // simultaneous events mints one trigger, not one per event.
                 let fanout = fanout && !ta.event.once_per_turn;
+                // CR 509.3a/509.3c — "whenever this creature blocks" and
+                // "whenever this creature becomes blocked" fire once per
+                // creature, even under a multi-block (one blocker on several
+                // attackers, or one attacker under several blockers). The
+                // batch carries one `BlockerDeclared` per pair, so fan out but
+                // dedupe on the trigger's own side of the pair. Per-object
+                // wordings (509.3b/d — "blocks *a creature*") read the whole
+                // partner set via `Selector::BlockedAttacker` /
+                // `BlockingCreatures`, so one trigger instance still covers all.
+                let mut block_sides_seen: Vec<CardId> = Vec::new();
                 for ev in events {
                     if is_event_hardcoded(ev, &ta.event) {
                         continue;
@@ -10289,6 +10299,17 @@ impl GameState {
                     }
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
                         let subject = crate::game::effects::event_subject(ev, &ta.event.kind);
+                        if matches!(
+                            ta.event.kind,
+                            crate::effect::EventKind::Blocks
+                                | crate::effect::EventKind::BecomesBlocked
+                        ) && let Some(crate::game::effects::EntityRef::Permanent(sid)) = subject
+                        {
+                            if block_sides_seen.contains(&sid) {
+                                continue;
+                            }
+                            block_sides_seen.push(sid);
+                        }
                         // Evaluate the trigger's intervening filter here, before
                         // consuming any once-per-turn / per-subject budget: a
                         // candidate whose filter fails must not "use up" the

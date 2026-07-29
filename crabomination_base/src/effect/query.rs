@@ -467,7 +467,9 @@ impl Effect {
             // Spree targets are supplied per chosen mode at cast time and
             // consumed at resolution; no fixed cast-time slot is demanded.
             Effect::Spree { .. } | Effect::Tiered { .. } | Effect::ChooseModesCast { .. } => false,
-            Effect::MayDo { body, .. } | Effect::CapTargetsAtX { body } => body.requires_target(),
+            Effect::MayDo { body, .. }
+            | Effect::CapTargetsAtX { body }
+            | Effect::CapTargetsAt { body, .. } => body.requires_target(),
             Effect::MayPayX { body, .. } => body.requires_target(),
             Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
@@ -669,6 +671,7 @@ impl Effect {
             | Effect::DestroyAndRemember { what }
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
+            | Effect::CantBeRegeneratedThisTurn { what }
             | Effect::ExileIfWouldDieThisTurn { what }
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
@@ -778,6 +781,7 @@ impl Effect {
             }
             Effect::BecomeBasicLand { what, .. }
             | Effect::GainAllBasicLandTypes { what, .. }
+            | Effect::GainLandType { what, .. }
             | Effect::ResetCreature { what, .. } => sel_has_target(what),
             Effect::BecomeCopyOf { what, source, .. }
             | Effect::BecomeCopyOfFor { what, source, .. } => {
@@ -885,7 +889,8 @@ impl Effect {
                     || zonedest_has_target(to)
                     || value_has_target(cap)
             }
-            Effect::DiscardChosen { from, count, .. }
+            Effect::DiscardChosenFromRevealed { from, reveal: count }
+            | Effect::DiscardChosen { from, count, .. }
             | Effect::BottomChosenFromHandAndDraw { from, count, .. }
             | Effect::ExileChosenUntilSourceLeaves { from, count, .. }
             | Effect::ExileChosenFromHand { from, count, .. } => {
@@ -1012,7 +1017,8 @@ impl Effect {
             Effect::Fight { defender, .. } => sel_filter(defender),
             Effect::DealDamageEqualToPower { target, .. } => sel_filter(target),
             // Land hosing targets the land slot (Tide Shaper's kicked mode).
-            Effect::BecomeBasicLand { what, .. } => sel_filter(what),
+            Effect::BecomeBasicLand { what, .. }
+            | Effect::GainLandType { what, .. } => sel_filter(what),
             // The chosen creature (`source`) is the targeted object; the
             // per-creature/opponent recipients are not targeted.
             Effect::DealDamageEqualToPowerToEach { source, .. } => sel_filter(source),
@@ -1035,6 +1041,7 @@ impl Effect {
             | Effect::DestroyAndRemember { what }
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
+            | Effect::CantBeRegeneratedThisTurn { what }
             | Effect::ExileIfWouldDieThisTurn { what }
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
@@ -1145,7 +1152,8 @@ impl Effect {
             }
             Effect::Drain { to, .. } => sel_filter(to),
             Effect::AddPoison { who, .. } => sel_filter(who),
-            Effect::DiscardChosen { from, .. } => sel_filter(from),
+            Effect::DiscardChosen { from, .. }
+            | Effect::DiscardChosenFromRevealed { from, .. } => sel_filter(from),
             Effect::BottomChosenFromHandAndDraw { from, .. } => sel_filter(from),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_filter(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
@@ -1197,7 +1205,10 @@ impl Effect {
             // MayDo wraps an inner effect — surface its filter so the
             // cast prompt narrows correctly when the inner effect needs
             // a target (e.g. "you may sacrifice [target permanent]").
-            Effect::MayDo { body, .. } | Effect::MayPayX { body, .. } | Effect::CapTargetsAtX { body } => body.primary_target_filter(),
+            Effect::MayDo { body, .. }
+            | Effect::MayPayX { body, .. }
+            | Effect::CapTargetsAtX { body }
+            | Effect::CapTargetsAt { body, .. } => body.primary_target_filter(),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.primary_target_filter(),
             Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => then.primary_target_filter(),
             Effect::Process { then, .. } => then.primary_target_filter(),
@@ -1343,6 +1354,7 @@ impl Effect {
             Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. } => {
                 body.prefers_friendly_target()
             }
@@ -1410,6 +1422,7 @@ impl Effect {
             | Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. } => body.prefers_graveyard_target(),
@@ -1713,6 +1726,7 @@ impl Effect {
             }
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. }
@@ -1882,6 +1896,7 @@ impl Effect {
             | Effect::GrantKeywords { .. }
             | Effect::ResetCreature { .. }
             | Effect::BecomeBasicLand { .. }
+            | Effect::GainLandType { .. }
             | Effect::Attach { .. }
             | Effect::ExchangeControl { .. }
             | Effect::ExchangeControlChoosing { .. }
@@ -1920,6 +1935,7 @@ impl Effect {
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. } => body.accepts_player_target(),
@@ -2139,6 +2155,7 @@ impl Effect {
                 },
                 Effect::MayDo { body, .. }
                 | Effect::CapTargetsAtX { body }
+                | Effect::CapTargetsAt { body, .. }
                 | Effect::MayPayX { body, .. }
                 | Effect::MayPay { body, .. }
                 | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),
@@ -2238,7 +2255,8 @@ impl Effect {
                 Effect::DestroyTargets { filter } => Some(filter),
                 Effect::Discard { who, .. } => sel_find(who, slot),
                 Effect::DiscardAnyNumber { who } => sel_find(who, slot),
-                Effect::DiscardChosen { from, .. } => sel_find(from, slot),
+                Effect::DiscardChosen { from, .. }
+                | Effect::DiscardChosenFromRevealed { from, .. } => sel_find(from, slot),
                 Effect::BottomChosenFromHandAndDraw { from, .. } => sel_find(from, slot),
                 Effect::SearchSplitOpponentChooses { opponent, .. } => sel_find(opponent, slot),
                 Effect::RedirectSpellTargetToSelf { what } => sel_find(what, slot),
@@ -2305,6 +2323,7 @@ impl Effect {
                 | Effect::RemoveKeywordCounter { what, .. }
                 | Effect::AddRandomMissingCounter { what, .. } => sel_find(what, slot),
                 Effect::BecomeBasicLand { what, .. }
+                | Effect::GainLandType { what, .. }
                 | Effect::ResetCreature { what, .. } => sel_find(what, slot),
                 Effect::RevealUntilLandDamage { to, .. }
                 | Effect::RevealUntilNonlandDamage { to } => sel_find(to, slot),
@@ -2325,6 +2344,7 @@ impl Effect {
                 // `requires_target` / `primary_target_filter` — the
                 // `targeted_effects_carry_slot_filters` test guards this set.
                 Effect::Regenerate { what }
+                | Effect::CantBeRegeneratedThisTurn { what }
                 | Effect::ExileWithSource { what }
                 | Effect::ExileSameNameAsTarget { what }
                 | Effect::ExileTaggedWithSource { what }
@@ -2460,6 +2480,7 @@ impl Effect {
             },
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. } => body.min_targets_in_mode(mode),
@@ -2496,6 +2517,7 @@ impl Effect {
             },
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. } => body.distinct_target_count(mode),

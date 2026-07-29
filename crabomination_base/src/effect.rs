@@ -141,9 +141,10 @@ pub enum Selector {
     /// "the chosen creature"). Resolves to nothing if the remembered
     /// permanent has left the battlefield.
     ChosenPermanentOfSource,
-    /// CR 509.1 — the attacker the source permanent is currently blocking.
-    /// Resolves via `GameState.block_map[source]`. Used by "whenever this
-    /// blocks a creature, [affect that creature]" triggers (Wall of Frost).
+    /// CR 509.1 — every attacker the source permanent is currently blocking
+    /// (all of them under a multi-block). Resolves via
+    /// `GameState.block_map[source]`. Used by "whenever this blocks a creature,
+    /// [affect that creature]" triggers (Wall of Frost).
     BlockedAttacker,
     /// The mirror of `BlockedAttacker`: every creature currently blocking the
     /// source attacker (reverse-lookup of `GameState.block_map`). Used by
@@ -1049,6 +1050,10 @@ pub enum Predicate {
     /// `CardInstance.suspected`. Powers Repeat Offender's "if this creature
     /// is suspected, … otherwise, suspect it."
     SourceIsSuspected,
+    /// CR 702.103 — the source permanent is an Aura because it was cast for
+    /// its bestow cost and is still attached. Powers "if this permanent is an
+    /// Aura, … instead" branches (Erebos's Emissary).
+    SourceIsBestowedAura,
     /// CR 702.139 — Revolt: a permanent left the battlefield under `who`'s
     /// control this turn. Backed by
     /// `Player.permanent_left_battlefield_this_turn`.
@@ -3690,6 +3695,10 @@ pub enum Effect {
     /// heal damage instead of dying). Powers "{cost}: Regenerate this
     /// creature" activated abilities (Drudge Skeletons, River Boa, Korlash).
     Regenerate { what: Selector },
+    /// CR 701.15g — "it can't be regenerated this turn": existing shields stop
+    /// applying and new ones do nothing for the rest of the turn. Rage of
+    /// Purphoros, the Terror-style removal riders.
+    CantBeRegeneratedThisTurn { what: Selector },
     /// "If [each resolved permanent] would die this turn, exile it instead."
     /// Installs an until-end-of-turn death replacement (CR 614, same shape
     /// as a finality counter) on every permanent the selector resolves to.
@@ -4467,6 +4476,10 @@ pub enum Effect {
     /// the static slot ceiling). Cast-time slot enumeration still offers
     /// the ceiling; an over-select at small X is dropped at resolution.
     CapTargetsAtX { body: Box<Effect> },
+    /// The `Value`-driven sibling of `CapTargetsAtX`: "up to [amount] target
+    /// creatures", where the cap is computed at resolution rather than paid as
+    /// {X} (Mogis's Marauder's devotion-to-black cap).
+    CapTargetsAt { amount: Value, body: Box<Effect> },
     /// Transparent wrapper declaring that target slots `>= min` are optional
     /// ("up to one target …") for an otherwise-conventional `body` whose slots
     /// come from *distinct* effects — the case `ApplyToTargets` can't express
@@ -4688,6 +4701,10 @@ pub enum Effect {
     /// layer-4 `AddLandType` continuous effect per basic type so the lands tap
     /// for any color (Energybending, Prismatic Omen-style fixers).
     GainAllBasicLandTypes { what: Selector, duration: Duration },
+    /// CR 305 — each resolved permanent *gains* one land type in addition to
+    /// its other types (layer 4, additive). Sealock Monster's monstrosity
+    /// trigger ("target land becomes an Island in addition to its other types").
+    GainLandType { what: Selector, land_type: crate::card::LandType, duration: Duration },
     /// Target becomes a creature with the given P/T and creature types,
     /// losing all other card types, abilities, and creature subtypes
     /// (CR 613 layers 4/6/7). Oko's "becomes a 3/3 Elk", Turn to Frog's
@@ -5506,6 +5523,12 @@ pub enum Effect {
         count: Value,
         filter: SelectionRequirement,
     },
+    /// "Target player reveals `reveal` cards from their hand. You choose one of
+    /// them; that player discards it." The reveal-capped sibling of
+    /// [`Effect::DiscardChosen`] — the caster only sees the revealed subset
+    /// (Disciple of Phenax). Which cards get revealed is the revealing
+    /// player's choice; the engine takes them in hand order.
+    DiscardChosenFromRevealed { from: Selector, reveal: Value },
     /// "Look at `from`'s hand; you may choose `count` card(s) matching
     /// `filter`. That player puts the chosen card(s) on the bottom of their
     /// library, then draws that many cards." Vendilion Clique. Same

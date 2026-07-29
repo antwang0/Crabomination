@@ -60,7 +60,8 @@ pub fn contaminated_ground() -> CardDefinition {
 }
 
 /// Guardian of the Gateless — {4}{W} 3/3 Angel with flying. Blocks any number
-/// of creatures; each block pumps it +1/+1 per creature it's blocking.
+/// of creatures; when it blocks it gets +1/+1 for each creature it's blocking
+/// (once per combat — CR 509.3a).
 pub fn guardian_of_the_gateless() -> CardDefinition {
     use crate::card::{CreatureType, Keyword};
     use crate::effect::{Duration, Value};

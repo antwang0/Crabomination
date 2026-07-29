@@ -1217,7 +1217,7 @@ impl GameState {
         if !no_regen
             && self
                 .battlefield_find(cid)
-                .map(|c| c.regeneration_shields > 0)
+                .map(|c| c.regeneration_shields > 0 && !c.cant_regenerate_this_turn)
                 .unwrap_or(false)
         {
             self.apply_regeneration(cid);
@@ -3308,6 +3308,13 @@ impl GameState {
                 // Power); slots beyond the paid X are dropped.
                 let mut sub = ctx.clone();
                 sub.targets.truncate(ctx.x_value as usize);
+                self.run_effect(body, &sub, events)
+            }
+
+            Effect::CapTargetsAt { amount, body } => {
+                let cap = self.evaluate_value(amount, ctx).max(0) as usize;
+                let mut sub = ctx.clone();
+                sub.targets.truncate(cap);
                 self.run_effect(body, &sub, events)
             }
 
@@ -5917,6 +5924,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CantBeRegeneratedThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.cant_regenerate_this_turn = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileIfWouldDieThisTurn { what } => {
                 // Install an until-end-of-turn death replacement on each
                 // resolved permanent. `remove_from_battlefield_to_graveyard_raw`
@@ -7735,6 +7753,29 @@ impl GameState {
                                 modification: Modification::AddLandType(lt),
                             });
                         }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GainLandType { what, land_type, duration } => {
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, Layer, Modification,
+                };
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: AffectedPermanents::Specific(vec![cid]),
+                            layer: Layer::L4Type,
+                            sublayer: None,
+                            duration: duration_kind.clone(),
+                            modification: Modification::AddLandType(*land_type),
+                        });
                     }
                 }
                 Ok(())
@@ -14861,6 +14902,55 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DiscardChosenFromRevealed { from, reveal } => {
+                // CR — the caster only picks from the revealed subset. Same
+                // decision shape as `DiscardChosen`, with the candidate list
+                // capped at `reveal` (hand order stands in for the revealing
+                // player's choice of which cards to show).
+                use crate::decision::Decision;
+                let cap = self.evaluate_value(reveal, ctx).max(0) as usize;
+                if cap == 0 {
+                    return Ok(());
+                }
+                let picker = ctx.controller;
+                let seats: Vec<usize> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, target_player) in seats.iter().copied().enumerate() {
+                    let candidates: Vec<(crate::card::CardId, String)> = self.players
+                        [target_player]
+                        .hand
+                        .iter()
+                        .take(cap)
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if candidates.is_empty() {
+                        continue;
+                    }
+                    let decision = Decision::Discard { player: picker, count: 1, hand: candidates };
+                    let pending = PendingEffectState::DiscardChosenPending { target_player };
+                    if self.players[picker].wants_ui {
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| {
+                            Effect::DiscardChosenFromRevealed {
+                                from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                                reveal: crate::effect::Value::Const(cap as i32),
+                            }
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
+                        return Ok(());
+                    }
+                    let answer = self.decider.decide(&decision);
+                    let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                    events.append(&mut applied);
+                }
+                Ok(())
+            }
+
             Effect::BottomChosenFromHandAndDraw { from, count, filter } => {
                 // Same caster-picks-from-hand shape as `DiscardChosen`
                 // (Vendilion Clique), but the apply step bottoms the chosen
@@ -19511,11 +19601,14 @@ impl GameState {
                 .collect(),
             Selector::BlockedAttacker => ctx
                 .source
-                .and_then(|blocker| self.attackers_blocked_by(blocker).first().copied())
-                .filter(|aid| self.battlefield.iter().any(|c| c.id == *aid))
-                .map(EntityRef::Permanent)
-                .into_iter()
-                .collect(),
+                .map(|blocker| {
+                    self.attackers_blocked_by(blocker)
+                        .iter()
+                        .filter(|aid| self.battlefield.iter().any(|c| c.id == **aid))
+                        .map(|aid| EntityRef::Permanent(*aid))
+                        .collect()
+                })
+                .unwrap_or_default(),
             Selector::RadianceGroup { subject } => {
                 let Some(EntityRef::Permanent(subj)) =
                     self.resolve_selector(subject, ctx).into_iter().next()

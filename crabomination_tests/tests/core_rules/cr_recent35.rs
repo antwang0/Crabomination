@@ -6,7 +6,7 @@
 //! - CR 506.4 — a blocker leaving combat stops blocking every attacker.
 //! - CR 603.6e — Lumbering Battlement's any-number exile-until-it-leaves.
 
-use crabomination::card::{CardDefinition, Keyword};
+use crabomination::card::{CardDefinition, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
@@ -124,16 +124,48 @@ fn cr_506_4_removed_multi_blocker_clears_all_its_blocks() {
     assert!(g.blocked_attackers().contains(&a1) && g.blocked_attackers().contains(&a2));
 }
 
-/// Guardian of the Gateless triggers once per block, and each instance counts
-/// every creature it's blocking: a double block is +2/+2 twice.
+/// CR 509.3a — "whenever this creature blocks" fires once even when it blocks
+/// two attackers; the pump reads the whole blocked set (+2/+2, not +2/+2 twice).
 #[test]
-fn guardian_of_the_gateless_scales_per_block() {
+fn cr_509_3a_blocks_trigger_fires_once_per_multi_block() {
     let (mut g, a1, a2, b) = two_attackers(catalog::guardian_of_the_gateless);
     let evs = g.declare_blockers(vec![(b, a1), (b, a2)]).expect("blocks both");
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
     let cp = g.computed_permanent(b).unwrap();
-    assert_eq!((cp.power, cp.toughness), (7, 7), "3/3 + 2 triggers × +2/+2");
+    assert_eq!((cp.power, cp.toughness), (5, 5), "3/3 + one +2/+2");
+}
+
+/// CR 509.3c — "whenever this creature becomes blocked" fires once even under a
+/// double block (Rakdos Roustabout pings the defender a single time).
+#[test]
+fn cr_509_3c_becomes_blocked_trigger_fires_once_per_double_block() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::rakdos_roustabout());
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.active_player_idx = 0;
+    g.attacking = vec![Attack { attacker: a, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    let evs = g.declare_blockers(vec![(b1, a), (b2, a)]).expect("double block");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+}
+
+/// CR 509.3b — "whenever this blocks a creature" affects every attacker a
+/// multi-blocker is blocking, from the single trigger instance.
+#[test]
+fn cr_509_3b_blocks_a_creature_reaches_every_blocked_attacker() {
+    let (mut g, a1, a2, b) = two_attackers(catalog::wall_of_frost);
+    grant_any_number_block(&mut g, b);
+    let evs = g.declare_blockers(vec![(b, a1), (b, a2)]).expect("blocks both");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    for a in [a1, a2] {
+        assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::Stun), 1);
+    }
 }
 
 /// CR 603.6e — Lumbering Battlement exiles the chosen bodies until it leaves

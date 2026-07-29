@@ -4236,6 +4236,10 @@ pub struct CardInstance {
     /// `granted_keywords_eot`), so it's intentionally **not** serialized —
     /// a mid-turn snapshot reload defaults shields back to 0.
     pub regeneration_shields: u32,
+    /// CR 701.15g — "it can't be regenerated this turn": shields already on
+    /// the permanent stop applying and new ones do nothing. Transient, cleared
+    /// at cleanup like `regeneration_shields`, so it isn't serialized.
+    pub cant_regenerate_this_turn: bool,
     /// CR 702.83 — Exert. When this creature attacks and is exerted, it
     /// won't untap during its controller's next untap step. Set at attack
     /// time; consumed (and the untap skipped) by `do_untap`. Transient —
@@ -4541,6 +4545,7 @@ impl CardInstance {
             damaged_by_this_turn: Vec::new(),
             combat_damager_controller: None,
             regeneration_shields: 0,
+            cant_regenerate_this_turn: false,
             skip_next_untap: false,
             untap_locked_by: None,
             attacked_this_turn: false,
@@ -4922,8 +4927,10 @@ impl CardInstance {
         self.dealt_deathtouch_damage = false;
         self.dealt_damage_this_turn = false;
         self.damaged_by_this_turn.clear();
-        // CR 701.15g — unused regeneration shields expire at end of turn.
+        // CR 701.15g — unused regeneration shields expire at end of turn,
+        // and so does the "can't be regenerated this turn" lock.
         self.regeneration_shields = 0;
+        self.cant_regenerate_this_turn = false;
         // CR 702.171 — "saddled until end of turn" ends here.
         self.saddled = false;
         self.saddled_by.clear();
