@@ -568,6 +568,9 @@ pub enum Value {
     Max(Box<Value>, Box<Value>),
     /// Clamp the inner value to ≥0.
     NonNeg(Box<Value>),
+    /// The inner value divided by `by`, rounded down ("for each five counters
+    /// removed this way" — Sage of Hours). `by == 0` evaluates to 0.
+    DivDown(Box<Value>, u32),
     /// Half the inner value, rounded up (Tamiyo -7's "half the number of
     /// cards in your library").
     HalvedRoundUp(Box<Value>),
@@ -2553,6 +2556,11 @@ pub enum Effect {
     /// `GameState`. Card factories pass `"…".into()` which is a no-cost
     /// `&str → String` move at construction time.
     MayDo { description: String, body: Box<Effect> },
+
+    /// "You may [body]. If you don't, [else_]." The two-sided sibling of
+    /// [`Effect::MayDo`] (Dakra Mystic). Shares MayPay's seat-routed yes/no
+    /// suspend with an empty cost.
+    MayDoElse { description: String, body: Box<Effect>, else_: Box<Effect> },
     /// "You may pay {X}. When you do, [body with X]." — the controller
     /// picks X at resolution via `Decision::ChooseAmount` (0 = decline,
     /// the AutoDecider default), capped by their FLOATED mana (the MayPay
@@ -3579,6 +3587,11 @@ pub enum Effect {
         up_to: bool,
         to: ZoneDest,
     },
+    /// "Put `what` into its owner's library just beneath the top `count`
+    /// cards of that library" (Quarry Colossus). The dynamic-`count` sibling
+    /// of `LibraryPosition::FromTop`; CR 401.7 bottoms it when the library is
+    /// shorter than `count`.
+    PutIntoLibraryBeneathTop { what: Selector, count: Value },
     /// Search `who`'s library for a card matching `filter` and move to `to`.
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// Search `who`'s library *and/or graveyard* for a card matching `filter`

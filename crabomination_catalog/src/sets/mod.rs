@@ -285,6 +285,7 @@ pub mod bng3;
 pub mod curses;
 pub mod jou;
 pub mod jou2;
+pub mod jou3;
 pub mod bro;
 pub mod c21;
 pub mod chk;

@@ -754,3 +754,211 @@ fn jou2_stat_lines() {
         }
     }
 }
+
+// ── Wave 3: bestow, Auras, and the rares ────────────────────────────────────
+
+/// Battlefield Thaumaturge shaves {1} off an instant that targets a creature.
+#[test]
+fn battlefield_thaumaturge_discounts_creature_targeting_spells() {
+    use crabomination::game::actions::cost_reduction_for_spell;
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::battlefield_thaumaturge());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bolt = g.players[0].hand.iter().find(|c| c.id == bolt).unwrap().clone();
+    assert_eq!(
+        cost_reduction_for_spell(&g, 0, &bolt, Some(&Target::Permanent(bear))),
+        1,
+        "targets a creature"
+    );
+    assert_eq!(cost_reduction_for_spell(&g, 0, &bolt, Some(&Target::Player(1))), 0);
+}
+
+/// Scourge of Fleets bounces exactly the creatures small enough for X.
+#[test]
+fn scourge_of_fleets_scales_with_islands() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(1, catalog::hydra_broodmaster()); // 7/7
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let kraken = g.add_card_to_battlefield(0, catalog::scourge_of_fleets());
+    g.fire_self_etb_triggers(kraken, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(small).is_none(), "toughness 2 <= 3 Islands");
+    assert!(g.battlefield_find(big).is_some(), "toughness 7 stays");
+    assert!(g.battlefield_find(mine).is_some(), "only opponents' creatures");
+}
+
+/// Quarry Colossus buries a creature beneath the top X cards.
+#[test]
+fn quarry_colossus_buries_under_the_plains_count() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::plains());
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let victim = g.add_card_to_battlefield(1, catalog::oreskos_swiftclaw());
+    let colossus = g.add_card_to_battlefield(0, catalog::quarry_colossus());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        colossus,
+        0,
+        Some(Target::Permanent(victim)),
+    );
+    g.resolve_effect(&catalog::quarry_colossus().triggered_abilities[0].effect, &ctx)
+        .expect("bury it");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert_eq!(
+        g.players[1].library.iter().position(|c| c.id == victim),
+        Some(2),
+        "third from the top"
+    );
+}
+
+/// Sage of Hours cashes ten counters in for two extra turns.
+#[test]
+fn sage_of_hours_buys_a_turn_per_five_counters() {
+    let mut g = main_phase();
+    let sage = g.add_card_to_battlefield(0, catalog::sage_of_hours());
+    g.clear_sickness(sage);
+    g.battlefield_find_mut(sage).unwrap().counters.insert(CounterType::PlusOnePlusOne, 11);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sage,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("cash in");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].extra_turns, 2, "11 counters = two extra turns");
+    assert_eq!(g.battlefield_find(sage).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+/// Deserter's Quarters keeps its victim tapped while it stays tapped.
+#[test]
+fn deserters_quarters_locks_a_creature_down() {
+    let mut g = main_phase();
+    let quarters = g.add_card_to_battlefield(0, catalog::deserters_quarters());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(quarters);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: quarters,
+        ability_index: 0,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("lock it");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(victim).unwrap();
+    assert!(c.tapped && c.untap_locked_by == Some(quarters));
+}
+
+/// Hypnotic Siren's bestow half steals the host.
+#[test]
+fn hypnotic_siren_bestow_steals_the_host() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let siren = g.add_card_to_hand(0, catalog::hypnotic_siren());
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastBestow {
+        card_id: siren,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bestow");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+/// Armament of Nyx only arms an enchantment creature.
+#[test]
+fn armament_of_nyx_reads_the_host_types() {
+    let mut g = main_phase();
+    let nyx = g.add_card_to_battlefield(0, catalog::whitewater_naiads());
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for host in [nyx, plain] {
+        let aura = g.add_card_to_hand(0, catalog::armament_of_nyx());
+        g.players[0].mana_pool.add_colorless(2);
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: aura,
+            target: Some(Target::Permanent(host)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("enchant");
+        drain_stack(&mut g);
+    }
+    assert!(g.computed_permanent(nyx).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(
+        g.computed_permanent(plain).unwrap().keywords.contains(&Keyword::DealsNoCombatDamage),
+        "a nonenchantment host deals no damage instead"
+    );
+}
+
+/// Dictate of Karametra doubles every land tap, for every player.
+#[test]
+fn dictate_of_karametra_doubles_land_taps() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::dictate_of_karametra());
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("tap");
+    assert_eq!(g.players[1].mana_pool.total(), 2, "the opponent's land doubles too");
+}
+
+/// Stat / keyword lines for the wave-3 bodies.
+#[test]
+fn jou3_stat_lines() {
+    let table: &[(fn() -> crabomination::card::CardDefinition, i32, i32, &[Keyword])] = &[
+        (catalog::sightless_brawler, 3, 2, &[Keyword::CantAttackAlone]),
+        (catalog::spirespine, 4, 1, &[Keyword::MustBlock]),
+        (catalog::crystalline_nautilus, 4, 4, &[]),
+        (catalog::hypnotic_siren, 1, 1, &[Keyword::Flying]),
+        (catalog::battlefield_thaumaturge, 2, 1, &[]),
+        (catalog::dakra_mystic, 1, 1, &[]),
+        (catalog::daring_thief, 2, 3, &[]),
+        (catalog::disciple_of_deceit, 1, 3, &[]),
+        (catalog::nessian_game_warden, 4, 5, &[]),
+        (
+            catalog::prophetic_flamespeaker,
+            1,
+            3,
+            &[Keyword::DoubleStrike, Keyword::Trample],
+        ),
+        (catalog::quarry_colossus, 5, 6, &[]),
+        (catalog::sage_of_hours, 1, 1, &[]),
+        (catalog::scourge_of_fleets, 6, 6, &[]),
+        (catalog::stormchaser_chimera, 2, 3, &[Keyword::Flying]),
+    ];
+    for (f, p, t, kws) in table {
+        let d = f();
+        assert_eq!((d.power, d.toughness), (*p, *t), "{}", d.name);
+        for kw in *kws {
+            assert!(d.keywords.contains(kw), "{} lacks {:?}", d.name, kw);
+        }
+    }
+    assert_eq!(catalog::ajani_mentor_of_heroes().base_loyalty, 4);
+}

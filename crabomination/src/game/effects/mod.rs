@@ -2718,6 +2718,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayDoElse { description, body, else_ } => self.run_effect(
+                &Effect::MayPay {
+                    description: description.clone(),
+                    mana_cost: crate::mana::ManaCost::default(),
+                    body: body.clone(),
+                    else_: Some(else_.clone()),
+                },
+                ctx,
+                events,
+            ),
+
             Effect::MayPay {
                 description,
                 mana_cost,
@@ -17965,6 +17976,27 @@ impl GameState {
                             ..Default::default()
                         });
                     }
+                }
+                Ok(())
+            }
+
+            Effect::PutIntoLibraryBeneathTop { what, count } => {
+                // CR 401.7 — "just beneath the top N cards"; a library
+                // shorter than N takes the card on the bottom instead.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    self.run_effect(
+                        &Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Library {
+                                who: PlayerRef::OwnerOfMoved,
+                                pos: crate::effect::LibraryPosition::FromTop(n),
+                            },
+                        },
+                        &EffectContext { targets: vec![Target::Permanent(cid)], ..ctx.clone() },
+                        events,
+                    )?;
                 }
                 Ok(())
             }

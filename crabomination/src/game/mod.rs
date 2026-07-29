@@ -8066,6 +8066,14 @@ impl GameState {
         }) {
             return false;
         }
+        // CR 509.1d — the pay gate: only legal if the blocker's controller
+        // could actually produce {N}.
+        if blocker_cp.keywords.iter().any(|k| {
+            matches!(k, Keyword::CantAttackOrBlockUnlessPay(n)
+                if !self.could_pay_generic(blocker.controller, *n))
+        }) {
+            return false;
+        }
         // CR 509.1a — Delirium gate (Patchwork Beastie).
         if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessDelirium)
             && !self.delirium_active(blocker.controller)
@@ -15002,6 +15010,8 @@ fn static_effect_to_effects(
             | StaticEffect::SearchTax { .. }
             // ActivationTax (Suppression Field) — consulted in
             // `activate_ability`; no layer effect.
+            // Cost reductions read in `cost_reduction_for_spell`; no layer.
+            | StaticEffect::YourISSpellsCostLessPerTargetCreature { .. }
             | StaticEffect::ActivationTax { .. }
             // AttachedActivationTax (Oppressive Rays) — same funnel, scoped
             // to the Aura's host.

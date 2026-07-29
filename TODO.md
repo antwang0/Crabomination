@@ -117,6 +117,22 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
 - Artist's Talent (BLB) — last unshipped Talent; needs level-gated
   cost-reduction + noncombat-damage-replacement on the non-layer static paths.
 
+**Noticed this run (JOU wave 2/3), deferred each on one primitive:**
+- **"You control target player during their next turn"** (Worst Fears,
+  Mindslaver, Emrakul). Needs the decision + priority router to hand another
+  seat's turn to a controller (`Player.controlled_by` consulted by
+  `player_with_priority`, `ask_seat_*`, and the bot policy). The only JOU gap.
+- **Per-target cost reduction.** `cost_reduction_for_spell` only sees target
+  slot 0, so Battlefield Thaumaturge's "for EACH creature it targets" is a
+  flat {1}. Threading the whole chosen target list into the cost hook would
+  also un-approximate Strive/Fireball interactions with cost statics.
+- **Exile-with-attached-Auras.** Silence the Believers, Deicide's Aura rider,
+  and O-Ring-adjacent cards want a "and all Auras attached to them" mover;
+  today the Auras fall off to SBA and land in the graveyard.
+- **"Blocks or becomes blocked by"** as one event. Godsend, and every future
+  "whenever this blocks or becomes blocked" card, currently ride
+  `EventKind::Blocks` only.
+
 **Noticed this run (recent290), deferred each on one primitive:**
 - **Undead Sprinter** (BR 2/2, cast from graveyard if a *non-Zombie* creature
   died this turn, enters with a +1/+1 counter) — needs (a) a typed per-turn
@@ -606,14 +622,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
-## Theros block — BNG COMPLETE, JOU next (good easy-card source)
+## Theros block — BNG and JOU COMPLETE
 
-**BNG (Born of the Gods) is at zero `set_gaps.py` entries** — `sets::bng`,
-`bng2`, `bng3` ship all 165 cards. **JOU (Journey into Nyx) is down to 92** after wave 1
-(`sets::jou` — the primitive-free core) and is the obvious next easy-card
-source: mostly commons and uncommons
-riding primitives BNG already bought (bestow, heroic, inspired, tribute,
-devotion, the Fated-style "if it's your turn" rider).
+`sets::bng`/`bng2`/`bng3` ship all 165 BNG cards; `sets::jou`/`jou2`/`jou3`
+ship all of JOU but **Worst Fears**, which needs a real
+"you control target player during their next turn" primitive (decision +
+priority routing for another seat — the Mindslaver shape). That's the only
+`set_gaps.py jou` entry left.
 
 Residual BNG approximations, each wanting one small primitive:
 - **Satyr Firedancer** — `EventKind::YourInstantOrSorceryDealtDamage` doesn't
@@ -628,6 +643,16 @@ Residual BNG approximations, each wanting one small primitive:
   activations.
 - **Whims of the Fates** — the three piles are a shuffled round-robin split, not
   a player-chosen one.
+
+Residual JOU approximations:
+- **Godsend**'s exile trigger fires on "blocks", not on "blocks or becomes
+  blocked", and auto-picks which combat partner to exile.
+- **Battlefield Thaumaturge** discounts {1} when the spell targets *a*
+  creature; the printed "for each creature it targets" needs the full
+  cast-time target list at cost time (`cost_reduction_for_spell` sees slot 0
+  only).
+- **Silence the Believers** exiles the creatures but not the Auras attached to
+  them (they hit the graveyard as an SBA instead).
 
 ## TDM (Tarkir: Dragonstorm) gaps — good easy-card source
 

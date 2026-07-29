@@ -63,6 +63,18 @@ impl GameState {
     ///
     /// `pub(crate)` so the bot's per-tick candidate sweep (`server::bot`)
     /// shares the same one-template-many-light-probes pattern.
+    /// Whether `seat` could pay `{n}` right now — floating mana plus what
+    /// auto-tapping their untapped sources would add. Probed on a clone so
+    /// nothing is spent; drives the "can't attack/block unless you pay"
+    /// affordance and blocker-legality gates.
+    pub(crate) fn could_pay_generic(&self, seat: usize, n: u32) -> bool {
+        if n == 0 {
+            return true;
+        }
+        let mut probe = self.affordance_probe_template();
+        probe.try_pay_with_auto_tap(seat, &crate::mana::cost(&[crate::mana::generic(n)])).is_ok()
+    }
+
     pub(crate) fn affordance_probe_template(&self) -> GameState {
         let mut template = self.clone();
         for p in &mut template.players {
@@ -309,6 +321,9 @@ impl GameState {
                         self.players[seat].hand.len() as u32 <= *n
                     }
                     Keyword::CantAttackOrBlockUnlessDelirium => self.delirium_active(seat),
+                    // CR 508.1g — the pay gate is legal only if the seat can
+                    // actually produce {N} (pool + auto-tappable sources).
+                    Keyword::CantAttackOrBlockUnlessPay(n) => self.could_pay_generic(seat, *n),
                     Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
                         self.players[seat].creatures_died_this_turn > 0
                     }

@@ -920,6 +920,9 @@ impl GameState {
                 1i32.checked_shl(exp as u32).unwrap_or(i32::MAX)
             }
             Value::HalfDown(inner) => self.evaluate_value(inner, ctx) / 2,
+            Value::DivDown(inner, by) => {
+                if *by == 0 { 0 } else { self.evaluate_value(inner, ctx) / *by as i32 }
+            }
             Value::PermanentCountControlledBy(p) => self
                 .resolve_player(p, ctx)
                 .map(|seat| {
@@ -2504,6 +2507,19 @@ impl GameState {
                             .count() as u32;
                         card.definition.cost.cmc() <= n
                     }
+                    R::ToughnessAtMostYourCount(inner) => {
+                        let n = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                            .count() as i32;
+                        card.definition.is_creature()
+                            && self
+                                .computed_permanent(card.id)
+                                .map(|cp| cp.toughness)
+                                .unwrap_or_else(|| card.toughness())
+                                <= n
+                    }
                     R::ManaValueAtMostPermanentsInYourGraveyard => {
                         let n = self.players[controller]
                             .graveyard
@@ -2824,6 +2840,19 @@ impl GameState {
                     .count() as u32;
                 card.definition.cost.cmc() <= n
             }
+            R::ToughnessAtMostYourCount(inner) => {
+                let n = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                    .count() as i32;
+                card.definition.is_creature()
+                    && self
+                        .computed_permanent(card.id)
+                        .map(|cp| cp.toughness)
+                        .unwrap_or_else(|| card.toughness())
+                        <= n
+            }
             R::ManaValueAtMostPermanentsInYourGraveyard => {
                 let n = self.players[controller]
                     .graveyard
@@ -2843,6 +2872,10 @@ impl GameState {
             R::ManaValueEqualsSourceCounters(_) => false,
             R::ManaValueAtMostDiscardedThisEffect => {
                 card.definition.cost.cmc() <= self.last_discarded_mana_value.unwrap_or(0)
+            }
+            R::ManaValueEqualsDiscardedThisEffect => {
+                self.last_discarded_mana_value
+                    .is_some_and(|mv| card.definition.cost.cmc() == mv)
             }
             R::ManaValueEqualsSacrificedPlus(off) => {
                 card.definition.cost.cmc() == self.sacrificed_mana_value.unwrap_or(0) + *off

@@ -953,6 +953,12 @@ impl Effect {
                 sel_has_target(from) || sel_has_target(to)
             }
             Effect::TapOrUntap { what } => sel_has_target(what),
+            Effect::MayDoElse { body, else_, .. } => {
+                body.requires_target() || else_.requires_target()
+            }
+            Effect::PutIntoLibraryBeneathTop { what, count } => {
+                sel_has_target(what) || value_has_target(count)
+            }
             Effect::ReplaceNextDamageWithDestroy { target } => sel_has_target(target),
             Effect::DamageCantBePreventedThisTurn => false,
             Effect::PreventSearchesThisTurn => false,
@@ -2246,6 +2252,10 @@ impl Effect {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::TapOrUntap { what } => sel_find(what, slot),
+                Effect::MayDoElse { body, else_, .. } => {
+                    body.target_filter_for_slot(slot).or_else(|| else_.target_filter_for_slot(slot))
+                }
+                Effect::PutIntoLibraryBeneathTop { what, .. } => sel_find(what, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }

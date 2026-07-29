@@ -1174,6 +1174,10 @@ pub enum StaticEffect {
         kind: crate::card::CounterType,
         n: u32,
     },
+    /// "Each instant and sorcery spell you cast costs {N} less to cast for
+    /// each creature it targets" (Battlefield Thaumaturge). Generic-only,
+    /// applied in `cost_reduction_for_spell`.
+    YourISSpellsCostLessPerTargetCreature { amount: u32 },
     /// "Abilities you activate that aren't mana abilities cost {N} less to
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).

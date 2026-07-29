@@ -523,6 +523,20 @@ pub fn cost_reduction_for_spell_full(
                 {
                     reduction += amount;
                 }
+                // Battlefield Thaumaturge — {N} less per creature the
+                // instant/sorcery targets.
+                StaticEffect::YourISSpellsCostLessPerTargetCreature { amount }
+                    if src.controller == caster
+                        && (card.definition.is_instant() || card.definition.is_sorcery()) =>
+                {
+                    let targets_creature = target.is_some_and(|t| {
+                        matches!(t, crate::game::Target::Permanent(id)
+                            if state.battlefield_find(*id).is_some_and(|c| c.definition.is_creature()))
+                    });
+                    if targets_creature {
+                        reduction += amount;
+                    }
+                }
                 StaticEffect::NamedSpellCostReduction { amount }
                     if src.controller == caster
                         && src.named_card.as_deref() == Some(card.definition.name) =>

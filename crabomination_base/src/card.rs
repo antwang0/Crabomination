@@ -1412,6 +1412,10 @@ pub enum SelectionRequirement {
     HasDisturb,
     PowerAtMost(i32),
     ToughnessAtMost(i32),
+    /// "Toughness X or less, where X is the number of [filter] you control"
+    /// (Scourge of Fleets' Islands). The count is taken from the evaluating
+    /// player's battlefield.
+    ToughnessAtMostYourCount(Box<SelectionRequirement>),
     WithCounter(CounterType),
     /// True when the candidate has at least one counter of any kind on it —
     /// "a creature with a counter on it" (Delta Bloodflies, Stalwart
@@ -1655,6 +1659,9 @@ pub enum SelectionRequirement {
     /// MV ≤ the mana value of the card discarded earlier in this resolution
     /// (Argentum Masticore's reflexive destroy).
     ManaValueAtMostDiscardedThisEffect,
+    /// MV *equal to* the card discarded earlier in this resolution (Disciple
+    /// of Deceit's tutor).
+    ManaValueEqualsDiscardedThisEffect,
     /// True when the card's mana value equals the most-recently-sacrificed
     /// creature's mana value plus `offset`, read from the resolution scratch
     /// (`GameState.sacrificed_mana_value`). Powers Birthing Pod's "search for a
@@ -3095,7 +3102,7 @@ pub struct EquipBonus {
 
 /// One "as long as enchanted creature is [filter]" rider of an
 /// [`EquipBonus`]. Evaluated against the host each layer pass.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConditionalEquipBonus {
     pub host_filter: SelectionRequirement,
     pub power: i32,

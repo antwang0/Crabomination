@@ -845,6 +845,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CanBlockOnlyFlying => "Can block only creatures with flying.",
         K::CantAttackOrBlockUnlessHandSizeAtMost(_) => "Can't attack or block unless you have that many or fewer cards in hand.",
         K::CantAttackOrBlockUnlessDelirium => "Can't attack or block unless you have delirium (four or more card types among cards in your graveyard).",
+        K::CantAttackOrBlockUnlessPay(_) => "Can't attack or block unless its controller pays the listed mana. The cost is charged as attackers or blockers are declared.",
         K::CantAttackOrBlockUnlessDescend(_) => "Descend — can't attack or block unless there are that many or more permanent cards in your graveyard.",
         K::CantAttackOrBlockUnlessCityBlessing => "Can't attack or block unless you have the city's blessing.",
         K::Bloodthirst(_) => "If an opponent was dealt damage this turn, it enters with that many +1/+1 counters.",
@@ -1095,6 +1096,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             "Can't attack unless you cast a creature spell this turn".into()
         }
         K::CantAttackOrBlockUnlessDelirium => "Can't attack or block unless you have delirium".into(),
+        K::CantAttackOrBlockUnlessPay(n) => {
+            format!("Can't attack or block unless its controller pays {{{n}}}")
+        }
         K::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
             "Can't attack or block unless a creature died under your control this turn".into()
         }

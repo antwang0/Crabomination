@@ -8338,6 +8338,29 @@ static JOU2: &[Factory] = &[
     super::jou2::thassas_ire,
     super::jou2::knowledge_and_power,
 ];
+static JOU3: &[Factory] = &[
+    super::jou3::sightless_brawler,
+    super::jou3::spirespine,
+    super::jou3::crystalline_nautilus,
+    super::jou3::hypnotic_siren,
+    super::jou3::armament_of_nyx,
+    super::jou3::flamespeakers_will,
+    super::jou3::mortal_obstinacy,
+    super::jou3::dictate_of_karametra,
+    super::jou3::deserters_quarters,
+    super::jou3::godsend,
+    super::jou3::battlefield_thaumaturge,
+    super::jou3::dakra_mystic,
+    super::jou3::daring_thief,
+    super::jou3::disciple_of_deceit,
+    super::jou3::nessian_game_warden,
+    super::jou3::prophetic_flamespeaker,
+    super::jou3::quarry_colossus,
+    super::jou3::sage_of_hours,
+    super::jou3::scourge_of_fleets,
+    super::jou3::stormchaser_chimera,
+    super::jou3::ajani_mentor_of_heroes,
+];
 static KHM: &[Factory] = &[
     super::khm::dragonkin_berserker,
 ];
@@ -15615,6 +15638,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("inv", INV),
     ("jou", JOU),
     ("jou2", JOU2),
+    ("jou3", JOU3),
     ("khm", KHM),
     ("kld", KLD),
     ("ktk", KTK),
