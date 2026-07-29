@@ -578,6 +578,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.monstrous {
         lines.push(String::from("(monstrous)"));
     }
+    // CR 702.158b Sector designation — which sector a space sculptor assigned
+    // this creature to; block restrictions and sector-wide effects key on it.
+    if let Some(sector) = &p.sector {
+        lines.push(format!("({sector} sector)"));
+    }
     // CR 702.93 Renown — its renown trigger has already fired (it became
     // renowned), so it won't add more counters on later combat hits.
     if p.renowned {
@@ -1355,6 +1360,7 @@ mod tests {
             doomed_next_damage: false,
             goaded: false,
             monstrous: false,
+            sector: None,
             suspected: false,
             renowned: false,
             case_solved: None,

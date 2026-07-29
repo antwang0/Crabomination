@@ -1140,6 +1140,7 @@ fn project_permanent(
                 .filter(|&m| m > charges)
                 .min()
         },
+        sector: card.sector.map(|s| s.label().to_string()),
         station_charges: (!card.definition.station.is_empty())
             .then(|| card.counter_count(crate::card::CounterType::Charge)),
         attacking: attacking.contains(&card.id),

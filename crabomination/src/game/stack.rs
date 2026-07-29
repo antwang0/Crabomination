@@ -2754,8 +2754,48 @@ impl GameState {
         }
     }
 
+
+    /// CR 704.5u / 702.158c — while a space-sculptor permanent is on the
+    /// battlefield, every creature without a sector designation gets one; its
+    /// controller chooses, opponents of the sculptor's controller first. When
+    /// the last sculptor leaves, the designations clear (CR 702.158b).
+    /// Auto-assignment spreads a player's creatures round-robin.
+    pub(crate) fn assign_sectors(&mut self) {
+        use crate::card::{Keyword, Sector};
+        let sculptors: Vec<usize> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.keywords.contains(&Keyword::SpaceSculptor))
+            .map(|c| c.controller)
+            .collect();
+        if sculptors.is_empty() {
+            for c in &mut self.battlefield {
+                c.sector = None;
+            }
+            return;
+        }
+        // Opponents of a sculptor's controller assign first (CR 702.158c).
+        let mut seats: Vec<usize> = (0..self.players.len()).collect();
+        seats.sort_by_key(|p| sculptors.contains(p));
+        for seat in seats {
+            let mut next = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == seat && c.sector.is_some())
+                .count();
+            for c in &mut self.battlefield {
+                if c.controller == seat && c.definition.is_creature() && c.sector.is_none() {
+                    c.sector = Some(Sector::ALL[next % Sector::ALL.len()]);
+                    next += 1;
+                }
+            }
+        }
+    }
+
     pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
+
+        self.assign_sectors();
 
         // CR 603.8 — state-triggered flip (Student of Elements: "When this
         // creature has flying, flip it"). Cheap guard so the common board pays

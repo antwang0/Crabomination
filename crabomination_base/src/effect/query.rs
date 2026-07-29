@@ -221,6 +221,7 @@ impl Effect {
             | Effect::DoubleYourSourcesDamageThisTurn
             | Effect::ReturnSelfTransformedAttached
             | Effect::ReturnSelfAttachedToTarget
+            | Effect::SectorBlockLockThisTurn
             | Effect::SecondSunrise
             | Effect::PlayerTapsUntapped { .. }
             | Effect::TapAnyNumberThenPumpPerTapped { .. }
@@ -854,6 +855,7 @@ impl Effect {
             Effect::PutOnLibraryFromHand { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
+            Effect::ChooseSector { body } => body.requires_target(),
             Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } => body.requires_target(),
             // Needs a creature to watch for death (the watched target).
             Effect::WhenTargetDiesThisTurn { .. } => true,

@@ -7602,6 +7602,46 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SectorBlockLockThisTurn => {
+                self.sector_block_lock_turn = Some(self.turn_number);
+                Ok(())
+            }
+
+            Effect::ChooseSector { body } => {
+                use crate::card::Sector;
+                // CR 702.158d — pick a sector, then run the body over it.
+                // The auto-picker takes the sector holding the most creatures
+                // the body would care about (opponents' for a wipe, yours for
+                // a pump is left to the body's own filter).
+                // Default pick: the sector holding the most creatures, so an
+                // auto-decided wipe or pump lands where it matters most.
+                let mut tally = [0u32; 3];
+                for c in self.battlefield.iter().filter(|c| c.definition.is_creature()) {
+                    if let Some(i) = c.sector.and_then(|s| Sector::ALL.iter().position(|a| *a == s))
+                    {
+                        tally[i] += 1;
+                    }
+                }
+                let best = (0..3).max_by_key(|i| tally[*i]).unwrap_or(0) as u8;
+                let answer = self.decider.decide(&Decision::ChooseModes {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    num_modes: Sector::ALL.len(),
+                    count: 1,
+                    default: vec![best],
+                    mode_texts: Sector::ALL.iter().map(|s| s.label().to_string()).collect(),
+                });
+                let idx = match answer {
+                    crate::decision::DecisionAnswer::Modes(v) => {
+                        v.first().copied().unwrap_or(best) as usize
+                    }
+                    _ => best as usize,
+                };
+                self.chosen_sector = Sector::ALL.get(idx).copied();
+                let out = self.run_effect(body, ctx, events);
+                self.chosen_sector = None;
+                out
+            }
+
             Effect::TapAndLockWhileSourcePresent { what } => {
                 // Shipbreaker Kraken — the lock releases when the source leaves
                 // the battlefield, not when it untaps.
@@ -19933,6 +19973,12 @@ impl GameState {
                         EntityRef::Card(cid)
                     }
                 })
+                .collect(),
+            Selector::CreaturesInChosenSector => self
+                .battlefield
+                .iter()
+                .filter(|c| c.definition.is_creature() && c.sector == self.chosen_sector)
+                .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
             Selector::LastMoved => self
                 .last_moved_cards

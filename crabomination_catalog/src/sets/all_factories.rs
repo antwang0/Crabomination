@@ -5752,6 +5752,7 @@ static DECKS: &[Factory] = &[
     super::decks::captains_defense,
     super::decks::aangs_defense,
     super::decks::outflank,
+    super::decks::space_beleren,
     super::decks::gruul_charm,
     super::decks::dimir_charm,
     super::decks::orzhov_charm,

@@ -182,6 +182,9 @@ pub enum Selector {
     /// to chain a `GrantMayPlay` immediately after the Move targets
     /// the same card(s). Cleared between resolution roots.
     LastMoved,
+    /// Every creature in the sector picked by the enclosing
+    /// `Effect::ChooseSector`.
+    CreaturesInChosenSector,
     /// The permanent sacrificed to pay the current spell's / ability's cost
     /// (`GameState.sacrificed_card`, stamped by `Effect::WithSacrificedPt`).
     /// Now a card in its owner's graveyard — Rescue from the Underworld
@@ -4009,6 +4012,13 @@ pub enum Effect {
     /// as the source permanent stays on the battlefield
     /// (`CardInstance.untap_locked_while_present`).
     TapAndLockWhileSourcePresent { what: Selector },
+    /// CR 702.158d — "choose a sector, then [body] each creature in it."
+    /// The controller picks alpha/beta/gamma; `body` reads the picks via
+    /// `Selector::CreaturesInChosenSector` (Space Beleren's −1 and −5).
+    ChooseSector { body: Box<Effect> },
+    /// CR 702.158d — creatures can be blocked this turn only by creatures in
+    /// the same sector (Space Beleren's +1).
+    SectorBlockLockThisTurn,
     /// "Tap each creature that was blocked by [what] this turn; those
     /// creatures don't untap during their controllers' next untap steps"
     /// (Triton Tactics), reading `CardInstance.blocked_attackers_this_turn`.

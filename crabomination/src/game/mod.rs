@@ -1225,6 +1225,13 @@ pub struct GameState {
     /// `Predicate::IsExtraTurn`.
     #[serde(default)]
     pub current_turn_is_extra: bool,
+    /// CR 702.158d — the turn Space Beleren's +1 locked blocks to same-sector
+    /// creatures. `None` outside that window.
+    #[serde(default)]
+    pub sector_block_lock_turn: Option<u32>,
+    /// The sector picked by the `Effect::ChooseSector` currently resolving.
+    #[serde(skip)]
+    pub(crate) chosen_sector: Option<crate::card::Sector>,
 }
 
 /// A pending control-reversion entry — see `GameState.temporary_control`.
@@ -1447,6 +1454,8 @@ impl Clone for GameState {
             day_night: self.day_night,
             previous_turn_active: self.previous_turn_active,
             current_turn_is_extra: self.current_turn_is_extra,
+            sector_block_lock_turn: self.sector_block_lock_turn,
+            chosen_sector: self.chosen_sector,
         }
     }
 }
@@ -1642,6 +1651,8 @@ impl GameState {
             day_night: None,
             previous_turn_active: None,
             current_turn_is_extra: false,
+            sector_block_lock_turn: None,
+            chosen_sector: None,
         }
     }
 
@@ -7942,6 +7953,13 @@ impl GameState {
         };
         let blocker_cp = &blocker_cp;
         if !blocker_cp.card_types.contains(&crate::card::CardType::Creature) || blocker.tapped {
+            return false;
+        }
+        // CR 702.158d — Space Beleren's +1: creatures can be blocked this turn
+        // only by creatures in the same sector.
+        if self.sector_block_lock_turn == Some(self.turn_number)
+            && blocker.sector != attacker.sector
+        {
             return false;
         }
         // CR 702.147 — Decayed creatures can't block (mirrors the

@@ -1254,6 +1254,10 @@ pub struct PermanentView {
     /// `station_next_threshold`. `None` for non-station permanents.
     #[serde(default)]
     pub station_charges: Option<u32>,
+    /// CR 702.158b — the permanent's sector designation while a space-sculptor
+    /// permanent is out ("alpha" / "beta" / "gamma"); `None` otherwise.
+    #[serde(default)]
+    pub sector: Option<String>,
     /// Whether this permanent is currently declared as an attacker.
     pub attacking: bool,
     /// CR 509.1b — the attackers this permanent is blocking, in declaration
