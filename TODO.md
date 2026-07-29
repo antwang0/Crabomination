@@ -609,6 +609,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Theros block — BNG / JOU (good easy-card source)
+
+`sets::bng` ships the common/uncommon core (26 cards). BNG is down to 100
+`set_gaps.py` entries and JOU is untouched at 132; both are mostly commons and
+uncommons that need no new primitives. Cards deferred out of the first BNG wave
+because each wants one primitive:
+
+- **Floodtide Serpent** — "can't attack unless you return an enchantment you
+  control to its owner's hand" (an additional *attack* cost, paid as attackers
+  are declared; the engine has no attack-cost hook).
+- **Aerie Worshippers / Oracle's Insight** and the other Inspired
+  enchant-a-creature Auras — they want the Aura's own "inspired" trigger to
+  fire off the *enchanted* creature untapping, not the Aura.
+- **Gorgon's Head** and the BNG Equipment — plain, but the whole Equipment
+  sub-batch is worth doing in one pass.
+
 ## TDM (Tarkir: Dragonstorm) gaps — good easy-card source
 
 `decks::tdm` shipped ~55 cards (Siege cycle, Abzan Monument, Breaching

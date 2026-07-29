@@ -279,6 +279,7 @@ pub mod akh;
 pub mod all;
 pub mod ap;
 pub mod arn;
+pub mod bng;
 pub mod bro;
 pub mod c21;
 pub mod chk;

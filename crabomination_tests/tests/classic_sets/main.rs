@@ -7,6 +7,7 @@ mod afr;
 mod akh;
 mod avatar_water;
 mod blight;
+mod bng;
 mod bro;
 mod chk;
 mod dgm;
