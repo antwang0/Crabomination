@@ -250,6 +250,11 @@ pub enum Selector {
     AttachedTo(Box<Selector>),
     /// All permanents attached to `anchor`.
     AttachedToMe(Box<Selector>),
+    /// One legal object chosen uniformly at random from the battlefield
+    /// permanents and players matching `filter` — "any target chosen at
+    /// random" (Goblin Test Pilot). Resolves to nothing when the pool is
+    /// empty; never asks for a target slot.
+    RandomAmong(SelectionRequirement),
 
     /// Top `count` cards of `who`'s library.
     TopOfLibrary { who: PlayerRef, count: Value },
@@ -531,6 +536,11 @@ pub enum Value {
     /// stamped by `Effect::CounterSpell`). Mana Sculpt's "add an amount of
     /// {C} equal to the amount of mana spent to cast that spell".
     CounteredSpellManaSpent,
+    /// The mana *value* of the spell countered during this resolution — the
+    /// printed-cost sibling of `CounteredSpellManaSpent` (which reads what was
+    /// actually paid). Plasm Capture. Backed by
+    /// `GameState.countered_spell_mana_value`, cleared per resolution.
+    CounteredSpellManaValue,
     Sum(Vec<Value>),
     Diff(Box<Value>, Box<Value>),
     Times(Box<Value>, Box<Value>),
@@ -1316,6 +1326,11 @@ pub enum Predicate {
     /// exile — reads the `StackItem::Spell.card.cast_from_exile` flag.
     /// Nassari, Dean of Expression's "whenever you cast a spell from exile".
     CastSpellFromExile,
+    /// True if the just-cast spell (via `ctx.trigger_source`) was cast from its
+    /// owner's library — reads `StackItem::Spell.card.cast_from_library`.
+    /// Melek, Izzet Paragon's "whenever you cast an instant or sorcery spell
+    /// from your library, copy it".
+    CastSpellFromLibrary,
     /// True if `ctx.source` (the listening permanent's id) is currently
     /// in the engine's `permanents_gained_counter_this_turn` set — i.e.
     /// the listening permanent has had one or more counters put on it
@@ -5611,7 +5626,14 @@ pub enum Effect {
     /// scratch values like `CounteredSpellManaSpent` are read while still
     /// live) and baked as a constant into the registered
     /// `YourNextMainPhase` delayed trigger. Mana Sculpt.
-    AddManaAtNextMainPhase { amount: Value },
+    AddManaAtNextMainPhase {
+        amount: Value,
+        /// When true the mana is added as `AnyColors` (the player picks each
+        /// pip) rather than {C} — Plasm Capture's "in any combination of
+        /// colors". Defaults to false (Mana Sculpt's colorless bank).
+        #[serde(default)]
+        any_color: bool,
+    },
 
     /// "When [target creature] dies this turn, [body]." Registers an
     /// event-keyed delayed trigger watching `ctx.targets[slot]`'s death. The

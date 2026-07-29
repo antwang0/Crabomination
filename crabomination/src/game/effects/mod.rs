@@ -993,6 +993,7 @@ impl GameState {
         self.excess_damage_this_resolution = 0;
         self.damaged_this_resolution.clear();
         self.countered_spell_mana_spent = 0;
+        self.countered_spell_mana_value = 0;
         self.players_sacrificed_this_resolution.clear();
         self.named_card_this_resolution = None;
         let mut events = vec![];
@@ -7229,6 +7230,7 @@ impl GameState {
                 for pos in to_remove.into_iter().rev() {
                     if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
                         self.countered_spell_mana_spent = mana_spent;
+                        self.countered_spell_mana_value = card.definition.cost.cmc();
                         self.countered_spell_off_stack(*card, events);
                         countered += 1;
                     }
@@ -10103,6 +10105,7 @@ impl GameState {
                         // Mana Sculpt — record the countered spell's paid
                         // mana for `Value::CounteredSpellManaSpent`.
                         self.countered_spell_mana_spent = mana_spent;
+                        self.countered_spell_mana_value = card.definition.cost.cmc();
                         self.countered_spell_off_stack(*card, events);
                     }
                 }
@@ -10133,6 +10136,7 @@ impl GameState {
                 for pos in to_remove {
                     if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
                         self.countered_spell_mana_spent = mana_spent;
+                        self.countered_spell_mana_value = card.definition.cost.cmc();
                         let name = card.definition.name;
                         let owner = card.owner;
                         self.countered_spell_off_stack(*card, events);
@@ -10747,6 +10751,7 @@ impl GameState {
                     )) {
                         if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
                             self.countered_spell_mana_spent = mana_spent;
+                        self.countered_spell_mana_value = card.definition.cost.cmc();
                             self.countered_spell_off_stack(*card, events);
                         }
                     } else if let Some(pos) = self
@@ -15629,7 +15634,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::AddManaAtNextMainPhase { amount } => {
+            Effect::AddManaAtNextMainPhase { amount, any_color } => {
                 // Mana Sculpt — evaluate `amount` NOW (resolution-scoped
                 // scratch values like `CounteredSpellManaSpent` are still
                 // live) and bake the constant into the delayed body, so the
@@ -15646,9 +15651,11 @@ impl GameState {
                     kind: crate::game::types::DelayedKind::YourNextMainPhase,
                     effect: Effect::AddMana {
                         who: crate::effect::PlayerRef::You,
-                        pool: crate::effect::ManaPayload::Colorless(
-                            crate::effect::Value::Const(n),
-                        ),
+                        pool: if *any_color {
+                            crate::effect::ManaPayload::AnyColors(crate::effect::Value::Const(n))
+                        } else {
+                            crate::effect::ManaPayload::Colorless(crate::effect::Value::Const(n))
+                        },
                     },
                     target: None,
                     bound_token: None,
@@ -19639,6 +19646,34 @@ impl GameState {
                 }
                 out
             }
+            Selector::RandomAmong(filter) => {
+                use rand::seq::IndexedRandom;
+                let mut pool: Vec<EntityRef> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            ctx.controller,
+                            ctx.source,
+                        )
+                    })
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect();
+                for p in 0..self.players.len() {
+                    if self.evaluate_requirement_static(
+                        filter,
+                        &Target::Player(p),
+                        ctx.controller,
+                        ctx.source,
+                    ) {
+                        pool.push(EntityRef::Player(p));
+                    }
+                }
+                pool.choose(&mut rand::rng()).copied().into_iter().collect()
+            }
+
             Selector::BlockingCreatures => ctx
                 .source
                 .map(|attacker| {

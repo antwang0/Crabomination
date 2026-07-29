@@ -4117,6 +4117,11 @@ pub struct CardInstance {
     /// "whenever you cast a spell from exile" payoffs (Nassari, Dean of
     /// Expression). Cleared when the card leaves the stack.
     pub cast_from_exile: bool,
+    /// True if this card was cast from its owner's library on its current trip
+    /// through the stack (a play-from-top-of-library grant). Powers
+    /// "whenever you cast a spell from your library" payoffs (Melek, Izzet
+    /// Paragon). Cleared when the card leaves the stack.
+    pub cast_from_library: bool,
     /// One-shot permission to cast this MDFC's **back face from the
     /// graveyard** (Pestilent Cauldron's "sacrifice, then cast Restorative
     /// Burst transformed"). Set by `Effect::GrantCastBackFromGraveyard` once
@@ -4522,6 +4527,7 @@ impl CardInstance {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             cast_from_exile: false,
+            cast_from_library: false,
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
             chosen_land_type: None,
@@ -5102,6 +5108,8 @@ struct CardInstanceWire {
     #[serde(default)]
     cast_from_exile: bool,
     #[serde(default)]
+    cast_from_library: bool,
+    #[serde(default)]
     may_cast_back_from_graveyard: bool,
     chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
@@ -5331,6 +5339,7 @@ impl serde::Serialize for CardInstance {
             cast_via_waterbend: self.cast_via_waterbend,
             cast_collected_evidence: self.cast_collected_evidence,
             cast_from_exile: self.cast_from_exile,
+            cast_from_library: self.cast_from_library,
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
             chosen_land_type: self.chosen_land_type,
@@ -5479,6 +5488,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_via_waterbend = wire.cast_via_waterbend;
         c.cast_collected_evidence = wire.cast_collected_evidence;
         c.cast_from_exile = wire.cast_from_exile;
+        c.cast_from_library = wire.cast_from_library;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.chosen_land_type = wire.chosen_land_type;
         c.chosen_number = wire.chosen_number;

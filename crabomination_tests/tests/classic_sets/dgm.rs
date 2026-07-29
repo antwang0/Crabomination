@@ -1187,3 +1187,134 @@ fn notion_thief_exempts_draw_step() {
     assert_eq!(g.players[0].hand.len(), h0 + 1, "active player keeps the draw-step draw");
     assert_eq!(g.players[1].hand.len(), h1, "thief does not steal the first draw");
 }
+
+// ── gaps wave 5 ─────────────────────────────────────────────────────────────
+
+/// Melek casts instants off the library top and copies what it casts from
+/// there — but not the same spell cast from hand.
+#[test]
+fn melek_copies_only_library_casts() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::melek_izzet_paragon());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast off the library top");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "3 from the spell + 3 from the copy");
+
+    let hand_bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hand_bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast from hand");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 11, "hand casts aren't copied");
+}
+
+/// Plasm Capture banks the countered spell's mana value as any-colour mana at
+/// the caster's next main phase.
+#[test]
+fn plasm_capture_banks_the_spells_mana_value() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let spell = g.add_card_to_hand(1, catalog::divination()); // {2}{U} — MV 3
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let capture = g.add_card_to_hand(0, catalog::plasm_capture());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: capture,
+        target: Some(Target::Permanent(spell)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("counter it");
+    drain_stack(&mut g);
+    let banked = g
+        .delayed_triggers
+        .iter()
+        .any(|d| matches!(d.kind, crabomination::game::types::DelayedKind::YourNextMainPhase));
+    assert!(banked, "the mana is banked for the next main phase");
+}
+
+/// Goblin Test Pilot picks its victim at random from every legal object.
+#[test]
+fn goblin_test_pilot_hits_something_at_random() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let pilot = g.add_card_to_battlefield(0, catalog::goblin_test_pilot());
+    g.clear_sickness(pilot);
+    let before: i32 = g.players.iter().map(|p| p.life).sum();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pilot,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("tap for 2");
+    drain_stack(&mut g);
+    let after: i32 = g.players.iter().map(|p| p.life).sum();
+    let hit_a_creature = g.battlefield_find(pilot).is_some_and(|c| c.damage > 0);
+    assert!(after == before - 2 || hit_a_creature, "the 2 damage landed somewhere");
+}
+
+/// Release edicts one permanent of each of the five types from every player.
+#[test]
+fn catch_release_edicts_five_types() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for seat in [0, 1] {
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        g.add_card_to_battlefield(seat, catalog::forest());
+    }
+    let release = g.add_card_to_hand(0, catalog::catch_release());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: release,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Release");
+    drain_stack(&mut g);
+    for seat in [0, 1] {
+        assert_eq!(
+            g.battlefield.iter().filter(|c| c.controller == seat).count(),
+            0,
+            "both the creature and the land were sacrificed"
+        );
+    }
+}

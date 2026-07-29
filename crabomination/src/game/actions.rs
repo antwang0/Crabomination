@@ -2875,9 +2875,13 @@ impl GameState {
             let capped = self.library_top_cast_is_capped(p, card_id);
             let card = self.players[p].library.remove(0);
             self.players[p].hand.push(card);
+            // The cast pipeline runs from hand, so record the true origin for
+            // "cast a spell from your library" payoffs (Melek).
+            self.casting_from_library_top = Some(card_id);
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
+            self.casting_from_library_top = None;
             if r.is_err() {
                 if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
                     self.players[p].library.insert(0, card);
@@ -4102,6 +4106,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
         card.cast_from_exile = false;
+        card.cast_from_library = self.casting_from_library_top == Some(card_id);
         card.adventuring = true;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -4173,6 +4178,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
         card.cast_from_exile = false;
+        card.cast_from_library = self.casting_from_library_top == Some(card_id);
         card.omen_casting = true;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -4343,6 +4349,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
         card.cast_from_exile = false;
+        card.cast_from_library = self.casting_from_library_top == Some(card_id);
         card.split_cast = Some(if fused { 2 } else { 1 });
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -4843,6 +4850,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
         card.cast_from_exile = false;
+        card.cast_from_library = self.casting_from_library_top == Some(card_id);
         // CR 701.67 — a mandatory "waterbend {N}" rider is paid even on the
         // plain cast path; only the optional "you may waterbend" form is
         // skippable. When no explicit amount arrived via CastSpellWaterbend,
@@ -7603,6 +7611,7 @@ impl GameState {
         card.granted_alt_cast_cost_eot = None;
         // Stamp the cast-zone flag for "cast a spell from exile" payoffs.
         card.cast_from_exile = matches!(source_zone, Zone::Exile);
+        card.cast_from_library = matches!(source_zone, Zone::Library);
         // Route to exile on resolve when the granting effect demands it
         // (Nita's "if would go to graveyard, exile instead").
         if exile_after {
@@ -8131,6 +8140,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
         card.cast_from_exile = false;
+        card.cast_from_library = self.casting_from_library_top == Some(card_id);
         if alt.evoke_sacrifice {
             card.evoked = true;
         }

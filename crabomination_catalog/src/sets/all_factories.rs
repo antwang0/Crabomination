@@ -7214,6 +7214,10 @@ static DGM: &[Factory] = &[
     super::dgm::emmara_tandris,
     super::dgm::beck_call,
     super::dgm::notion_thief,
+    super::dgm::melek_izzet_paragon,
+    super::dgm::plasm_capture,
+    super::dgm::goblin_test_pilot,
+    super::dgm::catch_release,
     super::dgm::boros_battleshaper,
     super::dgm::varolz_the_scar_striped,
 ];

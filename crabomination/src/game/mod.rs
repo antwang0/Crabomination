@@ -362,6 +362,11 @@ pub struct GameState {
     /// Transient scratch — `#[serde(skip)]`.
     #[serde(skip)]
     pub expend_prev_total: u32,
+    /// The card currently being cast off the library top (CR 401.6). The
+    /// cast pipeline runs from hand, so this scratch preserves the true origin
+    /// for "cast a spell from your library" payoffs. Transient.
+    #[serde(skip)]
+    pub(crate) casting_from_library_top: Option<CardId>,
     /// Total spells cast during the previous turn (snapshotted from
     /// `spells_cast_this_turn` at Cleanup). Drives the classic Innistrad
     /// werewolf transform check ("if no spells were cast last turn …").
@@ -663,6 +668,10 @@ pub struct GameState {
     /// `Effect::CounterSpell`-family handlers.
     #[serde(default)]
     pub countered_spell_mana_spent: u32,
+    /// The countered spell's printed mana value (CR 202.3) — the sibling of
+    /// `countered_spell_mana_spent`, read by `Value::CounteredSpellManaValue`.
+    #[serde(default)]
+    pub countered_spell_mana_value: u32,
     /// Transient: seats that sacrificed at least one permanent during the
     /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
@@ -1290,6 +1299,7 @@ impl Clone for GameState {
             cycled_count_by_name: self.cycled_count_by_name.clone(),
             mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
             expend_prev_total: self.expend_prev_total,
+            casting_from_library_top: self.casting_from_library_top,
             spells_cast_last_turn: self.spells_cast_last_turn,
             permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
             graveyard_from_battlefield_this_turn: self
@@ -1340,6 +1350,7 @@ impl Clone for GameState {
             excess_damage_this_resolution: self.excess_damage_this_resolution,
             damaged_this_resolution: self.damaged_this_resolution.clone(),
             countered_spell_mana_spent: self.countered_spell_mana_spent,
+            countered_spell_mana_value: self.countered_spell_mana_value,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
@@ -1485,6 +1496,7 @@ impl GameState {
             cycled_count_by_name: std::collections::HashMap::new(),
             mana_spent_on_spells_this_turn: 0,
             expend_prev_total: 0,
+            casting_from_library_top: None,
             spells_cast_last_turn: 0,
             permanents_to_graveyard_this_turn: 0,
             graveyard_from_battlefield_this_turn: Default::default(),
@@ -1533,6 +1545,7 @@ impl GameState {
             excess_damage_this_resolution: 0,
             damaged_this_resolution: Vec::new(),
             countered_spell_mana_spent: 0,
+            countered_spell_mana_value: 0,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             named_card_this_resolution: None,
             pending_cast_face: CastFace::Front,

@@ -226,6 +226,7 @@ pub fn mana_sculpt() -> CardDefinition {
                 )),
                 then: Box::new(Effect::AddManaAtNextMainPhase {
                     amount: Value::CounteredSpellManaSpent,
+                    any_color: false,
                 }),
                 else_: Box::new(Effect::Noop),
             },

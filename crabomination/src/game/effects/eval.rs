@@ -517,6 +517,7 @@ impl GameState {
                 .sum(),
             Value::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution as i32,
             Value::CounteredSpellManaSpent => self.countered_spell_mana_spent as i32,
+            Value::CounteredSpellManaValue => self.countered_spell_mana_value as i32,
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
             Value::Times(a, b) => self.evaluate_value(a, ctx) * self.evaluate_value(b, ctx),
@@ -1612,6 +1613,15 @@ impl GameState {
                 };
                 self.stack.iter().any(|si| match si {
                     StackItem::Spell { card, .. } if card.id == cid => card.cast_from_exile,
+                    _ => false,
+                })
+            }
+            Predicate::CastSpellFromLibrary => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => card.cast_from_library,
                     _ => false,
                 })
             }
