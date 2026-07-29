@@ -321,3 +321,89 @@ fn bng_graveyard_value() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == aura), "enchantment card returned");
 }
+
+/// Stat lines for the second BNG wave.
+#[test]
+fn bng_wave2_stat_lines() {
+    let table: &[(fn() -> crabomination::card::CardDefinition, i32, i32)] = &[
+        (catalog::akroan_phalanx, 3, 3),
+        (catalog::ashioks_adept, 1, 3),
+        (catalog::graverobber_spider, 2, 4),
+        (catalog::nyxborn_shieldmate, 1, 2),
+        (catalog::nyxborn_triton, 2, 3),
+        (catalog::nyxborn_wolf, 3, 1),
+    ];
+    for (f, p, t) in table {
+        let d = f();
+        assert_eq!((d.power, d.toughness), (*p, *t), "{}", d.name);
+        assert!(d.bestow.is_some() || !d.name.starts_with("Nyxborn"), "{} bestows", d.name);
+    }
+}
+
+/// Ephara's Radiance grants its host a tap-for-life ability.
+#[test]
+fn granting_auras_hand_over_their_ability() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    cast(&mut g, catalog::epharas_radiance(), Some(Target::Permanent(bear)), 0, &[(Color::White, 1)]);
+    let life = g.players[0].life;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("granted ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "the tap cost hit the host");
+}
+
+/// Gorgon's Head hands the equipped creature deathtouch.
+#[test]
+fn gorgons_head_grants_deathtouch() {
+    let mut g = main_phase();
+    let head = g.add_card_to_battlefield(0, catalog::gorgons_head());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: head, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Graverobber Spider scales with the creature cards in your graveyard.
+#[test]
+fn graverobber_spider_scales_with_the_yard() {
+    let mut g = main_phase();
+    let spider = g.add_card_to_battlefield(0, catalog::graverobber_spider());
+    g.battlefield_find_mut(spider).unwrap().summoning_sick = false;
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::great_hart());
+    }
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spider,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(spider).map(|c| (c.power, c.toughness)), Some((5, 7)));
+}
+
+/// Ashiok's Adept's heroic strips a card from each opponent.
+#[test]
+fn ashioks_adept_heroic_discards() {
+    let mut g = main_phase();
+    let adept = g.add_card_to_battlefield(0, catalog::ashioks_adept());
+    g.add_card_to_hand(1, catalog::great_hart());
+    cast(&mut g, catalog::mortals_ardor(), Some(Target::Permanent(adept)), 0, &[(Color::White, 1)]);
+    assert!(g.players[1].hand.is_empty(), "the opponent discarded");
+}

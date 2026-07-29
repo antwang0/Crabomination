@@ -449,3 +449,310 @@ pub fn glimpse_the_sun_god() -> CardDefinition {
         },
     )
 }
+
+// ── Auras, Equipment, and the bestow cycle ───────────────────────────────────
+
+use crate::card::{ActivatedAbility, EquipBonus};
+
+/// An "enchant creature" Aura whose only text is a granted activated ability.
+fn granting_aura(
+    name: &'static str,
+    mana: ManaCost,
+    ability: ActivatedAbility,
+    etb_draw: bool,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus { activated_abilities: vec![ability], ..Default::default() }),
+        triggered_abilities: if etb_draw {
+            vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })]
+        } else {
+            vec![]
+        },
+        ..Default::default()
+    }
+}
+
+/// A bestow creature that grants a flat `+p/+t` while attached.
+fn nyxborn(
+    name: &'static str,
+    mana: ManaCost,
+    bestow_cost: ManaCost,
+    pt: (i32, i32),
+    ct: Vec<CreatureType>,
+) -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        bestow: Some(bestow_cost),
+        equipped_bonus: Some(EquipBonus {
+            power: pt.0,
+            toughness: pt.1,
+            ..Default::default()
+        }),
+        ..creature(name, mana, pt.0, pt.1, ct, vec![])
+    }
+}
+
+/// Nyxborn Shieldmate — {W} 1/2; bestow {2}{W} for +1/+2.
+pub fn nyxborn_shieldmate() -> CardDefinition {
+    nyxborn(
+        "Nyxborn Shieldmate",
+        cost(&[w()]),
+        cost(&[generic(2), w()]),
+        (1, 2),
+        vec![CreatureType::Human, CreatureType::Soldier],
+    )
+}
+
+/// Nyxborn Triton — {2}{U} 2/3; bestow {4}{U} for +2/+3.
+pub fn nyxborn_triton() -> CardDefinition {
+    nyxborn(
+        "Nyxborn Triton",
+        cost(&[generic(2), u()]),
+        cost(&[generic(4), u()]),
+        (2, 3),
+        vec![CreatureType::Merfolk],
+    )
+}
+
+/// Nyxborn Wolf — {2}{G} 3/1; bestow {4}{G} for +3/+1.
+pub fn nyxborn_wolf() -> CardDefinition {
+    nyxborn(
+        "Nyxborn Wolf",
+        cost(&[generic(2), g()]),
+        cost(&[generic(4), g()]),
+        (3, 1),
+        vec![CreatureType::Wolf],
+    )
+}
+
+/// Ephara's Radiance — {W} Aura granting "{1}{W}, {T}: You gain 3 life."
+pub fn epharas_radiance() -> CardDefinition {
+    granting_aura(
+        "Ephara's Radiance",
+        cost(&[w()]),
+        ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            tap_cost: true,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ..Default::default()
+        },
+        false,
+    )
+}
+
+/// Claim of Erebos — {1}{B} Aura granting "{1}{B}, {T}: Target player loses 2
+/// life."
+pub fn claim_of_erebos() -> CardDefinition {
+    granting_aura(
+        "Claim of Erebos",
+        cost(&[generic(1), b()]),
+        ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            tap_cost: true,
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        },
+        false,
+    )
+}
+
+/// Evanescent Intellect — {U} Aura granting "{1}{U}, {T}: Target player mills
+/// three cards."
+pub fn evanescent_intellect() -> CardDefinition {
+    granting_aura(
+        "Evanescent Intellect",
+        cost(&[u()]),
+        ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            tap_cost: true,
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(3),
+            },
+            ..Default::default()
+        },
+        false,
+    )
+}
+
+/// Epiphany Storm — {R} Aura granting "{R}, {T}, Discard a card: Draw a card."
+pub fn epiphany_storm() -> CardDefinition {
+    granting_aura(
+        "Epiphany Storm",
+        cost(&[r()]),
+        ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            tap_cost: true,
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        },
+        false,
+    )
+}
+
+/// Karametra's Favor — {1}{G} Aura. ETB draw; the host taps for any color.
+pub fn karametras_favor() -> CardDefinition {
+    granting_aura(
+        "Karametra's Favor",
+        cost(&[generic(1), g()]),
+        ActivatedAbility {
+            tap_cost: true,
+            effect: crate::effect::shortcut::add_any_one_color(1),
+            ..Default::default()
+        },
+        true,
+    )
+}
+
+/// Grisly Transformation — {2}{B} Aura. ETB draw; the host gains intimidate.
+pub fn grisly_transformation() -> CardDefinition {
+    CardDefinition {
+        name: "Grisly Transformation",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Intimidate],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        ..Default::default()
+    }
+}
+
+/// Fearsome Temper — {2}{R} Aura granting +2/+2 and a can't-block activation.
+pub fn fearsome_temper() -> CardDefinition {
+    CardDefinition {
+        name: "Fearsome Temper",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(2), r()]),
+                effect: Effect::CantBlockSourceThisTurn {
+                    target: target_filtered(R::Creature),
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Gorgon's Head — {1} Equipment. Equipped creature has deathtouch. Equip {2}.
+pub fn gorgons_head() -> CardDefinition {
+    CardDefinition {
+        name: "Gorgon's Head",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Deathtouch],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Akroan Phalanx — {3}{W} 3/3 vigilance. {2}{R}: your creatures get +1/+0.
+pub fn akroan_phalanx() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::ONE,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Akroan Phalanx",
+            cost(&[generic(3), w()]),
+            3,
+            3,
+            vec![CreatureType::Human, CreatureType::Soldier],
+            vec![Keyword::Vigilance],
+        )
+    }
+}
+
+/// Ashiok's Adept — {2}{B} 1/3. Heroic: each opponent discards a card.
+pub fn ashioks_adept() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![heroic(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::ONE,
+            random: false,
+        })],
+        ..creature(
+            "Ashiok's Adept",
+            cost(&[generic(2), b()]),
+            1,
+            3,
+            vec![CreatureType::Human, CreatureType::Wizard],
+            vec![],
+        )
+    }
+}
+
+/// Graverobber Spider — {3}{G} 2/4 reach. {3}{B}: +X/+X for the creature cards
+/// in your graveyard, once each turn.
+pub fn graverobber_spider() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b()]),
+            once_per_turn: true,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: R::Creature,
+                },
+                toughness: Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: R::Creature,
+                },
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Graverobber Spider",
+            cost(&[generic(3), g()]),
+            2,
+            4,
+            vec![CreatureType::Spider],
+            vec![Keyword::Reach],
+        )
+    }
+}

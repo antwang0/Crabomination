@@ -611,7 +611,7 @@ state-corrupting in ordinary play.
 
 ## Theros block — BNG / JOU (good easy-card source)
 
-`sets::bng` ships the common/uncommon core (26 cards). BNG is down to 100
+`sets::bng` ships the common/uncommon core (40 cards). BNG is down to 86
 `set_gaps.py` entries and JOU is untouched at 132; both are mostly commons and
 uncommons that need no new primitives. Cards deferred out of the first BNG wave
 because each wants one primitive:
