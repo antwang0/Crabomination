@@ -66,6 +66,10 @@ impl GameState {
                 .resolve_player(who, ctx)
                 .map(|p| ((self.players[p].library.len() as i32) + 1) / 2)
                 .unwrap_or(0),
+            Value::HalfLifeRoundedUp(who) => self
+                .resolve_player(who, ctx)
+                .map(|p| (self.players[p].life.max(0) + 1) / 2)
+                .unwrap_or(0),
             Value::GreatestManaValueInExile => self
                 .exile
                 .iter()

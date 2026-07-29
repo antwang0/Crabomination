@@ -2338,7 +2338,10 @@ pub fn recover(cost: crate::mana::ManaCost) -> TriggeredAbility {
     use crate::card::{EventKind, EventScope, EventSpec};
     use crate::effect::ZoneDest;
     TriggeredAbility {
-        event: EventSpec::new(EventKind::CreatureDied, EventScope::FromYourGraveyard),
+        // CR 702.59a — "put into *your* graveyard": only a creature you own
+        // arms recover, not any creature dying anywhere.
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::FromYourGraveyard)
+            .with_filter(recover_subject_is_yours(false)),
         effect: Effect::MayPay {
             description: "Recover".into(),
             mana_cost: cost,
@@ -3152,4 +3155,34 @@ pub fn melee() -> TriggeredAbility {
         toughness: Value::OpponentsAttackedThisCombat,
         duration: Duration::EndOfTurn,
     })
+}
+
+/// "Recover—Pay half your life, rounded up" (Garza's Assassin): CR 702.59
+/// with a life cost instead of mana, and the printed "another creature".
+pub fn recover_paying_half_life() -> TriggeredAbility {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    use crate::effect::ZoneDest;
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::FromYourGraveyard)
+            .with_filter(recover_subject_is_yours(true)),
+        effect: Effect::MayPayLife {
+            description: "Recover: pay half your life, rounded up?".into(),
+            amount: Value::HalfLifeRoundedUp(PlayerRef::You),
+            body: Box::new(Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            else_: Some(Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Exile })),
+        },
+    }
+}
+
+/// The dying creature must be one you own; `another` also excludes the
+/// recover card itself.
+fn recover_subject_is_yours(another: bool) -> crate::effect::Predicate {
+    let mut filter = SelectionRequirement::OwnedByYou;
+    if another {
+        filter = filter.and(SelectionRequirement::OtherThanSource);
+    }
+    crate::effect::Predicate::EntityMatches { what: Selector::TriggerSource, filter }
 }

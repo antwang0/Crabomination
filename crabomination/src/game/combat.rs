@@ -5,7 +5,8 @@ use crate::game::layers::ComputedPermanent;
 
 /// CR 509.1b — how many attackers this creature may block. One by default;
 /// `CanBlockAdditional(n)` adds n (they stack), `CanBlockAnyNumber` lifts the
-/// cap entirely.
+/// cap entirely. `SelfCanBlockAdditionalPerAttachedEquipment` (Kemba's Legion)
+/// adds one more per attached Equipment — see `max_blocks_on`.
 fn max_blocks_for(kws: &[Keyword]) -> usize {
     if kws.contains(&Keyword::CanBlockAnyNumber) {
         return usize::MAX;
@@ -20,6 +21,34 @@ fn max_blocks_for(kws: &[Keyword]) -> usize {
 }
 
 impl GameState {
+    /// `max_blocks_for` plus the board-dependent riders keyed on the blocker
+    /// itself ("…for each Equipment attached to this creature").
+    pub(crate) fn max_blocks_on(&self, blocker: CardId, kws: &[Keyword]) -> usize {
+        use crate::effect::StaticEffect;
+        let base = max_blocks_for(kws);
+        if base == usize::MAX {
+            return base;
+        }
+        let per_equipment = self
+            .battlefield_find(blocker)
+            .filter(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        StaticEffect::SelfCanBlockAdditionalPerAttachedEquipment
+                    )
+                })
+            })
+            .map(|_| {
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.attached_to == Some(blocker) && c.definition.is_equipment())
+                    .count()
+            })
+            .unwrap_or(0);
+        base + per_equipment
+    }
+
     /// True if `card` carries a `CanAttackIgnoringDefenderWhile` static whose
     /// condition currently holds — it may attack despite Defender
     /// (Drowsing Tyrannodon).
@@ -807,7 +836,7 @@ impl GameState {
             }
             taken.push(attacker_id);
             let total = taken.len() + self.attackers_blocked_by(blocker_id).len();
-            if total > max_blocks_for(kws_of(blocker_id)) {
+            if total > self.max_blocks_on(blocker_id, kws_of(blocker_id)) {
                 return Err(GameError::CannotBlock(blocker_id));
             }
             let atk = self

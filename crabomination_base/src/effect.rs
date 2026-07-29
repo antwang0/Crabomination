@@ -373,6 +373,9 @@ pub enum Value {
     /// Half of a player's library size, rounded up (Ulamog, the Defiler's
     /// cast trigger).
     HalfLibrarySizeRoundedUp(PlayerRef),
+    /// Half the player's life total, rounded up (Garza's Assassin's
+    /// "Recover—Pay half your life, rounded up").
+    HalfLifeRoundedUp(PlayerRef),
     /// The greatest mana value among cards in exile (Ulamog, the Defiler's
     /// enters-with-counters count).
     GreatestManaValueInExile,

@@ -846,6 +846,17 @@ pub fn cost_reduction_for_spell_full(
             reduction = reduction.saturating_add(amount);
         }
     }
+    // Card-intrinsic "costs {amount} less if [condition]" (Avatar of Hope).
+    // Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedIfPredicate { amount, condition } = &sa.effect {
+            let mut ctx = crate::game::effects::EffectContext::for_spell(caster, None, 0, 0);
+            ctx.source = Some(card.id);
+            if state.evaluate_predicate(condition, &ctx) {
+                reduction = reduction.saturating_add(*amount);
+            }
+        }
+    }
     // Card-intrinsic "costs {X} less, where X is your Domain" (Leyline Binding)
     // — distinct basic land types among the caster's lands. Generic-only,
     // clamped by the caller via `ManaCost::reduce_generic`.
@@ -5302,6 +5313,15 @@ impl GameState {
         // Foliage).
         if card.definition.cast_only_after_blockers
             && !(self.step.is_combat_phase() && self.blockers_declared)
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
+        // "Cast only during combat before blockers are declared" (Blaze of
+        // Glory).
+        if card.definition.cast_only_before_blockers
+            && (!self.step.is_combat_phase() || self.blockers_declared)
         {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);

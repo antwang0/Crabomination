@@ -473,6 +473,13 @@ pub enum StaticEffect {
     /// Card-intrinsic "This spell costs {amount} less to cast if a creature died
     /// this turn" (Bone Picker). Generic-only; clamped by `ManaCost::reduce_generic`.
     SelfCostReducedIfCreatureDiedThisTurn { amount: u32 },
+    /// Card-intrinsic "This spell costs {amount} less to cast if [condition]"
+    /// (Avatar of Hope — "if you have 3 or less life"). Evaluated for the
+    /// caster at cast time. Generic-only; clamped by `ManaCost::reduce_generic`.
+    SelfCostReducedIfPredicate { amount: u32, condition: Predicate },
+    /// CR 509.1b — "…can block an additional creature each combat for each
+    /// Equipment attached to it" (Kemba's Legion). Folded into `max_blocks_on`.
+    SelfCanBlockAdditionalPerAttachedEquipment,
     /// Card-intrinsic "This spell costs {X} less to cast, where X is your
     /// Domain" (CR 702.43 — Leyline Binding). Read by `cost_reduction_for_spell`
     /// off the *spell being cast*; the count is the distinct basic land types

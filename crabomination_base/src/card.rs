@@ -2409,6 +2409,9 @@ pub struct CardDefinition {
     /// (Flash Foliage). Checked at the cast gate.
     #[serde(default)]
     pub cast_only_after_blockers: bool,
+    /// "Cast this spell only during combat before blockers are declared"
+    /// (Blaze of Glory). Gated in the cast-timing check.
+    pub cast_only_before_blockers: bool,
     /// Gate on casting via Flashback ("Corrupted — … this card has flashback"
     /// — Viral Spawning). Checked at the graveyard-cast gate.
     #[serde(default)]

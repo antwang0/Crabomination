@@ -4600,6 +4600,21 @@ impl GameState {
             .min()
     }
 
+    /// CR 121.2b / 121.3 — a player who can't draw may not *choose* to.
+    /// An empty library does not block the choice (CR 121.3 says it can still
+    /// be taken); only an active can't-draw / draw-cap effect does.
+    pub fn may_choose_to_draw(&self, seat: usize, amount: i32) -> bool {
+        if amount <= 0 {
+            return true;
+        }
+        match self.draw_cap_for(seat) {
+            Some(max) => {
+                self.players[seat].cards_drawn_this_turn.saturating_add(amount as u32) <= max
+            }
+            None => true,
+        }
+    }
+
     /// Replace the current team partition. Every seat must appear in
     /// exactly one entry; partitions must be non-empty. Used by team
     /// formats (2HG) after `new()` to group seats.
@@ -9055,6 +9070,11 @@ impl GameState {
     /// `CardDrawn` for a normal draw, or `CardMilled` ×N +
     /// `CardLeftGraveyard` for a dredge.
     pub fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
+        // CR 121.2b — a per-turn draw cap applies to *individual* card draws,
+        // so it gates every draw source, not just `Effect::Draw`'s count.
+        if self.draw_cap_for(p).is_some_and(|cap| self.players[p].cards_drawn_this_turn >= cap) {
+            return false;
+        }
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
         }
@@ -14910,6 +14930,11 @@ fn static_effect_to_effects(
             | StaticEffect::SelfFlashIf { .. }
             // SelfCostReducedIfCreatureDiedThisTurn (Bone Picker) — same.
             | StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { .. }
+            // SelfCostReducedIfPredicate (Avatar of Hope) — same.
+            | StaticEffect::SelfCostReducedIfPredicate { .. }
+            // SelfCanBlockAdditionalPerAttachedEquipment (Kemba's Legion) —
+            // read by `max_blocks_on`; no continuous-layer effect.
+            | StaticEffect::SelfCanBlockAdditionalPerAttachedEquipment
             // SelfCostReducedByDomain (Leyline Binding) — same, off the spell.
             | StaticEffect::SelfCostReducedByDomain { .. }
             // SelfCostReducedByDistinctLandNames (Fungal Colossus) — same.

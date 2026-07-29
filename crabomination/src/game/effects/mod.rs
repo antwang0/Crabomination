@@ -2617,6 +2617,13 @@ impl GameState {
             }
 
             Effect::MayDo { description, body } => {
+                // CR 121.2b / 121.3 — an optional draw isn't offered at all to
+                // a player who can't take it (Spirit of the Labyrinth, Narset).
+                if let Some((seat, n)) = self.optional_draw_target(body, ctx)
+                    && !self.may_choose_to_draw(seat, n)
+                {
+                    return Ok(());
+                }
                 // Yes/no decision via `Decision::OptionalTrigger`, asked of
                 // the *controller* of the effect (`ctx.controller`). A
                 // `wants_ui` controller gets the client's yes/no modal via
@@ -2716,6 +2723,16 @@ impl GameState {
                 body,
                 else_,
             } => {
+                // CR 121.2b / 121.3 — see `Effect::MayDo`. A declined-by-rule
+                // draw still runs the "if you don't" half.
+                if let Some((seat, n)) = self.optional_draw_target(body, ctx)
+                    && !self.may_choose_to_draw(seat, n)
+                {
+                    if let Some(e) = else_ {
+                        return self.run_effect(e, ctx, events);
+                    }
+                    return Ok(());
+                }
                 // Sibling to `MayDo`: ask yes/no, then *attempt* to pay
                 // mana. If the controller declines or can't afford the
                 // cost the body is skipped and `else_` (if any) runs.
@@ -19588,6 +19605,26 @@ impl GameState {
                 EntityRef::Card(_) => None,
             })
             .collect()
+    }
+
+    /// The (seat, count) an optional effect's body would have a *single*
+    /// player draw, if the body is exactly a draw. Used by `MayDo`/`MayPay`
+    /// to honor CR 121.2b / 121.3 — a player who can't draw can't choose to.
+    fn optional_draw_target(&self, body: &Effect, ctx: &EffectContext) -> Option<(usize, i32)> {
+        let Effect::Draw { who, amount } = body else { return None };
+        let n = self.evaluate_value(amount, ctx);
+        let seats: Vec<usize> = self
+            .resolve_selector(who, ctx)
+            .into_iter()
+            .filter_map(|e| match e {
+                EntityRef::Player(p) => Some(p),
+                _ => None,
+            })
+            .collect();
+        match seats.as_slice() {
+            [seat] => Some((*seat, n)),
+            _ => None,
+        }
     }
 
     pub(crate) fn resolve_selector(&self, sel: &Selector, ctx: &EffectContext) -> Vec<EntityRef> {

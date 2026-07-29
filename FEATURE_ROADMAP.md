@@ -852,6 +852,12 @@ exercising each) was elided in a compaction pass; recover it from
   surfaced at cast time (`query.rs` — Cut In's up-to-one Role). Bot `pick_saddle`
   now fires only in precombat main. ~30 cards across `decks::recent127-128`;
   tests in `tests/recent127-128.rs`, `cr_rules.rs`.
+- **Multi-block tail (modern_decks):**
+  `StaticEffect::SelfCanBlockAdditionalPerAttachedEquipment` (Kemba's Legion,
+  folded into `max_blocks_on`), `StaticEffect::SelfCostReducedIfPredicate`,
+  `CardDefinition.cast_only_before_blockers`, `Value::HalfLifeRoundedUp`, and
+  `GameState::may_choose_to_draw` (CR 121.2b/121.3 — a capped player is never
+  offered an optional draw, and the cap now gates `draw_one` itself).
 - **Scry/Surveil-matters + graveyard CDA (modern_decks — FIN):**
   `EventKind::ScriedOrSurveiled` (CR 701.22/701.42 — "whenever you scry or
   surveil"; emitted from the scry/surveil resolution alongside
