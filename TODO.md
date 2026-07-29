@@ -117,6 +117,20 @@ dispatch, mirroring the death/leave-graveyard batch machinery) would unblock:
 - Artist's Talent (BLB) — last unshipped Talent; needs level-gated
   cost-reduction + noncombat-damage-replacement on the non-layer static paths.
 
+**M15 (Magic 2015) — near-complete.** `sets::m15` ships the convoke shell,
+the Paragon and Soul cycles, the land-type cycle, and the common/uncommon
+core; `set_gaps.py m15` is down to the planeswalkers (Ajani Steadfast, Garruk
+Apex Predator, Nissa Worldwaker, Jace the Living Guildpact), the bespoke rares
+(Avacyn Guardian Angel, Kurkesh, Jalira, Master of Predicaments, Might Makes
+Right, Goblin Kaboomist, Mercurial Pretender, Spirit Bonds, Waste Not,
+Necromancer's Stockpile, Boonweaver Giant, Brood Keeper, Constricting Sliver,
+Aetherspouts, Aggressive Mining, Stain the Mind, Spectra Ward, First Response,
+Feast on the Fallen, Avarice Amulet, Shield of the Avatar, Burning Anger,
+Ensoul Artifact, Chief Engineer, Genesis Hydra's reveal half) and **The Chain
+Veil**, which needs per-turn loyalty-activation tracking
+(`Player.loyalty_activated_this_turn` + a "reset the per-walker activation
+flag" effect).
+
 **Noticed this run (JOU wave 2/3), deferred each on one primitive:**
 - **"You control target player during their next turn"** (Worst Fears,
   Mindslaver, Emrakul). Needs the decision + priority router to hand another

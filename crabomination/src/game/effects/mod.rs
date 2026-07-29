@@ -17571,6 +17571,36 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventAllCombatDamageByMatchingThisTurn { filter } => {
+                // CR 615.1 — a fog scoped to the dealers matching `filter`,
+                // expressed as the engine-wide fog plus an "except" for
+                // everything that does NOT match.
+                self.prevent_combat_damage_this_turn = true;
+                self.prevent_combat_damage_except = Some(filter.clone().negate());
+                Ok(())
+            }
+
+            Effect::ReturnSelfAtNextUpkeepTapped => {
+                use crate::game::types::{DelayedKind, DelayedTrigger};
+                let Some(cid) = ctx.source else { return Ok(()) };
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source: cid,
+                    kind: DelayedKind::YourNextUpkeep,
+                    effect: Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                            tapped: true,
+                        },
+                    },
+                    target: Some(Target::Permanent(cid)),
+                    bound_token: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
             Effect::PreventAllCombatDamageThisTurn => {
                 // CR 615.1 — set the engine-wide flag the combat damage
                 // resolver consults. Cleared in `do_cleanup` (CR 514.2).

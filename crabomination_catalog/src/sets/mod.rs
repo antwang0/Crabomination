@@ -320,6 +320,7 @@ pub mod ktk;
 pub mod lci;
 pub mod lea;
 pub mod m11;
+pub mod m15;
 pub mod mh3;
 pub mod mh3b;
 pub mod mh3c;

@@ -1731,6 +1731,27 @@ impl crate::game::GameState {
         mult.min(1 << 16)
     }
 
+    /// Whether `cost` still has an unpaid `color` pip after `p`'s current
+    /// floating pool is applied. Drives the CR 702.51 convoke choice: a
+    /// tapped creature contributes a colored pip only where the cost wants
+    /// one, otherwise {1}.
+    fn cost_still_needs_color(
+        &self,
+        p: usize,
+        cost: &crate::mana::ManaCost,
+        color: ManaColor,
+    ) -> bool {
+        let want = cost
+            .symbols
+            .iter()
+            .filter(|s| {
+                matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == color)
+                    || matches!(s, crate::mana::ManaSymbol::Hybrid(a, b) if *a == color || *b == color)
+            })
+            .count() as u32;
+        want > self.players[p].mana_pool.amount(color)
+    }
+
     /// Needs-aware "any color" pick for a mana ability that can't suspend for
     /// a real choice: the heaviest colored pip across `p`'s hand — this mana
     /// exists to cast things. (A bare `ChooseColor` ask hits AutoDecider and
@@ -5549,16 +5570,27 @@ impl GameState {
         // auto-tap tapped.
         let snapshot = self.snapshot_payment_state(p);
 
-        // Convoke: tap each chosen creature and credit the player's pool
-        // with {1} generic per creature. (The full Oracle also lets the
-        // creature pay one mana of its own color identity; for now every
-        // tap pays {1}.) Convoke discounts can't reduce the cost below
-        // colored requirements — those still come from real mana sources.
+        // Convoke (CR 702.51): tap each chosen creature; each pays {1} OR one
+        // mana of a color that creature is. A tapped creature is credited with
+        // a colored pip its color set covers and the cost still needs — so a
+        // white creature pays a {W} the cost wants — falling back to {1}.
+        // Improvise / waterbend helpers (colorless artifacts) always pay {1}.
         for cid in convoke_creatures {
+            let colors: Vec<crate::mana::Color> = self
+                .computed_permanent(*cid)
+                .map(|cp| cp.colors.clone())
+                .unwrap_or_default();
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == *cid) {
                 c.tapped = true;
             }
-            self.players[p].mana_pool.add_colorless(1);
+            match colors
+                .iter()
+                .copied()
+                .find(|c| self.cost_still_needs_color(p, &cost, *c))
+            {
+                Some(color) => self.players[p].mana_pool.add(color, 1),
+                None => self.players[p].mana_pool.add_colorless(1),
+            }
         }
 
         let forced_only = self.players[p].wants_ui;

@@ -561,6 +561,8 @@ pub enum Value {
     /// actually paid). Plasm Capture. Backed by
     /// `GameState.countered_spell_mana_value`, cleared per resolution.
     CounteredSpellManaValue,
+    /// The controller's starting life total (Resolute Archangel).
+    StartingLifeTotal,
     Sum(Vec<Value>),
     Diff(Box<Value>, Box<Value>),
     Times(Box<Value>, Box<Value>),
@@ -4008,6 +4010,10 @@ pub enum Effect {
     /// An optional self-flicker whose return is deferred to the controller's
     /// next upkeep (CR 603.4). Obzedat, Ghost Council's end-step ability.
     MayExileSelfReturnNextUpkeepHaste,
+    /// "Return this card to the battlefield tapped under its owner's control
+    /// at the beginning of their next upkeep" (Phytotitan). Fired from a
+    /// dies-trigger; registers a `DelayedKind::YourNextUpkeep` return.
+    ReturnSelfAtNextUpkeepTapped,
     /// CR 702.55 — Haunt. Exile the source card (the dying creature, or the
     /// resolving instant/sorcery) "haunting" a creature, then register a
     /// `DelayedKind::WhenHauntedCreatureDies` delayed trigger that runs `body`
@@ -6197,6 +6203,10 @@ pub enum Effect {
     /// state. Used by Owlin Shieldmage's ETB and the Holy Day / fog
     /// family of effects.
     PreventAllCombatDamageThisTurn,
+    /// CR 615 — "Prevent all combat damage that would be dealt by [filter]
+    /// creatures this turn" (Hunter's Ambush's nongreen fog). The filtered
+    /// sibling of `PreventAllCombatDamageThisTurn`.
+    PreventAllCombatDamageByMatchingThisTurn { filter: crate::card::SelectionRequirement },
 
     /// CR 615.1 fog with an exception — "Prevent all combat damage this turn
     /// except combat damage dealt by [filter] creatures." Inspire Awe ("by

@@ -492,10 +492,40 @@ const IO_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 /// Split the first line of a request into `(method, path)`. Returns `None` for
 /// an empty read (a stalled or timed-out peer) and for a line that doesn't
 /// carry both tokens, so those get a 400 instead of being routed as `("", "")`.
+///
+/// Only the bytes up to the first newline are decoded, so a non-UTF-8 byte
+/// later in the request (a binary header from a confused client) can't turn a
+/// perfectly good request line into a 400.
 fn parse_request_line(buf: &[u8]) -> Option<(&str, &str)> {
-    let line = std::str::from_utf8(buf).ok()?.lines().next()?;
+    let end = buf.iter().position(|b| *b == b'\n').unwrap_or(buf.len());
+    let line = std::str::from_utf8(&buf[..end]).ok()?;
     let mut parts = line.split_whitespace();
     Some((parts.next()?, parts.next()?))
+}
+
+/// Longest request line we'll buffer. Anything past this is a client bug or an
+/// attack; the read stops and the request 400s rather than growing unbounded.
+const MAX_REQUEST_LINE: usize = 2048;
+
+/// Read until the request line is complete (CRLF), the peer closes, or
+/// `MAX_REQUEST_LINE` bytes have arrived. A single `read` can return a partial
+/// line when the request straddles TCP segments — the old one-shot read 400'd
+/// those, which showed up as flaky health probes.
+fn read_request_line(stream: &mut impl Read) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(256);
+    let mut chunk = [0u8; 256];
+    while buf.len() < MAX_REQUEST_LINE {
+        match stream.read(&mut chunk) {
+            Ok(0) | Err(_) => break,
+            Ok(n) => {
+                buf.extend_from_slice(&chunk[..n]);
+                if buf.contains(&b'\n') {
+                    break;
+                }
+            }
+        }
+    }
+    buf
 }
 
 /// Spawn the status listener thread if `CRAB_STATUS_BIND` is set. Bind
@@ -519,10 +549,14 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
             // Bound both directions; a stalled peer just gets dropped.
             let _ = stream.set_read_timeout(Some(IO_TIMEOUT));
             let _ = stream.set_write_timeout(Some(IO_TIMEOUT));
-            let mut buf = [0u8; 512];
-            let n = stream.read(&mut buf).unwrap_or(0);
-            let (status, content_type, body, extra_headers) = match parse_request_line(&buf[..n]) {
-                Some((method, path)) => route(method, path, started, &slots),
+            let buf = read_request_line(&mut stream);
+            // HEAD gets headers only (an HTTP nicety for probes).
+            let mut head_only = false;
+            let (status, content_type, body, extra_headers) = match parse_request_line(&buf) {
+                Some((method, path)) => {
+                    head_only = method == "HEAD";
+                    route(method, path, started, &slots)
+                }
                 None => (
                     "400 Bad Request",
                     "text/plain",
@@ -530,8 +564,6 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
                     "Cache-Control: no-store\r\n",
                 ),
             };
-            // HEAD gets headers only (an HTTP nicety for probes).
-            let head_only = parse_request_line(&buf[..n]).is_some_and(|(m, _)| m == "HEAD");
             let payload = if head_only { "" } else { &body };
             let _ = write!(
                 stream,
@@ -549,6 +581,32 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn read_request_line_reassembles_a_split_request() {
+        // Two "segments": the request line arrives across reads.
+        struct Chunked(Vec<&'static [u8]>);
+        impl Read for Chunked {
+            fn read(&mut self, out: &mut [u8]) -> std::io::Result<usize> {
+                if self.0.is_empty() {
+                    return Ok(0);
+                }
+                let c = self.0.remove(0);
+                out[..c.len()].copy_from_slice(c);
+                Ok(c.len())
+            }
+        }
+        let mut src = Chunked(vec![b"GET /sta", b"tus HTTP/1.1\r\n\r\n"]);
+        let buf = read_request_line(&mut src);
+        assert_eq!(parse_request_line(&buf), Some(("GET", "/status")));
+    }
+
+    #[test]
+    fn parse_request_line_ignores_junk_after_the_first_line() {
+        let mut buf = b"GET /healthz HTTP/1.1\r\n".to_vec();
+        buf.extend_from_slice(&[0xff, 0xfe]); // non-UTF-8 header bytes
+        assert_eq!(parse_request_line(&buf), Some(("GET", "/healthz")));
+    }
 
     #[test]
     fn parse_request_line_rejects_empty_and_partial_reads() {

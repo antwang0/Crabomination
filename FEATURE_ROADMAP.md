@@ -759,7 +759,8 @@ exercising each) was elided in a compaction pass; recover it from
   `granted_abilities_for` so a Planet's `12+ | {cost}: …` band is usable once
   charged), Incubate (CR 701.53 — Incubator DFC token via `TokenDefinition.back_face`).
 - **Costs/mana:** colored/generic/colorless/hybrid/mono-hybrid/Phyrexian/snow/X;
-  Convoke/Delve reduction; Commander tax; alternative (pitch) costs;
+  Convoke (CR 702.51 — each tapped creature pays {1} or one mana of a color
+  it is) / Delve reduction; Commander tax; alternative (pitch) costs;
   energy-gated mana abilities; X-cost activated abilities.
 - **Resource systems:** Energy {E}, Poison/Toxic, Devotion, Ascend/city's
   blessing, Monarch, Day/Night, coin-flip + die-roll randomization.

@@ -919,6 +919,7 @@ impl GameState {
                 let exp = self.evaluate_value(inner, ctx).clamp(0, 30);
                 1i32.checked_shl(exp as u32).unwrap_or(i32::MAX)
             }
+            Value::StartingLifeTotal => self.players[ctx.controller].starting_life,
             Value::HalfDown(inner) => self.evaluate_value(inner, ctx) / 2,
             Value::DivDown(inner, by) => {
                 if *by == 0 { 0 } else { self.evaluate_value(inner, ctx) / *by as i32 }
