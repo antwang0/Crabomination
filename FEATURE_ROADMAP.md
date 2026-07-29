@@ -110,6 +110,23 @@ exercising each) was elided in a compaction pass; recover it from
   `core_rules/cr_recent34` (118.8 pay-life, 614.16 counter-doubling, 508.1g
   temporary attack tax).
 
+- **BNG complete (modern_decks, this run — all 165 cards, `set_gaps.py bng` = 0)**
+  plus **CR 303.4a "enchant player" Auras** (the Curse cycle + Psychic
+  Possession). New primitives: `Effect::GainActivatedAbility { duration }` (the
+  EOT activated-ability grant that also closed the Lorehold Apprentice /
+  Evolution Vat duration approximations), `StaticEffect::ColoredCostReduction`
+  ("costs {B}{R} less"), `Keyword::{CantBeBlockedByPowerLessThanCount,
+  CantBeBlockedUnlessAllBlock, HexproofUnlessAttackingOrBlocking,
+  AttackCostBounce}` (CR 509.1b / 508.1g), `CardInstance.attached_to_player` +
+  `PlayerRef::EnchantedPlayer` + `StaticEffect::{EnchantedPlayerOneSpellPerTurn,
+  DoubleDamageToEnchantedPlayer}`, `Effect::{RevealTopMayPutOntoBattlefield,
+  PreventDamageToAndByUntilYourNextTurn, CounterSpellIfNameExiledWithSource,
+  ExchangeControlWithTriggeringSpell, EachPlayerSplitsAndSacrificesRandomPile}`,
+  `PreventionShield.redirect_to_player`, `SelectionRequirement::IsBestowed`,
+  and `StaticEffect::PumpTeamByControlledPermanents.exclude_self`. CR 702.103f
+  (bestowed Aura on an illegal host reverts to a creature) is fixed. Tests in
+  `classic_sets/bng` and `core_rules/cr_recent37`.
+
 - **WAR set complete (modern_decks, this run, 10 bombs):** Tezzeret Master of
   the Bridge, God-Eternal Kefnet, Nissa Who Shakes the World, Nicol Bolas
   Dragon-God, Bolas's Citadel, Feather the Redeemed, Finale of Promise, Deliver
@@ -1754,7 +1771,9 @@ Each a small targeted feature; sweep batch by batch.
 - ⏳ **Card-scripting DSL** to reduce catalog boilerplate.
 - ⏳ **Set / Scryfall import pipeline** (`scripts/verify_cards.py` exists — extend).
 - ⏳ **Card art / image pipeline**.
-- ⏳ **Rules-engine conformance suite** mapped to CR sections.
+- 🟡 **Rules-engine conformance suite** mapped to CR sections — `core_rules/
+  cr_recent*` now carries ~37 CR-numbered modules, but there's no index mapping
+  CR section → test, so coverage is only visible by grepping.
 - ✅ **Operator telemetry endpoint** — `CRAB_STATUS_BIND` HTTP `/healthz` +
   `/status` (uptime, rolling match stats, slot accounting).
 

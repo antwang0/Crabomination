@@ -38,9 +38,6 @@ machinery:
   table at the bottom of this file.
 
 **Remaining DIS/RTR gap cards (each blocked on one engine primitive):**
-- **Player-enchanting Auras** ("enchant player") — Psychic Possession (DIS),
-  and the Curse cycle generally. No attach-to-player support today; modeling as
-  a plain enchantment would drift the type line.
 - **Filtered exile-free-cast** — Epic Experiment (RTR): exile top X, free-cast
   I/S with MV ≤ X, rest to graveyard (a filtered `ExileTopAndGrantMayPlay` that
   bins non-cast cards).
@@ -609,21 +606,27 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
-## Theros block — BNG / JOU (good easy-card source)
+## Theros block — BNG COMPLETE, JOU next (good easy-card source)
 
-`sets::bng` ships the common/uncommon core (40 cards). BNG is down to 86
-`set_gaps.py` entries and JOU is untouched at 132; both are mostly commons and
-uncommons that need no new primitives. Cards deferred out of the first BNG wave
-because each wants one primitive:
+**BNG (Born of the Gods) is at zero `set_gaps.py` entries** — `sets::bng`,
+`bng2`, `bng3` ship all 165 cards. **JOU (Journey into Nyx) is untouched at
+132** and is the obvious next easy-card source: mostly commons and uncommons
+riding primitives BNG already bought (bestow, heroic, inspired, tribute,
+devotion, the Fated-style "if it's your turn" rider).
 
-- **Floodtide Serpent** — "can't attack unless you return an enchantment you
-  control to its owner's hand" (an additional *attack* cost, paid as attackers
-  are declared; the engine has no attack-cost hook).
-- **Aerie Worshippers / Oracle's Insight** and the other Inspired
-  enchant-a-creature Auras — they want the Aura's own "inspired" trigger to
-  fire off the *enchanted* creature untapping, not the Aura.
-- **Gorgon's Head** and the BNG Equipment — plain, but the whole Equipment
-  sub-batch is worth doing in one pass.
+Residual BNG approximations, each wanting one small primitive:
+- **Satyr Firedancer** — `EventKind::YourInstantOrSorceryDealtDamage` doesn't
+  carry *which* player was hit, so "target creature that player controls"
+  reads as "target creature an opponent controls".
+- **Perplexing Chimera** — the exchange ships, but the printed "you may choose
+  new targets for the spell" rider is dropped.
+- **Champion of Stray Souls** — "return X TARGET creature cards" is modelled as
+  a resolution-time `MoveChosen` pick, because `Effect::ApplyToTargets` inside
+  an *activated ability* isn't collected at activation time (the cast path does
+  collect it). Fixing that would also un-approximate future X-target
+  activations.
+- **Whims of the Fates** — the three piles are a shuffled round-robin split, not
+  a player-chosen one.
 
 ## TDM (Tarkir: Dragonstorm) gaps — good easy-card source
 
@@ -4331,7 +4334,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   test `cr_509_2_banding_blocker_lets_defender_assign_damage`). Remaining:
   attacking-band formation, "bands with other", and the band-blocks-multiple
   damage-distribution corner.
-- 🟡 **CR 303 — Auras** — characteristic-overriding Auras ✅ (`EquipBonus.{set_base_pt,set_card_types,set_creature_types,set_colors,remove_abilities}` install layer 4/5/6/7b continuous effects on the host — Ichthyomorphosis "0/1 blue Fish, no abilities", One with the Stars "becomes an enchantment", Heliod's Punishment "loses abilities + can't attack/block"; removal is ordered before the aura's own keyword grants so they survive — test `cr_613_aura_set_base_pt_then_counter`). **Aura/Equipment-granted step triggers ✅** (CR 702.6e — `fire_step_triggers` now dispatches `EquipBonus.triggered_abilities` whose kind is a step, sourced on the host and scoped to the host's controller; Pillory of the Sleepless's "enchanted creature has: at your upkeep, you lose 1 life" — `cr_702_6e_aura_granted_upkeep_trigger_keys_on_host_controller`). Remaining: replacement-style Aura ETB (enters attached under another rule) + bestow type-switch corners.
+- 🟡 **CR 303 — Auras** — characteristic-overriding Auras ✅ (`EquipBonus.{set_base_pt,set_card_types,set_creature_types,set_colors,remove_abilities}` install layer 4/5/6/7b continuous effects on the host — Ichthyomorphosis "0/1 blue Fish, no abilities", One with the Stars "becomes an enchantment", Heliod's Punishment "loses abilities + can't attack/block"; removal is ordered before the aura's own keyword grants so they survive — test `cr_613_aura_set_base_pt_then_counter`). **Aura/Equipment-granted step triggers ✅** (CR 702.6e — `fire_step_triggers` now dispatches `EquipBonus.triggered_abilities` whose kind is a step, sourced on the host and scoped to the host's controller; Pillory of the Sleepless's "enchanted creature has: at your upkeep, you lose 1 life" — `cr_702_6e_aura_granted_upkeep_trigger_keys_on_host_controller`). **CR 303.4a "enchant player" ✅** — `CardInstance.attached_to_player` anchors an Aura to a seat, `PlayerRef::EnchantedPlayer` and `EventScope::EnchantedBySource` read it, `StaticEffect::PumpPT` takes a `Selector::ControlledBy` anthem scope, and the orphan-Aura SBA leaves player-Auras alone (`catalog::sets::curses`; tests `core_rules/cr_recent37`). **CR 702.103f ✅** — a bestowed Aura that is unattached *or* attached to an illegal object reverts to a creature instead of dying. Remaining: replacement-style Aura ETB (enters attached under another rule).
 - 🟡 **CR 603.10 — Last-Known Information** — full LKI for mid-resolution stack sources (e.g. lifelink 702.15c). (CR 603.6d "leaves the battlefield" self-source triggers now also fire on the lethal-damage SBA path, not just the destroy/sacrifice path — Thought-Knot Seer's LTB draw.) Sac-as-cost activated abilities that read the sacrificed source's own counters at resolution now stash `leaves_bf_lki` during cost payment (it outlives the per-dispatch `died_card_snapshots` clear) so `Value::TotalCountersOn { This }` reads the last-known total — Twitching Doll's "Spider per counter on it" (`twitching_doll_nests_then_sacs_for_spiders`). `SelectionRequirement::ControlledByYou` now falls back to `died_card_snapshots` for the LKI controller, so a graveyard-scoped "a creature you control dies" trigger fires only for your creatures — Furious Forebear (`cr_603_10_died_creature_controller_read_from_lki`). CR 603.10a self-death: both self-death funnels (SBA lethal-damage + destroy/sacrifice) now evaluate a filtered `YourControl`/`AnyPlayer` death trigger's `.with_filter` against the dying creature via the death snapshot, and the destroy/sacrifice path fires self-inclusive scopes (was SelfSource-only) so an aristocrat drains for its own sacrifice (`cruel_celebrant_drains_on_its_own_sacrifice`).
 - 🟡 **CR 704 — State-Based Actions** — Saga SBA ✅ (`saga_chapters` reach
   final chapter → sacrifice, unless a chapter ability is still on the stack);
@@ -4482,7 +4485,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ **CR 602.5b — Additional activation costs (cont.)** — two new cost forms on `ActivatedAbility`: `bounce_other_filter` ("Return a [filter] you control to its owner's hand:" — Quirion Ranger, Wirewood Symbiote) and `tap_n_filter` ("Tap N untapped [filter] you control:", source eligible — Heritage Druid). Both gate pre-payment + auto-pick lowest-power, surface in `ability_cost_label`, and are excluded from the bot's `is_free_mana_ability`.
 - ✅ **CR 701.16 / 614 — "Opponents can't make you sacrifice"** — `StaticEffect::OpponentsCantMakeYouSacrifice`, consulted in the `Effect::Sacrifice` resolver (skips a player whose opponent's effect would force a sacrifice; own-sacrifice unaffected). Ships Sigarda, Host of Herons + the sacrifice half of Tamiyo, Collector of Tales.
 - 🟡 **CR 614 — Replacement Effects** — general "instead" framework. Damage *halving* ✅ (614.5 — `StaticEffect::HalveDamageDealt`, Ghosts of the Innocent; composed with doublers via `scale_damage` at both damage funnels). Skip-step (614.10) ✅ via `StaticEffect::SkipStep` consulted in `advance_step` — a skipped upkeep/draw never occurs (no turn-based actions, triggers, or priority); a skipped untap skips untapping/phasing/day-night but the turn still starts (Eon Hub, Stasis). Skip-*turn* ✅ (`Player.skip_turns`, Chronatog / Ral Zarek -7). Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.) Enters-*untapped* replacement ✅ — `StaticEffect::LandsEnterUntapped` overrides any enters-tapped effect for the controller's lands in `apply_enters_tapped_replacement` (Spelunking).
-- 🟡 **CR 615 / 614.9 — Prevention & redirection** — source+target-scoped prevention ✅ (`PreventDamageToYourCreaturesFromYourSources` — Light of Sanction; `PreventThisDamageToColor` — Indentured Oaf's own damage to red creatures; both wired into the combat + noncombat funnels — `cr_recent14`). Damage **redirection** (614.9) ✅ — `Effect::RedirectNextDamage` + `PreventionShield.redirect_to` deals the soaked N to a chosen permanent (Carom, Razia); `RedirectControllerDamageToEquippedCreature` sends a player's damage to the equipped creature (Pariah's Shield). Global "combat damage can't be prevented" ✅ (`StaticEffect::CombatDamageCantBePrevented` — Frenzied Baloth; bypasses shields for any creature-sourced damage, sharing the Questing-Beast combat approximation). Source-scoped "damage dealt by this can't be prevented" ✅ (`StaticEffect::SourceDamageCantBePrevented` — Excruciator; keyed on the damage source in `apply_prevention_shields`, so only its own damage bypasses shields — `cr_615_12_excruciator_source_scoped_unpreventable`). Per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Player-scoped combat fog ✅ (`Effect::PreventAllCombatDamageToPlayerThisTurn` — "prevent all combat damage that would be dealt to you this turn", Druid's Deliverance; `GameState.combat_damage_prevented_to_players_this_turn`, honored in `prevent_combat_to_target` — `druids_deliverance_prevents_combat_damage_to_you`). Player+permanents noncombat prevention ✅ (`StaticEffect::PreventNoncombatDamageToYouAndYourPermanents` — The Wanderer; gates the noncombat funnel for both the controller and any permanent they control — `the_wanderer_prevents_noncombat_damage_to_you`). Source-of-your-choice prevention (615.7) ✅ via
+- 🟡 **CR 615 / 614.9 — Prevention & redirection** — source+target-scoped prevention ✅ (`PreventDamageToYourCreaturesFromYourSources` — Light of Sanction; `PreventThisDamageToColor` — Indentured Oaf's own damage to red creatures; both wired into the combat + noncombat funnels — `cr_recent14`). Damage **redirection** (614.9) ✅ — `Effect::RedirectNextDamage` + `PreventionShield.redirect_to` deals the soaked N to a chosen permanent (Carom, Razia); `RedirectControllerDamageToEquippedCreature` sends a player's damage to the equipped creature (Pariah's Shield). Global "combat damage can't be prevented" ✅ (`StaticEffect::CombatDamageCantBePrevented` — Frenzied Baloth; bypasses shields for any creature-sourced damage, sharing the Questing-Beast combat approximation). Source-scoped "damage dealt by this can't be prevented" ✅ (`StaticEffect::SourceDamageCantBePrevented` — Excruciator; keyed on the damage source in `apply_prevention_shields`, so only its own damage bypasses shields — `cr_615_12_excruciator_source_scoped_unpreventable`). Per-source / per-N shields ✅ (`PreventionShield.source` + `Effect::PreventNextDamageFromChosenSource` — Wojek Apothecary, Stave Off). Prevented damage can now be **redirected to a player**, not just a permanent (`PreventionShield.redirect_to_player` — Acolyte's Reward at face). Non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Player-scoped combat fog ✅ (`Effect::PreventAllCombatDamageToPlayerThisTurn` — "prevent all combat damage that would be dealt to you this turn", Druid's Deliverance; `GameState.combat_damage_prevented_to_players_this_turn`, honored in `prevent_combat_to_target` — `druids_deliverance_prevents_combat_damage_to_you`). Player+permanents noncombat prevention ✅ (`StaticEffect::PreventNoncombatDamageToYouAndYourPermanents` — The Wanderer; gates the noncombat funnel for both the controller and any permanent they control — `the_wanderer_prevents_noncombat_damage_to_you`). Source-of-your-choice prevention (615.7) ✅ via
   `Effect::PreventAllDamageFromChosenSourceThisTurn` +
   `GameState.damage_prevented_sources`, consulted at both damage funnels
   (Burrenton Forge-Tender; the source is chosen as the ability resolves,
@@ -7291,3 +7294,28 @@ is reference bumps plus only the zones the action actually mutates.
 Remaining scaling comes from the racing schedule (`racing_rounds` +
 small `games_per_pairing`) and, if ever needed, early adjudication of
 stalled games via `eval_material`.
+
+## Noticed this run (modern_decks BNG completion + enchant-player)
+
+- **`Effect::ApplyToTargets` isn't collected on the activated-ability path.**
+  A cast surfaces every slot filter and accepts `additional_targets`; an
+  activation rejects with `SelectionRequirementViolated`. Champion of Stray
+  Souls works around it with a resolution-time `MoveChosen`. Fixing it unlocks
+  faithful "X target …" activations generally.
+- **`EventKind::YourInstantOrSorceryDealtDamage` doesn't carry the victim.**
+  Satyr Firedancer wants "target creature *that player* controls"; the event
+  only says a spell dealt damage. Add the damaged player (and amount per
+  victim) to the event payload.
+- **Perplexing Chimera's "you may choose new targets".** The control exchange
+  ships; re-targeting the stolen spell does not
+  (`CopySpellMayChooseTargets` has the prompt shape to borrow).
+- **Whims of the Fates piles are engine-chosen.** A shuffled round-robin split;
+  the printed card lets each player build their own three piles. Wants a
+  `Decision::PartitionPermanents`.
+- **No CR-section → test index.** `core_rules/cr_recent*` has ~37 modules of
+  CR-numbered conformance tests but no map, so it's impossible to tell which
+  sections are covered without grepping. A generated `CR_COVERAGE.md` (parse
+  `cr_<section>_` test names) would make the roadmap's Tier-16 conformance row
+  measurable.
+- **JOU (Journey into Nyx) is the next easy-card source** — 132 gaps, and BNG
+  just paid for every primitive it needs.
