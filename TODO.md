@@ -871,6 +871,16 @@ factory doc comment:
   unattach.
 - Bahamut/Dion meld pair still wants a second `Effect::Meld` card wiring.
 
+## Noticed this run (OTJ + Darksteel gap batches)
+
+- **Darksteel remainder** (`scripts/set_gaps.py dst`): `decks::recent310`
+  shipped 13; the rest still want primitives — Drooling Ogre (a cast-triggered
+  control handover), Death Cloud / Aether Snap (mass counter removal), the
+  Arcbound modular cycle, Chimeric Egg / Darksteel Reactor (charge-counter
+  win/animation thresholds), Death-Mask Duplicant (imprint-scoped keyword
+  theft), Eater of Days (skip-your-next-two-turns), Dismantle's
+  counter-relocation rider.
+
 ## Noticed this run (OTJ gap batch, `decks::recent309`)
 
 - **Cross-permanent death-trigger filters need the cast/SBA path.** A
