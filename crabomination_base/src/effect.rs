@@ -2795,6 +2795,16 @@ pub enum Effect {
     /// Aura Thief, Switcheroo). If either selector resolves to no permanent
     /// the effect no-ops. Both permanents change controller simultaneously.
     ExchangeControl { a: Selector, b: Selector },
+    /// Perplexing Chimera — exchange control of `what` and the spell whose
+    /// cast fired the current trigger: the spell's controller takes `what`,
+    /// and the trigger's controller takes over the spell. (The printed "you
+    /// may choose new targets" rider is not modeled.)
+    ExchangeControlWithTriggeringSpell { what: Selector },
+    /// Whims of the Fates — starting with the controller, each player splits
+    /// the permanents they control into `piles` piles and sacrifices one
+    /// chosen at random. The split is round-robin over a shuffled list (no
+    /// player choice).
+    EachPlayerSplitsAndSacrificesRandomPile { piles: u8 },
     /// CR 701.12 — exchange control of a permanent you control matching
     /// `filter` (chosen at resolution: `Decision::ChooseCards` for a
     /// `wants_ui` controller, lowest CardId otherwise) and the permanent
@@ -6250,6 +6260,16 @@ pub enum Effect {
     /// (CR 615) A fog scoped to one player/permanent — Pradesh Gypsies,
     /// "you don't lose / prevent all damage to you". Non-combat path.
     PreventAllDamageThisTurn { target: Selector },
+
+    /// CR 615 — "Until your next turn, prevent all damage that would be dealt
+    /// to and dealt by `target`" (Kiora, the Crashing Wave's +1). Registers the
+    /// permanent in `damage_locked_until_turn_of`, checked on both ends of
+    /// every damage event and dropped at the controller's next untap step.
+    PreventDamageToAndByUntilYourNextTurn { target: Selector },
+
+    /// CR 701.5 — counter target spell only if a card exiled with the source
+    /// shares its name (Mindreaver). A no-op when nothing matches.
+    CounterSpellIfNameExiledWithSource { what: Selector },
 
     /// "The next time damage would be dealt to `target` creature this turn,
     /// destroy that creature instead." (Kill-Suit Cultist.) A one-event

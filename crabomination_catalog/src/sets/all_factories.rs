@@ -180,6 +180,10 @@ static BNG3: &[Factory] = &[
     super::bng3::vortex_elemental,
     super::bng3::floodtide_serpent,
     super::bng3::arbiter_of_the_ideal,
+    super::bng3::kiora_the_crashing_wave,
+    super::bng3::mindreaver,
+    super::bng3::perplexing_chimera,
+    super::bng3::whims_of_the_fates,
 ];
 static BRO: &[Factory] = &[
     super::bro::goring_warplow,

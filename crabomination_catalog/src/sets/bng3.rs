@@ -834,3 +834,136 @@ pub fn arbiter_of_the_ideal() -> CardDefinition {
         )
     }
 }
+
+// ── The last four ────────────────────────────────────────────────────────────
+
+/// Kiora, the Crashing Wave — {2}{G}{U} planeswalker, loyalty 2.
+pub fn kiora_the_crashing_wave() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, Supertype};
+    CardDefinition {
+        name: "Kiora, the Crashing Wave",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Kiora],
+            ..Default::default()
+        },
+        base_loyalty: 2,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::PreventDamageToAndByUntilYourNextTurn {
+                    target: target_filtered(R::Permanent.and(R::ControlledByOpponent)),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::GrantExtraLandPlay { who: PlayerRef::You, count: Value::ONE },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -5,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Kiora, the Crashing Wave".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(
+                            EventKind::StepBegins(crabomination_base::turn_step::TurnStep::End),
+                            EventScope::YourControl,
+                        ),
+                        effect: Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            definition: TokenDefinition {
+                                name: "Kraken".into(),
+                                power: 9,
+                                toughness: 9,
+                                colors: vec![Color::Blue],
+                                card_types: vec![CardType::Creature],
+                                subtypes: Subtypes {
+                                    creature_types: vec![CreatureType::Kraken],
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                        },
+                    }],
+                    statics: vec![],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mindreaver — {U}{U} 2/1. Heroic exiles the top three of a player's library
+/// with it; {U}{U}, Sacrifice: counter a spell sharing a name with them.
+pub fn mindreaver() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![heroic(Effect::ExileTopOfLibrary {
+            who: Selector::Player(PlayerRef::Target(1)),
+            amount: Value::Const(3),
+            link_to_source: true,
+            face_down: false,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), u()]),
+            sac_cost: true,
+            effect: Effect::CounterSpellIfNameExiledWithSource {
+                what: target_filtered(R::IsSpellOnStack),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Mindreaver",
+            cost(&[u(), u()]),
+            2,
+            1,
+            vec![CreatureType::Human, CreatureType::Wizard],
+            vec![],
+        )
+    }
+}
+
+/// Perplexing Chimera — {4}{U} 3/3. Whenever an opponent casts a spell, you may
+/// exchange control of this creature and that spell.
+pub fn perplexing_chimera() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
+            effect: Effect::MayDo {
+                description: "Exchange control of Perplexing Chimera and that spell".into(),
+                body: Box::new(Effect::ExchangeControlWithTriggeringSpell {
+                    what: Selector::This,
+                }),
+            },
+        }],
+        ..creature(
+            "Perplexing Chimera",
+            cost(&[generic(4), u()]),
+            3,
+            3,
+            vec![CreatureType::Chimera],
+            vec![],
+        )
+    }
+}
+
+/// Whims of the Fates — {5}{R} Sorcery. Each player splits their permanents
+/// into three piles and sacrifices one pile at random.
+pub fn whims_of_the_fates() -> CardDefinition {
+    CardDefinition {
+        name: "Whims of the Fates",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::EachPlayerSplitsAndSacrificesRandomPile { piles: 3 },
+        ..Default::default()
+    }
+}

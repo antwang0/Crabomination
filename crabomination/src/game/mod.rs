@@ -975,6 +975,11 @@ pub struct GameState {
     /// CR 508.1a — creatures granted "can attack this turn as though it didn't
     /// have defender" (Krotiq Nestguard's activated ability). Cleared at cleanup.
     pub(crate) attack_despite_defender_this_turn: Vec<CardId>,
+    /// CR 615 — "prevent all damage that would be dealt to and dealt by
+    /// [permanent] until your next turn" (Kiora, the Crashing Wave's +1).
+    /// Each entry is `(permanent, the seat whose next turn ends it)`; the
+    /// entry is dropped at that seat's untap step.
+    pub(crate) damage_locked_until_turn_of: Vec<(CardId, usize)>,
     /// Active prevention shields (CR 615.1) around players/permanents.
     /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
@@ -1415,6 +1420,7 @@ impl Clone for GameState {
             damage_prevented_sources: self.damage_prevented_sources.clone(),
             cant_block_pairs: self.cant_block_pairs.clone(),
             attack_despite_defender_this_turn: self.attack_despite_defender_this_turn.clone(),
+            damage_locked_until_turn_of: self.damage_locked_until_turn_of.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
             damage_redirect_this_turn: self.damage_redirect_this_turn.clone(),
@@ -1612,6 +1618,7 @@ impl GameState {
             damage_prevented_sources: Vec::new(),
             cant_block_pairs: Vec::new(),
             attack_despite_defender_this_turn: Vec::new(),
+            damage_locked_until_turn_of: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
             damage_redirect_this_turn: Vec::new(),

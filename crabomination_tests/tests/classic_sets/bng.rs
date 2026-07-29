@@ -1110,3 +1110,127 @@ fn satyr_firedancer_forwards_spell_damage() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).map(|c| c.damage), Some(3), "3 forwarded");
 }
+
+/// Kiora's +1 locks a permanent out of dealing and taking damage.
+#[test]
+fn kiora_plus_one_locks_damage_both_ways() {
+    let mut g = main_phase();
+    let kiora = g.add_card_to_battlefield(0, catalog::kiora_the_crashing_wave());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::great_hart());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: kiora,
+        ability_index: 0,
+        target: Some(Target::Permanent(theirs)),
+        x_value: None,
+    })
+    .expect("+1");
+    drain_stack(&mut g);
+    let mut events = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(theirs),
+        3,
+        None,
+        &mut events,
+    );
+    assert_eq!(g.battlefield_find(theirs).unwrap().damage, 0, "damage to it is prevented");
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(mine),
+        3,
+        Some(theirs),
+        &mut events,
+    );
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "damage by it is prevented too");
+}
+
+/// Mindreaver's sac only counters a spell it already exiled a copy of.
+#[test]
+fn mindreaver_counters_only_named_spells() {
+    let mut g = main_phase();
+    let reaver = g.add_card_to_battlefield(0, catalog::mindreaver());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(reaver, 0, None);
+    g.resolve_effect(
+        &crabomination::effect::Effect::ExileTopOfLibrary {
+            who: crabomination::effect::Selector::Player(crabomination::effect::PlayerRef::Seat(1)),
+            amount: crabomination::effect::Value::Const(1),
+            link_to_source: true,
+            face_down: false,
+        },
+        &ctx,
+    )
+    .expect("exile the top card with Mindreaver");
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: reaver,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("counter it");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "name matched → countered");
+}
+
+/// Perplexing Chimera swaps itself for the opponent's spell.
+#[test]
+fn perplexing_chimera_swaps_for_the_spell() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let chimera = g.add_card_to_battlefield(0, catalog::perplexing_chimera());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).map(|c| c.controller),
+        Some(0),
+        "the spell resolved under your control"
+    );
+    assert_eq!(
+        g.battlefield_find(chimera).map(|c| c.controller),
+        Some(1),
+        "the Chimera went the other way"
+    );
+}
+
+/// Whims of the Fates sacrifices roughly a third of each board.
+#[test]
+fn whims_of_the_fates_sacrifices_a_pile() {
+    let mut g = main_phase();
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    }
+    cast(&mut g, catalog::whims_of_the_fates(), None, 5, &[(Color::Red, 1)]);
+    for seat in 0..2 {
+        let left = g.battlefield.iter().filter(|c| c.controller == seat).count();
+        assert!((3..6).contains(&left), "seat {seat} kept {left} of 6");
+    }
+}

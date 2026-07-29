@@ -377,6 +377,18 @@ impl GameState {
         if amount == 0 {
             return;
         }
+        // CR 615 — Kiora's +1 locks a permanent out of dealing *and* taking
+        // damage until her controller's next turn.
+        if !self.damage_locked_until_turn_of.is_empty() {
+            let locked = |id: crate::card::CardId| {
+                self.damage_locked_until_turn_of.iter().any(|(c, _)| *c == id)
+            };
+            if source.is_some_and(locked)
+                || matches!(ent, EntityRef::Permanent(id) if locked(id))
+            {
+                return;
+            }
+        }
         // Damage-source attribution: the source permanent's controller, or
         // the resolving spell's caster (mirrors `scale_damage_to`).
         let from_controller = source.and_then(|s| {

@@ -204,6 +204,8 @@ impl Effect {
         }
         match self {
             Effect::Noop
+            | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }
+            | Effect::ExchangeControlWithTriggeringSpell { .. }
             | Effect::ExileAnyNumberUntilSourceLeaves { .. }
             | Effect::RevealUntilCreatureDoubleBasePt
             | Effect::CopyActivatedAbilityMayChooseTargets
@@ -705,6 +707,7 @@ impl Effect {
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what }
             | Effect::CounterSpell { what }
+            | Effect::CounterSpellIfNameExiledWithSource { what }
             | Effect::CounterSpellExileSameNamed { what }
             | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
@@ -944,7 +947,8 @@ impl Effect {
             | Effect::PreventNextDamageAndGainLife { target, amount } => {
                 sel_has_target(target) || value_has_target(amount)
             }
-            Effect::PreventAllDamageThisTurn { target } => sel_has_target(target),
+            Effect::PreventAllDamageThisTurn { target }
+            | Effect::PreventDamageToAndByUntilYourNextTurn { target } => sel_has_target(target),
             Effect::ReplaceNextDamageWithDestroy { target } => sel_has_target(target),
             Effect::DamageCantBePreventedThisTurn => false,
             Effect::PreventSearchesThisTurn => false,
@@ -1074,6 +1078,7 @@ impl Effect {
             | Effect::ClearSuspected { what }
             | Effect::Detain { what }
             | Effect::CounterSpell { what }
+            | Effect::CounterSpellIfNameExiledWithSource { what }
             | Effect::CounterSpellExileSameNamed { what }
             | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
@@ -2228,6 +2233,7 @@ impl Effect {
                 Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target }
+                | Effect::PreventDamageToAndByUntilYourNextTurn { target }
                 | Effect::ReplaceNextDamageWithDestroy { target }
                 | Effect::PreventAllCombatDamageInvolving { target }
                 | Effect::PreventCombatDamageToTargetThisTurn { target }
@@ -2293,6 +2299,7 @@ impl Effect {
                 | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }
                 | Effect::CounterSpell { what }
+                | Effect::CounterSpellIfNameExiledWithSource { what }
                 | Effect::CounterSpellExileSameNamed { what }
                 | Effect::CounterSpellDrawIfUnderpaid { what }
                 | Effect::CounterSpellToZone { what, .. }

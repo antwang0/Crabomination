@@ -288,6 +288,10 @@ impl GameState {
         match next {
             // Untap has no priority window — auto-execute and move on.
             TurnStep::Untap => {
+                // CR 615 — "until your next turn" damage locks (Kiora's +1)
+                // end as the granting player's turn begins.
+                let ap = self.active_player_idx;
+                self.damage_locked_until_turn_of.retain(|(_, seat)| *seat != ap);
                 // CR 614.10 — a skipped untap step skips its turn-based
                 // actions (untapping, phasing, day/night), but the turn
                 // itself still begins.

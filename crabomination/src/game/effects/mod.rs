@@ -9759,6 +9759,55 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExchangeControlWithTriggeringSpell { what } => {
+                // Perplexing Chimera — the opponent's spell changes hands and
+                // the Chimera goes the other way.
+                let Some(cid) =
+                    self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let me = ctx.controller;
+                let Some(pos) = self.stack.iter().rposition(|si| {
+                    matches!(si, StackItem::Spell { caster, .. } if *caster != me)
+                }) else {
+                    return Ok(());
+                };
+                let StackItem::Spell { caster, .. } = &mut self.stack[pos] else { return Ok(()) };
+                let them = *caster;
+                *caster = me;
+                self.change_control(cid, them);
+                Ok(())
+            }
+
+            Effect::EachPlayerSplitsAndSacrificesRandomPile { piles } => {
+                use rand::seq::SliceRandom;
+                use rand::RngExt;
+                let n = (*piles).max(1) as usize;
+                let mut order: Vec<usize> = (0..self.players.len()).collect();
+                order.rotate_left(ctx.controller.min(self.players.len().saturating_sub(1)));
+                for p in order {
+                    let mut ids: Vec<crate::card::CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p)
+                        .map(|c| c.id)
+                        .collect();
+                    if ids.is_empty() {
+                        continue;
+                    }
+                    let mut rng = rand::rng();
+                    ids.shuffle(&mut rng);
+                    let doomed = rng.random_range(0..n);
+                    for id in ids.iter().skip(doomed).step_by(n) {
+                        if self.battlefield_find(*id).is_some() {
+                            self.sacrifice_one(*id, p, events);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExchangeControlChoosing { filter, with } => self.resolve_exchange_control_choosing(filter, with, ctx, events),
 
 
@@ -17855,6 +17904,42 @@ impl GameState {
                             ..Default::default()
                         });
                     }
+                }
+                Ok(())
+            }
+
+            Effect::PreventDamageToAndByUntilYourNextTurn { target } => {
+                for ent in self.resolve_selector(target, ctx) {
+                    if let Some(id) = ent.as_permanent_id()
+                        && !self.damage_locked_until_turn_of.iter().any(|(c, _)| *c == id)
+                    {
+                        self.damage_locked_until_turn_of.push((id, ctx.controller));
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CounterSpellIfNameExiledWithSource { what } => {
+                // Mindreaver — the counter only applies when a card exiled
+                // with the source shares the spell's name.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let names: Vec<&'static str> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src))
+                    .map(|c| c.definition.name)
+                    .collect();
+                let matched = self.resolve_selector(what, ctx).iter().any(|t| {
+                    t.as_card_id().is_some_and(|cid| {
+                        self.stack.iter().any(|si| matches!(
+                            si,
+                            StackItem::Spell { card, .. }
+                                if card.id == cid && names.contains(&card.definition.name)
+                        ))
+                    })
+                });
+                if matched {
+                    self.run_effect(&Effect::CounterSpell { what: what.clone() }, ctx, events)?;
                 }
                 Ok(())
             }
