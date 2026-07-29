@@ -4713,12 +4713,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
-- ⏳ **Bot multi-block seeding.** The block planner's spare-capacity pass only
-  extends blockers the main scoring loop already assigned, and that loop never
-  assigns a body that neither kills nor is needed against lethal. A 0/N
-  `CanBlockAnyNumber` wall therefore still blocks nothing when it could soak
-  the whole swing for free. Seed the pass from every legal blocker whose
-  allowance is > 1.
+- ✅ ~~**Bot multi-block seeding**~~ — the spare-capacity pass now seeds from
+  every legal blocker with extra capacity, not just the ones the scoring loop
+  assigned, so an idle 0/N `CanBlockAnyNumber` wall soaks the whole swing
+  (`bot_soaks_the_swing_with_an_idle_wall`).
 - ⏳ **CR 121.8 / 121.9** — mid-cast face-down draw and reveal-on-draw, the two
   remaining CR 121 clauses.
 - ⏳ **Sector designations are auto-assigned.** `GameState::assign_sectors`

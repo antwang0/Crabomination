@@ -4169,11 +4169,23 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             })
             .sum()
     };
-    let multi: Vec<CardId> = assignments
-        .iter()
-        .map(|(b, _)| *b)
-        .filter(|b| extra_capacity(*b) > 0)
-        .collect();
+    // Seed from every legal blocker with spare capacity, not just the ones the
+    // scoring loop already assigned: a 0/N `CanBlockAnyNumber` wall kills
+    // nothing and isn't needed against lethal, so it never gets picked up
+    // there — but it can still soak the whole swing for free.
+    let mut multi: Vec<CardId> = Vec::new();
+    let seeds = assignments.iter().map(|(b, _)| *b).chain(
+        state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && bot_can_block(c))
+            .map(|c| c.id),
+    );
+    for id in seeds {
+        if !multi.contains(&id) && extra_capacity(id) > 0 {
+            multi.push(id);
+        }
+    }
     for b_id in multi {
         let Some(b) = state.battlefield_find(b_id) else { continue };
         let (b_tough, b_flying, b_reach) = (
@@ -6785,6 +6797,52 @@ mod tests {
         let blocks = pick_blocks_for_test(&g, 1);
         assert_eq!(blocks.iter().filter(|(_, a)| *a == atk).count(), 0,
             "two blockers can't legally block a ≥3 attacker — declares none");
+    }
+
+    /// CR 509.1b — a `CanBlockAnyNumber` wall that kills nothing and isn't
+    /// needed against lethal still soaks the whole swing for free: the
+    /// spare-capacity pass seeds from every legal blocker, not just the ones
+    /// the scoring loop already assigned.
+    #[test]
+    fn bot_soaks_the_swing_with_an_idle_wall() {
+        use crate::card::{CardDefinition, CardType, Keyword};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let bear = |g: &mut GameState| {
+            g.add_card_to_battlefield(
+                0,
+                CardDefinition {
+                    name: "Bear",
+                    card_types: vec![CardType::Creature],
+                    power: 2,
+                    toughness: 2,
+                    ..Default::default()
+                },
+            )
+        };
+        let a1 = bear(&mut g);
+        let a2 = bear(&mut g);
+        let wall = g.add_card_to_battlefield(
+            1,
+            CardDefinition {
+                name: "Big Wall",
+                card_types: vec![CardType::Creature],
+                power: 0,
+                toughness: 9,
+                keywords: vec![Keyword::Defender, Keyword::CanBlockAnyNumber],
+                ..Default::default()
+            },
+        );
+        g.attacking = vec![
+            Attack { attacker: a1, target: AttackTarget::Player(1) },
+            Attack { attacker: a2, target: AttackTarget::Player(1) },
+        ];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(
+            blocks.iter().filter(|(b, _)| *b == wall).count(),
+            2,
+            "the 0/9 wall eats both attackers"
+        );
     }
 
     /// CR 702.16e — the bot treats a block by a protection-from-the-attacker's
