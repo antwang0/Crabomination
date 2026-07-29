@@ -33,8 +33,12 @@ pub enum EffectDuration {
     WhileSourceOnBattlefield,
     /// Expires at the next end-of-turn Cleanup step.
     UntilEndOfTurn,
-    /// Lasts until the beginning of the next turn.
+    /// Lasts until the beginning of the next turn (any player's).
     UntilNextTurn,
+    /// CR 611.2b — "until your next turn": lasts through the intervening
+    /// turns and expires as the recorded player's next turn begins. Carries
+    /// the turn it was installed on so it never expires on its own turn.
+    UntilYourNextTurn { player: usize, installed_turn: u32 },
     /// Expires when the current combat phase ends (CR 511.2 — "Effects
     /// that last 'until end of combat' expire at the end of the combat
     /// phase"). Cleared as the end-of-combat step ends. If the effect

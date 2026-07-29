@@ -467,3 +467,327 @@ pub fn ordeal_of_nylea() -> CardDefinition {
         },
     )
 }
+
+// ── Batch 2: the remaining simple commons / uncommons ───────────────────────
+
+/// Ephara's Warden — {3}{W} 1/2 Human Cleric. {T}: tap target creature with
+/// power 3 or less.
+pub fn epharas_warden() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Tap { what: target_filtered(R::Creature.and(R::PowerAtMost(3))) },
+            ..Default::default()
+        }],
+        ..creature("Ephara's Warden", cost(&[generic(3), w()]), 1, 2, vec![CreatureType::Human, CreatureType::Cleric], vec![])
+    }
+}
+
+/// Fleshmad Steed — {1}{B} 2/2 Horse. Whenever another creature dies, tap it.
+pub fn fleshmad_steed() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::OtherThanSource,
+                },
+            ),
+            effect: Effect::Tap { what: Selector::This },
+        }],
+        ..creature("Fleshmad Steed", cost(&[generic(1), b()]), 2, 2, vec![CreatureType::Horse], vec![])
+    }
+}
+
+/// Blood-Toll Harpy — {2}{B} 2/1 Harpy with flying. ETB: each player loses 1.
+pub fn blood_toll_harpy() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::ONE,
+        })],
+        ..creature("Blood-Toll Harpy", cost(&[generic(2), b()]), 2, 1, vec![CreatureType::Harpy], vec![Keyword::Flying])
+    }
+}
+
+/// Benthic Giant — {5}{U} 4/5 Giant with hexproof.
+pub fn benthic_giant() -> CardDefinition {
+    creature("Benthic Giant", cost(&[generic(5), u()]), 4, 5, vec![CreatureType::Giant], vec![Keyword::Hexproof])
+}
+
+/// Crackling Triton — {2}{U} 2/3 Merfolk Wizard. {2}{R}, sacrifice: 2 damage
+/// to any target.
+pub fn crackling_triton() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            sac_cost: true,
+            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..creature("Crackling Triton", cost(&[generic(2), u()]), 2, 3, vec![CreatureType::Merfolk, CreatureType::Wizard], vec![])
+    }
+}
+
+/// Boon of Erebos — {B} Instant. Target creature gets +2/+0 and regenerates;
+/// you lose 2 life.
+pub fn boon_of_erebos() -> CardDefinition {
+    CardDefinition {
+        name: "Boon of Erebos",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Regenerate { what: Selector::Target(0) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Defend the Hearth — {1}{G} Instant. Prevent all combat damage that would be
+/// dealt to players this turn.
+pub fn defend_the_hearth() -> CardDefinition {
+    CardDefinition {
+        name: "Defend the Hearth",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef::EachPlayer },
+        ..Default::default()
+    }
+}
+
+/// Lost in a Labyrinth — {U} Instant. Target creature gets -3/-0; scry 1.
+pub fn lost_in_a_labyrinth() -> CardDefinition {
+    CardDefinition {
+        name: "Lost in a Labyrinth",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dark Betrayal — {B} Instant. Destroy target black creature.
+pub fn dark_betrayal() -> CardDefinition {
+    CardDefinition {
+        name: "Dark Betrayal",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::HasColor(Color::Black))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Hunt the Hunter — {G} Sorcery. Your green creature gets +2/+2, then fights
+/// a green creature an opponent controls.
+pub fn hunt_the_hunter() -> CardDefinition {
+    let green = R::Creature.and(R::HasColor(Color::Green));
+    CardDefinition {
+        name: "Hunt the Hunter",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: green.clone().and(R::ControlledByYou),
+                },
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Fight {
+                attacker: Selector::Target(0),
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: green.and(R::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Glare of Heresy — {1}{W} Sorcery. Exile target white permanent.
+pub fn glare_of_heresy() -> CardDefinition {
+    CardDefinition {
+        name: "Glare of Heresy",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(R::Permanent.and(R::HasColor(Color::White))),
+            to: ZoneDest::Exile,
+        },
+        ..Default::default()
+    }
+}
+
+/// Lagonna-Band Elder — {2}{W} 3/2 Centaur Advisor. ETB: gain 3 life if you
+/// control an enchantment.
+pub fn lagonna_band_elder() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::CountOf(Box::new(Selector::EachPermanent(
+                    R::Enchantment.and(R::ControlledByYou),
+                ))),
+                Value::ONE,
+            ),
+            then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature("Lagonna-Band Elder", cost(&[generic(2), w()]), 3, 2, vec![CreatureType::Centaur, CreatureType::Advisor], vec![])
+    }
+}
+
+/// March of the Returned — {3}{B} Sorcery. Return up to two target creature
+/// cards from your graveyard to your hand.
+pub fn march_of_the_returned() -> CardDefinition {
+    CardDefinition {
+        name: "March of the Returned",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::Creature.and(R::InGraveyard).and(R::OwnedByYou),
+            effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Minotaur Skullcleaver — {2}{R} 2/2 Minotaur Berserker with haste. ETB:
+/// +2/+0 until end of turn.
+pub fn minotaur_skullcleaver() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Minotaur Skullcleaver", cost(&[generic(2), r()]), 2, 2, vec![CreatureType::Minotaur, CreatureType::Berserker], vec![Keyword::Haste])
+    }
+}
+
+/// Fleetfeather Sandals — {2} Equipment. Equipped creature has flying and
+/// haste. Equip {2}.
+pub fn fleetfeather_sandals() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Fleetfeather Sandals",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Flying, Keyword::Haste],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Flamecast Wheel — {1} Artifact. {5}, {T}, sacrifice: 3 damage to target
+/// creature.
+pub fn flamecast_wheel() -> CardDefinition {
+    CardDefinition {
+        name: "Flamecast Wheel",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::Const(3),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Decorated Griffin — {4}{W} 2/3 Griffin with flying. {1}{W}: prevent the
+/// next 1 combat damage that would be dealt to you this turn. The shield isn't
+/// combat-scoped, so it also eats one point of noncombat damage.
+pub fn decorated_griffin() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::PreventNextDamage {
+                target: Selector::You,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature("Decorated Griffin", cost(&[generic(4), w()]), 2, 3, vec![CreatureType::Griffin], vec![Keyword::Flying])
+    }
+}
+
+/// Coastline Chimera — {3}{U} 1/5 Chimera with flying. {1}{W}: it can block an
+/// additional creature this turn (CR 509.1b).
+pub fn coastline_chimera() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::CanBlockAdditional(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Coastline Chimera", cost(&[generic(3), u()]), 1, 5, vec![CreatureType::Chimera], vec![Keyword::Flying])
+    }
+}
+
+/// Breaching Hippocamp — {3}{U} 3/2 Horse Fish with flash. ETB: untap another
+/// target creature you control.
+pub fn breaching_hippocamp() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Untap {
+            what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            up_to: None,
+        })],
+        ..creature("Breaching Hippocamp", cost(&[generic(3), u()]), 3, 2, vec![CreatureType::Horse, CreatureType::Fish], vec![Keyword::Flash])
+    }
+}
+
+/// Agent of Horizons — {2}{G} 3/2 Human Rogue. {2}{U}: it can't be blocked
+/// this turn.
+pub fn agent_of_horizons() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Agent of Horizons", cost(&[generic(2), g()]), 3, 2, vec![CreatureType::Human, CreatureType::Rogue], vec![])
+    }
+}

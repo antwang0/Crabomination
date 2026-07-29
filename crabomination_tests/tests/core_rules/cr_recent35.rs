@@ -151,3 +151,48 @@ fn lumbering_battlement_exiles_and_grows() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(friend).is_some(), "returns when the Battlement leaves");
 }
+
+/// CR 611.2b — an "until your next turn" continuous effect survives the
+/// intervening turn and expires as its player's next turn begins.
+#[test]
+fn cr_611_2b_until_your_next_turn_spans_one_turn_cycle() {
+    use crabomination::game::layers::{
+        AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification, PtSublayer,
+    };
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let timestamp = g.next_timestamp();
+    let installed_turn = g.turn_number;
+    g.add_continuous_effect(ContinuousEffect {
+        timestamp,
+        source: bear,
+        affected: AffectedPermanents::Specific(vec![bear]),
+        layer: Layer::L7PowerTough,
+        sublayer: Some(PtSublayer::SetValue),
+        duration: EffectDuration::UntilYourNextTurn { player: 0, installed_turn },
+        modification: Modification::SetPowerToughness(6, 6),
+    });
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 6);
+
+    // Drive turns until the opponent is active: still 6/6.
+    advance_until_active(&mut g, 1);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 6, "spans the intervening turn");
+
+    // Back to player 0: expired.
+    advance_until_active(&mut g, 0);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "expired on your next turn");
+}
+
+/// Step the game until `seat` is the active player.
+fn advance_until_active(g: &mut GameState, seat: usize) {
+    for _ in 0..200 {
+        if g.active_player_idx == seat && g.step == TurnStep::Untap {
+            return;
+        }
+        let _ = g.advance_step(Vec::new());
+        if g.active_player_idx == seat {
+            return;
+        }
+    }
+    panic!("never reached seat {seat}");
+}

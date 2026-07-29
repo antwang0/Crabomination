@@ -35,9 +35,15 @@ exercising each) was elided in a compaction pass; recover it from
   CopyActivatedAbilityMayChooseTargets, ExileAnyNumberUntilSourceLeaves}`,
   `Value::CreaturesBlockedBy`, and a `StackItem::Trigger.activated` flag that
   distinguishes activated abilities from triggered ones on the stack.
-- **THS heroic / bestow / Ordeal batch (22 cards):** the three heroic Hoplites,
-  the two-target pump instants, five Auras, six bestow creatures, and the whole
-  Ordeal cycle. `EventScope::EnchantedBySource` now covers attack/tap events
+- **THS batch (42 cards):** the three heroic Hoplites, the two-target pump
+  instants, five Auras, six bestow creatures, the whole Ordeal cycle, and a
+  second wave of commons/uncommons (Ephara's Warden, Fleshmad Steed,
+  Blood-Toll Harpy, Benthic Giant, Crackling Triton, Boon of Erebos, Defend the
+  Hearth, Lost in a Labyrinth, Dark Betrayal, Hunt the Hunter, Glare of Heresy,
+  Lagonna-Band Elder, March of the Returned, Minotaur Skullcleaver, Fleetfeather
+  Sandals, Flamecast Wheel, Decorated Griffin, Coastline Chimera — the first
+  card to buy an extra block at instant speed — Breaching Hippocamp, Agent of
+  Horizons). `EventScope::EnchantedBySource` now covers attack/tap events
   (it previously only handled deaths, exiles, and damage), and
   `Effect::prefers_friendly_target` judges a `Seq`/`If` by the children that
   actually declare a target — a non-targeting friendly prelude no longer aims a

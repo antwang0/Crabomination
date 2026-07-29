@@ -306,6 +306,17 @@ impl GameState {
                     }
                     self.do_untap();
                 }
+                // CR 611.2b — "until the next turn" / "until your next turn"
+                // continuous effects end as the relevant turn begins.
+                let (active, turn) = (self.active_player_idx, self.turn_number);
+                self.continuous_effects.retain(|e| match e.duration {
+                    crate::game::layers::EffectDuration::UntilNextTurn => false,
+                    crate::game::layers::EffectDuration::UntilYourNextTurn {
+                        player,
+                        installed_turn,
+                    } => !(player == active && turn > installed_turn),
+                    _ => true,
+                });
                 events.push(GameEvent::TurnStarted {
                     player: self.active_player_idx,
                     turn: self.turn_number,

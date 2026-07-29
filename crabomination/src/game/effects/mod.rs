@@ -61,9 +61,7 @@ pub(crate) fn map_effect_duration(
         crate::effect::Duration::EndOfTurn => EffectDuration::UntilEndOfTurn,
         crate::effect::Duration::EndOfCombat => EffectDuration::UntilEndOfCombat,
         crate::effect::Duration::UntilNextTurn
-        | crate::effect::Duration::UntilYourNextUntap => {
-            EffectDuration::UntilNextTurn
-        }
+        | crate::effect::Duration::UntilYourNextUntap => EffectDuration::UntilNextTurn,
         crate::effect::Duration::Permanent => EffectDuration::Indefinite,
     }
 }
@@ -1410,10 +1408,10 @@ impl GameState {
                         affected: crate::game::layers::AffectedPermanents::Specific(vec![source]),
                         layer: crate::game::layers::Layer::L7PowerTough,
                         sublayer: Some(crate::game::layers::PtSublayer::SetValue),
-                        // "Until your next turn" — the source is the active
-                        // player's upkeep trigger, so next-turn expiry lands on
-                        // their following untap (CR 611.2b).
-                        duration: crate::game::layers::EffectDuration::UntilNextTurn,
+                        duration: crate::game::layers::EffectDuration::UntilYourNextTurn {
+                            player: p,
+                            installed_turn: self.turn_number,
+                        },
                         modification: crate::game::layers::Modification::SetPowerToughness(
                             pw * 2,
                             tf * 2,
@@ -7635,7 +7633,7 @@ impl GameState {
                                 AffectedPermanents, ContinuousEffect, Layer, Modification,
                                 PtSublayer,
                             };
-                            let duration_kind = map_effect_duration(*duration);
+                            let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                             let source = ctx.source.unwrap_or(CardId(0));
                             let ts = self.next_timestamp();
                             self.add_continuous_effect(ContinuousEffect {
@@ -7687,7 +7685,7 @@ impl GameState {
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, Layer, Modification,
                 };
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {
@@ -7714,7 +7712,7 @@ impl GameState {
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, Layer, Modification,
                 };
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 let basics = [
                     LandType::Plains,
@@ -7757,7 +7755,7 @@ impl GameState {
                 };
                 let p = self.evaluate_value(power, ctx);
                 let t = self.evaluate_value(toughness, ctx);
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {
@@ -7787,7 +7785,7 @@ impl GameState {
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, Layer, Modification, PtSublayer,
                 };
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {
@@ -7819,7 +7817,7 @@ impl GameState {
                 };
                 let p = self.evaluate_value(power, ctx);
                 let t = self.evaluate_value(toughness, ctx);
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -7879,7 +7877,7 @@ impl GameState {
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, Layer, Modification,
                 };
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -7900,7 +7898,7 @@ impl GameState {
             Effect::SetBasePower { what, power, duration } => {
                 use crate::game::layers::{AffectedPermanents, ContinuousEffect, Layer, Modification, PtSublayer};
                 let p = self.evaluate_value(power, ctx);
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -8285,7 +8283,7 @@ impl GameState {
             Effect::BecomeChosenColor { what, duration } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -8316,7 +8314,7 @@ impl GameState {
                 // and its replacement; applied as a layer-3 text change.
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 let legal = vec![
                     Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
@@ -8364,7 +8362,7 @@ impl GameState {
                     Color::Red => LandType::Mountain,
                     Color::Green => LandType::Forest,
                 };
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 let legal = vec![
                     Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
@@ -8400,7 +8398,7 @@ impl GameState {
             }
 
             Effect::BecomeColor { what, colors, duration, additive } => {
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -8427,7 +8425,7 @@ impl GameState {
             }
 
             Effect::BecomeCreatureType { what, creature_types, duration } => {
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -8446,7 +8444,7 @@ impl GameState {
             }
 
             Effect::AddCreatureTypes { what, creature_types, duration } => {
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -16461,7 +16459,7 @@ impl GameState {
                 };
                 let p = self.evaluate_value(power, ctx);
                 let t = self.evaluate_value(toughness, ctx);
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -16514,7 +16512,7 @@ impl GameState {
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, Layer, Modification,
                 };
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -16574,7 +16572,7 @@ impl GameState {
                     DecisionAnswer::Color(Color::Red) => LandType::Mountain,
                     _ => LandType::Forest,
                 };
-                let duration_kind = map_effect_duration(*duration);
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 for cid in lands {
                     let affected = AffectedPermanents::Specific(vec![cid]);
                     let mut push = |layer, modification| {

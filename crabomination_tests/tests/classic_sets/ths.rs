@@ -324,3 +324,189 @@ fn heliods_emissary_taps_on_attack() {
     assert!(g.battlefield_find(victim).unwrap().tapped);
 }
 
+
+// ── Batch 2 ─────────────────────────────────────────────────────────────────
+
+/// Stat / keyword lines for the second THS batch.
+#[test]
+fn ths_batch2_stat_lines() {
+    let table: &[(fn() -> crabomination::card::CardDefinition, i32, i32, &[Keyword])] = &[
+        (catalog::epharas_warden, 1, 2, &[]),
+        (catalog::fleshmad_steed, 2, 2, &[]),
+        (catalog::blood_toll_harpy, 2, 1, &[Keyword::Flying]),
+        (catalog::benthic_giant, 4, 5, &[Keyword::Hexproof]),
+        (catalog::crackling_triton, 2, 3, &[]),
+        (catalog::lagonna_band_elder, 3, 2, &[]),
+        (catalog::minotaur_skullcleaver, 2, 2, &[Keyword::Haste]),
+        (catalog::decorated_griffin, 2, 3, &[Keyword::Flying]),
+        (catalog::coastline_chimera, 1, 5, &[Keyword::Flying]),
+        (catalog::breaching_hippocamp, 3, 2, &[Keyword::Flash]),
+        (catalog::agent_of_horizons, 3, 2, &[]),
+    ];
+    for (f, p, t, kws) in table {
+        let d = f();
+        assert_eq!((d.power, d.toughness), (*p, *t), "{}", d.name);
+        for kw in *kws {
+            assert!(d.keywords.contains(kw), "{} lacks {:?}", d.name, kw);
+        }
+    }
+}
+
+/// Coastline Chimera buys an extra block for the turn (CR 509.1b).
+#[test]
+fn coastline_chimera_buys_an_extra_block() {
+    let mut g = main_phase();
+    let chimera = g.add_card_to_battlefield(1, catalog::coastline_chimera());
+    let a1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a1);
+    g.clear_sickness(a2);
+    g.attacking = vec![
+        Attack { attacker: a1, target: AttackTarget::Player(1) },
+        Attack { attacker: a2, target: AttackTarget::Player(1) },
+    ];
+    g.step = TurnStep::DeclareBlockers;
+    assert!(g.declare_blockers(vec![(chimera, a1), (chimera, a2)]).is_err(), "one block by default");
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: chimera,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("buy an extra block");
+    drain_stack(&mut g);
+    g.declare_blockers(vec![(chimera, a1), (chimera, a2)]).expect("now legal");
+    assert_eq!(g.attackers_blocked_by(chimera).len(), 2);
+}
+
+/// Blood-Toll Harpy drains both players; Lagonna-Band Elder only pays off with
+/// an enchantment out.
+#[test]
+fn etb_riders_fire_conditionally() {
+    let mut g = main_phase();
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.move_card_to_battlefield_for_test(0, catalog::blood_toll_harpy());
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (l0 - 1, l1 - 1));
+
+    // No enchantment: no life.
+    let life = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::lagonna_band_elder());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life);
+    // With one: +3.
+    g.add_card_to_battlefield(0, catalog::messengers_speed());
+    g.move_card_to_battlefield_for_test(0, catalog::lagonna_band_elder());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3);
+}
+
+/// Dark Betrayal only answers black creatures; Glare of Heresy only white
+/// permanents.
+#[test]
+fn color_restricted_removal_checks_the_color() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    let zombie = g.add_card_to_battlefield(1, catalog::gravedigger()); // black
+    let betrayal = g.add_card_to_hand(0, catalog::dark_betrayal());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: betrayal, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "a green creature isn't a legal target");
+    cast_at(&mut g, betrayal, Some(Target::Permanent(zombie)));
+    assert!(g.battlefield_find(zombie).is_none());
+}
+
+/// Hunt the Hunter pumps yours, then fights theirs.
+#[test]
+fn hunt_the_hunter_pumps_then_fights() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 green
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let hunt = g.add_card_to_hand(0, catalog::hunt_the_hunter());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hunt,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(theirs).is_none(), "4/4 kills the 2/2");
+    assert!(g.battlefield_find(mine).is_some(), "the 4/4 survives 2 damage");
+}
+
+/// March of the Returned rebuys two creature cards.
+#[test]
+fn march_of_the_returned_rebuys_two() {
+    let mut g = main_phase();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let march = g.add_card_to_hand(0, catalog::march_of_the_returned());
+    g.players[0].mana_pool.add(Color::Black, 4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: march,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.id == a || c.id == b).count(), 2);
+}
+
+/// Defend the Hearth fogs only the players — creatures still trade.
+#[test]
+fn defend_the_hearth_fogs_players_only() {
+    let mut g = main_phase();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let fog = g.add_card_to_hand(0, catalog::defend_the_hearth());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast_at(&mut g, fog, None);
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    let life = g.players[1].life;
+    g.resolve_combat().expect("damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life, "no combat damage to players");
+}
+
+/// Crackling Triton's sac ability and Flamecast Wheel's both fire off their
+/// own removal.
+#[test]
+fn sacrifice_abilities_deal_their_damage() {
+    let mut g = main_phase();
+    let triton = g.add_card_to_battlefield(0, catalog::crackling_triton());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: triton, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("sac for 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    assert!(g.battlefield_find(triton).is_none(), "sacrificed as a cost");
+
+    let wheel = g.add_card_to_battlefield(0, catalog::flamecast_wheel());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wheel, ability_index: 0, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("wheel");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none(), "3 damage kills the 2/2");
+}

@@ -29,28 +29,8 @@ online.
 
 | Feature | Status | Notes |
 |---|---|---|
-| Equipment + equip-cost ability | ✅ | `GameAction::Equip` + `equipped_bonus`. Board-scaled bonus (`EquipBonus.scale` — Nettlecyst), equipment-granted triggers (Sword of Body and Mind), Reconfigure (Lion Sash), living weapon (Batterskull), equip-triggers that charge the *Equipment* (Umezawa's Jitte), instant-speed equip (Leonin Shikari), equip-cost reduction (Auriok Steelshaper), per-Equipment CDA (Goblin Gaveleer), "while equipped, has [kw]" (`SelfHasKeywordWhile` — Kor Duelist), while-equipped team anthems (`PumpTeamIf` + `Predicate::SourceIsEquipped` — Auriok Steelshaper's Soldier/Knight buff), conditional keyword by attached-count (`SelectionRequirement::EquippedByAtLeast` — Balan's double strike), and two-target Attach via spell/ETB (Embercleave) all ship. |
-| Adventure (cost-mode duality) | ✅ | `CardDefinition.adventure` + `CastAdventure`/`CastAdventureCreature` (incl. Virtue of Loyalty enchantment // instant). |
-| Storm count + cast-from-top | 🟡 | Cast-from-library-top statics ✅ (Mystic Forge, Courser, Oracle of Mul Daya). Storm count wired (`Value::StormCount`, auto-copy on cast) + `Effect::CopySpell`. Exile-top-and-grant-free-play ✅ (Robber of the Rich, Mind's Desire); energy-gated free cast-from-exile ✅ (Amped Raptor). |
-| Soulbond | ✅ | `Keyword::Soulbond` + `soulbond_partner` + `SoulbondBonus` (P/T, keywords, granted abilities). Pairs auto-resolve on ETB, break on leave (Wolfir Silverheart, Deadeye Navigator, …). |
-| Saga lore counters | ✅ | `saga_chapters` (History of Benalia). DFC sagas ✅ (`ExileSelfReturnTransformed` — Fable of the Mirror-Breaker). |
-| Transforming DFCs | ✅ | `Effect::Transform` + `CardInstance.{transformed,front_face}`; swaps face in place, round-trips through snapshots (Delver, Concealing Curtains, The Everflowing Well). Daybound/Nightbound, DFC sagas, manifest/disguise all ship. |
-| Hideaway lands | ✅ | `Effect::Hideaway { count }` + `CardExiledWithSource` (Shelldock Isle, Mosswort Bridge, Spinerock Knoll, Windbrisk Heights). |
-| Impending (CR 702.183) | ✅ | `Keyword::Impending(n)` + `AlternativeCost.impending` — enters with N time counters, not a creature until they tick off (all five Duskmourn Overlords). |
-| Verge / surveil land families | ✅ | All five `*verge` lands (`verge_land`), the horizon-canopy six (`horizon_land`), and all ten MKM surveil lands (`etb_tap_then_surveil_one`). |
-| ETB-replacement (suppress entirely) | 🟡 | Exile-non-cast-creature-instead (Containment Priest), ETB/death-trigger suppression (`SuppressCreatureEtbTriggers` — Torpor Orb, Hushbringer), and steal-instead (Gather Specimens) all ship. |
-| Spell-tax statics | ✅ | Damping Sphere, flat `AdditionalCost`, and the Trinisphere minimum-cost floor (`SpellCostFloor`) all ship. Elite Spellbinder reuses the tax static. |
-| Cast spells without paying mana | ✅ | Omniscience, Aluren, Maelstrom Archangel (`CastFromHandWithoutPaying`). |
-| Name-a-card primitive | 🟡 | `Effect::NameCard` + `Decision::NameCard` (Pithing Needle, Phyrexian Revoker); same-name exile (Crumble to Dust), reveal-until-find (Spoils of the Vault), hand-discard-by-name (Cabal Therapy), name-then-sort (Tamiyo) all ship. |
 | Face-down permanents (morph/manifest) | 🟡 | `face_up_def` stashes the real card behind a vanilla 2/2; Manifest/ManifestDread, `CastFaceDown` ({3}), `TurnFaceUp`. Disguise ✅ (warded 2/2), Cloak ✅ (`CardInstance.cloaked`). |
-| Token-copy of permanent | 🟡 | Populate ✅; `CreateTokenCopyOf` ✅ (with `non_legendary` rider — Helm of the Host); clone-enter ✅ (`BecomeCopyOf`); continuous "becomes a copy" ✅ (`BecomeCopyOfFor` — Mirrorform, Vesuva). |
-| Multi-pick over revealed cards | ✅ | `LookPickToHand` with `take > 1` (Dig Through Time); `RevealTopTakeOnePerType` (Atraxa, Grand Unifier). Put-into-hand is not a draw (121.5). |
-| Investigate + Clue/Map tokens | 🟡 | Clue tokens ✅ (Tireless Tracker, Lonis); Map tokens ✅ (Loot, the Pathfinder). Sac-a-Clue payoffs ride `sac_other_filter: HasArtifactSubtype(Clue)`; variable "Sacrifice X Clues" ✅ (`sac_other_x` — Lonis). |
-| Landfall trigger | ✅ | Graveyard-source landfall via `EventScope::FromYourGraveyard` (Bloodghast); battlefield-side via `LandPlayed` + `YourControl` (Omnath). |
-| Loyalty abilities w/ static | 🟡 | Teferi, loyalty-set (`SetLoyalty` — Geyadrone Dihada), variable `-X` (`x_cost` — Kasmina), and the rest (Ashiok, Sorin, Tamiyo, Dakkon, Saheeli -7, Karn Scion, Tezzeret) all ship. No remainder of note. |
-| Split cards (709) + Fuse + Aftermath | ✅ | `CardDefinition.split` + `CastSplitRight`/`CastSplitFused`/`CastAftermath` (Wear // Tear, Fire // Ice, the aftermath splits, …). Client half-picker UI ⏳ (TODO.md). |
-| Protection-from-color (more colors) | ✅ | Multi-color printed protection (Stillmoon Cavalier) + EOT grants. |
-| Charge counters as mana storage | 🟡 | Gemstone Mine, Coalition Relic (precombat burst), Power Depot, Pentad Prism, Chalice of the Void all reuse the charge-counter primitive. |
+| Token-copy of permanent | 🟡 | Populate, `CreateTokenCopyOf`, clone-enter (`BecomeCopyOf`) and continuous "becomes a copy" (`BecomeCopyOfFor`) all ship. Remaining: Helm of the Host's per-combat mint is approximated (no layer-1 continuous copy). |
 
 ## Plan
 

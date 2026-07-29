@@ -7441,6 +7441,24 @@ impl GameState {
     /// Also sweeps `UntilEndOfCombat` for cards that registered combat-
     /// scoped effects during a turn that ended without an actual combat
     /// phase (defensive cleanup so they don't leak indefinitely).
+    /// Map a card-level [`crate::effect::Duration`] onto a layer-system
+    /// duration. CR 611.2b — "until your next untap/turn" is scoped to
+    /// `controller` and stamped with the current turn, so it survives the
+    /// intervening turns and ends only as that player's next turn begins.
+    pub(crate) fn effect_duration_for(
+        &self,
+        duration: crate::effect::Duration,
+        controller: usize,
+    ) -> EffectDuration {
+        match duration {
+            crate::effect::Duration::UntilYourNextUntap => EffectDuration::UntilYourNextTurn {
+                player: controller,
+                installed_turn: self.turn_number,
+            },
+            other => crate::game::effects::map_effect_duration(other),
+        }
+    }
+
     pub fn expire_end_of_turn_effects(&mut self) {
         self.continuous_effects.retain(|e| {
             e.duration != EffectDuration::UntilEndOfTurn

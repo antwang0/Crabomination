@@ -767,6 +767,11 @@ factory doc comment:
   - **Reap Intellect**, **Plasm Capture** (extend `AddManaAtNextMainPhase` to
     key on the countered spell's MV rather than mana spent), **Catch // Release**
     (five-type edict), **Flesh // Blood** (fused split) — the DGM tail.
+- **`EffectDuration::UntilNextTurn` was never expired** — nothing swept it, so
+  every effect using it behaved as `Indefinite`. Both it and the new
+  `UntilYourNextTurn { player, installed_turn }` (CR 611.2b — Amplifire) are now
+  cleared at the untap step of the turn they name. Worth auditing whether any
+  existing card wanted the old (buggy) permanence.
 - **Illusionist's Bracers** — the ability copy inherits the original's targets;
   the printed "you may choose new targets for the copy" prompt isn't offered
   (`Effect::CopySpellMayChooseTargets` has the spell-side machinery to reuse).
