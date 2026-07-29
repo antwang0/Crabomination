@@ -289,7 +289,7 @@ impl LobbyManager {
     /// needed) and forget it.
     pub fn disconnect(&mut self, conn: ConnId) -> LobbyOutcome {
         self.conn_cmd_times.remove(&conn);
-        let mut out = self.remove_from_lobby(conn, false);
+        let mut out = self.remove_from_lobby(conn);
         self.conns.remove(&conn);
         self.conn_name.remove(&conn);
         self.push_browser_list(&mut out);
@@ -350,8 +350,8 @@ impl LobbyManager {
         Some(lobby_id)
     }
 
-    /// Add a bot seat to the lobby (host-only). Fills a seat (and may start the
-    /// match); errors if already full.
+    /// Add a bot seat to the lobby (host-only); errors if already full. Never
+    /// starts the match — a full lobby waits for the host (`start_lobby`).
     fn add_bot(&mut self, conn: ConnId) -> LobbyOutcome {
         let mut out = LobbyOutcome::default();
         let Some(lobby_id) = self.host_lobby(conn, &mut out) else { return out };
@@ -371,7 +371,10 @@ impl LobbyManager {
     /// index + display name. Browsers not seated in a lobby are ignored.
     fn chat(&mut self, conn: ConnId, text: &str) -> LobbyOutcome {
         let mut out = LobbyOutcome::default();
-        let Some(&lobby_id) = self.conn_lobby.get(&conn) else { return out };
+        let Some(&lobby_id) = self.conn_lobby.get(&conn) else {
+            out.send(conn, ServerMsg::LobbyError { message: "not in a lobby".into() });
+            return out;
+        };
         let Some(text) = super::sanitize_chat(text) else { return out };
         let Some(lobby) = self.lobbies.iter().find(|l| l.id == lobby_id) else { return out };
         let Some((seat, name)) = lobby.seats.iter().enumerate().find_map(|(i, s)| match s {
@@ -458,7 +461,7 @@ impl LobbyManager {
     }
 
     fn leave(&mut self, conn: ConnId) -> LobbyOutcome {
-        let mut out = self.remove_from_lobby(conn, false);
+        let mut out = self.remove_from_lobby(conn);
         // The leaver is browsing again — hand them a fresh list.
         if self.conns.contains(&conn) {
             out.send(conn, self.lobby_list_msg());
@@ -478,8 +481,10 @@ impl LobbyManager {
         for m in lobby.members() {
             self.conn_lobby.remove(&m);
             // The members are leaving the lobby system for a match; the driver
-            // moves their channels into the match, so drop them from browsing.
+            // moves their channels into the match, so drop them from browsing
+            // and forget their flood window (they'll never `disconnect` here).
             self.conns.remove(&m);
+            self.conn_cmd_times.remove(&m);
         }
         let seats = lobby
             .seats
@@ -503,9 +508,8 @@ impl LobbyManager {
 
     /// Remove `conn` from whatever lobby it's in. Notifies the remaining human
     /// members, or drops the lobby entirely once no humans are left (a
-    /// bot-only lobby can't start). `_notify_leaver` is reserved for a future
-    /// "you were kicked" message.
-    fn remove_from_lobby(&mut self, conn: ConnId, _notify_leaver: bool) -> LobbyOutcome {
+    /// bot-only lobby can't start).
+    fn remove_from_lobby(&mut self, conn: ConnId) -> LobbyOutcome {
         let mut out = LobbyOutcome::default();
         let Some(lobby_id) = self.conn_lobby.remove(&conn) else { return out };
         let Some(idx) = self.lobbies.iter().position(|l| l.id == lobby_id) else { return out };
@@ -920,9 +924,10 @@ mod tests {
             msg,
             ServerMsg::Chat { seat: 0, text, .. } if text == "gl hf"
         )));
-        // A browser not in any lobby chats into the void.
+        // A browser not in any lobby is told why nothing was relayed.
         let out = m.handle(ConnId(3), ClientMsg::Chat { text: "hello?".into() });
-        assert!(out.sends.is_empty());
+        assert!(out.sends.iter().all(|(to, msg)| *to == ConnId(3)
+            && matches!(msg, ServerMsg::LobbyError { .. })));
     }
 
     #[test]
@@ -1483,5 +1488,35 @@ mod flood_tests {
         // Disconnect clears the bookkeeping.
         mgr.disconnect(c);
         assert!(!mgr.conn_cmd_times.contains_key(&c));
+    }
+
+    /// A connection that leaves for a match never calls `disconnect` here, so
+    /// `maybe_start` has to forget its flood window itself.
+    #[test]
+    fn starting_a_match_forgets_the_flood_window() {
+        let mut mgr = LobbyManager::new();
+        let host = ConnId(1);
+        mgr.register(host);
+        mgr.note_command(host, Instant::now());
+        mgr.handle(
+            host,
+            ClientMsg::CreateLobby { name: "m".into(), format: LobbyFormat::Modern },
+        );
+        mgr.handle(host, ClientMsg::AddBotToLobby);
+        mgr.handle(host, ClientMsg::StartLobby);
+        assert!(mgr.lobbies.is_empty(), "the match started");
+        assert!(!mgr.conn_cmd_times.contains_key(&host), "flood window released");
+    }
+
+    /// Chatting while not seated in a lobby reports the error rather than
+    /// silently dropping the message.
+    #[test]
+    fn chat_outside_a_lobby_errors() {
+        let mut mgr = LobbyManager::new();
+        let c = ConnId(3);
+        mgr.register(c);
+        let out = mgr.handle(c, ClientMsg::Chat { text: "hello".into() });
+        assert!(out.sends.iter().any(|(to, msg)| *to == c
+            && matches!(msg, ServerMsg::LobbyError { .. })));
     }
 }

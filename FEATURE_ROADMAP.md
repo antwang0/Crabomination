@@ -27,6 +27,20 @@ exercising each) was elided in a compaction pass; recover it from
   whole-partner-set for the per-object ones, count-gated for "N or more").
   Cards: Guardian of the Gateless, Knight of Sorrows, Valor Made Real,
   Lumbering Battlement, Lairwatch Giant. Tests in `core_rules/cr_recent35`.
+- **Return to Ravnica block complete (RTR + GTC + DGM all at zero
+  `set_gaps.py` gaps)** and **Theros (THS) complete**. The primitives those
+  closures added: `Predicate::IsExtraTurn`,
+  `StaticEffect::{UntapYoursEachUntapStepFiltered, GraveyardCardsUntargetable,
+  CostReductionByValue}`, `CardDefinition.cast_condition`,
+  `Effect::{TapAndLockWhileSourcePresent, TapBlockedByAndSkipUntap,
+  DelayUntilWithCapture, ReturnSelfAttachedToTarget, ExileLinked,
+  ChooseSector, SectorBlockLockThisTurn, SearchTheCityReturn}`,
+  `Selector::{SacrificedCard, LastDamagerOf, CreaturesInChosenSector}`,
+  `DelayedTriggerKind::NextCombat`, `Keyword::SpaceSculptor` +
+  `CardInstance.sector` (CR 702.158 / 704.5u), and `DealDamageDivided.
+  retaliate_to_source`. Engine bug fixed along the way: `fire_step_triggers`
+  was never called for `TurnStep::EndCombat`, so every `DelayedKind::
+  EndOfCombat` trigger silently never fired (CR 511.2).
 - **RNA + GTC complete (both sets at zero `set_gaps.py` gaps):** Dovin Grand
   Arbiter, Gideon Champion of Justice, Teysa Karlov, Mass Manipulation,
   Lavinia Azorius Renegade, Mirror March, Amplifire, Lazav Dimir Mastermind,

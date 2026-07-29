@@ -89,15 +89,7 @@ Obzedat's Aid, Drown in Filth, Blast of Genius, Pyrewild Shaman, Maze's End,
 Aetherling, Dragonshift, Krasis Incubation, Armed//Dangerous, Protect//Serve,
 Down//Dirty; gaps3 added Blaze Commando, Teysa, Deadbridge Chant, Progenitor
 Mimic, Council of the Absolute; gaps4 added Notion Thief, Varolz, Boros
-Battleshaper). Still open, each needing one primitive:
-- **Legion's Initiative** — the exile-all-your-creatures/return-at-next-combat
-  ability (the two anthems are trivial; the ability is a mass timed flicker —
-  needs a `DelayedTriggerKind::NextCombat` + exile-set return).
-- **Reap Intellect / Plasm Capture** — bespoke (name-strip-all-zones; counter +
-  banked mana at next main).
-- **Melek, Izzet Paragon** — copy-on-cast-from-library (needs a cast-from-library
-  provenance flag; `Effect::CopySpell` exists).
-- Goblin Test Pilot / Scab-Clan Giant need a "target chosen at random" primitive.
+Battleshaper). DGM is now at zero `set_gaps.py` entries.
 - The remaining Fuse splits (Catch // Release — multi-type edict; Flesh // Blood
   — exile-gy-and-counter-by-power).
 
@@ -739,8 +731,6 @@ factory doc comment:
 ## Discovered engine follow-ups (claude/modern_decks)
 
 - **Noticed but not tackled this run:**
-  - `DelayedKind::NextCombat` ("at the beginning of the next combat") — blocks
-    Legion's Initiative and the exile-and-return-at-combat shape generally.
   - `Effect::ChooseUnchosenMode` auto-picks the first unused mode for bots and
     for a `wants_ui` seat alike (it uses the synchronous decider rather than a
     suspend). A human controller should get the real modal.
@@ -750,25 +740,6 @@ factory doc comment:
   - `Selector::RandomAmong` re-rolls per resolution and can pick the source
     itself; a "chosen at random" that must exclude the source would need a
     filter-side `OtherThanSource` at the call site (Goblin Test Pilot doesn't).
-  - THS is down to 16 `set_gaps.py` entries, each blocked on one primitive:
-    - **Xenagos, the Reveler** — an "exile the top N; put any number of
-      matching cards onto the battlefield" effect (no `ExileTopPickToBattlefield`).
-    - **Medomai the Ageless** ships without its "can't attack during extra
-      turns" rider — needs an is-extra-turn `Predicate`.
-    - **Prophet of Kruphix** — "untap all creatures and lands you control
-      during each other player's untap step" (no cross-turn untap static;
-      the creature-spells-have-flash half already exists).
-    - **Underworld Cerberus** — "cards in graveyards can't be the targets of
-      spells or abilities" (a graveyard-untargetable static).
-    - **Curse of the Swine** — exile X creatures, each *controller* creates a
-      Boar (per-victim-controller token minting).
-    - **Polukranos, World Eater** — divided damage where each damaged creature
-      deals its power back to the source.
-    - **Shipbreaker Kraken** — "don't untap for as long as you control this".
-    - Also open: Ashen Rider, Artisan of Forms, Chained to the Rocks, Daxos of
-      Meletis, Gift of Immortality, Polis Crusher, Psychic Intrusion, Rescue
-      from the Underworld, Triad of Fates, Triton Tactics.
-
 - **Multi-block follow-ups — CLOSED.** Engine + client both ship (the
   order/assign modals are noun-aware via `damage_recipient_noun`, reading
   `PermanentView.attacking` / `.blocking_attackers`). CR 509.3a–e is now wired
@@ -791,13 +762,11 @@ factory doc comment:
     `Predicate::CastSpellFromLibrary`; the library-top cast hops through hand,
     so the origin rides `GameState.casting_from_library_top`).
   - **Goblin Test Pilot — SHIPPED** (`Selector::RandomAmong(filter)`).
-  - **Legion's Initiative** — exile-all-your-creatures returning at the next
-    combat with haste.
   - **Plasm Capture — SHIPPED** (`Value::CounteredSpellManaValue` +
     `AddManaAtNextMainPhase { any_color }`); **Catch // Release — SHIPPED**
-    (five-type edict off existing primitives). Still open: **Reap Intellect**,
-    **Flesh // Blood** (fused split), **Legion's Initiative** (needs a
-    "beginning of the next combat" delayed-trigger kind).
+    (five-type edict off existing primitives). **Reap Intellect**,
+    **Flesh // Blood**, and **Legion's Initiative** shipped too — DGM is
+    complete.
 - **`EffectDuration::UntilNextTurn` was never expired** — fixed; both it and
   `UntilYourNextTurn { player, installed_turn }` (CR 611.2b — Amplifire) now
   clear at the untap step of the turn they name. The 18 catalog sites were
@@ -826,14 +795,6 @@ factory doc comment:
   open on top of it: "blocks two or more creatures" batch counting (CR 509.3e),
   and the client has no UI yet for assigning a multi-blocker's damage split
   (the engine suspends correctly; the panel reuses the attacker-side modal).
-- **Remaining DGM gap cards.** Shipped since this list was written: Melek,
-  Izzet Paragon; Varolz; Notion Thief; Goblin Test Pilot; Plasm Capture;
-  Catch // Release. Still open: Boros Battleshaper (a `BeginCombat` trigger with
-  two "up to one target" slots granting MustAttack+MustBlock / CantAttack+
-  CantBlock, verified to auto-fill); Legion's Initiative (exile all your
-  creatures, return them at the *next* combat with haste — needs a
-  `DelayedKind::NextCombat`); Reap Intellect; Flesh // Blood (the last fused
-  split — exile-graveyard + damage-by-power).
 - **New primitives that would unblock batches of gap cards (recent274–279 run):**
   - **Enlist** (CR 702.148) — no keyword yet; blocks the DMU Enlist commons
     (Barkweave Crusher, Coalition Warbrute, Argivian Cavalier, …). `Effect::Enlist`
@@ -1827,8 +1788,8 @@ Mechanics deferred while batching the 20-card `recent23` wave:
   selection (same as the guild Commands). Blocks Insatiable Avarice, Caught in
   the Crossfire.
 - **Other genuinely-unimplemented CR keywords** (each needs a new subsystem):
-  Read Ahead (702.155 — Saga enters-chapter choice), Space Sculptor (702.158 —
-  sector assignment), Living Metal (702.161 — needs the MTMTE transform DFCs).
+  Read Ahead (702.155 — Saga enters-chapter choice), Living Metal (702.161 —
+  needs the MTMTE transform DFCs). (Space Sculptor, 702.158, now ships.)
 - ✅ **DSK deferred cards shipped** — Sawblade Skinripper
   (`Player.permanents_sacrificed_this_turn` + `Value::PermanentsSacrificedThisTurn`
   / `Predicate::PermanentsSacrificedThisTurnAtLeast`); Twitching Doll
@@ -4392,6 +4353,20 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   step too, Stun counters still interpose; Thousand Moons Infantry,
   `thousand_moons_infantry_untaps_on_opponent_untap`).
 - ✅ **CR 510 — Combat Damage Step** — blocker-side damage division ✅ (510.1e / 509.2 — a creature blocking several attackers orders them and divides its power; the defending player decides and a `wants_ui` seat suspends, mirroring the attacker-side order/assign pair). remains-blocked ✅ (`blocked_attackers`, 510.1c); excess non-trample damage assigned to the last blocker ✅ (510.1d); lethal accounts for marked damage ✅ (510.1c, double-strike tramplers); blocker strike-back per-source ✅ (702.90 / 615.6 — infect/deathtouch/scaling/shields/lifelink apply per blocker event, tests `cr_702_90_*`). **Assigns combat damage equal to toughness** ✅ (510.1c — `Keyword::AssignsCombatDamageByToughness`, read by `combat_damage_value` for attackers, blockers, and the cached-assignment path; Doran, Tapestry Warden, Bill the Pony, `tests/recent23.rs`). **"Whenever combat damage is dealt to you"** ✅ (`EventKind::ControllerDealtCombatDamage` — recipient-keyed `SelfSource` listeners fire off the damaged player's own permanents, carrying the amount as `event_amount`; Risona sheds an indestructible counter — `tests/recent100.rs`).
+- ✅ **CR 702.158 — Space Sculptor.** `Keyword::SpaceSculptor`,
+  `CardInstance.sector`, the CR 704.5u assignment SBA (opponents assign first;
+  designations clear with the last sculptor per 702.158b),
+  `Effect::ChooseSector` + `Selector::CreaturesInChosenSector` (702.158d), and
+  the same-sector block lock. Space Beleren ships; tests
+  `core_rules/cr_recent36`. Residual: the assignment and the sector pick are
+  auto-decided rather than prompted.
+- ✅ **CR 511 — End of Combat Step.** 511.2 "at end of combat" triggers now
+  fire — `fire_step_triggers` was never called for `TurnStep::EndCombat`, so
+  every `DelayedKind::EndOfCombat` registration silently expired. Test
+  `cr_511_2_end_of_combat_delayed_trigger_fires`.
+- ✅ **CR 506.4 — Removal from Combat.** 506.4c verified: an attacker whose
+  planeswalker leaves combat stays an attacking creature and deals no combat
+  damage (`cr_506_4c_attacker_survives_its_planeswalker_leaving`).
 - ✅ CR 702.59 — Recover. The graveyard trigger now filters on the dying
   creature's *owner* (CR 702.59a "put into **your** graveyard"), and
   `recover_paying_half_life` covers the life-cost variant. All 7 printed
@@ -4574,8 +4549,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   allowance is > 1.
 - ⏳ **CR 121.8 / 121.9** — mid-cast face-down draw and reveal-on-draw, the two
   remaining CR 121 clauses.
-- ⏳ **CR 702.158 Space Sculptor** (sector assignment) is genuinely absent —
-  no `Keyword`, no shortcut.
+- ⏳ **Sector designations are auto-assigned.** `GameState::assign_sectors`
+  (CR 704.5u) spreads a player's creatures round-robin instead of asking; a
+  `wants_ui` seat should get the real choice. `Effect::ChooseSector` likewise
+  auto-picks the fullest sector for a bot/auto seat.
+- ⏳ **Search the City's return is auto-picked.** With several exiled copies of
+  a name, `Effect::SearchTheCityReturn` returns the first — the printed text
+  lets the controller choose which.
 
 - ⏳ **recent239 (DSK/OTJ/MKM) deferred, each blocked on one primitive:**
   - ✅ ~~**Collect-evidence additional cost**~~ — shipped
