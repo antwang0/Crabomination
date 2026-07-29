@@ -7313,13 +7313,8 @@ stalled games via `eval_material`.
 - **Whims of the Fates piles are engine-chosen.** A shuffled round-robin split;
   the printed card lets each player build their own three piles. Wants a
   `Decision::PartitionPermanents`.
-- **No CR-section → test index.** `core_rules/cr_recent*` has ~37 modules of
-  CR-numbered conformance tests but no map, so it's impossible to tell which
-  sections are covered without grepping. A generated `CR_COVERAGE.md` (parse
-  `cr_<section>_` test names) would make the roadmap's Tier-16 conformance row
-  measurable.
-- **JOU wave 2 wants two mechanics.** `sets::jou` wave 1 (28 cards) skipped
-  every **Strive** card ("costs N more for each target beyond the first" — a
-  cast-time per-extra-target surcharge, ~11 cards) and every **Constellation**
-  card ("whenever this or another enchantment you control enters", ~8 cards).
-  Both are one primitive each and would clear most of the remaining 92 gaps.
+- **CR coverage gaps.** `scripts/cr_coverage.py` → `CR_COVERAGE.md` now maps
+  CR section → conformance test; 81 numbered sections still have none. The
+  highest-value untested blocks are 610 (one-shot "until" effects), 612
+  (text-changing effects), 703 (turn-based actions) and the 8xx multiplayer
+  rules.

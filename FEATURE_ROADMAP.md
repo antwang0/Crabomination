@@ -1608,11 +1608,12 @@ Each a small targeted feature; sweep batch by batch.
   (Lambholt Pacifist / Olog-hai Crusher), honored in combat, affordances, bot,
   and the legal-blocker gate); hand-size-gated
   (`CantAttackOrBlockUnlessHandSizeAtMost` — Hazoret), delirium-gated
-  (`CantAttackOrBlockUnlessDelirium` — Patchwork Beastie) and descend-gated
-  (`CantAttackOrBlockUnlessDescend(n)` — The Ancient One, via `descend_count`).
-  Open: granted
-  must-attack with future-turn duration, multiplayer goad-target clause,
-  cost-to-block (509.1d-f).
+  (`CantAttackOrBlockUnlessDelirium` — Patchwork Beastie), descend-gated
+  (`CantAttackOrBlockUnlessDescend(n)` — The Ancient One, via `descend_count`)
+  and cost-gated (CR 508.1g / 509.1d–f — `CantAttackOrBlockUnlessPay(n)`,
+  Oppressive Rays; charged to the attacker's/blocker's own controller from the
+  Propaganda tax pool). Open: granted must-attack with future-turn duration,
+  multiplayer goad-target clause.
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
 - ✅ **Goad**, **Lure**, **Provoke**, **Ninjutsu swap**.
 
@@ -1771,9 +1772,10 @@ Each a small targeted feature; sweep batch by batch.
 - ⏳ **Card-scripting DSL** to reduce catalog boilerplate.
 - ⏳ **Set / Scryfall import pipeline** (`scripts/verify_cards.py` exists — extend).
 - ⏳ **Card art / image pipeline**.
-- 🟡 **Rules-engine conformance suite** mapped to CR sections — `core_rules/
-  cr_recent*` now carries ~37 CR-numbered modules, but there's no index mapping
-  CR section → test, so coverage is only visible by grepping.
+- ✅ **Rules-engine conformance suite** mapped to CR sections — `scripts/
+  cr_coverage.py` generates `CR_COVERAGE.md` (section → title, subrules tested,
+  test count, plus the untested-section gap list) from the `cr_<section>_` test
+  names. 66 sections covered, 81 numbered sections still untested.
 - ✅ **Operator telemetry endpoint** — `CRAB_STATUS_BIND` HTTP `/healthz` +
   `/status` (uptime, rolling match stats, slot accounting).
 

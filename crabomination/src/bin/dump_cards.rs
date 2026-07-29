@@ -187,6 +187,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackOrBlockUnlessEvenCounters
         | Keyword::CantAttackOrBlockUnlessHandSizeAtMost(_)
         | Keyword::CantAttackOrBlockUnlessDelirium
+        | Keyword::CantAttackOrBlockUnlessPay(_)
         | Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn
         | Keyword::CantAttackOrBlockUnlessDescend(_)
         | Keyword::CantAttackOrBlockUnlessCityBlessing
