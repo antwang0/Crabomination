@@ -53,8 +53,7 @@ fn bestow_creature(
     name: &'static str,
     mana: ManaCost,
     bestow_cost: ManaCost,
-    p: i32,
-    t: i32,
+    pt: (i32, i32),
     ct: Vec<CreatureType>,
     kw: Vec<Keyword>,
     bonus: EquipBonus,
@@ -63,7 +62,7 @@ fn bestow_creature(
         card_types: vec![CardType::Enchantment, CardType::Creature],
         bestow: Some(bestow_cost),
         equipped_bonus: Some(bonus),
-        ..creature(name, mana, p, t, ct, kw)
+        ..creature(name, mana, pt.0, pt.1, ct, kw)
     }
 }
 
@@ -291,8 +290,7 @@ pub fn chromanticore() -> CardDefinition {
         "Chromanticore",
         cost(&[w(), u(), b(), r(), g()]),
         cost(&[generic(2), w(), u(), b(), r(), g()]),
-        4,
-        4,
+        (4, 4),
         vec![CreatureType::Manticore],
         suite.clone(),
         EquipBonus { power: 4, toughness: 4, keywords: suite, ..Default::default() },
@@ -305,8 +303,7 @@ pub fn ghostblade_eidolon() -> CardDefinition {
         "Ghostblade Eidolon",
         cost(&[generic(2), w()]),
         cost(&[generic(5), w()]),
-        1,
-        1,
+        (1, 1),
         vec![CreatureType::Spirit],
         vec![Keyword::DoubleStrike],
         EquipBonus {
@@ -324,8 +321,7 @@ pub fn flitterstep_eidolon() -> CardDefinition {
         "Flitterstep Eidolon",
         cost(&[generic(1), u()]),
         cost(&[generic(5), u()]),
-        1,
-        1,
+        (1, 1),
         vec![CreatureType::Spirit],
         vec![Keyword::Unblockable],
         EquipBonus {
@@ -352,8 +348,7 @@ pub fn herald_of_torment() -> CardDefinition {
             "Herald of Torment",
             cost(&[generic(1), b(), b()]),
             cost(&[generic(3), b(), b()]),
-            3,
-            3,
+            (3, 3),
             vec![CreatureType::Demon],
             vec![Keyword::Flying],
             EquipBonus {
@@ -382,8 +377,7 @@ pub fn spiteful_returned() -> CardDefinition {
             "Spiteful Returned",
             cost(&[generic(1), b()]),
             cost(&[generic(3), b()]),
-            1,
-            1,
+            (1, 1),
             vec![CreatureType::Zombie],
             vec![],
             EquipBonus {
@@ -402,8 +396,7 @@ pub fn noble_quarry() -> CardDefinition {
         "Noble Quarry",
         cost(&[generic(2), g()]),
         cost(&[generic(5), g()]),
-        1,
-        1,
+        (1, 1),
         vec![CreatureType::Unicorn],
         vec![Keyword::AllMustBlock],
         EquipBonus {
@@ -438,8 +431,7 @@ pub fn everflame_eidolon() -> CardDefinition {
             "Everflame Eidolon",
             cost(&[generic(1), r()]),
             cost(&[generic(2), r()]),
-            1,
-            1,
+            (1, 1),
             vec![CreatureType::Spirit],
             vec![],
             EquipBonus { power: 1, toughness: 1, ..Default::default() },
@@ -464,8 +456,7 @@ pub fn eidolon_of_countless_battles() -> CardDefinition {
             "Eidolon of Countless Battles",
             cost(&[generic(1), w(), w()]),
             cost(&[generic(2), w(), w()]),
-            0,
-            0,
+            (0, 0),
             vec![CreatureType::Spirit],
             vec![],
             EquipBonus {

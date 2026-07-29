@@ -17,6 +17,7 @@ mod dis;
 mod gpt;
 mod gtc;
 mod innistrad;
+mod jou;
 mod ktk;
 mod lci;
 mod ltr;

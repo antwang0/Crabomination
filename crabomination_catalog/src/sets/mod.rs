@@ -283,6 +283,7 @@ pub mod bng;
 pub mod bng2;
 pub mod bng3;
 pub mod curses;
+pub mod jou;
 pub mod bro;
 pub mod c21;
 pub mod chk;
