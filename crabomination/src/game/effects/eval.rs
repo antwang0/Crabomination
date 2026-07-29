@@ -2185,6 +2185,17 @@ impl GameState {
                     .unwrap_or(false),
                 Target::Player(p) => !self.same_team(*p, controller),
             },
+            R::ControlledByTriggerPlayer => {
+                let Some(who) = self.trigger_event_player_scratch else { return false };
+                match target {
+                    Target::Permanent(cid) => self
+                        .battlefield_find(*cid)
+                        .map(|c| c.controller)
+                        .or_else(|| self.stack_spell_caster(*cid))
+                        .is_some_and(|ctrl| ctrl == who),
+                    Target::Player(p) => *p == who,
+                }
+            }
             R::OwnedByYou => match target {
                 // Ownership is stable across zones — look the card up anywhere
                 // (battlefield / graveyard / exile / stack) so "target creature
@@ -2759,6 +2770,9 @@ impl GameState {
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
             R::PutIntoGraveyardFromBattlefieldThisTurn => {
                 self.graveyard_from_battlefield_this_turn.contains(&card.id)
+            }
+            R::ControlledByTriggerPlayer => {
+                self.trigger_event_player_scratch == Some(card.controller)
             }
             R::OwnedByYou => card.owner == controller,
             R::Creature => {

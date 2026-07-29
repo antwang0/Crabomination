@@ -1111,6 +1111,31 @@ fn satyr_firedancer_forwards_spell_damage() {
     assert_eq!(g.battlefield_find(target).map(|c| c.damage), Some(3), "3 forwarded");
 }
 
+/// "That player controls" — a spell that hits its own caster forwards onto the
+/// caster's creature, not the opponent's.
+#[test]
+fn satyr_firedancer_forwards_to_the_damaged_players_creature() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::satyr_firedancer());
+    let mine = g.add_card_to_battlefield(0, catalog::great_hart());
+    let theirs = g.add_card_to_battlefield(1, catalog::great_hart());
+    g.add_card_to_library(0, catalog::great_hart());
+    let bolt = g.add_card_to_hand(0, catalog::bolt_of_keranos());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).map(|c| c.damage), Some(3));
+    assert_eq!(g.battlefield_find(theirs).map(|c| c.damage), Some(0));
+}
+
 /// Kiora's +1 locks a permanent out of dealing and taking damage.
 #[test]
 fn kiora_plus_one_locks_damage_both_ways() {

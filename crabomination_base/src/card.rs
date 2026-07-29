@@ -1453,6 +1453,11 @@ pub enum SelectionRequirement {
     NameDiffersFromLastMoved,
     ControlledByYou,
     ControlledByOpponent,
+    /// The object is controlled by the player bound as the firing event's
+    /// subject — "target creature *that player* controls" on a triggered
+    /// ability (Satyr Firedancer). Reads
+    /// `GameState.trigger_event_player_scratch`; false outside a trigger.
+    ControlledByTriggerPlayer,
     /// CR 108.3 — the object's owner is you (regardless of who controls it).
     /// Gruul Charm's "gain control of all permanents you own".
     OwnedByYou,
@@ -2035,6 +2040,7 @@ fn controller_suffix(r: &SelectionRequirement) -> Option<String> {
         SelectionRequirement::ControlledByYou => Some("you control".to_string()),
         SelectionRequirement::OpponentPlayer => Some("opponent".to_string()),
         SelectionRequirement::ControlledByOpponent => Some("an opponent controls".to_string()),
+        SelectionRequirement::ControlledByTriggerPlayer => Some("that player controls".to_string()),
         _ => None,
     }
 }

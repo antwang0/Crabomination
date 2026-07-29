@@ -579,19 +579,18 @@ pub fn akroan_conscriptor() -> CardDefinition {
 }
 
 /// Satyr Firedancer — {1}{R} 1/1. Whenever an instant or sorcery you control
-/// deals damage, it deals that much to target creature an opponent controls.
-/// (The engine's spell-damage event doesn't carry which player was hit, so the
-/// "that player controls" narrowing reads as "an opponent controls".)
+/// deals damage to a player, it deals that much to target creature that player
+/// controls.
 pub fn satyr_firedancer() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Creature],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::YourInstantOrSorceryDealtDamage,
+                EventKind::YourInstantOrSorceryDealtDamageToPlayer,
                 EventScope::YourControl,
             ),
             effect: Effect::DealDamage {
-                to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                to: target_filtered(R::Creature.and(R::ControlledByTriggerPlayer)),
                 amount: Value::TriggerEventAmount,
             },
         }],

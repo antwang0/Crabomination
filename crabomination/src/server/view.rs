@@ -1576,6 +1576,7 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::ControllerDealtCombatDamage, EventScope::SelfSource) => "You're hit",
         (EventKind::DealsCombatDamageToCreature, EventScope::SelfSource) => "Combat dmg to crea",
         (EventKind::YourInstantOrSorceryDealtDamage, _) => "Your spell deals dmg",
+        (EventKind::YourInstantOrSorceryDealtDamageToPlayer, _) => "Your spell hits a player",
         (EventKind::LandPlayed, EventScope::YourControl) => "Landfall",
         (EventKind::LandPlayed, EventScope::AnyPlayer) => "Any landfall",
         (EventKind::SpellCast, EventScope::OpponentControl) => "Opp casts",

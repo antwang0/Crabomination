@@ -4,8 +4,13 @@
 //! - CR 610.3b/3c — a linked "until this leaves" exile doesn't happen when
 //!   the source already left, and returns under the card's *owner's* control.
 //! - CR 402.2 — the cleanup discard-down to maximum hand size.
+//! - CR 609.2/609.3 — effects apply only to permanents; impossible effects do
+//!   as much as possible.
+//! - CR 703.4c/4d/4f — untap, draw, and Saga lore-counter turn-based actions.
+//! - CR 708.2b/708.3/708.8 — face-down permanents can't re-flip down, and
+//!   neither entering face down nor flipping up fires ETB abilities.
 
-use crabomination::card::CounterType;
+use crabomination::card::{CardInstance, CounterType};
 use crabomination::catalog;
 use crabomination::game::effects::EntityRef;
 use crabomination::game::types::{GameAction, Target, TurnStep};
@@ -143,4 +148,154 @@ fn cr_606_3_loyalty_budget_resets_each_turn() {
     plus(&mut g).expect("next turn");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 7);
+}
+
+// ── CR 609 — Effects ────────────────────────────────────────────────────────
+
+/// CR 609.3 — an effect that asks for more than is available does only as much
+/// as possible: "each player discards two cards" takes the one card a player
+/// has and doesn't fail.
+#[test]
+fn cr_609_3_impossible_effect_does_as_much_as_possible() {
+    let mut g = main_phase();
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        g.add_card_to_battlefield(0, catalog::grizzly_bears()),
+        0,
+        None,
+    );
+    g.resolve_effect(
+        &crabomination::effect::Effect::Discard {
+            who: crabomination::effect::Selector::Player(
+                crabomination::effect::PlayerRef::EachPlayer,
+            ),
+            amount: crabomination::effect::Value::Const(2),
+            random: false,
+        },
+        &ctx,
+    )
+    .expect("discard resolves");
+    assert_eq!(g.players[0].hand.len(), 0, "discarded the one card it had");
+    assert_eq!(g.players[1].hand.len(), 1, "discarded the full two");
+}
+
+/// CR 609.2 — effects apply only to permanents unless stated otherwise: a
+/// "destroy all creatures" sweeper leaves creature *cards* in graveyards and
+/// hands alone.
+#[test]
+fn cr_609_2_effects_apply_only_to_permanents() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let in_hand = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wrath,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the permanent died");
+    assert!(g.players[0].hand.iter().any(|c| c.id == in_hand), "the hand card is untouched");
+    assert_eq!(g.players[1].graveyard.len(), 1, "the graveyard card is untouched");
+}
+
+// ── CR 703 — Turn-Based Actions ─────────────────────────────────────────────
+
+/// CR 703.4c/703.3 — the untap turn-based action happens as the untap step
+/// begins, before any player gets priority, so an upkeep trigger already sees
+/// an untapped board.
+#[test]
+fn cr_703_4c_untap_precedes_upkeep_priority() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.active_player_idx = 1;
+    g.step = TurnStep::End;
+    let _ = g.advance_step(Vec::new()); // → cleanup → seat 0's untap
+    while g.step != TurnStep::Upkeep {
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.active_player_idx, 0);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped by the turn-based action");
+}
+
+/// CR 703.4d — the active player draws immediately as the draw step begins
+/// (CR 103.7a's opening-hand skip is a one-shot, not a turn-based action).
+#[test]
+fn cr_703_4d_draw_step_draws_a_card() {
+    let mut g = main_phase();
+    g.skip_first_draw = false;
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    g.step = TurnStep::Upkeep;
+    let _ = g.advance_step(Vec::new());
+    assert_eq!(g.step, TurnStep::Draw);
+    assert_eq!(g.players[0].hand.len(), before + 1);
+}
+
+/// CR 703.4f — a lore counter goes on each Saga the active player controls as
+/// their precombat main phase begins (and the chapter ability then triggers).
+#[test]
+fn cr_703_4f_precombat_main_puts_a_lore_counter_on_each_saga() {
+    let mut g = main_phase();
+    let saga = g.add_card_to_battlefield(0, catalog::history_of_benalia());
+    assert_eq!(g.battlefield_find(saga).unwrap().counter_count(CounterType::Lore), 0);
+    g.step = TurnStep::Draw;
+    let _ = g.advance_step(Vec::new());
+    assert_eq!(g.step, TurnStep::PreCombatMain);
+    assert_eq!(g.battlefield_find(saga).unwrap().counter_count(CounterType::Lore), 1);
+}
+
+// ── CR 708 — Face-Down Permanents ───────────────────────────────────────────
+
+/// CR 708.2b — a face-down permanent can't be turned face down again; the
+/// stashed real card survives a second attempt.
+#[test]
+fn cr_708_2b_face_down_permanent_cant_be_turned_face_down_again() {
+    let mut g = main_phase();
+    let id = g.add_card_to_battlefield(0, catalog::elder_gargaroth());
+    let c = g.battlefield_find_mut(id).unwrap();
+    c.turn_face_down();
+    c.turn_face_down();
+    assert_eq!(c.definition.name, "");
+    c.turn_face_up();
+    assert_eq!(c.definition.name, "Elder Gargaroth", "the real card is still there");
+}
+
+/// CR 708.3 / 708.8 — a card put onto the battlefield face down doesn't fire
+/// its enters-the-battlefield ability, and turning it face up later doesn't
+/// fire it either.
+#[test]
+fn cr_708_3_face_down_entry_and_face_up_flip_skip_etb_triggers() {
+    let mut g = main_phase();
+    let top = g.next_id();
+    g.players[0]
+        .library
+        .insert(0, CardInstance::new(top, catalog::elvish_visionary(), 0));
+    let hand_before = g.players[0].hand.len();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(top, 0, None);
+    g.manifest_card(top, 0, &ctx, &mut Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "708.3 — no ETB draw on the way in");
+    // A counter placed while face down survives the flip (708.8).
+    g.battlefield_find_mut(top).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::TurnFaceUp { card_id: top }).expect("turn face up");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "708.8 — no ETB draw on the flip");
+    let c = g.battlefield_find(top).unwrap();
+    assert_eq!(c.definition.name, "Elvish Visionary");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "708.8 — the counter persists");
+    assert_eq!((c.power(), c.toughness()), (2, 2), "1/1 plus the counter");
 }

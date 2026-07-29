@@ -1963,6 +1963,14 @@ pub enum EventKind {
     /// per spell resolution regardless of how many things it hit. Blaze
     /// Commando. The amount rides in via `Value::TriggerEventAmount`.
     YourInstantOrSorceryDealtDamage,
+    /// An instant or sorcery spell its controller controls dealt damage to a
+    /// **player**. Pair with `EventScope::YourControl`. Unlike
+    /// `YourInstantOrSorceryDealtDamage` this fires once per damaged player,
+    /// binding that player as the trigger subject so
+    /// `SelectionRequirement::ControlledByTriggerPlayer` reads "that player
+    /// controls" (Satyr Firedancer). The amount rides in via
+    /// `Value::TriggerEventAmount`.
+    YourInstantOrSorceryDealtDamageToPlayer,
     /// A player gained life.
     LifeGained,
     /// CR — a player paid life as a cost (Font of Agonies). The amount paid

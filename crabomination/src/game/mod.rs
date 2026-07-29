@@ -483,6 +483,14 @@ pub struct GameState {
     /// `SelectionRequirement::ManaValueLessThanEventAmount` (Scrap Trawler).
     #[serde(default)]
     pub(crate) trigger_event_amount_scratch: u32,
+    /// Transient: the player bound as the firing event's subject for the
+    /// trigger currently being targeted or resolved (stamped alongside
+    /// `trigger_event_amount_scratch`). Read by
+    /// `SelectionRequirement::ControlledByTriggerPlayer` so "target creature
+    /// *that player* controls" narrows to the event's player (Satyr
+    /// Firedancer).
+    #[serde(skip)]
+    pub(crate) trigger_event_player_scratch: Option<usize>,
     /// Transient: id of the most-recently-created token within the current
     /// effect resolution. Set by `Effect::CreateToken` and read by
     /// `Selector::LastCreatedToken` so a follow-up `AddCounter` /
@@ -1359,6 +1367,7 @@ impl Clone for GameState {
             block_poison_this_turn: self.block_poison_this_turn,
             tapped_for_cost_power: self.tapped_for_cost_power,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
+            trigger_event_player_scratch: self.trigger_event_player_scratch,
             last_created_token: self.last_created_token,
             last_die_roll: self.last_die_roll,
             extra_cast_reduction: self.extra_cast_reduction,
@@ -1561,6 +1570,7 @@ impl GameState {
             block_poison_this_turn: 0,
             tapped_for_cost_power: None,
             trigger_event_amount_scratch: 0,
+            trigger_event_player_scratch: None,
             last_created_token: None,
             last_die_roll: 0,
             extra_cast_reduction: 0,
@@ -11295,6 +11305,10 @@ impl GameState {
             // "lesser mana value than that artifact") read this scratch
             // during legal-target enumeration below.
             self.trigger_event_amount_scratch = pending.event_amount;
+            self.trigger_event_player_scratch = match pending.subject {
+                Some(crate::game::effects::EntityRef::Player(p)) => Some(p),
+                _ => None,
+            };
             let needs = pending.effect.requires_target();
             let wants_ui = !force_auto
                 && self
@@ -13860,6 +13874,10 @@ impl GameState {
         // Event-amount-relative filters re-checked at resolution
         // (ManaValueLessThanEventAmount) read this scratch.
         self.trigger_event_amount_scratch = event_amount;
+        self.trigger_event_player_scratch = match trigger_source_ent {
+            Some(crate::game::effects::EntityRef::Player(p)) => Some(p),
+            _ => None,
+        };
         // CR 608.2b — if the trigger's stored sole target is no longer legal
         // at resolution (left the zone, stopped matching the filter), the
         // ability doesn't resolve: none of its effects happen. It must NOT

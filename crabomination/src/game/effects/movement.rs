@@ -936,6 +936,60 @@ impl GameState {
         // "Whenever an instant or sorcery spell you control deals damage"
         // (Blaze Commando). Fires once per resolution across a multi-hit spell.
         self.fire_your_spell_dealt_damage(source, amount);
+        // The damage-to-a-player sibling (Satyr Firedancer) — once per damaged
+        // player, with that player bound as the trigger subject.
+        if let EntityRef::Player(victim) = ent {
+            self.fire_your_spell_damaged_player(source, victim, amount);
+        }
+    }
+
+    /// Fire `EventKind::YourInstantOrSorceryDealtDamageToPlayer` for the caster
+    /// of the instant/sorcery currently resolving — once per damaged player,
+    /// with that player bound as the trigger subject so
+    /// `SelectionRequirement::ControlledByTriggerPlayer` narrows "target
+    /// creature that player controls" (Satyr Firedancer).
+    fn fire_your_spell_damaged_player(
+        &mut self,
+        source: Option<crate::card::CardId>,
+        victim: usize,
+        amount: u32,
+    ) {
+        use crate::effect::{EventKind, EventScope};
+        if amount == 0 {
+            return;
+        }
+        let Some(seat) = self.resolving_spell_caster else { return };
+        if let (Some(src), Some((res_id, _, _))) = (source, &self.resolving_source)
+            && src != *res_id
+        {
+            return;
+        }
+        let queue: Vec<crate::game::types::PendingTriggerPush> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| {
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .filter(|ta| {
+                        ta.event.kind == EventKind::YourInstantOrSorceryDealtDamageToPlayer
+                            && ta.event.scope == EventScope::YourControl
+                    })
+                    .map(move |ta| crate::game::types::PendingTriggerPush {
+                        source: c.id,
+                        controller: c.controller,
+                        effect: ta.effect.clone(),
+                        subject: Some(EntityRef::Player(victim)),
+                        event_amount: amount,
+                        mode: None,
+                        intervening_if: None,
+                    })
+            })
+            .collect();
+        if !queue.is_empty() {
+            self.drain_trigger_queue(queue);
+        }
     }
 
     /// Fire `EventKind::YourInstantOrSorceryDealtDamage` for the caster of the
