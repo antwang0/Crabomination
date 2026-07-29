@@ -928,6 +928,51 @@ impl GameState {
         self.move_card_to(cid, &dest, ctx, events);
     }
 
+    /// Exile `anchor_id` and every same-named card in its owner's graveyard,
+    /// hand, and library, then shuffle that library (CR 701.19c). Shared by
+    /// Crumble to Dust / Surgical Extraction / Reap Intellect.
+    pub(crate) fn exile_all_copies_of(&mut self, anchor_id: CardId, events: &mut Vec<GameEvent>) {
+        let Some((name, owner)) = self
+            .find_card_anywhere(anchor_id)
+            .map(|c| (c.definition.name.to_string(), c.owner))
+        else {
+            return;
+        };
+        if self.battlefield_find(anchor_id).is_some() {
+            self.remove_from_battlefield_to_exile(anchor_id);
+            events.push(GameEvent::PermanentExiled { card_id: anchor_id });
+        }
+        // Sweep the owner's hidden/graveyard zones for same-named cards.
+        // Graveyard exiles get leaves-graveyard bookkeeping.
+        let pl = &mut self.players[owner];
+        let mut swept: Vec<crate::card::CardInstance> = Vec::new();
+        let mut from_gy: Vec<CardId> = Vec::new();
+        for (zi, zone) in [&mut pl.graveyard, &mut pl.hand, &mut pl.library].into_iter().enumerate()
+        {
+            let mut i = 0;
+            while i < zone.len() {
+                if zone[i].definition.name == name.as_str() {
+                    if zi == 0 {
+                        from_gy.push(zone[i].id);
+                    }
+                    swept.push(zone.remove(i));
+                } else {
+                    i += 1;
+                }
+            }
+        }
+        for c in swept {
+            let cid = c.id;
+            self.exile.push(c);
+            events.push(GameEvent::PermanentExiled { card_id: cid });
+        }
+        for cid in from_gy {
+            self.note_left_graveyard(owner, cid, events);
+        }
+        use rand::seq::SliceRandom;
+        self.players[owner].library.shuffle(&mut rand::rng());
+    }
+
     pub fn move_card_to(
         &mut self,
         cid: CardId,

@@ -12,5 +12,6 @@ pub(crate) fn delayed_kind_from_effect(k: DelayedTriggerKind) -> DelayedKind {
         DelayedTriggerKind::NextEndStep => DelayedKind::NextEndStep,
         DelayedTriggerKind::YourNextMainPhase => DelayedKind::YourNextMainPhase,
         DelayedTriggerKind::EndOfCombat => DelayedKind::EndOfCombat,
+        DelayedTriggerKind::NextCombat => DelayedKind::NextCombat,
     }
 }

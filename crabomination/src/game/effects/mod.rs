@@ -6121,6 +6121,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileLinked { what } => {
+                let source = ctx.source;
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .collect();
+                for cid in ids {
+                    if self.battlefield.iter().any(|c| c.id == cid) {
+                        self.remove_from_battlefield_to_exile(cid);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    } else {
+                        self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    }
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_with = source;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileReturnNextEndStep { what } => {
                 // Exile each resolved permanent now; register a per-card
                 // NextEndStep delayed trigger that returns it under its owner's
@@ -6632,53 +6653,19 @@ impl GameState {
                 // Crumble to Dust / Surgical Extraction: exile the anchor
                 // (battlefield permanent or graveyard card), then exile every
                 // same-named card from its owner's graveyard, hand, and
-                // library, and shuffle that library.
-                let anchor = self.resolve_selector(what, ctx).into_iter().find_map(|e| match e {
-                    EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
-                    _ => None,
-                });
-                let Some(anchor_id) = anchor else { return Ok(()); };
-                let Some((name, owner)) = self
-                    .find_card_anywhere(anchor_id)
-                    .map(|c| (c.definition.name.to_string(), c.owner))
-                else { return Ok(()); };
-
-                if self.battlefield_find(anchor_id).is_some() {
-                    self.remove_from_battlefield_to_exile(anchor_id);
-                    events.push(GameEvent::PermanentExiled { card_id: anchor_id });
-                }
-
-                // Sweep the owner's hidden/graveyard zones for same-named
-                // cards. Graveyard exiles get leaves-graveyard bookkeeping.
-                let pl = &mut self.players[owner];
-                let mut swept: Vec<CardInstance> = Vec::new();
-                let mut from_gy: Vec<CardId> = Vec::new();
-                for (zi, zone) in [&mut pl.graveyard, &mut pl.hand, &mut pl.library]
+                // library, and shuffle that library. Several anchors are legal
+                // (Reap Intellect exiles up to X); each name is swept in turn.
+                let anchors: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
                     .into_iter()
-                    .enumerate()
-                {
-                    let mut i = 0;
-                    while i < zone.len() {
-                        if zone[i].definition.name == name.as_str() {
-                            if zi == 0 {
-                                from_gy.push(zone[i].id);
-                            }
-                            swept.push(zone.remove(i));
-                        } else {
-                            i += 1;
-                        }
-                    }
+                    .filter_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                        _ => None,
+                    })
+                    .collect();
+                for anchor_id in anchors {
+                    self.exile_all_copies_of(anchor_id, events);
                 }
-                for c in swept {
-                    let cid = c.id;
-                    self.exile.push(c);
-                    events.push(GameEvent::PermanentExiled { card_id: cid });
-                }
-                for cid in from_gy {
-                    self.note_left_graveyard(owner, cid, events);
-                }
-                use rand::seq::SliceRandom;
-                self.players[owner].library.shuffle(&mut rand::rng());
                 Ok(())
             }
 

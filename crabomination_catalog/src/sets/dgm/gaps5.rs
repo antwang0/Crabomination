@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Predicate, Selector, StaticEffect};
-use crate::mana::{cost, g, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Melek, Izzet Paragon — {4}{U}{R} 2/4 legendary Weird Wizard. Plays with the
 /// top of your library revealed, casts instants and sorceries from there, and
@@ -166,6 +166,121 @@ pub fn lairwatch_giant() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Flesh // Blood — {3}{B}{G} // {R}{G} Sorcery // Sorcery, Fuse. Flesh exiles
+/// a graveyard creature and grows a creature by its power; Blood makes a
+/// creature you control deal its power to any target.
+pub fn flesh_blood() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Flesh // Blood",
+        cost: cost(&[generic(3), b(), g()]),
+        card_types: vec![CardType::Sorcery],
+        // Counters first, so `Value::PowerOf` reads the card while it is still
+        // in the graveyard.
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+            Effect::Exile { what: target_filtered(R::Creature.and(R::InGraveyard)) },
+        ]),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[r(), g()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::DealDamageEqualToPower {
+                    source: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    target: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                    },
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Legion's Initiative — {R}{W} Enchantment. Red creatures get +1/+0, white
+/// ones +0/+1; {R}{W}, exile this: blink all your creatures until the next
+/// combat, where they return with haste.
+pub fn legions_initiative() -> CardDefinition {
+    use crate::effect::{DelayedTriggerKind, PlayerRef, ZoneDest};
+    use crate::mana::Color;
+    let anthem = |color, power, toughness| StaticAbility {
+        description: "Creatures you control of a color get a bonus.",
+        effect: StaticEffect::PumpPT {
+            applies_to: Selector::EachPermanent(
+                R::Creature.and(R::ControlledByYou).and(R::HasColor(color)),
+            ),
+            power,
+            toughness,
+        },
+    };
+    CardDefinition {
+        name: "Legion's Initiative",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![anthem(Color::Red, 1, 0), anthem(Color::White, 0, 1)],
+        // The self-exile runs in the effect rather than as a cost (an
+        // `exile_self_cost` activation is graveyard-only today).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r(), w()]),
+            effect: Effect::Seq(vec![
+                Effect::ExileLinked {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                },
+                Effect::ExileSource,
+                Effect::DelayUntil {
+                    kind: DelayedTriggerKind::NextCombat,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::CardExiledWithSource,
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::OwnerOfMoved,
+                                tapped: false,
+                            },
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::LastMoved,
+                            keyword: Keyword::Haste,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reap Intellect — {X}{2}{U}{B} Sorcery. Target opponent reveals their hand;
+/// exile up to X nonland cards from it and every same-named card they own.
+pub fn reap_intellect() -> CardDefinition {
+    use crate::effect::PlayerRef;
+    use crate::mana::{b, x};
+    CardDefinition {
+        name: "Reap Intellect",
+        cost: cost(&[x(), generic(2), u(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileChosenFromHand {
+                from: Selector::Player(PlayerRef::Target(0)),
+                count: Value::XFromCost,
+                filter: R::Nonland,
+                link_to_source: true,
+                face_down: false,
+            },
+            Effect::ExileSameNameAsTarget { what: Selector::CardExiledWithSource },
+        ]),
         ..Default::default()
     }
 }

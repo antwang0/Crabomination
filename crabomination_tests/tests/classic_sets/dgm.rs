@@ -1321,3 +1321,111 @@ fn catch_release_edicts_five_types() {
         );
     }
 }
+
+/// Flesh exiles a graveyard creature and grows a creature by its power; Blood
+/// makes a creature you control deal its power to any target.
+#[test]
+fn flesh_blood_halves() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let corpse = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let flesh = g.add_card_to_hand(0, catalog::flesh_blood());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.cast_spell(flesh, Some(Target::Permanent(corpse)), vec![Target::Permanent(bear)], None, None)
+        .expect("cast Flesh");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        4,
+        "counters equal the exiled Angel's power"
+    );
+
+    let blood = g.add_card_to_hand(0, catalog::flesh_blood());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: blood,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Blood");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 6, "the 6/6 bear hit for its power");
+}
+
+/// Legion's Initiative anthems by color and blinks the team until the next
+/// combat.
+#[test]
+fn legions_initiative_anthems_and_blinks() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let init = g.add_card_to_battlefield(0, catalog::legions_initiative());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    assert_eq!(g.computed_permanent(angel).map(|c| c.toughness), Some(5), "white +0/+1");
+    assert_eq!(g.computed_permanent(bear).map(|c| c.power), Some(2), "green is untouched");
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: init,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("blink the team");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "exiled");
+
+    for _ in 0..12 {
+        g.advance_step(Vec::new()).expect("advance");
+        drain_stack(&mut g);
+        if g.battlefield_find(bear).is_some() {
+            break;
+        }
+    }
+    assert!(g.battlefield_find(bear).is_some(), "returned at the next combat");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Reap Intellect exiles X cards from a hand plus every same-named copy.
+#[test]
+fn reap_intellect_strips_a_name() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let target_card = g.add_card_to_hand(1, catalog::serra_angel());
+    g.add_card_to_library(1, catalog::serra_angel());
+    g.add_card_to_graveyard(1, catalog::serra_angel());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let reap = g.add_card_to_hand(0, catalog::reap_intellect());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: reap,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == target_card), "the picked card is exiled");
+    assert_eq!(
+        g.exile.iter().filter(|c| c.definition.name == "Serra Angel").count(),
+        3,
+        "hand, library, and graveyard copies all went with it"
+    );
+    assert_eq!(g.players[1].hand.len(), 1, "the Bears stayed");
+}

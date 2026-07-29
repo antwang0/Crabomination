@@ -685,6 +685,7 @@ impl Effect {
             | Effect::RemoveAllCountersDiscountNextSpell { what }
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
+            | Effect::ExileLinked { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
@@ -1057,6 +1058,7 @@ impl Effect {
             | Effect::RemoveAllCountersDiscountNextSpell { what }
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
+            | Effect::ExileLinked { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
@@ -2363,7 +2365,8 @@ impl Effect {
                 | Effect::ExileWithSource { what }
                 | Effect::ExileSameNameAsTarget { what }
                 | Effect::ExileTaggedWithSource { what }
-                | Effect::ExileUntilSourceLeaves { what, .. }
+                | Effect::ExileLinked { what }
+            | Effect::ExileUntilSourceLeaves { what, .. }
                 | Effect::ExileReturnToOwnerNextEndStep { what }
                 | Effect::ExileReturnNextEndStep { what }
                 | Effect::FlipUntilLossThenTokenCopies { what }

@@ -306,6 +306,27 @@ pub struct Subtypes {
     pub battle_subtypes: Vec<BattleSubtype>,
 }
 
+/// CR 702.158b — a permanent's sector designation. Not a copiable value; it
+/// is cleared once no player controls a space-sculptor permanent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Sector {
+    Alpha,
+    Beta,
+    Gamma,
+}
+
+impl Sector {
+    pub const ALL: [Sector; 3] = [Sector::Alpha, Sector::Beta, Sector::Gamma];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Sector::Alpha => "alpha",
+            Sector::Beta => "beta",
+            Sector::Gamma => "gamma",
+        }
+    }
+}
+
 /// Counter types that can be placed on permanents or players.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CounterType {
@@ -632,6 +653,10 @@ pub enum Keyword {
     /// Frenzy N (CR 702.35) — whenever this attacks and isn't blocked, it gets
     /// +N/+0 until end of turn.
     Frenzy(u32),
+    /// CR 702.158 — Space sculptor. While a permanent with this keyword is on
+    /// the battlefield, every creature without a sector designation gets one
+    /// (CR 704.5u); the designations clear when the last one leaves.
+    SpaceSculptor,
     Intimidate,
     Skulk,
     /// CR 702.36 — Fear. "This creature can't be blocked except by
@@ -4357,6 +4382,9 @@ pub struct CardInstance {
     /// and any "as long as ~ is monstrous" state. Round-trips through
     /// `CardInstanceWire` with `#[serde(default)]`.
     pub monstrous: bool,
+    /// CR 702.158b — this permanent's sector designation, assigned by the
+    /// space-sculptor state-based action (CR 704.5u).
+    pub sector: Option<Sector>,
     /// CR 702.93 — true once this creature has become renowned. Persistent;
     /// gates the once-only Renown counter add.
     pub renowned: bool,
@@ -4594,6 +4622,7 @@ impl CardInstance {
             chosen_colors: Vec::new(),
             goaded_by: Vec::new(),
             monstrous: false,
+            sector: None,
             renowned: false,
             suspected: false,
             adventuring: false,

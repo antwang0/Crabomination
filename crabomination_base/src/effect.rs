@@ -3919,6 +3919,11 @@ pub enum Effect {
     /// engine returns the exiled card(s) to `return_to`. Powers Banisher
     /// Priest / Fiend Hunter / Oblivion Ring (return to battlefield) and
     /// Brain Maggot / Tidehollow Sculler (return to hand).
+    /// Exile each resolved permanent/card stamped `exiled_with = source`
+    /// (recoverable via `Selector::CardExiledWithSource`) but with no
+    /// return-when-the-source-leaves link — the effect that scheduled it owns
+    /// the return (Legion's Initiative).
+    ExileLinked { what: Selector },
     ExileUntilSourceLeaves {
         what: Selector,
         return_to: crate::card::ExileReturnZone,
@@ -6259,6 +6264,9 @@ pub struct SpreeMode {
 /// `game::`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DelayedTriggerKind {
+    /// "At the beginning of the next combat" — the next Begin Combat step on
+    /// any player's turn (Legion's Initiative).
+    NextCombat,
     YourNextUpkeep,
     NextEndStep,
     /// "At end of combat, …" — fires once at the current turn's end-of-combat

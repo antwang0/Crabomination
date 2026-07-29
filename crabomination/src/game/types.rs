@@ -666,6 +666,9 @@ pub struct DelayedTrigger {
 /// What kind of future event a delayed trigger waits for.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DelayedKind {
+    /// "At the beginning of the next combat" — fires on the next Begin Combat
+    /// step, whoever's turn it is (Legion's Initiative).
+    NextCombat,
     /// At the beginning of `controller`'s next upkeep.
     YourNextUpkeep,
     /// At the beginning of the next end step (any player's).
