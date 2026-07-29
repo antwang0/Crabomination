@@ -257,21 +257,33 @@ pub(crate) fn flashback_additional_cost_for_name(
     }
 }
 
+/// CR 702.122 Strive (and Fireball's generic sibling): "this spell costs
+/// [cost] more to cast for each target beyond the first". Returns the total
+/// surcharge for `extra_targets` filled additional slots.
+pub fn strive_cost_for_spell(
+    card: &crate::card::CardInstance,
+    extra_targets: usize,
+) -> crate::mana::ManaCost {
+    let mut out = crate::mana::ManaCost::default();
+    if let Some(per) = &card.definition.cost_per_extra_target {
+        for _ in 0..extra_targets {
+            out.symbols.extend(per.symbols.iter().cloned());
+        }
+    }
+    out
+}
+
 pub fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
     card: &crate::card::CardInstance,
     target: Option<&crate::game::Target>,
-    extra_targets: usize,
 ) -> u32 {
     use crate::effect::StaticEffect;
     let mut tax = 0u32;
     if state.players[caster].first_spell_tax_charges > 0 {
         tax += 1;
     }
-    // "Costs {N} more for each target beyond the first" (Fireball) — each
-    // filled additional target slot charges the card's per-target rider.
-    tax += card.definition.cost_per_extra_target * extra_targets as u32;
     // "Costs {N} more if it targets a [filter]" (Vanish into Eternity).
     if let Some((filter, n)) = &card.definition.cost_increase_if_targets
         && let Some(t) = target
@@ -1705,6 +1717,32 @@ impl crate::game::GameState {
         mult.min(1 << 16)
     }
 
+    /// Needs-aware "any color" pick for a mana ability that can't suspend for
+    /// a real choice: the heaviest colored pip across `p`'s hand — this mana
+    /// exists to cast things. (A bare `ChooseColor` ask hits AutoDecider and
+    /// always yields White, wasting the pip for any non-white deck;
+    /// interactive choice is a TODO.md item.)
+    fn best_color_for_hand(&self, p: usize) -> ManaColor {
+        let mut best = (0u32, ManaColor::White);
+        for c in [
+            ManaColor::White,
+            ManaColor::Blue,
+            ManaColor::Black,
+            ManaColor::Red,
+            ManaColor::Green,
+        ] {
+            let pips: u32 = self.players[p]
+                .hand
+                .iter()
+                .map(|h| crate::draft::colored_pip_count(&h.definition.cost, c))
+                .sum();
+            if pips > best.0 {
+                best = (pips, c);
+            }
+        }
+        best.1
+    }
+
     /// CR 605.1b — resolve `ExtraManaOnLandTap` triggered mana abilities
     /// after `land_id` (controlled by `p`) was tapped for mana. `resolved`
     /// is the tapping ability's event batch — `Mirror` reads the produced
@@ -1762,29 +1800,19 @@ impl crate::game::GameState {
                     GameEvent::ManaAdded { player, color, .. } if *player == p => Some(*color),
                     _ => None,
                 }),
-                ExtraManaKind::AnyColor => {
-                    // Needs-aware pick for every seat: the heaviest colored
-                    // pip across the player's hand — this mana exists to cast
-                    // things. (The old bare `ChooseColor` ask hit AutoDecider
-                    // and always produced White, wasting the pip for any
-                    // non-white deck. A real suspension isn't reachable mid
-                    // mana-ability; interactive choice is a TODO.md item.)
-                    let mut best = (0u32, ManaColor::White);
-                    for c in [
-                        ManaColor::White, ManaColor::Blue, ManaColor::Black,
-                        ManaColor::Red, ManaColor::Green,
-                    ] {
-                        let pips: u32 = self.players[p]
-                            .hand
-                            .iter()
-                            .map(|h| crate::draft::colored_pip_count(&h.definition.cost, c))
-                            .sum();
-                        if pips > best.0 {
-                            best = (pips, c);
-                        }
+                ExtraManaKind::AnyColors(n) => {
+                    for _ in 0..n {
+                        let c = self.best_color_for_hand(p);
+                        self.players[p].mana_pool.add(c, 1);
+                        events.push(GameEvent::ManaAdded {
+                            player: p,
+                            color: c,
+                            source: Some(src_id),
+                        });
                     }
-                    Some(best.1)
+                    continue;
                 }
+                ExtraManaKind::AnyColor => Some(self.best_color_for_hand(p)),
                 // Handled above (colorless-only fast path).
                 ExtraManaKind::MirrorColorless => continue,
             };
@@ -5449,10 +5477,12 @@ impl GameState {
         {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(amt));
         }
-        let tax = extra_cost_for_spell(self, p, &card, target.as_ref(), additional_targets.len());
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
+        // Strive (CR 702.122) / Fireball — per-extra-target surcharge.
+        cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
         // Apply static cost-reduction effects (Killian's "spells that target
         // a creature cost {2} less"). Tax is applied first so reductions
@@ -7947,11 +7977,12 @@ impl GameState {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(commander_tax));
         }
-        let tax = extra_cost_for_spell(self, p, &card, target.as_ref(), additional_targets.len());
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(tax));
         }
+        cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
         let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
         if reduction > 0 {
@@ -8317,10 +8348,11 @@ impl GameState {
         } else {
             alt.mana_cost.clone()
         };
-        let tax = extra_cost_for_spell(self, p, &card, target.as_ref(), additional_targets.len());
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
+        mana_cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         mana_cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
         // CR 601.2f: cost reductions apply uniformly across cast paths
         // (hand cast / flashback / alt-cost), and `cost_reduction_for_
@@ -11591,8 +11623,14 @@ impl GameState {
                 .iter()
                 .flat_map(|c| {
                     let opp_your_turn = c.controller != p && c.controller == self.active_player_idx;
+                    let attached_here = c.attached_to == Some(card_id);
                     c.definition.static_abilities.iter().map(move |sa| match sa.effect {
                         crate::effect::StaticEffect::ActivationTax { amount } => amount,
+                        crate::effect::StaticEffect::AttachedActivationTax { amount }
+                            if attached_here =>
+                        {
+                            amount
+                        }
                         crate::effect::StaticEffect::OpponentActivityCostsMoreOnYourTurn { amount }
                             if opp_your_turn =>
                         {

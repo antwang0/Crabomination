@@ -314,8 +314,8 @@ mod recent44 {
         let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
         let bolt = g.players[0].hand.iter().find(|c| c.id == bolt).unwrap().clone();
         let bear = g.players[0].hand.iter().find(|c| c.id == bear).unwrap().clone();
-        assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &bolt, None, 0), 1, "noncreature taxed");
-        assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &bear, None, 0), 0, "creature untaxed");
+        assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &bolt, None), 1, "noncreature taxed");
+        assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &bear, None), 0, "creature untaxed");
     }
 
     #[test]

@@ -503,15 +503,15 @@ fn tithe_taker_taxes_opponents_on_your_turn() {
     let opp_spell = g.players[1].hand.iter().find(|c| c.id == sid).unwrap().clone();
     // Player 0's turn → opponent (1) is taxed 1.
     g.active_player_idx = 0;
-    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 1, &opp_spell, None, 0), 1, "taxed on your turn");
+    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 1, &opp_spell, None), 1, "taxed on your turn");
     // Player 1's turn → no tax.
     g.active_player_idx = 1;
-    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 1, &opp_spell, None, 0), 0, "not taxed off your turn");
+    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 1, &opp_spell, None), 0, "not taxed off your turn");
     // The controller's own spell is never taxed, even on their turn.
     let oid = g.add_card_to_hand(0, catalog::lightning_bolt());
     let own_spell = g.players[0].hand.iter().find(|c| c.id == oid).unwrap().clone();
     g.active_player_idx = 0;
-    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &own_spell, None, 0), 0, "controller exempt");
+    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &own_spell, None), 0, "controller exempt");
 }
 
 /// Watchful Giant's ETB makes a 1/1 white Human.

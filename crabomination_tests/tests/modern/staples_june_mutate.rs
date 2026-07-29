@@ -2382,10 +2382,10 @@ fn jubilant_skybonder_taxes_opponent_spells_targeting_flyers() {
     let bolt = g.players[1].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
     let at_flyer = crabomination::game::Target::Permanent(skybonder);
     let at_ground = crabomination::game::Target::Permanent(ground);
-    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_flyer), 0), 2, "flyer taxed by 2");
-    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_ground), 0), 0, "ground creature untaxed");
+    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_flyer)), 2, "flyer taxed by 2");
+    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_ground)), 0, "ground creature untaxed");
     // The controller's own spells are never taxed.
-    assert_eq!(extra_cost_for_spell(&g, 0, &bolt, Some(&at_flyer), 0), 0, "own spells untaxed");
+    assert_eq!(extra_cost_for_spell(&g, 0, &bolt, Some(&at_flyer)), 0, "own spells untaxed");
 }
 
 /// Lavabrink Venturer's ETB choice grants protection from the chosen parity:

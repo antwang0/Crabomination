@@ -1037,6 +1037,12 @@ pub enum Keyword {
     /// Amonkhet Gods). Enforced in `declare_attackers` / blocker legality
     /// against the controller's hand size.
     CantAttackOrBlockUnlessHandSizeAtMost(u32),
+    /// CR 508.1a / 509.1a restriction with a cost — "This creature can't
+    /// attack or block unless its controller pays {N}" (Oppressive Rays,
+    /// Pacifism's taxing cousins). The controller is offered the payment as
+    /// attackers/blockers are declared; declining makes the declaration
+    /// illegal.
+    CantAttackOrBlockUnlessPay(u32),
     /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
     /// unless there are four or more card types among cards in your graveyard"
     /// (Delirium; Patchwork Beastie). Enforced against `delirium_active`.
@@ -2447,11 +2453,12 @@ pub struct CardDefinition {
     /// target at cast time.
     #[serde(default)]
     pub cost_increase_if_targets: Option<(SelectionRequirement, u32)>,
-    /// "This spell costs {N} more to cast for each target beyond the first"
-    /// (Fireball). Charged off the chosen target-slot count at cast time by
-    /// `extra_cost_for_spell`.
+    /// "This spell costs [cost] more to cast for each target beyond the first"
+    /// — Fireball's `{1}`, and the JOU **Strive** cycle's colored riders
+    /// ({2}{W} and friends). Charged off the chosen target-slot count at cast
+    /// time by `strive_cost_for_spell`.
     #[serde(default)]
-    pub cost_per_extra_target: u32,
+    pub cost_per_extra_target: Option<crate::mana::ManaCost>,
     /// "If you cast this spell during your main phase, you may [target one
     /// additional …]" (Return to Dust). Casts with filled extra target slots
     /// are rejected outside the caster's own main phase.
@@ -3176,6 +3183,14 @@ pub struct EquipScale {
 /// sets that field (no engine-side table).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DynamicPt {
+    /// The general CR 604.3 CDA: power = `base_p` + the number of permanents
+    /// matching `filter` the controller controls, toughness = `base_t` + that
+    /// count. Squelching Leeches (`*/*` = Swamps you control).
+    PermanentsControlledMatching {
+        base_p: i32,
+        base_t: i32,
+        filter: Box<SelectionRequirement>,
+    },
     /// Power = N, toughness = N+1 where N is the count of distinct card
     /// types across every player's graveyard. Tarmogoyf, Cosmogoyf.
     DistinctTypesInAllGraveyards,

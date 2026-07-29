@@ -486,6 +486,15 @@ impl GameState {
                 }
             }
         }
+        // CR 508.1g — per-attacker "can't attack unless its controller pays
+        // {N}" (Oppressive Rays). Same pool as the Propaganda tax above.
+        for atk in &attacks {
+            for k in computed_kw(atk.attacker) {
+                if let Keyword::CantAttackOrBlockUnlessPay(n) = k {
+                    total_tax += n;
+                }
+            }
+        }
         if total_tax > 0 {
             // Pay from the floating pool, auto-tapping mana sources for any
             // shortfall (rolled back atomically if unpayable).
@@ -1143,6 +1152,29 @@ impl GameState {
                     + self.blocker_count_of(atk.attacker);
                 if blocker_count == 1 {
                     return Err(GameError::MenaceRequiresTwoBlockers(atk.attacker));
+                }
+            }
+        }
+
+        // CR 509.1b — "can't block unless its controller pays {N}"
+        // (Oppressive Rays). Charged once per declared blocker, paid from
+        // that blocker's controller's pool with auto-tap for the shortfall.
+        {
+            let mut owed: std::collections::HashMap<usize, u32> = Default::default();
+            for &(blocker_id, _) in &assignments {
+                let Some(seat) = self.battlefield_find(blocker_id).map(|c| c.controller) else {
+                    continue;
+                };
+                for kw in kws_of(blocker_id) {
+                    if let Keyword::CantAttackOrBlockUnlessPay(n) = kw {
+                        *owed.entry(seat).or_default() += n;
+                    }
+                }
+            }
+            for (seat, amount) in owed {
+                let tax = crate::mana::cost(&[crate::mana::generic(amount)]);
+                if self.try_pay_with_auto_tap(seat, &tax).is_err() {
+                    return Err(GameError::CannotBlock(assignments[0].0));
                 }
             }
         }

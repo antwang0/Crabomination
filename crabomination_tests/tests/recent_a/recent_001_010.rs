@@ -8438,9 +8438,9 @@ mod recent4 {
         g.add_card_to_battlefield(0, catalog::defense_grid());
         let id = g.add_card_to_hand(1, catalog::lightning_bolt());
         let bolt = g.players[1].hand.iter().find(|c| c.id == id).unwrap().clone();
-        assert_eq!(extra_cost_for_spell(&g, 1, &bolt, None, 0), 3,
+        assert_eq!(extra_cost_for_spell(&g, 1, &bolt, None), 3,
             "opponent's spell taxed {{3}} on the active player's turn");
-        assert_eq!(extra_cost_for_spell(&g, 0, &bolt, None, 0), 0,
+        assert_eq!(extra_cost_for_spell(&g, 0, &bolt, None), 0,
             "active player's own spell untaxed");
     }
 

@@ -32,8 +32,8 @@ fn cr_601_2f_cost_increase_and_reduction_apply() {
     g.add_card_to_battlefield(0, catalog::grand_arbiter_augustin_iv());
     let blue = crabomination::card::CardInstance::new(g.next_id(), catalog::counterspell(), 0);
     assert_eq!(cost_reduction_for_spell(&g, 0, &blue, None), 1, "your blue spell: {{1}} off");
-    assert_eq!(extra_cost_for_spell(&g, 0, &blue, None, 0), 0, "your spell isn't taxed");
-    assert_eq!(extra_cost_for_spell(&g, 1, &blue, None, 0), 1, "opponent's spell: {{1}} tax");
+    assert_eq!(extra_cost_for_spell(&g, 0, &blue, None), 0, "your spell isn't taxed");
+    assert_eq!(extra_cost_for_spell(&g, 1, &blue, None), 1, "opponent's spell: {{1}} tax");
     assert_eq!(cost_reduction_for_spell(&g, 1, &blue, None), 0, "opponent gets no discount");
 }
 

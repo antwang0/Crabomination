@@ -42,6 +42,10 @@ pub enum ExtraManaKind {
     /// One mana of any color, chosen by the controller at tap time (Buried in
     /// the Garden — "adds an additional one mana of any color").
     AnyColor,
+    /// N mana "in any combination of colors" (Market Festival's two). Each
+    /// pip is picked independently by the same needs-aware heuristic as
+    /// [`ExtraManaKind::AnyColor`].
+    AnyColors(u32),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1196,6 +1200,10 @@ pub enum StaticEffect {
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).
     ActivationTax { amount: u32 },
+    /// CR 602.5 / 614 — "Activated abilities of enchanted/equipped creature
+    /// cost {N} more to activate" (Oppressive Rays). Applies only to
+    /// activations whose source is the permanent this Aura is attached to.
+    AttachedActivationTax { amount: u32 },
     /// CR 606 — "Loyalty abilities of planeswalkers your opponents control
     /// cost {N} more to activate" (Eidolon of Obstruction). Summed across the
     /// taxers an activating player's opponents control and paid as extra

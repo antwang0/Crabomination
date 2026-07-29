@@ -949,6 +949,10 @@ impl Effect {
             }
             Effect::PreventAllDamageThisTurn { target }
             | Effect::PreventDamageToAndByUntilYourNextTurn { target } => sel_has_target(target),
+            Effect::PreventAllDamageBetweenThisTurn { from, to } => {
+                sel_has_target(from) || sel_has_target(to)
+            }
+            Effect::TapOrUntap { what } => sel_has_target(what),
             Effect::ReplaceNextDamageWithDestroy { target } => sel_has_target(target),
             Effect::DamageCantBePreventedThisTurn => false,
             Effect::PreventSearchesThisTurn => false,
@@ -2238,6 +2242,10 @@ impl Effect {
                 | Effect::PreventAllCombatDamageInvolving { target }
                 | Effect::PreventCombatDamageToTargetThisTurn { target }
                 | Effect::PreventCombatDamageByTargetThisTurn { target } => sel_find(target, slot),
+                Effect::PreventAllDamageBetweenThisTurn { from, to } => {
+                    sel_find(from, slot).or_else(|| sel_find(to, slot))
+                }
+                Effect::TapOrUntap { what } => sel_find(what, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }

@@ -1322,8 +1322,8 @@ fn thorn_of_amethyst_taxes_only_noncreature_spells() {
     let bear_id = g.add_card_to_hand(0, catalog::grizzly_bears());
     let bolt = g.players[0].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
     let bear = g.players[0].hand.iter().find(|c| c.id == bear_id).unwrap().clone();
-    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &bolt, None, 0), 1, "noncreature taxed");
-    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &bear, None, 0), 0, "creature untaxed");
+    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &bolt, None), 1, "noncreature taxed");
+    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &bear, None), 0, "creature untaxed");
 }
 
 #[test]
@@ -1334,8 +1334,8 @@ fn lodestone_golem_taxes_nonartifact_spells() {
     let sol_id = g.add_card_to_hand(0, catalog::sol_ring());
     let bolt = g.players[0].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
     let sol = g.players[0].hand.iter().find(|c| c.id == sol_id).unwrap().clone();
-    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &bolt, None, 0), 1, "nonartifact taxed");
-    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &sol, None, 0), 0, "artifact untaxed");
+    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &bolt, None), 1, "nonartifact taxed");
+    assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 0, &sol, None), 0, "artifact untaxed");
 }
 
 #[test]

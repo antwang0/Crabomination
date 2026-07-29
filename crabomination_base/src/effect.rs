@@ -6265,6 +6265,16 @@ pub enum Effect {
     /// "you don't lose / prevent all damage to you". Non-combat path.
     PreventAllDamageThisTurn { target: Selector },
 
+    /// CR 615 — "Prevent all damage that `from` would deal to `to` this turn."
+    /// A source-restricted fog (Stonewise Fortifier's "prevent all damage that
+    /// would be dealt to this creature by target creature this turn").
+    PreventAllDamageBetweenThisTurn { from: Selector, to: Selector },
+
+    /// "You may tap or untap `what`" — the controller picks which per resolved
+    /// permanent (Thassa's Ire, Puppeteer). Tapped permanents untap and
+    /// untapped ones tap when the controller declines to choose.
+    TapOrUntap { what: Selector },
+
     /// CR 615 — "Until your next turn, prevent all damage that would be dealt
     /// to and dealt by `target`" (Kiora, the Crashing Wave's +1). Registers the
     /// permanent in `damage_locked_until_turn_of`, checked on both ends of

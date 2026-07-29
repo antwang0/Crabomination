@@ -3609,9 +3609,9 @@ fn callaphe_taxes_opponent_spells_targeting_your_permanents() {
     let bolt = g.players[1].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
     let at_mine = crabomination::game::Target::Permanent(callaphe);
     let at_theirs = crabomination::game::Target::Permanent(opp_bear);
-    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_mine), 0), 1, "opponent taxed targeting Callaphe");
-    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_theirs), 0), 0, "their own creature untaxed");
-    assert_eq!(extra_cost_for_spell(&g, 0, &bolt, Some(&at_mine), 0), 0, "your own spells untaxed");
+    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_mine)), 1, "opponent taxed targeting Callaphe");
+    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_theirs)), 0, "their own creature untaxed");
+    assert_eq!(extra_cost_for_spell(&g, 0, &bolt, Some(&at_mine)), 0, "your own spells untaxed");
 }
 
 /// Siona digs seven for an Aura to hand.

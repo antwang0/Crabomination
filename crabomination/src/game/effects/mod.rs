@@ -7784,24 +7784,10 @@ impl GameState {
                         break;
                     }
                     if let Some(cid) = ent.as_permanent_id()
-                        && let Some(c) = self.battlefield_find_mut(cid)
-                        && c.tapped {
-                            // CR 122.1c: stun counter replaces untap.
-                            let stun = c
-                                .counters
-                                .get(&crate::card::CounterType::Stun)
-                                .copied()
-                                .unwrap_or(0);
-                            if stun > 0 {
-                                *c.counters
-                                    .entry(crate::card::CounterType::Stun)
-                                    .or_insert(0) -= 1;
-                            } else {
-                                c.tapped = false;
-                                events.push(GameEvent::PermanentUntapped { card_id: cid });
-                            }
-                            count += 1;
-                        }
+                        && self.untap_permanent(cid, events)
+                    {
+                        count += 1;
+                    }
                 }
                 Ok(())
             }
@@ -17961,6 +17947,57 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventAllDamageBetweenThisTurn { from, to } => {
+                // CR 615 — a fog scoped to one (source, recipient) pair.
+                let sources: Vec<_> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                        EntityRef::Player(_) => None,
+                    })
+                    .collect();
+                for t in self.prevention_targets(to, ctx) {
+                    for src in &sources {
+                        self.prevention_shields.push(crate::game::types::PreventionShield {
+                            target: t,
+                            source: Some(*src),
+                            ..Default::default()
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::TapOrUntap { what } => {
+                // "Tap or untap" — the useful choice is always the flip
+                // (untap your own, tap theirs), so the engine takes it.
+                let ids: Vec<_> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    match self.battlefield_find(id) {
+                        Some(c) if c.tapped => {
+                            self.untap_permanent(id, events);
+                        }
+                        Some(_) => {
+                            if let Some(c) = self.battlefield_find_mut(id) {
+                                c.tapped = true;
+                                events.push(GameEvent::PermanentTapped {
+                                    card_id: id,
+                                    actor: Some(ctx.controller),
+                                    as_attacker: false,
+                                });
+                            }
+                        }
+                        None => {}
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReplaceNextDamageWithDestroy { target } => {
                 // Kill-Suit Cultist — "the next time damage would be dealt to
                 // target creature this turn, destroy that creature instead."
@@ -19937,6 +19974,27 @@ impl GameState {
 
     /// Map a selector to the `PreventionTarget`s it designates (players and
     /// permanents only). Used by the prevention-shield effects.
+    /// CR 122.1c-aware untap: a Stun counter is removed instead of untapping.
+    /// Returns whether the permanent was tapped (i.e. the untap "counted").
+    fn untap_permanent(
+        &mut self,
+        cid: crate::card::CardId,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        let Some(c) = self.battlefield_find_mut(cid) else { return false };
+        if !c.tapped {
+            return false;
+        }
+        let stun = c.counters.get(&crate::card::CounterType::Stun).copied().unwrap_or(0);
+        if stun > 0 {
+            *c.counters.entry(crate::card::CounterType::Stun).or_insert(0) -= 1;
+        } else {
+            c.tapped = false;
+            events.push(GameEvent::PermanentUntapped { card_id: cid });
+        }
+        true
+    }
+
     fn prevention_targets(
         &self,
         sel: &Selector,

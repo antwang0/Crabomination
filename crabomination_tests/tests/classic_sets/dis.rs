@@ -944,9 +944,9 @@ fn grand_arbiter_taxes_and_discounts() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::grand_arbiter_augustin_iv());
     let blue = crabomination::card::CardInstance::new(g.next_id(), catalog::counterspell(), 0); // {U}{U}
-    assert_eq!(extra_cost_for_spell(&g, 0, &blue, None, 0), 0, "your spell isn't taxed");
+    assert_eq!(extra_cost_for_spell(&g, 0, &blue, None), 0, "your spell isn't taxed");
     assert_eq!(cost_reduction_for_spell(&g, 0, &blue, None), 1, "your blue spell is discounted {{1}}");
-    assert_eq!(extra_cost_for_spell(&g, 1, &blue, None, 0), 1, "opponent spell taxed {{1}}");
+    assert_eq!(extra_cost_for_spell(&g, 1, &blue, None), 1, "opponent spell taxed {{1}}");
 }
 
 /// Magewright's Stone untaps a target creature.

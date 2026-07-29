@@ -958,7 +958,7 @@ pub fn fireball() -> CardDefinition {
         name: "Fireball",
         cost: cost(&[x(), r()]),
         card_types: vec![CardType::Sorcery],
-        cost_per_extra_target: 1,
+        cost_per_extra_target: Some(cost(&[generic(1)])),
         effect: Effect::DealDamageDividedEvenly {
             total: Value::XFromCost,
             filter: SelectionRequirement::Any,

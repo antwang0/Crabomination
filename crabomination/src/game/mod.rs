@@ -6634,6 +6634,13 @@ impl GameState {
                     }).count() as i32;
                     (n, n)
                 }
+                crate::card::DynamicPt::PermanentsControlledMatching { base_p, base_t, ref filter } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller
+                            && self.evaluate_requirement_on_card(filter, c, card.controller)
+                    }).count() as i32;
+                    (base_p + n, base_t + n)
+                }
                 crate::card::DynamicPt::LandsControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller && c.definition.is_land()
@@ -14996,6 +15003,9 @@ fn static_effect_to_effects(
             // ActivationTax (Suppression Field) — consulted in
             // `activate_ability`; no layer effect.
             | StaticEffect::ActivationTax { .. }
+            // AttachedActivationTax (Oppressive Rays) — same funnel, scoped
+            // to the Aura's host.
+            | StaticEffect::AttachedActivationTax { .. }
             // OpponentLoyaltyActivationTax (Eidolon of Obstruction) —
             // consulted in `activate_loyalty_ability`; no layer effect.
             | StaticEffect::OpponentLoyaltyActivationTax { .. }

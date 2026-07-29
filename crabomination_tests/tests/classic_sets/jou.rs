@@ -249,3 +249,508 @@ fn king_macar_gilds_a_creature() {
     assert!(g.battlefield_find(victim).is_none(), "exiled");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Gold"));
 }
+
+// ── Wave 2: Strive, constellation, and the rest of the core ──────────────────
+
+/// Cast `def` with `extras` additional target slots filled.
+fn cast_multi(
+    g: &mut GameState,
+    def: crabomination::card::CardDefinition,
+    target: Target,
+    extras: Vec<Target>,
+    colorless: u32,
+    colors: &[(Color, u32)],
+) -> Result<(), crabomination::game::GameError> {
+    let id = g.add_card_to_hand(0, def);
+    g.players[0].mana_pool.add_colorless(colorless);
+    for (c, n) in colors {
+        g.players[0].mana_pool.add(*c, *n);
+    }
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(target),
+        additional_targets: extras,
+        mode: None,
+        x_value: None,
+    });
+    if r.is_ok() {
+        drain_stack(g);
+    }
+    r.map(|_| ())
+}
+
+/// CR 702.122 Strive — each extra target charges the full colored rider, and
+/// the spell pumps every target it paid for.
+#[test]
+fn strive_charges_a_colored_rider_per_extra_target() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::oreskos_swiftclaw());
+
+    // Two targets on Ajani's Presence = {W} + {2}{W}. One white short fails.
+    assert!(cast_multi(
+        &mut g,
+        catalog::ajanis_presence(),
+        Target::Permanent(a),
+        vec![Target::Permanent(b)],
+        2,
+        &[(Color::White, 1)],
+    )
+    .is_err());
+
+    g.players[0].mana_pool.empty();
+    cast_multi(
+        &mut g,
+        catalog::ajanis_presence(),
+        Target::Permanent(a),
+        vec![Target::Permanent(b)],
+        2,
+        &[(Color::White, 2)],
+    )
+    .expect("strive for two");
+    for id in [a, b] {
+        let cp = g.computed_permanent(id).unwrap();
+        assert!(cp.keywords.contains(&Keyword::Indestructible), "both got the grant");
+    }
+    assert_eq!(g.computed_permanent(a).unwrap().power, 3);
+}
+
+/// A Strive spell cast on one target pays only its printed cost.
+#[test]
+fn strive_single_target_costs_the_printed_price() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast(
+        &mut g,
+        catalog::rouse_the_mob(),
+        Some(Target::Permanent(bear)),
+        0,
+        &[(Color::Red, 1)],
+    );
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 2));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Fireball's generic per-target rider still works after the Strive rewrite.
+#[test]
+fn fireball_still_charges_one_generic_per_extra_target() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // {X=4}{R} + {1} for the second target = 6 mana, 2 damage each.
+    let id = g.add_card_to_hand(0, catalog::fireball());
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: Some(4),
+    })
+    .expect("fireball two targets");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+}
+
+/// Consign to Dust destroys artifacts and enchantments in one Strive.
+#[test]
+fn consign_to_dust_sweeps_both_types() {
+    let mut g = main_phase();
+    let ench = g.add_card_to_battlefield(1, catalog::skybind());
+    let art = g.add_card_to_battlefield(1, catalog::hall_of_triumph());
+    cast_multi(
+        &mut g,
+        catalog::consign_to_dust(),
+        Target::Permanent(ench),
+        vec![Target::Permanent(art)],
+        4,
+        &[(Color::Green, 2)],
+    )
+    .expect("strive for two");
+    assert!(g.battlefield_find(ench).is_none() && g.battlefield_find(art).is_none());
+}
+
+/// Harness by Force steals, untaps, and hastes its targets.
+#[test]
+fn harness_by_force_steals_and_hastes() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    cast(
+        &mut g,
+        catalog::harness_by_force(),
+        Some(Target::Permanent(bear)),
+        1,
+        &[(Color::Red, 2)],
+    );
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.controller, 0);
+    assert!(!c.tapped);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Hour of Need exiles and hands the owner a 4/4 Sphinx.
+#[test]
+fn hour_of_need_trades_creatures_for_sphinxes() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast(&mut g, catalog::hour_of_need(), Some(Target::Permanent(bear)), 2, &[(Color::Blue, 1)]);
+    assert!(g.battlefield_find(bear).is_none());
+    let sphinx = g.battlefield.iter().find(|c| c.definition.name == "Sphinx").expect("Sphinx");
+    assert_eq!(sphinx.controller, 1);
+    assert_eq!((sphinx.definition.power, sphinx.definition.toughness), (4, 4));
+}
+
+/// Twinflame mints a hasty token copy that leaves at the next end step.
+#[test]
+fn twinflame_mints_a_transient_copy() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast(&mut g, catalog::twinflame(), Some(Target::Permanent(bear)), 1, &[(Color::Red, 1)]);
+    let copies: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Grizzly Bears" && c.is_token)
+        .collect();
+    assert_eq!(copies.len(), 1);
+    assert!(g.computed_permanent(copies[0].id).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Solidarity of Heroes doubles the +1/+1 counters on its targets.
+#[test]
+fn solidarity_of_heroes_doubles_counters() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().counters.insert(CounterType::PlusOnePlusOne, 3);
+    cast(
+        &mut g,
+        catalog::solidarity_of_heroes(),
+        Some(Target::Permanent(bear)),
+        1,
+        &[(Color::Green, 1)],
+    );
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 6);
+}
+
+/// Constellation counts the enchantment creature's own arrival.
+#[test]
+fn constellation_fires_on_its_own_entry() {
+    let mut g = main_phase();
+    let opp_life = g.players[1].life;
+    cast(&mut g, catalog::thoughtrender_lamia(), None, 4, &[(Color::Black, 2)]);
+    // Lamia's own ETB made the opponent discard once.
+    assert_eq!(g.players[1].hand.len(), 0, "empty hand, nothing to discard");
+    assert_eq!(g.players[1].life, opp_life);
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    // A second enchantment entering fires it again.
+    cast(&mut g, catalog::skybind(), None, 3, &[(Color::White, 2)]);
+    assert_eq!(g.players[1].hand.len(), 0, "the constellation trigger took it");
+}
+
+/// Oakheart Dryads pumps on each enchantment that enters.
+#[test]
+fn oakheart_dryads_pumps_on_each_enchantment() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::oakheart_dryads());
+    cast(&mut g, catalog::strength_from_the_fallen(), None, 1, &[(Color::Green, 1)]);
+    assert!(
+        g.computed_permanent(bear).unwrap().power > 2,
+        "the constellation trigger auto-targeted and pumped"
+    );
+}
+
+/// Squelching Leeches's CDA reads Swamps you control.
+#[test]
+fn squelching_leeches_counts_swamps() {
+    let mut g = main_phase();
+    let leech = g.add_card_to_battlefield(0, catalog::squelching_leeches());
+    assert_eq!(g.computed_permanent(leech).map(|c| (c.power, c.toughness)), Some((0, 0)));
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    g.add_card_to_battlefield(1, catalog::swamp());
+    assert_eq!(
+        g.computed_permanent(leech).map(|c| (c.power, c.toughness)),
+        Some((3, 3)),
+        "only your Swamps count"
+    );
+}
+
+/// Oppressive Rays taxes attacking and every activation.
+#[test]
+fn oppressive_rays_taxes_attacks_and_abilities() {
+    let mut g = main_phase();
+    let starfish = g.add_card_to_battlefield(1, catalog::sigiled_starfish());
+    g.clear_sickness(starfish);
+    let aura = g.add_card_to_hand(0, catalog::oppressive_rays());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(starfish)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("enchant");
+    drain_stack(&mut g);
+    // {T}: Scry 1 now costs {3}; with no mana the activation is rejected.
+    g.priority.player_with_priority = 1;
+    assert!(g
+        .perform_action(GameAction::ActivateAbility {
+            card_id: starfish,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+        })
+        .is_err());
+    g.players[1].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: starfish,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("paid the {3} tax");
+}
+
+/// Market Festival's enchanted land adds two extra mana of any colors.
+#[test]
+fn market_festival_doubles_down_on_a_land() {
+    let mut g = main_phase();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let aura = g.add_card_to_hand(0, catalog::market_festival());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(forest)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("enchant the land");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.empty();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.total(), 3, "{{G}} plus two more");
+}
+
+/// Thassa's Ire flips a creature's tap state either way.
+#[test]
+fn thassas_ire_taps_or_untaps() {
+    let mut g = main_phase();
+    let ire = g.add_card_to_battlefield(0, catalog::thassas_ire());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().tapped = true;
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ire,
+        ability_index: 0,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("untap mine");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(mine).unwrap().tapped);
+
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ire,
+        ability_index: 0,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("tap theirs");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+}
+
+/// Stonewise Fortifier's shield is scoped to one attacker.
+#[test]
+fn stonewise_fortifier_blanks_one_source() {
+    let mut g = main_phase();
+    let fort = g.add_card_to_battlefield(0, catalog::stonewise_fortifier());
+    let big = g.add_card_to_battlefield(1, catalog::hydra_broodmaster()); // 7/7
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fort,
+        ability_index: 0,
+        target: Some(Target::Permanent(big)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("shield up");
+    drain_stack(&mut g);
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        big,
+        1,
+        Some(Target::Permanent(fort)),
+    );
+    g.resolve_effect(
+        &crabomination::effect::Effect::DealDamage {
+            to: crabomination::effect::Selector::Target(0),
+            amount: crabomination::card::Value::Const(7),
+        },
+        &ctx,
+    )
+    .expect("swing damage");
+    assert!(g.battlefield_find(fort).is_some(), "the shield soaked it");
+}
+
+/// Tormented Thoughts discards for the sacrificed creature's power.
+#[test]
+fn tormented_thoughts_discards_for_power() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::hydra_broodmaster()); // 7/7
+    for _ in 0..5 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    cast(
+        &mut g,
+        catalog::tormented_thoughts(),
+        Some(Target::Player(1)),
+        2,
+        &[(Color::Black, 1)],
+    );
+    assert_eq!(g.players[1].hand.len(), 0, "7 power emptied a 5-card hand");
+}
+
+/// Bearer of the Heavens wipes the board at the next end step, not on death.
+#[test]
+fn bearer_of_the_heavens_delays_the_wipe() {
+    let mut g = main_phase();
+    let bearer = g.add_card_to_battlefield(0, catalog::bearer_of_the_heavens());
+    let bystander = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.destroy_permanent(bearer, false, &mut evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bystander).is_some(), "still alive during the main phase");
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bystander).is_none(), "the delayed wipe landed");
+}
+
+/// Wildfire Cerberus's monstrosity burns the opponent and their board.
+#[test]
+fn wildfire_cerberus_burns_on_monstrosity() {
+    let mut g = main_phase();
+    let dog = g.add_card_to_battlefield(0, catalog::wildfire_cerberus());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(dog);
+    let life = g.players[1].life;
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dog,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("monstrosity 1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    assert!(g.battlefield_find(bear).is_none(), "2 damage killed the 2/2");
+}
+
+/// Swarmborn Giant gains reach only once monstrous.
+#[test]
+fn swarmborn_giant_reaches_when_monstrous() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::swarmborn_giant());
+    g.clear_sickness(giant);
+    assert!(!g.computed_permanent(giant).unwrap().keywords.contains(&Keyword::Reach));
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: giant,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("monstrosity 2");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(giant).unwrap().keywords.contains(&Keyword::Reach));
+}
+
+/// Starfall's rider only bites an enchantment creature's controller.
+#[test]
+fn starfall_punishes_enchantment_creatures() {
+    let mut g = main_phase();
+    let nyx = g.add_card_to_battlefield(1, catalog::whitewater_naiads()); // 4/4 enchantment
+    let life = g.players[1].life;
+    cast(&mut g, catalog::starfall(), Some(Target::Permanent(nyx)), 4, &[(Color::Red, 1)]);
+    assert_eq!(g.players[1].life, life - 3, "the controller took 3 too");
+
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[1].life;
+    cast(&mut g, catalog::starfall(), Some(Target::Permanent(bear)), 4, &[(Color::Red, 1)]);
+    assert_eq!(g.players[1].life, life, "a plain creature spares its controller");
+}
+
+/// Ritual of the Returned mints a Zombie with the exiled card's stats.
+#[test]
+fn ritual_of_the_returned_copies_stats() {
+    let mut g = main_phase();
+    let card = g.add_card_to_graveyard(0, catalog::hydra_broodmaster()); // 7/7
+    cast(
+        &mut g,
+        catalog::ritual_of_the_returned(),
+        Some(Target::Permanent(card)),
+        3,
+        &[(Color::Black, 1)],
+    );
+    let zombie = g.battlefield.iter().find(|c| c.definition.name == "Zombie").expect("Zombie");
+    assert_eq!(g.computed_permanent(zombie.id).map(|c| (c.power, c.toughness)), Some((7, 7)));
+}
+
+/// Stat / keyword lines for the wave-2 bodies.
+#[test]
+fn jou2_stat_lines() {
+    let table: &[(fn() -> crabomination::card::CardDefinition, i32, i32, &[Keyword])] = &[
+        (catalog::agent_of_erebos, 2, 2, &[]),
+        (catalog::dreadbringer_lampads, 4, 2, &[]),
+        (catalog::forgeborn_oreads, 4, 2, &[]),
+        (catalog::goldenhide_ox, 5, 4, &[]),
+        (catalog::harvestguard_alseids, 2, 3, &[]),
+        (catalog::humbler_of_mortals, 5, 5, &[]),
+        (catalog::oakheart_dryads, 2, 3, &[]),
+        (catalog::thassas_devourer, 2, 6, &[]),
+        (catalog::thoughtrender_lamia, 5, 3, &[]),
+        (catalog::whitewater_naiads, 4, 4, &[]),
+        (catalog::riptide_chimera, 3, 4, &[Keyword::Flying]),
+        (catalog::skyspear_cavalry, 2, 2, &[Keyword::Flying, Keyword::DoubleStrike]),
+        (catalog::triton_shorestalker, 1, 1, &[Keyword::Unblockable]),
+        (catalog::spawn_of_thraxes, 5, 5, &[Keyword::Flying]),
+        (catalog::bearer_of_the_heavens, 10, 10, &[]),
+        (catalog::war_wing_siren, 1, 3, &[Keyword::Flying]),
+        (catalog::supply_line_cranes, 2, 4, &[Keyword::Flying]),
+        (catalog::ravenous_leucrocota, 2, 4, &[Keyword::Vigilance]),
+    ];
+    for (f, p, t, kws) in table {
+        let d = f();
+        assert_eq!((d.power, d.toughness), (*p, *t), "{}", d.name);
+        for kw in *kws {
+            assert!(d.keywords.contains(kw), "{} lacks {:?}", d.name, kw);
+        }
+    }
+}
