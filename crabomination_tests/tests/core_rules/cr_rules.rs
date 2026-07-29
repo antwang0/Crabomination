@@ -509,7 +509,7 @@ fn cr_510_2_jitte_charges_when_equipped_creature_is_blocked() {
     g.clear_sickness(attacker);
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
-    g.block_map.insert(blocker, attacker);
+    g.set_block_map([(blocker, attacker)]);
     g.step = TurnStep::CombatDamage;
     g.active_player_idx = 0;
     g.resolve_combat().expect("regular combat damage");
@@ -1313,7 +1313,7 @@ fn cr_509_1a_animated_land_can_block() {
     g.step = TurnStep::DeclareBlockers;
     g.perform_action(GameAction::DeclareBlockers(vec![(land, attacker)]))
         .expect("animated land is a legal blocker");
-    assert_eq!(g.block_map.get(&land), Some(&attacker));
+    assert_eq!(g.attackers_blocked_by(land), [attacker]);
 }
 
 // ── CR 510.1c/d — marked damage + full assignment ─────────────────────────────
@@ -1992,7 +1992,7 @@ fn cr_702_64_absorb_soaks_combat_damage() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.clear_sickness(bear);
     g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(0) }];
-    g.block_map.insert(sliver, bear);
+    g.set_block_map([(sliver, bear)]);
     g.step = TurnStep::CombatDamage;
     g.active_player_idx = 1;
     g.resolve_combat().unwrap();
@@ -5461,7 +5461,7 @@ fn cr_510_1c_deathtouch_trample_assigns_one() {
     g.clear_sickness(attacker);
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
-    g.block_map.insert(blocker, attacker);
+    g.set_block_map([(blocker, attacker)]);
     g.step = TurnStep::CombatDamage;
     g.active_player_idx = 0;
     let life_before = g.players[1].life;
@@ -9492,7 +9492,7 @@ fn cr_702_2_deathtouch_one_damage_is_lethal() {
     g.clear_sickness(rat);
     let djinn = g.add_card_to_battlefield(1, catalog::mahamoti_djinn()); // 5/6
     g.attacking = vec![Attack { attacker: rat, target: AttackTarget::Player(1) }];
-    g.block_map.insert(djinn, rat);
+    g.set_block_map([(djinn, rat)]);
     g.step = TurnStep::CombatDamage;
     g.active_player_idx = 0;
     g.resolve_combat().expect("combat damage");

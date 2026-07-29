@@ -58,3 +58,32 @@ pub fn contaminated_ground() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Guardian of the Gateless — {4}{W} 3/3 Angel with flying. Blocks any number
+/// of creatures; each block pumps it +1/+1 per creature it's blocking.
+pub fn guardian_of_the_gateless() -> CardDefinition {
+    use crate::card::{CreatureType, Keyword};
+    use crate::effect::{Duration, Value};
+    CardDefinition {
+        name: "Guardian of the Gateless",
+        cost: cost(&[generic(4), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::CanBlockAnyNumber],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::CreaturesBlockedBy(Box::new(Selector::This)),
+                toughness: Value::CreaturesBlockedBy(Box::new(Selector::This)),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}

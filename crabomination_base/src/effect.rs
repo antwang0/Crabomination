@@ -394,6 +394,9 @@ pub enum Value {
     /// Number of creatures currently blocking the resolved permanent
     /// (Spined Sliver's "+1/+1 for each creature blocking it").
     BlockersOf(Box<Selector>),
+    /// CR 509.1b — number of attackers the resolved permanent is blocking
+    /// (Guardian of the Gateless's "+1/+1 for each creature it's blocking").
+    CreaturesBlockedBy(Box<Selector>),
     ToughnessOf(Box<Selector>),
     /// Marked damage on the first entity the selector resolves to (CR 120.3).
     /// Read from the live permanent, or from CR 603.10 leaves-battlefield LKI
@@ -3863,6 +3866,11 @@ pub enum Effect {
         what: Selector,
         return_to: crate::card::ExileReturnZone,
     },
+    /// CR 603.6e — "Exile any number of other permanents you control matching
+    /// `filter` until this leaves the battlefield" (Lumbering Battlement). The
+    /// controller picks the subset (`Decision::ChooseCards`, min 0); each pick
+    /// is linked to the source exactly like `ExileUntilSourceLeaves`.
+    ExileAnyNumberUntilSourceLeaves { filter: SelectionRequirement },
     /// CR 724 — Palace Jailer's "exile [what] until an opponent becomes the
     /// monarch". Exiles the resolved permanent(s) with a `monarch_guard` set to
     /// the controller (who has just become the monarch); the card returns to the

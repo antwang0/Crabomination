@@ -30,7 +30,6 @@
 //!   `delayed_triggers`, `continuous_effects` (rebuilt from static
 //!   abilities of permanents on load).
 
-use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -270,7 +269,7 @@ impl GameSnapshot {
                     target: a.target,
                 })
                 .collect(),
-            block_map: state.block_map().iter().map(|(b, a)| (*b, *a)).collect(),
+            block_map: state.block_map_snapshot(),
             blockers_declared: state.blockers_declared(),
             skip_first_draw: state.skip_first_draw(),
             dropped_triggers,
@@ -426,8 +425,7 @@ impl GameSnapshot {
                 })
                 .collect(),
         );
-        let bm: HashMap<CardId, CardId> = block_map.into_iter().collect();
-        state.set_block_map(bm);
+        state.set_block_map(block_map);
         state.set_blockers_declared(blockers_declared);
         state.set_skip_first_draw(skip_first_draw);
         Ok(state)

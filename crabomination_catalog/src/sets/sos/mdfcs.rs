@@ -828,14 +828,7 @@ pub fn leech_collector() -> CardDefinition {
 /// Prepare spell: sorcery — printed "When you next cast an instant or
 /// sorcery spell this turn, copy that spell. You may choose new targets
 /// for the copy."
-///
-/// Approximation: the engine's `OnYourNextSpellCastThisTurn` delayed
-/// trigger is consumed by the very next spell of *any* type — the body
-/// is gated to copy only when that spell is an instant or sorcery, so
-/// casting a creature first wastes the rider where the printed text
-/// would keep waiting for an instant/sorcery.
 pub fn pigment_wrangler() -> CardDefinition {
-    use crate::effect::shortcut::cast_is_instant_or_sorcery;
     let spell = spell_back(
         "Striking Palette",
         cost(&[r()]),

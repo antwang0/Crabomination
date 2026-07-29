@@ -765,7 +765,7 @@ fn fallen_shinobi_ninjutsu_rejected_on_blocked_attacker() {
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let shinobi = g.add_card_to_hand(0, catalog::fallen_shinobi());
     g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
-    g.block_map.insert(blocker, bear); // bear is blocked
+    g.set_block_map([(blocker, bear)]); // bear is blocked
     g.step = TurnStep::DeclareBlockers;
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;

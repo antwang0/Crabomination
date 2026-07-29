@@ -1256,11 +1256,12 @@ pub struct PermanentView {
     pub station_charges: Option<u32>,
     /// Whether this permanent is currently declared as an attacker.
     pub attacking: bool,
-    /// If this permanent is declared as a blocker, the attacker it is
-    /// blocking. `None` when the permanent isn't a blocker. Exposed so
-    /// the client can animate the blocker toward its attacker.
+    /// CR 509.1b — the attackers this permanent is blocking, in declaration
+    /// order. Empty when it isn't a blocker; more than one only for a
+    /// `CanBlockAdditional` / `CanBlockAnyNumber` blocker. Exposed so the
+    /// client can animate the blocker toward each attacker it blocks.
     #[serde(default)]
-    pub blocking_attacker: Option<CardId>,
+    pub blocking_attackers: Vec<CardId>,
     /// Activated abilities visible to the client.
     pub abilities: Vec<AbilityView>,
     /// Loyalty abilities (only populated for planeswalkers).

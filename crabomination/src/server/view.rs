@@ -283,11 +283,39 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
             // count toward the attacker's death.
             let deals_back =
                 |b: &CP| !(attacker_fs && !has_fs(b) && killed.contains(&b.id));
+            // CR 510.1e — a creature blocking several attackers divides its
+            // power among them; the preview shows the default lethal-in-order
+            // split (the same one the engine falls back to).
+            let power_vs_this = |b: &CP| -> i32 {
+                let blocked = state.attackers_blocked_by(b.id);
+                if blocked.len() <= 1 {
+                    return b.power.max(0);
+                }
+                let dt = kw(b, &Keyword::Deathtouch);
+                let mut remaining = b.power.max(0);
+                let mut share = 0;
+                for (i, &aid) in blocked.iter().enumerate() {
+                    let needed = if dt {
+                        1
+                    } else {
+                        cp(aid).map(|c| c.toughness.max(1)).unwrap_or(1)
+                    };
+                    let mut give = needed.min(remaining);
+                    if i + 1 == blocked.len() {
+                        give = remaining; // the excess lands on the last one
+                    }
+                    remaining -= give;
+                    if aid == atk.attacker {
+                        share = give;
+                    }
+                }
+                share
+            };
             let total_blocker_power: i32 =
-                blockers.iter().filter(|b| deals_back(b)).map(|b| b.power.max(0)).sum();
-            let dt_blocker = blockers
-                .iter()
-                .any(|b| b.power > 0 && kw(b, &Keyword::Deathtouch) && deals_back(b));
+                blockers.iter().filter(|b| deals_back(b)).map(|b| power_vs_this(b)).sum();
+            let dt_blocker = blockers.iter().any(|b| {
+                power_vs_this(b) > 0 && kw(b, &Keyword::Deathtouch) && deals_back(b)
+            });
             if (total_blocker_power > 0 || dt_blocker)
                 && !kw(a, &Keyword::Indestructible)
                 && (total_blocker_power >= a.toughness || dt_blocker)
@@ -1115,9 +1143,10 @@ fn project_permanent(
         station_charges: (!card.definition.station.is_empty())
             .then(|| card.counter_count(crate::card::CounterType::Charge)),
         attacking: attacking.contains(&card.id),
-        blocking_attacker: block_map
+        blocking_attackers: block_map
             .iter()
-            .find_map(|(b, a)| (*b == card.id).then_some(*a)),
+            .filter_map(|(b, a)| (*b == card.id).then_some(*a))
+            .collect(),
         abilities: project_abilities(card),
         loyalty_abilities: project_loyalty_abilities(card, battlefield),
         loyalty_uses_remaining: card.definition.is_planeswalker().then(|| {

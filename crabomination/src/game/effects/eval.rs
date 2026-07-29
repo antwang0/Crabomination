@@ -153,7 +153,13 @@ impl GameState {
                 .resolve_selector(s, ctx)
                 .iter()
                 .filter_map(|e| e.as_permanent_id())
-                .map(|id| self.block_map.values().filter(|&&a| a == id).count() as i32)
+                .map(|id| self.blocker_count_of(id) as i32)
+                .sum(),
+            Value::CreaturesBlockedBy(s) => self
+                .resolve_selector(s, ctx)
+                .iter()
+                .filter_map(|e| e.as_permanent_id())
+                .map(|id| self.attackers_blocked_by(id).len() as i32)
                 .sum(),
             Value::PowerOf(s) => self.resolve_selector(s, ctx).iter()
                 .filter_map(|e| {
@@ -1225,7 +1231,7 @@ impl GameState {
             }),
             Predicate::TriggerBlocksSource => match (ctx.trigger_source, ctx.source) {
                 (Some(EntityRef::Permanent(blocker)), Some(src)) => {
-                    self.block_map.get(&blocker) == Some(&src)
+                    self.blocks(blocker, src)
                 }
                 _ => false,
             },

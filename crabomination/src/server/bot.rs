@@ -1573,6 +1573,7 @@ fn decide_mulligan(
     }
 }
 
+#[cfg(test)]
 fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
     main_phase_action_with(state, seat, true)
 }
@@ -4084,7 +4085,71 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             }
         }
     }
+
+    // CR 509.1b — spend spare block capacity (Guardian of the Gateless and
+    // friends). A blocker that can block extra attackers soaks additional
+    // ones for free as long as the total damage it would take stays under its
+    // toughness and no extra attacker has deathtouch.
+    let extra_capacity = |id: CardId| -> usize {
+        let Some(c) = state.battlefield_find(id) else { return 0 };
+        if c.has_keyword(&Keyword::CanBlockAnyNumber) {
+            return usize::MAX;
+        }
+        state
+            .computed_permanent(id)
+            .map(|cp| cp.keywords.clone())
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|k| match k {
+                Keyword::CanBlockAdditional(n) => Some(*n as usize),
+                _ => None,
+            })
+            .sum()
+    };
+    let multi: Vec<CardId> = assignments
+        .iter()
+        .map(|(b, _)| *b)
+        .filter(|b| extra_capacity(*b) > 0)
+        .collect();
+    for b_id in multi {
+        let Some(b) = state.battlefield_find(b_id) else { continue };
+        let (b_tough, b_flying, b_reach) = (
+            b.toughness(),
+            b.has_keyword(&Keyword::Flying),
+            b.has_keyword(&Keyword::Reach),
+        );
+        let mut taken: i32 = assignments
+            .iter()
+            .filter(|(bid, _)| *bid == b_id)
+            .filter_map(|(_, aid)| attacker_info.iter().find(|(a, ..)| a == aid))
+            .map(|(_, p, ..)| *p)
+            .sum();
+        let mut spare = extra_capacity(b_id);
+        for (a_id, a_pow, _a_tough, a_flying, a_dt) in &attacker_info {
+            if spare == 0 {
+                break;
+            }
+            if *a_dt
+                || taken + *a_pow >= b_tough
+                || assignments.iter().any(|(bid, aid)| *bid == b_id && aid == a_id)
+                || assignments.iter().any(|(_, aid)| aid == a_id)
+                || (*a_flying && !b_flying && !b_reach)
+                || min_blockers_required_by_id(state, *a_id) > 1
+                || !state.blocker_can_block_attacker(b_id, *a_id)
+            {
+                continue;
+            }
+            assignments.push((b_id, *a_id));
+            taken += *a_pow;
+            spare = spare.saturating_sub(1);
+        }
+    }
     assignments
+}
+
+/// [`min_blockers_required`] for a battlefield id (1 when it isn't there).
+fn min_blockers_required_by_id(state: &GameState, id: CardId) -> usize {
+    state.battlefield_find(id).map(min_blockers_required).unwrap_or(1)
 }
 
 /// Minimum number of creatures legally required to block `attacker` (CR
@@ -7595,7 +7660,7 @@ mod tests {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::DeclareBlockers;
         g.set_attacking(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]);
-        g.set_block_map([(dragon, bears)].into_iter().collect());
+        g.set_block_map([(dragon, bears)]);
         g.set_blockers_declared(true);
         let action = RandomBot::new().next_action(&g, 0);
         assert!(
@@ -7623,7 +7688,7 @@ mod tests {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::DeclareBlockers;
         g.set_attacking(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]);
-        g.set_block_map([(elf, bears)].into_iter().collect());
+        g.set_block_map([(elf, bears)]);
         g.set_blockers_declared(true);
         let action = RandomBot::new().next_action(&g, 0);
         assert!(

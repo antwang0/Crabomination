@@ -3575,3 +3575,48 @@ pub fn nikya_of_the_old_ways() -> CardDefinition {
         ..body("Nikya of the Old Ways", cost(&[generic(3), r(), g()]), 5, 5, vec![CreatureType::Centaur, CreatureType::Druid], vec![])
     }
 }
+
+/// Knight of Sorrows — {4}{W} 3/3 Human Knight. Can block an additional
+/// creature each combat; afterlife 1.
+pub fn knight_of_sorrows() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![afterlife(1)],
+        ..body("Knight of Sorrows", cost(&[generic(4), w()]), 3, 3, vec![CreatureType::Human, CreatureType::Knight], vec![Keyword::CanBlockAdditional(1)])
+    }
+}
+
+/// Valor Made Real — {W} Instant. Target creature can block any number of
+/// creatures this turn.
+pub fn valor_made_real() -> CardDefinition {
+    CardDefinition {
+        name: "Valor Made Real",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GrantKeyword {
+            what: target_filtered(R::Creature),
+            keyword: Keyword::CanBlockAnyNumber,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Lumbering Battlement — {4}{W} 4/5 Beast with vigilance. ETB: exile any
+/// number of other nontoken creatures you control until it leaves; it gets
+/// +2/+2 for each card exiled with it.
+pub fn lumbering_battlement() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ExileAnyNumberUntilSourceLeaves {
+            filter: R::Creature.and(R::NotToken),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +2/+2 for each card exiled with it.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::CardsExiledWithSourceCount,
+                per_power: 2,
+                per_toughness: 2,
+            },
+        }],
+        ..body("Lumbering Battlement", cost(&[generic(4), w()]), 4, 5, vec![CreatureType::Beast], vec![Keyword::Vigilance])
+    }
+}

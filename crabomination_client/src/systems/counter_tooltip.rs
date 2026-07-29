@@ -553,8 +553,10 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.attacking {
         lines.push(String::from("(attacking)"));
     }
-    if let Some(att) = p.blocking_attacker {
-        lines.push(format!("(blocking #{})", att.0));
+    if !p.blocking_attackers.is_empty() {
+        let ids: Vec<String> =
+            p.blocking_attackers.iter().map(|a| format!("#{}", a.0)).collect();
+        lines.push(format!("(blocking {})", ids.join(", ")));
     }
 
     // Designation badges surfaced over the wire (CR 701.60 Suspect,
@@ -1223,7 +1225,6 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Ice => "Ice",
         CounterType::Soot => "Soot",
         CounterType::Void => "Void",
-        CounterType::Fuse => "Fuse",
         CounterType::Ki => "Ki",
         CounterType::Coin => "Coin",
         CounterType::Tide => "Tide",
@@ -1333,7 +1334,7 @@ mod tests {
             attached_to: None,
             is_token: false,
             attacking: false,
-            blocking_attacker: None,
+            blocking_attackers: Vec::new(),
             triggered_ability_labels: vec![],
             static_ability_labels: vec![],
             activated_ability_labels: vec![],
@@ -1662,7 +1663,7 @@ mod tests {
     #[test]
     fn blocking_status_shows_attacker_id() {
         let mut p = make_permanent_view(0, 2);
-        p.blocking_attacker = Some(CardId(7));
+        p.blocking_attackers = vec![CardId(7)];
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("(blocking #7)"), "got: {body}");
     }

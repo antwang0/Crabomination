@@ -3,6 +3,22 @@ use crate::card::Keyword;
 use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 
+/// CR 509.1b — how many attackers this creature may block. One by default;
+/// `CanBlockAdditional(n)` adds n (they stack), `CanBlockAnyNumber` lifts the
+/// cap entirely.
+fn max_blocks_for(kws: &[Keyword]) -> usize {
+    if kws.contains(&Keyword::CanBlockAnyNumber) {
+        return usize::MAX;
+    }
+    1 + kws
+        .iter()
+        .filter_map(|k| match k {
+            Keyword::CanBlockAdditional(n) => Some(*n as usize),
+            _ => None,
+        })
+        .sum::<usize>()
+}
+
 impl GameState {
     /// True if `card` carries a `CanAttackIgnoringDefenderWhile` static whose
     /// condition currently holds — it may attack despite Defender
@@ -778,12 +794,20 @@ impl GameState {
 
         // Validate ALL assignments before mutating any state. Each blocker's
         // controller must equal the defender of the attacker it's blocking.
-        // A blocker may appear once: `block_map` is a single blocker→attacker
-        // mapping, so a duplicate would silently un-block the first attacker
-        // while keeping both Flanking/Bushido/Rampage deltas.
-        let mut seen_blockers = std::collections::HashSet::new();
+        // CR 509.1b — a creature blocks one attacker unless an effect lets it
+        // block more (`CanBlockAdditional` / `CanBlockAnyNumber`); count the
+        // merged set (already-declared blocks plus this batch) against the
+        // allowance, and reject a repeat of the same pair.
+        let mut batch_blocks: std::collections::HashMap<CardId, Vec<CardId>> =
+            std::collections::HashMap::new();
         for &(blocker_id, attacker_id) in &assignments {
-            if !seen_blockers.insert(blocker_id) || self.block_map.contains_key(&blocker_id) {
+            let taken = batch_blocks.entry(blocker_id).or_default();
+            if taken.contains(&attacker_id) || self.blocks(blocker_id, attacker_id) {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+            taken.push(attacker_id);
+            let total = taken.len() + self.attackers_blocked_by(blocker_id).len();
+            if total > max_blocks_for(kws_of(blocker_id)) {
                 return Err(GameError::CannotBlock(blocker_id));
             }
             let atk = self
@@ -1022,7 +1046,7 @@ impl GameState {
                     .iter()
                     .filter(|(_, aid)| *aid == atk.attacker)
                     .count()
-                    + self.block_map.values().filter(|&&aid| aid == atk.attacker).count();
+                    + self.blocker_count_of(atk.attacker);
                 if blocker_count == 1 {
                     return Err(GameError::MenaceRequiresTwoBlockers(atk.attacker));
                 }
@@ -1038,7 +1062,7 @@ impl GameState {
                         .iter()
                         .filter(|(_, aid)| *aid == atk.attacker)
                         .count()
-                        + self.block_map.values().filter(|&&aid| aid == atk.attacker).count();
+                        + self.blocker_count_of(atk.attacker);
                     if blocker_count > 0 && (blocker_count as u32) < *n {
                         return Err(GameError::MenaceRequiresTwoBlockers(atk.attacker));
                     }
@@ -1054,7 +1078,7 @@ impl GameState {
                     .iter()
                     .filter(|(_, aid)| *aid == atk.attacker)
                     .count()
-                    + self.block_map.values().filter(|&&aid| aid == atk.attacker).count();
+                    + self.blocker_count_of(atk.attacker);
                 if blocker_count > 1 {
                     return Err(GameError::CannotBeBlockedByMoreThanOne(atk.attacker));
                 }
@@ -1072,7 +1096,7 @@ impl GameState {
             if !kws_of(atk.attacker).contains(&Keyword::MustBeBlocked) {
                 continue;
             }
-            let already = self.block_map.values().any(|&aid| aid == atk.attacker);
+            let already = self.blocker_count_of(atk.attacker) > 0;
             let in_batch = assignments.iter().any(|(_, aid)| *aid == atk.attacker);
             if already || in_batch {
                 continue;
@@ -1089,7 +1113,7 @@ impl GameState {
                     && self.same_team(b.controller, defender_idx)
                     && !b.tapped
                     && !kws_of(b.id).contains(&Keyword::CantBlock)
-                    && !self.block_map.contains_key(&b.id)
+                    && !self.is_blocking(b.id)
                     && !assignments.iter().any(|(bid, _)| *bid == b.id)
                     && cp_of(b.id).is_some_and(|bcp| {
                         super::can_block_attacker_computed(
@@ -1127,7 +1151,7 @@ impl GameState {
                         )
                     })
                     // Able to block it but not assigned to it (here or earlier).
-                    && self.block_map.get(&b.id) != Some(&atk.attacker)
+                    && !self.blocks(b.id, atk.attacker)
                     && !assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == atk.attacker)
             });
             if unmet {
@@ -1162,7 +1186,7 @@ impl GameState {
             if !able {
                 continue;
             }
-            let assigned = self.block_map.get(&b.id) == Some(&required)
+            let assigned = self.blocks(b.id, required)
                 || assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == required);
             if !assigned {
                 return Err(GameError::MustBeBlockedIfAble(required));
@@ -1182,7 +1206,7 @@ impl GameState {
             {
                 continue;
             }
-            let already = self.block_map.contains_key(&b.id)
+            let already = self.is_blocking(b.id)
                 || assignments.iter().any(|(bid, _)| *bid == b.id);
             if already { continue; }
             // Could it have blocked any declared attacker?
@@ -1272,7 +1296,7 @@ impl GameState {
         self.blockers_declared = true;
         let mut events = vec![];
         for (blocker_id, attacker_id) in assignments {
-            self.block_map.insert(blocker_id, attacker_id);
+            self.add_block(blocker_id, attacker_id);
             if let Some(b) = self.battlefield_find_mut(blocker_id) {
                 b.blocked_this_turn = true;
             }
@@ -1306,11 +1330,9 @@ impl GameState {
         // CR 509.3g — emit `AttackerWentUnblocked` for each attacker
         // with no blockers assigned. Trigger source is the unblocked
         // attacker; consumers can read it via `Selector::TriggerSource`.
-        // The block_map maps blocker → attacker, so an attacker is
-        // unblocked iff no entry has it as a value.
         let mut frenzy_deltas: Vec<(CardId, i32)> = Vec::new();
         for atk in &self.attacking {
-            let blocked = self.block_map.values().any(|&aid| aid == atk.attacker);
+            let blocked = self.blocker_count_of(atk.attacker) > 0;
             if !blocked {
                 events.push(GameEvent::AttackerWentUnblocked { attacker: atk.attacker });
                 // CR 702.35 — Frenzy N: an unblocked attacker gets +N/+0.
@@ -1601,6 +1623,7 @@ impl GameState {
         &mut self,
         attacker_infos: &[AttackerInfo],
         computed: &[ComputedPermanent],
+        blocker_filter: &impl Fn(&[Keyword]) -> bool,
     ) -> bool {
         use crate::game::types::{CombatDecisionKind, PendingDecision, ResumeContext};
         // Reset the caches once when entering a new damage step (first-strike
@@ -1612,13 +1635,7 @@ impl GameState {
         }
         let active = self.active_player_idx;
         for atk in attacker_infos.iter().filter(|a| a.should_deal) {
-            let mut blocker_ids: Vec<CardId> = self
-                .block_map
-                .iter()
-                .filter(|(_, aid)| **aid == atk.id)
-                .map(|(&bid, _)| bid)
-                .collect();
-            blocker_ids.sort_by_key(|id| id.0);
+            let blocker_ids = self.blockers_of(atk.id);
             if blocker_ids.len() <= 1 {
                 continue;
             }
@@ -1689,7 +1706,98 @@ impl GameState {
                 self.combat_damage_assignment.insert(atk.id, split);
             }
         }
+
+        // CR 509.2 / 510.1e — the mirror image for a creature blocking several
+        // attackers: its controller (the defending player) orders those
+        // attackers and divides the blocker's damage among them. Cached in the
+        // same maps, keyed by the blocker's id — a creature is never both an
+        // attacker and a blocker in one combat, so the keyspaces don't collide.
+        let multi_blockers: Vec<CardId> = {
+            let mut v: Vec<CardId> = self
+                .block_map
+                .iter()
+                .filter(|(_, atks)| atks.len() > 1)
+                .map(|(&b, _)| b)
+                .collect();
+            v.sort_by_key(|id| id.0);
+            v
+        };
+        for bid in multi_blockers {
+            let Some(bcp) = computed.iter().find(|c| c.id == bid) else { continue };
+            if !blocker_filter(&bcp.keywords)
+                || bcp.keywords.contains(&Keyword::DealsNoCombatDamage)
+                || self.combat_damage_prevented_creatures.contains(&bid)
+                || self.combat_damage_prevented_for_dealer(bid)
+                || self.combat_damage_prevented_from(bid)
+            {
+                continue;
+            }
+            let assigner = bcp.controller;
+            let assigner_ui = self.players[assigner].wants_ui;
+            let deathtouch = bcp.keywords.contains(&Keyword::Deathtouch);
+            let total_power = combat_damage_value(bcp).max(0) as u32;
+
+            if !self.combat_damage_order.contains_key(&bid) {
+                let default_order = self.attackers_blocked_by(bid).to_vec();
+                let decision = self.combat_damage_order_decision(bid, &default_order);
+                if assigner_ui {
+                    self.pending_decision = Some(PendingDecision {
+                        decision,
+                        resume: ResumeContext::CombatDamage {
+                            player: assigner,
+                            attacker: bid,
+                            kind: CombatDecisionKind::Order,
+                        },
+                    });
+                    return true;
+                }
+                let answer = self.decider.decide(&decision);
+                let order = self.resolve_damage_order(&default_order, &answer);
+                self.combat_damage_order.insert(bid, order);
+            }
+            let order = self.combat_damage_order[&bid].clone();
+
+            if !self.combat_damage_assignment.contains_key(&bid) {
+                let lethals = self.combat_lethals(deathtouch, &order, computed);
+                // A blocker has no trample outlet: all its damage lands on the
+                // attackers it blocks, so the split is never partial.
+                if total_power == 0 {
+                    let split = self.default_damage_split(0, &lethals, false);
+                    self.combat_damage_assignment.insert(bid, split);
+                    continue;
+                }
+                let decision = self.assign_combat_damage_decision(bid, total_power, &lethals);
+                if assigner_ui {
+                    self.pending_decision = Some(PendingDecision {
+                        decision,
+                        resume: ResumeContext::CombatDamage {
+                            player: assigner,
+                            attacker: bid,
+                            kind: CombatDecisionKind::Assign,
+                        },
+                    });
+                    return true;
+                }
+                let answer = self.decider.decide(&decision);
+                let split = self.resolve_damage_assignment(total_power, &lethals, false, &answer);
+                self.combat_damage_assignment.insert(bid, split);
+            }
+        }
         false
+    }
+
+    /// CR 510.1e — the combat damage `blocker` assigns to `attacker` this
+    /// step. A creature blocking one attacker deals its whole power; a
+    /// multi-block divides it per the cached split (defaulting to lethal in
+    /// declaration order).
+    fn blocker_damage_to(&self, blocker: CardId, attacker: CardId, power: u32) -> u32 {
+        if self.attackers_blocked_by(blocker).len() <= 1 {
+            return power;
+        }
+        self.combat_damage_assignment
+            .get(&blocker)
+            .and_then(|split| split.iter().find(|(a, _)| *a == attacker).map(|(_, n)| *n))
+            .unwrap_or(0)
     }
 
     /// Lethal damage required for each blocker in `order` (its toughness, or 1
@@ -1732,13 +1840,13 @@ impl GameState {
         use crate::game::types::CombatDecisionKind;
         match kind {
             CombatDecisionKind::Order => {
-                let mut default_order: Vec<CardId> = self
-                    .block_map
-                    .iter()
-                    .filter(|(_, aid)| **aid == attacker)
-                    .map(|(&bid, _)| bid)
-                    .collect();
-                default_order.sort_by_key(|id| id.0);
+                // `attacker` is the damage source: an attacker ordering its
+                // blockers, or (CR 509.2) a multi-block blocker ordering the
+                // attackers it blocks.
+                let default_order = match self.attackers_blocked_by(attacker) {
+                    atks if atks.len() > 1 => atks.to_vec(),
+                    _ => self.blockers_of(attacker),
+                };
                 let order = self.resolve_damage_order(&default_order, answer);
                 self.combat_damage_order.insert(attacker, order);
             }
@@ -1759,7 +1867,9 @@ impl GameState {
                     power.max(0) as u32
                 };
                 let lethals = self.combat_lethals(deathtouch, &order, &computed);
-                let trample = atk_cp.is_some_and(|c| c.keywords.contains(&Keyword::Trample));
+                // A multi-block blocker (CR 510.1e) has no trample outlet.
+                let trample = self.attackers_blocked_by(attacker).len() <= 1
+                    && atk_cp.is_some_and(|c| c.keywords.contains(&Keyword::Trample));
                 let split = self.resolve_damage_assignment(total_power, &lethals, trample, answer);
                 self.combat_damage_assignment.insert(attacker, split);
             }
@@ -1837,7 +1947,7 @@ impl GameState {
         // proceeds once every choice is settled). The choices are cached in
         // `combat_damage_order` / `combat_damage_assignment` and read in the
         // apply phase below.
-        if self.gather_combat_damage_decisions(&attacker_infos, computed) {
+        if self.gather_combat_damage_decisions(&attacker_infos, computed, &blocker_filter) {
             return Ok(vec![]);
         }
 
@@ -1877,13 +1987,7 @@ impl GameState {
             // choice was gathered in PHASE 1 and cached. Start from the
             // deterministic default (CardId = declaration-order proxy) and use
             // the cached order when present.
-            let mut blocker_ids: Vec<CardId> = self
-                .block_map
-                .iter()
-                .filter(|(_, aid)| **aid == atk.id)
-                .map(|(&bid, _)| bid)
-                .collect();
-            blocker_ids.sort_by_key(|id| id.0);
+            let mut blocker_ids = self.blockers_of(atk.id);
             if blocker_ids.len() > 1
                 && let Some(order) = self.combat_damage_order.get(&atk.id)
             {
@@ -2117,7 +2221,13 @@ impl GameState {
                         std::collections::HashMap::new();
                     for &bid in &dealing_blocker_ids {
                         let Some(bc) = computed_of(bid) else { continue };
-                        let power = combat_damage_value(bc).max(0) as u32;
+                        // CR 510.1e — a multi-block blocker only assigns this
+                        // attacker its share of the divided damage.
+                        let power = self.blocker_damage_to(
+                            bid,
+                            atk.id,
+                            combat_damage_value(bc).max(0) as u32,
+                        );
                         if power == 0 {
                             continue;
                         }

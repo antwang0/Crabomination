@@ -1430,7 +1430,7 @@ mod tests {
             .find(|c| !c.splash.is_empty() && c.splash.contains(&Color::Green))
             .expect("a green-splash candidate exists");
         assert!(
-            splashy.main.iter().any(|&f| f as usize == catalog::craw_wurm as usize),
+            splashy.main.iter().any(|&f| f as *const () == catalog::craw_wurm as *const ()),
             "the splash candidate actually plays the green card",
         );
         assert!(

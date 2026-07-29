@@ -1309,7 +1309,7 @@ fn dark_endurance_blocking_discount_and_pump() {
     let idle = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let spell = crabomination::card::CardInstance::new(g.next_id(), catalog::dark_endurance(), 0);
     assert_eq!(cost_reduction_for_spell(&g, 0, &spell, Some(&Target::Permanent(idle))), 0);
-    g.block_map.insert(blocker, attacker);
+    g.set_block_map([(blocker, attacker)]);
     assert_eq!(cost_reduction_for_spell(&g, 0, &spell, Some(&Target::Permanent(blocker))), 1,
         "{{1}} off vs a blocking creature");
     resolve_targeted(&mut g, 0, catalog::dark_endurance().effect, &[blocker]);

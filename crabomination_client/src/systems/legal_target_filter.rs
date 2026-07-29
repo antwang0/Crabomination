@@ -181,7 +181,7 @@ fn evaluate_permanent(
         }
         R::WithCounter(k) => perm.counters.iter().any(|(kk, n)| kk == k && *n > 0),
         R::IsAttacking => perm.attacking,
-        R::IsBlocking => perm.blocking_attacker.is_some(),
+        R::IsBlocking => !perm.blocking_attackers.is_empty(),
         // "target that was dealt damage this turn" (Needle Drop) — precise
         // now that the view carries the flag instead of highlighting all.
         R::DealtDamageThisTurn => perm.dealt_damage_this_turn,

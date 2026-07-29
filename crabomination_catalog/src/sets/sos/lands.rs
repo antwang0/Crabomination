@@ -102,7 +102,6 @@ pub fn spectacle_summit() -> CardDefinition {
 ///   gate as the ability's activation condition.
 pub fn great_hall_of_the_biblioplex() -> CardDefinition {
     use super::super::tap_add_colorless;
-    use crate::card::Supertype;
     use crate::effect::{ActivatedAbility, ManaPayload};
     use crate::mana::SpendRestriction;
     // Pure mana ability (`AddMana` only) → resolves immediately without

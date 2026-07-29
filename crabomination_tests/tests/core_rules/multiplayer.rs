@@ -589,7 +589,7 @@ fn two_v_two_teammate_can_block_for_partner() {
         .expect("seat 3 (teammate of attacked seat 2) may block");
 
     assert_eq!(
-        g.block_map.get(&blocker).copied(),
+        g.attackers_blocked_by(blocker).first().copied(),
         Some(attacker),
         "blocker registered against the attacker",
     );

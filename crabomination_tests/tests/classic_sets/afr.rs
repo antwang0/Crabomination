@@ -181,7 +181,7 @@ fn cr_509_4_flash_foliage_blocks_the_attacker() {
     drain_stack(&mut g);
     let sap = g.battlefield.iter().find(|c| c.definition.name == "Saproling")
         .expect("Saproling minted");
-    assert_eq!(g.block_map.get(&sap.id), Some(&attacker), "token is blocking the attacker");
+    assert_eq!(g.attackers_blocked_by(sap.id), [attacker], "token is blocking the attacker");
     assert!(g.blocked_attackers().contains(&attacker), "attacker is blocked");
     // The bear is blocked by a 1/1: combat kills the Saproling, no damage to P1.
     let life = g.players[1].life;

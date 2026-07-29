@@ -953,6 +953,13 @@ pub enum Keyword {
     /// greater" (Ironclaw Orcs, Ironclaw Buzzardiers). Enforced against the
     /// attacker's *computed* power in `can_block_attacker_computed`.
     CantBlockPowerAtLeast(u32),
+    /// CR 509.1b — "This creature can block an additional N creatures each
+    /// combat" (Knight of Sorrows, Sunweb). Raises the blocker's per-combat
+    /// assignment cap in `declare_blockers`; instances stack.
+    CanBlockAdditional(u32),
+    /// CR 509.1b — "This creature can block any number of creatures"
+    /// (Guardian of the Gateless, Valor Made Real).
+    CanBlockAnyNumber,
     /// "This creature can't attack." A static restriction on the bearer
     /// (or an Aura/effect grant — Pacifism, Faith's Fetters, Bound in
     /// Silence). Enforced from the *computed* keyword set in

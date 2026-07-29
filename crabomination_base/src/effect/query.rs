@@ -204,6 +204,7 @@ impl Effect {
         }
         match self {
             Effect::Noop
+            | Effect::ExileAnyNumberUntilSourceLeaves { .. }
             | Effect::AdvanceClassLevel
             | Effect::SignalTheClans
             | Effect::NivMizzetReveal
@@ -2113,7 +2114,6 @@ impl Effect {
                 },
                 Effect::MayDo { body, .. }
                 | Effect::CapTargetsAtX { body }
-            | Effect::CapTargetsAtX { body }
                 | Effect::MayPayX { body, .. }
                 | Effect::MayPay { body, .. }
                 | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),

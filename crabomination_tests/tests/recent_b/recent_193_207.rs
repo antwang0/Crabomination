@@ -1514,7 +1514,7 @@ mod recent207 {
         let attacker = g.add_card_to_battlefield(1, catalog::mahamoti_djinn()); // 5/6
         let prog = g.add_card_to_battlefield(0, catalog::progenitus()); // 10/10
         g.attacking = vec![Attack { attacker, target: AttackTarget::Player(0) }];
-        g.block_map.insert(prog, attacker);
+        g.set_block_map([(prog, attacker)]);
         g.step = TurnStep::CombatDamage;
         g.active_player_idx = 1;
         g.resolve_combat().expect("combat damage");

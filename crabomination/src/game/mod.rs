@@ -311,8 +311,11 @@ pub struct GameState {
     /// Attackers declared this combat, each with the player or planeswalker
     /// it is attacking.
     pub attacking: Vec<Attack>,
-    /// Blocker → attacker mapping for the current combat.
-    pub block_map: HashMap<CardId, CardId>,
+    /// Blocker → the attackers it blocks this combat (CR 509.1b). Usually one
+    /// entry; a creature with `CanBlockAdditional`/`CanBlockAnyNumber` blocks
+    /// several. Declaration order within the Vec is the defending player's
+    /// damage-assignment default (CR 509.2).
+    pub block_map: HashMap<CardId, Vec<CardId>>,
     /// CR 510.1c — the active player's chosen blocker order for each attacker
     /// that has multiple blockers, gathered (and cached) before combat damage
     /// is applied so the choice can suspend for a `wants_ui` player. Read by
@@ -5762,6 +5765,44 @@ impl GameState {
                 });
             }
         }
+        // "This creature gets +P/+T for each [thing]" where the count is an
+        // arbitrary `Value` (`StaticEffect::PumpSelfByValue`) — evaluated live
+        // against the source, then emitted as a layer-7 self-effect.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpSelfByValue {
+                    amount,
+                    per_power,
+                    per_toughness,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let mut ctx = crate::game::effects::EffectContext::for_spell(
+                    card.controller,
+                    None,
+                    0,
+                    0,
+                );
+                ctx.source = Some(card.id);
+                let count = self.evaluate_value(amount, &ctx).max(0);
+                if count == 0 {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(
+                        count * per_power,
+                        count * per_toughness,
+                    ),
+                });
+            }
+        }
         // "[applies_to] you control get +P/+T for each [count_filter] you
         // control" (`StaticEffect::PumpTeamByControlledPermanents`) — count the
         // controller's matching permanents (plus graveyard cards when
@@ -5995,15 +6036,8 @@ impl GameState {
                     matches!(applies_to, crate::effect::Selector::CreaturesInCombatWith(inner)
                         if matches!(inner.as_ref(), crate::effect::Selector::This))
                         .then(|| {
-                            let mut ids = Vec::new();
-                            if let Some(&aid) = self.block_map.get(&card.id) {
-                                ids.push(aid);
-                            }
-                            for (&bid, &aid) in &self.block_map {
-                                if aid == card.id {
-                                    ids.push(bid);
-                                }
-                            }
+                            let mut ids = self.attackers_blocked_by(card.id).to_vec();
+                            ids.extend(self.blockers_of(card.id));
                             AffectedPermanents::Specific(ids)
                         })
                 });
@@ -7652,8 +7686,51 @@ impl GameState {
     // restore otherwise-private fields. They aren't intended for general
     // callers; the snapshot module guards round-trip correctness with tests.
 
-    pub fn block_map(&self) -> &HashMap<CardId, CardId> {
+    pub fn block_map(&self) -> &HashMap<CardId, Vec<CardId>> {
         &self.block_map
+    }
+
+    // ── Block-map queries (CR 509.1b multi-block aware) ───────────────────────
+
+    /// The creatures blocking `attacker`, in ascending id order (the
+    /// declaration-order proxy used as the damage-order default).
+    pub fn blockers_of(&self, attacker: CardId) -> Vec<CardId> {
+        let mut ids: Vec<CardId> = self
+            .block_map
+            .iter()
+            .filter(|(_, atks)| atks.contains(&attacker))
+            .map(|(&bid, _)| bid)
+            .collect();
+        ids.sort_by_key(|id| id.0);
+        ids
+    }
+
+    /// How many creatures are blocking `attacker`.
+    pub fn blocker_count_of(&self, attacker: CardId) -> usize {
+        self.block_map.values().filter(|atks| atks.contains(&attacker)).count()
+    }
+
+    /// The attackers `blocker` is blocking, in declaration order.
+    pub fn attackers_blocked_by(&self, blocker: CardId) -> &[CardId] {
+        self.block_map.get(&blocker).map(|v| v.as_slice()).unwrap_or(&[])
+    }
+
+    /// Is `id` blocking anything this combat?
+    pub fn is_blocking(&self, id: CardId) -> bool {
+        self.block_map.contains_key(&id)
+    }
+
+    /// Is `blocker` blocking `attacker`?
+    pub fn blocks(&self, blocker: CardId, attacker: CardId) -> bool {
+        self.attackers_blocked_by(blocker).contains(&attacker)
+    }
+
+    /// Record `blocker` as blocking `attacker` (idempotent, order-preserving).
+    pub(crate) fn add_block(&mut self, blocker: CardId, attacker: CardId) {
+        let entry = self.block_map.entry(blocker).or_default();
+        if !entry.contains(&attacker) {
+            entry.push(attacker);
+        }
     }
 
     pub fn blockers_declared(&self) -> bool {
@@ -7671,8 +7748,13 @@ impl GameState {
     pub fn set_attacking(&mut self, attacks: Vec<Attack>) {
         self.attacking = attacks;
     }
-    pub fn set_block_map(&mut self, map: HashMap<CardId, CardId>) {
-        self.block_map = map;
+    /// Restore from a flat (blocker, attacker) list — the snapshot wire form
+    /// and the shape test helpers build.
+    pub fn set_block_map(&mut self, map: impl IntoIterator<Item = (CardId, CardId)>) {
+        self.block_map.clear();
+        for (b, a) in map {
+            self.add_block(b, a);
+        }
     }
     pub fn set_blockers_declared(&mut self, value: bool) {
         self.blockers_declared = value;
@@ -7696,7 +7778,13 @@ impl GameState {
     }
 
     pub fn block_map_snapshot(&self) -> Vec<(CardId, CardId)> {
-        self.block_map.iter().map(|(b, a)| (*b, *a)).collect()
+        let mut out: Vec<(CardId, CardId)> = self
+            .block_map
+            .iter()
+            .flat_map(|(&b, atks)| atks.iter().map(move |&a| (b, a)))
+            .collect();
+        out.sort_by_key(|(b, a)| (b.0, a.0));
+        out
     }
 
     /// Look up the attack record for a given attacker id, if any.
@@ -9548,8 +9636,7 @@ impl GameState {
         }
         // CR 702.49a — "unblocked attacker": once blocked it stays blocked
         // for the combat even if its blockers have since left (CR 510.1c).
-        if self.block_map.values().any(|&a| a == returning)
-            || self.blocked_attackers.contains(&returning)
+        if self.blocker_count_of(returning) > 0 || self.blocked_attackers.contains(&returning)
         {
             return Err(GameError::InvalidTarget); // blocked — illegal
         }
@@ -11243,7 +11330,6 @@ impl GameState {
                     match t {
                         Target::Permanent(cid) => avoid.push(cid),
                         Target::Player(pl) => used_players.push(pl),
-                        _ => {}
                     }
                     chosen.push(t);
                 }
@@ -14555,6 +14641,9 @@ fn static_effect_to_effects(
             // PumpSelfByControlledPermanents — needs a live battlefield
             // count; resolved in `gather_continuous_effects`.
             | StaticEffect::PumpSelfByControlledPermanents { .. }
+            // PumpSelfByValue — needs live Value evaluation; resolved in
+            // `gather_continuous_effects`.
+            | StaticEffect::PumpSelfByValue { .. }
             // PumpTeamByControlledPermanents — team anthem scaled by a live
             // controlled/graveyard count; resolved in `gather_continuous_effects`.
             | StaticEffect::PumpTeamByControlledPermanents { .. }

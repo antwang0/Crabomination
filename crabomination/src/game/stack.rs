@@ -2646,7 +2646,10 @@ impl GameState {
     pub(crate) fn remove_permanent_from_combat(&mut self, id: CardId) {
         self.attacking.retain(|atk| atk.attacker != id);
         self.block_map.remove(&id);
-        self.block_map.retain(|_, atk| *atk != id);
+        self.block_map.retain(|_, atks| {
+            atks.retain(|a| *a != id);
+            !atks.is_empty()
+        });
     }
 
     /// CR 800.4a — handle a player leaving the game: all cards/tokens they
@@ -3599,8 +3602,11 @@ impl GameState {
     /// attacker values).
     pub(crate) fn remove_from_combat(&mut self, id: CardId) {
         self.attacking.retain(|a| a.attacker != id);
-        self.block_map
-            .retain(|blocker, attacker| *blocker != id && *attacker != id);
+        self.block_map.remove(&id);
+        self.block_map.retain(|_, atks| {
+            atks.retain(|a| *a != id);
+            !atks.is_empty()
+        });
     }
 
     /// **Raw** battlefield→graveyard move: zone change + replacements only.

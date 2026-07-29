@@ -4988,7 +4988,7 @@ impl GameState {
                     events,
                 )?;
                 let Some(token) = self.last_created_token else { return Ok(()) };
-                self.block_map.insert(token, attacker);
+                self.add_block(token, attacker);
                 if !self.blocked_attackers.contains(&attacker) {
                     self.blocked_attackers.push(attacker);
                 }
@@ -5066,7 +5066,7 @@ impl GameState {
             }
 
             Effect::Fateseal { who, amount } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 // CR 701.29 — look at the top N of the targeted opponent's
                 // library; the controller may put any of them on the bottom.
                 let Some(opp) = self.resolve_player(who, ctx) else { return Ok(()); };
@@ -5108,11 +5108,10 @@ impl GameState {
             }
 
             Effect::DigToHandLoseLife { count, life_per_card } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
-                let per = self.evaluate_value(life_per_card, ctx).max(0);
                 let top: Vec<(CardId, String)> = self.players[p]
                     .library
                     .iter()
@@ -5121,11 +5120,8 @@ impl GameState {
                     .collect();
                 if top.is_empty() { return Ok(()); }
                 let source = ctx.source.unwrap_or(CardId(0));
-                // Controller chooses any subset to keep (a `wants_ui` seat is
-                // served the same inline pick; a dedicated suspend path is a
-                // TODO.md follow-up).
-                // Auto default: take everything the life budget allows
-                // (keep a buffer of 5); UI / scripted picks authoritative.
+                // Auto default: take everything the life budget allows (keep a
+                // buffer of 5); UI / scripted picks are authoritative.
                 let per = self.evaluate_value(life_per_card, ctx).max(0);
                 let affordable = if per > 0 {
                     (((self.players[ctx.controller].life - 5).max(0)) / per) as usize
@@ -6138,7 +6134,7 @@ impl GameState {
             }
 
             Effect::ExileAnyNumberFromGraveyards { filter } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 // Gather every graveyard card matching `filter`, across all
                 // players. Each is offered as a `ChooseCards` candidate.
                 let mut candidates: Vec<(CardId, String)> = Vec::new();
@@ -6192,7 +6188,7 @@ impl GameState {
             }
 
             Effect::MayExileFromYourGraveyard { filter, then } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 let p = ctx.controller;
                 let candidates: Vec<(CardId, String)> = self.players[p]
                     .graveyard
@@ -6521,6 +6517,64 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileAnyNumberUntilSourceLeaves { filter } => {
+                // CR 603.6e — controller picks any subset of their matching
+                // permanents (other than the source); each is exiled linked to
+                // the source and returns when it leaves. Lumbering Battlement.
+                let Some(source) = ctx.source else { return Ok(()) };
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.id != source
+                            && c.controller == p
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                ctx.source,
+                            )
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let max = candidates.len() as u32;
+                // Auto default: exile everything (the source's payoff scales
+                // with the count and the bodies come back).
+                let auto: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                let Some(chosen) = self.choose_up_to_cards(
+                    p,
+                    "Exile any number of creatures you control?".to_string(),
+                    source,
+                    candidates,
+                    max,
+                    effect,
+                    auto,
+                ) else {
+                    return Ok(());
+                };
+                for cid in chosen {
+                    if self.battlefield_find(cid).is_none() {
+                        continue;
+                    }
+                    self.remove_from_battlefield_to_exile(cid);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_by = Some(crate::card::ExileLink {
+                            source,
+                            return_to: crate::card::ExileReturnZone::Battlefield,
+                            monarch_guard: None,
+                        });
+                        // "for each card exiled with it" (Value::CardsExiledWithSourceCount).
+                        c.exiled_with = Some(source);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileUntilOpponentMonarch { what } => {
                 // CR 724 — exile until the monarchy leaves the controller
                 // (Palace Jailer). Guarded by the controller seat rather than
@@ -6616,7 +6670,7 @@ impl GameState {
             }
 
             Effect::TapAnyNumberThenPumpPerTapped { filter, power, toughness } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 let seat = ctx.controller;
                 let source = ctx.source.unwrap_or(CardId(0));
                 let candidates: Vec<(CardId, String)> = self
@@ -6818,7 +6872,7 @@ impl GameState {
             }
 
             Effect::ReturnGraveyardCreaturesUpToTotalPower { max_total } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
                 let cap = self.evaluate_value(max_total, ctx).max(0);
@@ -6856,7 +6910,7 @@ impl GameState {
             }
 
             Effect::ReturnGraveyardCreaturesUpToTotalManaValue { max_total, max_count, counters } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
                 let cap = self.evaluate_value(max_total, ctx).max(0);
@@ -6903,7 +6957,7 @@ impl GameState {
             }
 
             Effect::CommandTheDreadhorde => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
                 // Creature / planeswalker cards across every graveyard.
@@ -6979,7 +7033,7 @@ impl GameState {
             }
 
             Effect::SearchLibraryCreaturesUpToTotalManaValue { max_total } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 use crate::effect::ZoneDest;
                 use rand::seq::SliceRandom;
                 let p = ctx.controller;
@@ -7090,7 +7144,7 @@ impl GameState {
             }
 
             Effect::ReturnGraveyardPermanentsDifferentNames => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
                 let candidates: Vec<(CardId, String)> = self.players[p]
@@ -7126,7 +7180,7 @@ impl GameState {
             }
 
             Effect::ReturnGraveyardCardsToHand { filter, max } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
                 let n = self.evaluate_value(max, ctx).max(0) as u32;
@@ -7173,7 +7227,7 @@ impl GameState {
             }
 
             Effect::ShuffleGraveyardCardsIntoLibrary { who, filter, max } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let n = self.evaluate_value(max, ctx).max(0) as u32;
                 if n == 0 { return Ok(()); }
@@ -7222,7 +7276,7 @@ impl GameState {
             }
 
             Effect::LookTopNDeployPermanentsRestToHand { count } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -10932,7 +10986,7 @@ impl GameState {
                 // path returns the weakest N ("up to" choosers may take 0 —
                 // approximated by still auto-picking, since declining is
                 // rarely right for the affected player's own choice).
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
                     return Ok(());
@@ -11257,7 +11311,7 @@ impl GameState {
             }
 
             Effect::PutFromHandOntoBattlefield { who, filter, count, tapped, haste, sacrifice_eot } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let max = self.evaluate_value(count, ctx).max(0) as u32;
                 if max == 0 { return Ok(()); }
@@ -11371,7 +11425,7 @@ impl GameState {
             }
 
             Effect::DeployCreatureFromHandAttacking { filter, return_to_hand_eot } => {
-                use crate::decision::{Decision, DecisionAnswer};
+                
                 use crate::game::types::{Attack, AttackTarget};
                 // Only meaningful mid-combat (the source is attacking).
                 if self.attacking.is_empty() {
@@ -19348,7 +19402,7 @@ impl GameState {
                 .collect(),
             Selector::BlockedAttacker => ctx
                 .source
-                .and_then(|blocker| self.block_map.get(&blocker).copied())
+                .and_then(|blocker| self.attackers_blocked_by(blocker).first().copied())
                 .filter(|aid| self.battlefield.iter().any(|c| c.id == *aid))
                 .map(EntityRef::Permanent)
                 .into_iter()
@@ -19386,10 +19440,8 @@ impl GameState {
             Selector::BlockingCreatures => ctx
                 .source
                 .map(|attacker| {
-                    self.block_map
-                        .iter()
-                        .filter(|(_, aid)| **aid == attacker)
-                        .map(|(bid, _)| *bid)
+                    self.blockers_of(attacker)
+                        .into_iter()
                         .filter(|bid| self.battlefield.iter().any(|c| c.id == *bid))
                         .map(EntityRef::Permanent)
                         .collect()
@@ -19401,17 +19453,10 @@ impl GameState {
                 else {
                     return vec![];
                 };
-                let mut out = Vec::new();
-                // If the subject is a blocker, the attacker it blocks.
-                if let Some(&aid) = self.block_map.get(&subj) {
-                    out.push(aid);
-                }
-                // Creatures blocking the subject (subject as attacker).
-                for (&bid, &aid) in &self.block_map {
-                    if aid == subj {
-                        out.push(bid);
-                    }
-                }
+                // The attackers the subject blocks, plus the creatures
+                // blocking the subject.
+                let mut out = self.attackers_blocked_by(subj).to_vec();
+                out.extend(self.blockers_of(subj));
                 out.into_iter()
                     .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
                     .map(EntityRef::Permanent)

@@ -70,6 +70,15 @@ pub enum StaticEffect {
         per_power: i32,
         per_toughness: i32,
     },
+    /// "This creature gets +`per_power`/+`per_toughness` for each [thing]",
+    /// where the count is an arbitrary `Value` evaluated live against the
+    /// source (Lumbering Battlement's `CardsExiledWithSourceCount`). The
+    /// general sibling of `PumpSelfByControlledPermanents`.
+    PumpSelfByValue {
+        amount: Value,
+        per_power: i32,
+        per_toughness: i32,
+    },
     /// "As long as [condition], this creature gets +P/+T and has [keyword]."
     /// A conditional self-anthem gated by a `Predicate` evaluated live (with
     /// the source/controller as context) on every layer recompute. Powers

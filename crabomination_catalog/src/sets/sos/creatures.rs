@@ -804,20 +804,8 @@ pub fn summoned_dromedary() -> CardDefinition {
 /// "When this creature enters, look at the top X cards of your library,
 /// where X is the number of creatures you control. Put one of those
 /// cards into your hand and the rest into your graveyard."
-///
-/// Approximation: implemented via `Effect::RevealUntilFind` with a
-/// `Creature` filter and `cap = CountOf(EachPermanent(Creature &
-/// ControlledByYou))`. The found creature card goes to your hand; cards
-/// revealed *before* it are milled. Per-card semantics match the
-/// printed card most of the time (when at least one card in the top X
-/// is a creature). The deviation: cards *after* the found creature
-/// stay on top of your library instead of going to the graveyard. This
-/// is a small fidelity gap but doesn't affect the immediate-gain side
-/// (a creature in hand) — and the typical case (X = 2-4 creatures and
-/// the top card is the chosen creature) matches the printed result.
 pub fn stirring_honormancer() -> CardDefinition {
     use crate::card::SelectionRequirement;
-    use crate::effect::ZoneDest;
     CardDefinition {
         name: "Stirring Honormancer",
         // {2}{W}{W/B}{B}: the {W/B} pip is a real `ManaSymbol::Hybrid`
@@ -3112,17 +3100,11 @@ pub fn abstract_paintmage() -> CardDefinition {
 /// X cards of your library. Put one of them into your hand and the rest
 /// on the bottom of your library in a random order."
 ///
-/// Now wired (push XVI): the `SpellCast` filter uses the new
-/// `Predicate::CastSpellHasX` primitive; the body approximates the
-/// "look X, pick 1, rest to bottom" shape with `RevealUntilFind { find:
-/// Any, cap: XFromCost, to: Hand }`. The trigger inherits the cast
-/// spell's X via `StackItem::Trigger.x_value`, so the cap reflects the
-/// real X paid. Misses go to the bottom of the library in a random
-/// order (`miss_dest: RevealMissDest::BottomRandom`), matching the
-/// printed "rest on the bottom of your library in a random order".
+/// The `Predicate::CastSpellHasX` filter fires the trigger, which inherits
+/// the cast spell's X via `StackItem::Trigger.x_value`, so the look count
+/// reflects the real X paid.
 pub fn geometers_arthropod() -> CardDefinition {
     use crate::effect::shortcut::cast_has_x_trigger;
-    use crate::effect::ZoneDest;
     use crate::mana::{g, u};
     CardDefinition {
         name: "Geometer's Arthropod",
