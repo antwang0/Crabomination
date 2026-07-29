@@ -1045,15 +1045,55 @@ impl GameState {
             .collect()
     }
 
-    /// Cards in `caster`'s hand they could Plot right now (CR 702.170): the
-    /// card has a `plot_cost` and paying it at sorcery speed is legal.
+    /// Cards `caster` could Plot right now (CR 702.170): a hand card with a
+    /// `plot_cost`, plus their library's top card while a
+    /// `MayPlotFromLibraryTop` grant is out (Fblthp). Paying at sorcery speed
+    /// must be legal.
     fn plottable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         self.players[caster]
             .hand
             .iter()
             .filter(|c| c.definition.plot_cost.is_some())
             .map(|c| c.id)
+            .chain(
+                self.may_plot_from_library_top(caster)
+                    .then(|| self.players[caster].library.first().map(|c| c.id))
+                    .flatten(),
+            )
             .filter(|&id| Self::would_accept_on(template, GameAction::Plot { card_id: id }))
+            .collect()
+    }
+
+    /// CR 702.170d — plotted cards in `caster`'s exile they can cast for free
+    /// right now (a later turn, sorcery speed).
+    fn castable_plotted_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.exile
+            .iter()
+            .filter(|c| c.owner == caster && self.plotted_cards.contains(&c.id))
+            .map(|c| c.id)
+            .filter(|&id| {
+                let (target, additional_targets) = template
+                    .auto_targets_for_effect_all_slots(
+                        &template
+                            .exile
+                            .iter()
+                            .find(|c| c.id == id)
+                            .map(|c| c.definition.effect.clone())
+                            .unwrap_or(crate::effect::Effect::Noop),
+                        caster,
+                        None,
+                    );
+                Self::would_accept_on(
+                    template,
+                    GameAction::CastPlotted {
+                        card_id: id,
+                        target,
+                        additional_targets,
+                        mode: None,
+                        x_value: None,
+                    },
+                )
+            })
             .collect()
     }
 
@@ -1214,6 +1254,7 @@ impl GameState {
             suspendable: self.suspendable_hand_cards_on(&template, seat),
             foretellable: self.foretellable_hand_cards_on(&template, seat),
             plottable: self.plottable_hand_cards_on(&template, seat),
+            castable_plotted: self.castable_plotted_on(&template, seat),
             adventurable: self.adventurable_hand_cards_on(&template, seat),
             omenable: self.omenable_hand_cards_on(&template, seat),
             splittable_right: self.splittable_right_hand_cards_on(&template, seat),

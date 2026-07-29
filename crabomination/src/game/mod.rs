@@ -194,6 +194,8 @@ pub struct HandAffordances {
     pub suspendable: Vec<CardId>,
     pub foretellable: Vec<CardId>,
     pub plottable: Vec<CardId>,
+    /// CR 702.170d — plotted cards in exile castable for free right now.
+    pub castable_plotted: Vec<CardId>,
     pub adventurable: Vec<CardId>,
     /// CR 702.183 — hand cards with an Omen half castable right now.
     pub omenable: Vec<CardId>,

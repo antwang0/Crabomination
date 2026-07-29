@@ -266,6 +266,7 @@ mod tests {
             suspendable_hand: vec![],
             foretellable_hand: vec![],
             plottable_hand: vec![],
+            castable_plotted: vec![],
             adventurable_hand: vec![],
             omenable_hand: vec![],
             splittable_right_hand: vec![],

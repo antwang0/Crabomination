@@ -108,7 +108,11 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                 decision: (viewer == Some(acting)).then(|| (&pd.decision).into()),
             }
         }),
-        exile: state.exile.iter().map(|c| exile_entry(c, viewer)).collect(),
+        exile: state
+            .exile
+            .iter()
+            .map(|c| exile_entry(c, viewer, state.plotted_cards.contains(&c.id)))
+            .collect(),
         game_over: state.game_over,
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
         combat_damage_prevented_this_turn: state.prevent_combat_damage_this_turn,
@@ -140,6 +144,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         suspendable_hand: affordances.suspendable,
         foretellable_hand: affordances.foretellable,
         plottable_hand: affordances.plottable,
+        castable_plotted: affordances.castable_plotted,
         adventurable_hand: affordances.adventurable,
         omenable_hand: affordances.omenable,
         prototypable_hand: affordances.prototypable,
@@ -398,7 +403,7 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
     })
 }
 
-fn exile_entry(card: &CardInstance, viewer: Option<usize>) -> ExileCardView {
+fn exile_entry(card: &CardInstance, viewer: Option<usize>, plotted: bool) -> ExileCardView {
     // CR 708 — a face-down exiled card (hideaway, foretell) is hidden from
     // everyone but its controller: mask the identity.
     let hidden = card.face_down && viewer != Some(card.controller);
@@ -419,6 +424,7 @@ fn exile_entry(card: &CardInstance, viewer: Option<usize>) -> ExileCardView {
         exiled_by: card.exiled_by.map(|l| l.source),
         encoded_on: card.encoded_on,
         face_down: card.face_down,
+        plotted,
     }
 }
 
@@ -2321,6 +2327,34 @@ mod tests {
         g.remove_from_battlefield_to_graveyard_raw(b);
         let view = project(&g, 0);
         assert_eq!(view.permanents_to_graveyard_this_turn, 2);
+    }
+
+    #[test]
+    fn project_flags_plotted_exile_and_its_castability() {
+        // CR 702.170d — a card plotted this turn is badged but not yet
+        // castable; on a later turn it joins `castable_plotted`.
+        let mut g = two_player_game();
+        g.step = crate::game::TurnStep::PreCombatMain;
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        let ctx = crate::game::effects::EffectContext::for_spell(
+            0,
+            Some(crate::game::types::Target::Permanent(bolt)),
+            0,
+            0,
+        );
+        g.resolve_effect(
+            &crate::effect::Effect::Move {
+                what: crate::effect::Selector::Target(0),
+                to: crate::effect::ZoneDest::ExilePlotted,
+            },
+            &ctx,
+        )
+        .expect("plot it");
+        let view = project(&g, 0);
+        assert!(view.exile.iter().any(|c| c.id == bolt && c.plotted));
+        assert!(view.castable_plotted.is_empty(), "not the turn it was plotted");
+        g.plotted_this_turn.clear();
+        assert_eq!(project(&g, 0).castable_plotted, vec![bolt]);
     }
 
     #[test]

@@ -1522,6 +1522,14 @@ pub fn exile_browser(
                     None => format!("May play ({who})"),
                 });
             }
+            if c.plotted {
+                // CR 702.170d — free sorcery-speed cast on a later turn.
+                badges.push(if cv.castable_plotted.contains(&c.id) {
+                    "Plotted — castable now".to_string()
+                } else {
+                    "Plotted".to_string()
+                });
+            }
             if c.encoded_on.is_some() {
                 badges.push("Cipher: encoded".to_string());
             }

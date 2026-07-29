@@ -405,6 +405,10 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub plottable_hand: Vec<CardId>,
+    /// CR 702.170d — plotted cards in exile the viewer can cast for free right
+    /// now (a later turn than the one they were plotted, sorcery speed).
+    #[serde(default)]
+    pub castable_plotted: Vec<CardId>,
     /// CardIds in the viewer's hand with an Adventure half they could cast
     /// right now (CR 715). Lets the client offer the "cast the Adventure"
     /// affordance distinct from the plain creature cast. Empty off-priority.
@@ -1240,6 +1244,11 @@ pub struct ExileCardView {
     /// card's controller.
     #[serde(default)]
     pub face_down: bool,
+    /// CR 702.170 — this exiled card is plotted, so its owner may cast it for
+    /// free as a sorcery on a later turn. Pair with
+    /// `ClientView.castable_plotted` for "castable right now".
+    #[serde(default)]
+    pub plotted: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
