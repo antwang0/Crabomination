@@ -1989,3 +1989,68 @@ pub fn avarice_amulet() -> CardDefinition {
         },
     )
 }
+
+/// Kapsho Kitefins — {4}{U}{U} 3/3 flier. Any creature you control entering
+/// taps one of theirs.
+pub fn kapsho_kitefins() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+            effect: Effect::Tap {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            },
+        }],
+        ..creature(
+            "Kapsho Kitefins",
+            cost(&[generic(4), u(), u()]),
+            3,
+            3,
+            vec![CreatureType::Fish],
+            vec![Keyword::Flying],
+        )
+    }
+}
+
+/// Spirit Bonds — {1}{W} Enchantment. Pay {W} when a nontoken creature enters
+/// for a Spirit; sacrifice a Spirit to make a non-Spirit indestructible.
+pub fn spirit_bonds() -> CardDefinition {
+    CardDefinition {
+        name: "Spirit Bonds",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::NotToken),
+                }),
+            effect: Effect::MayPay {
+                description: "Pay {W} to create a 1/1 Spirit?".into(),
+                mana_cost: cost(&[w()]),
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: spirit_token(),
+                }),
+                else_: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            sac_other_filter: Some((R::HasCreatureType(CreatureType::Spirit), 1)),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    R::Creature.and(R::HasCreatureType(CreatureType::Spirit).negate()),
+                ),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -487,3 +487,24 @@ fn avarice_amulet_draws_each_upkeep() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// Kapsho Kitefins taps a blocker each time you add a creature.
+#[test]
+fn kapsho_kitefins_taps_on_every_arrival() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast(&mut g, catalog::kapsho_kitefins(), None, 4, &[(Color::Blue, 2)]);
+    assert!(g.battlefield_find(theirs).unwrap().tapped, "its own arrival counts");
+}
+
+/// Spirit Bonds pays {W} for a Spirit on a nontoken arrival.
+#[test]
+fn spirit_bonds_mints_on_nontoken_arrivals() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::spirit_bonds());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, catalog::grizzly_bears(), None, 1, &[(Color::Green, 1)]);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count(), 1);
+}

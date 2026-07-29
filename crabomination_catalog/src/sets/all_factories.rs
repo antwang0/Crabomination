@@ -8822,6 +8822,8 @@ static M15: &[Factory] = &[
     super::m15::first_response,
     super::m15::feast_on_the_fallen,
     super::m15::avarice_amulet,
+    super::m15::kapsho_kitefins,
+    super::m15::spirit_bonds,
 ];
 static MH3: &[Factory] = &[
     super::mh3::accursed_marauder,

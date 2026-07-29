@@ -131,6 +131,18 @@ Veil**, which needs per-turn loyalty-activation tracking
 (`Player.loyalty_activated_this_turn` + a "reset the per-walker activation
 flag" effect).
 
+**Two M15 rares bounced off a primitive gap this run** (written, tested,
+reverted rather than left half-wired):
+- **Waste Not** — `EventKind::CardDiscarded` + `EventScope::OpponentControl`
+  with an `EntityMatches { what: TriggerSource, filter }` gate never fires;
+  the discard event's trigger source doesn't resolve as a matchable card for
+  the type split (Zombie / mana / draw). Needs the discard event to carry the
+  discarded card as a filterable `EntityRef::Card`.
+- **Yisan, the Wanderer Bard** — `R::ManaValueEqualsSourceCounters(Verse)`
+  isn't rewritten to a concrete MV inside `Effect::Search`, so the tutor
+  matches nothing. `resolve_source_power`-style rewriting exists; `Search`
+  needs the counter-count sibling.
+
 **Spectra Ward's CR 704.5n exception.** The printed "This effect doesn't
 remove Auras" carves the enchanting Aura out of the protection legality check.
 The engine's SBA drops any Aura whose host has protection from its color, so
