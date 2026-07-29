@@ -8138,6 +8138,38 @@ impl GameState {
                 }
             }
         }
+        // Lavinia, Azorius Renegade — opponents can't cast noncreature spells
+        // whose mana value exceeds their own land count.
+        if action.is_cast() {
+            let caster = self.priority.player_with_priority;
+            let over_land_count = action
+                .cast_card_id()
+                .and_then(|id| self.find_card_anywhere(id))
+                .is_some_and(|c| {
+                    !c.definition.is_creature() && {
+                        let lands = self
+                            .battlefield
+                            .iter()
+                            .filter(|p| p.controller == caster && p.definition.is_land())
+                            .count() as u32;
+                        c.definition.cost.cmc() > lands
+                    }
+                });
+            if over_land_count {
+                let locked = self.battlefield.iter().any(|c| {
+                    !self.same_team(c.controller, caster)
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::OpponentsCantCastNoncreatureAboveLandCount
+                            )
+                        })
+                });
+                if locked {
+                    return Err(GameError::SilencedThisTurn);
+                }
+            }
+        }
         // Voice of Victory — the active player's opponents can't cast spells
         // during that player's turn.
         if action.is_cast() {
@@ -14898,6 +14930,7 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsCantActDuringYourTurn
             // Void Winnower — cast gate + block-legality gate; no layer effect.
             | StaticEffect::OpponentsCantCastEvenMv
+            | StaticEffect::OpponentsCantCastNoncreatureAboveLandCount
             | StaticEffect::OpponentsCantBlockWithEvenMv
             // Attack-permission static, read in `ignores_defender_for_attack`.
             | StaticEffect::CanAttackIgnoringDefenderWhile { .. }

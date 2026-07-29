@@ -1575,6 +1575,7 @@ impl GameState {
                 event_amount,
                 intervening_if,
                 additional_targets,
+                activated: _,
             } => {
                 // CR 603.4 — re-check the intervening 'if' clause as the
                 // ability resolves. "If the condition isn't true at that

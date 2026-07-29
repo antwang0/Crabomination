@@ -205,6 +205,8 @@ impl Effect {
         match self {
             Effect::Noop
             | Effect::ExileAnyNumberUntilSourceLeaves { .. }
+            | Effect::RevealUntilCreatureDoubleBasePt
+            | Effect::CopyActivatedAbilityMayChooseTargets
             | Effect::AdvanceClassLevel
             | Effect::SignalTheClans
             | Effect::NivMizzetReveal
@@ -679,6 +681,7 @@ impl Effect {
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
+            | Effect::FlipUntilLossThenTokenCopies { what }
             | Effect::ExileReturnToOwnerNextEndStep { what }
             | Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
@@ -1044,6 +1047,7 @@ impl Effect {
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
+            | Effect::FlipUntilLossThenTokenCopies { what }
             | Effect::ExileReturnToOwnerNextEndStep { what }
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what }
@@ -2306,6 +2310,7 @@ impl Effect {
                 | Effect::ExileUntilSourceLeaves { what, .. }
                 | Effect::ExileReturnToOwnerNextEndStep { what }
                 | Effect::ExileReturnNextEndStep { what }
+                | Effect::FlipUntilLossThenTokenCopies { what }
                 | Effect::RemoveAllCountersDiscountNextSpell { what }
                 | Effect::Goad { what }
                 | Effect::Detain { what }

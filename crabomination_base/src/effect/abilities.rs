@@ -197,6 +197,10 @@ pub enum StaticEffect {
     /// values" (zero is even). Gated at the cast dispatch off the spell's
     /// printed mana value.
     OpponentsCantCastEvenMv,
+    /// Lavinia, Azorius Renegade — "Each opponent can't cast noncreature spells
+    /// with mana value greater than the number of lands that player controls."
+    /// Gated at the cast dispatch against the caster's live land count.
+    OpponentsCantCastNoncreatureAboveLandCount,
     /// Void Winnower — "Your opponents can't block with creatures with even
     /// mana values" (zero is even). Consulted in the block-legality check.
     OpponentsCantBlockWithEvenMv,

@@ -3877,6 +3877,18 @@ pub enum Effect {
     /// battlefield the moment the monarchy leaves that player, not when the
     /// source leaves play.
     ExileUntilOpponentMonarch { what: Selector },
+    /// Mirror March — flip a coin until you lose a flip, then create that many
+    /// token copies of `what`. The copies gain haste and are exiled at the
+    /// beginning of the next end step.
+    FlipUntilLossThenTokenCopies { what: Selector },
+    /// Amplifire — reveal from the top of your library until you reveal a
+    /// creature card; until your next turn the source's base P/T become twice
+    /// that card's. The reveal is bottomed in a random order.
+    RevealUntilCreatureDoubleBasePt,
+    /// Illusionist's Bracers — copy the activated ability that just triggered
+    /// this (skipping mana abilities), with new targets allowed. Reads the
+    /// activation off the stack, so it belongs on an `AbilityActivated` trigger.
+    CopyActivatedAbilityMayChooseTargets,
     /// Exile each resolved permanent, then return it to the battlefield under
     /// its owner's control at the beginning of the next end step, entering with
     /// an extra +1/+1 counter (creatures) or loyalty counter (planeswalkers).

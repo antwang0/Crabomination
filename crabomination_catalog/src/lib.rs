@@ -92,6 +92,7 @@ pub use sets::pc2::*;
 pub use sets::por::*;
 pub use sets::rav::*;
 pub use sets::rna::*;
+pub use sets::rna2::*;
 pub use sets::rtr::*;
 pub use sets::shm::*;
 pub use sets::tmp::*;

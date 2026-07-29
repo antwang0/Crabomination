@@ -1962,6 +1962,12 @@ pub enum StackItem {
         /// for snapshot back-compat.
         #[serde(default)]
         additional_targets: Vec<Target>,
+        /// True when this stack item is an ACTIVATED ability rather than a
+        /// triggered one (CR 602). Mana abilities never reach the stack, so an
+        /// item carrying this flag is always a copyable nonmana activation
+        /// (Illusionist's Bracers). Defaults to `false` for snapshot back-compat.
+        #[serde(default)]
+        activated: bool,
     },
 }
 
@@ -1983,6 +1989,7 @@ pub struct TriggerPush {
     mana_spent: u32,
     event_amount: u32,
     intervening_if: Option<crate::card::Predicate>,
+    activated: bool,
 }
 
 impl TriggerPush {
@@ -2000,7 +2007,13 @@ impl TriggerPush {
             mana_spent: 0,
             event_amount: 0,
             intervening_if: None,
+            activated: false,
         }
+    }
+    /// Mark this item as an activated ability (CR 602) rather than a trigger.
+    pub fn activated(mut self, v: bool) -> Self {
+        self.activated = v;
+        self
     }
     pub fn target(mut self, t: Option<Target>) -> Self {
         self.target = t;
@@ -2052,6 +2065,7 @@ impl TriggerPush {
             event_amount: self.event_amount,
             intervening_if: self.intervening_if,
             additional_targets: self.additional_targets,
+            activated: self.activated,
         }
     }
 }

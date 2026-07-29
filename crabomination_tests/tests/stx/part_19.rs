@@ -1675,6 +1675,7 @@ fn cr_603_4_intervening_if_re_checked_at_resolve_time() {
         event_amount: 0,
         intervening_if: Some(pred),
         additional_targets: Vec::new(),
+        activated: false,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -1714,6 +1715,7 @@ fn cr_603_4_intervening_if_runs_when_true_at_resolve_time() {
         event_amount: 0,
         intervening_if: Some(pred),
         additional_targets: Vec::new(),
+        activated: false,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -1771,6 +1773,7 @@ fn cr_705_3_coin_flip_advantage_lets_tails_be_recovered() {
         event_amount: 0,
         intervening_if: None,
         additional_targets: Vec::new(),
+        activated: false,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -1815,6 +1818,7 @@ fn cr_705_3_no_advantage_means_one_flip_one_result() {
         event_amount: 0,
         intervening_if: None,
         additional_targets: Vec::new(),
+        activated: false,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -2144,6 +2148,7 @@ fn cr_705_3_static_grants_coin_flip_advantage() {
         x_value: 0, converged_value: 0, trigger_source: None, mana_spent: 0,
         event_amount: 0, intervening_if: None,
         additional_targets: Vec::new(),
+        activated: false,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);

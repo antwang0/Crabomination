@@ -335,6 +335,7 @@ mod tests {
             event_amount: 0,
             intervening_if: None,
             additional_targets: Vec::new(),
+            activated: false,
         });
 
         let cv = empty_view();

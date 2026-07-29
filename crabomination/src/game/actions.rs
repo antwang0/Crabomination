@@ -12117,6 +12117,7 @@ impl GameState {
                     .additional_targets(additional_targets.clone())
                     .mode(mode)
                     .x_value(activated_x)
+                    .activated(true)
                     .build(),
             );
             // CR 702.21: Ward also fires on activated abilities targeting

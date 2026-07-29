@@ -1330,6 +1330,117 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::FlipUntilLossThenTokenCopies { what } => {
+                // Mirror March — CR 705.1: flip until a loss, then mint one
+                // hasty token copy per win, exiled at the next end step.
+                use crate::game::types::{DelayedKind, DelayedTrigger};
+                let mut wins = 0u32;
+                loop {
+                    if !self.flip_one_coin(ctx.controller) {
+                        events.push(GameEvent::CoinFlipLost { player: ctx.controller });
+                        break;
+                    }
+                    events.push(GameEvent::CoinFlipWon { player: ctx.controller });
+                    wins += 1;
+                    // Backstop against a rigged/replaying decider.
+                    if wins >= 64 {
+                        break;
+                    }
+                }
+                if wins == 0 {
+                    return Ok(());
+                }
+                self.run_effect(
+                    &Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: crate::effect::Value::Const(wins as i32),
+                        source: what.clone(),
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: None,
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                        extra_keywords: vec![crate::card::Keyword::Haste],
+                    },
+                    ctx,
+                    events,
+                )?;
+                let minted = std::mem::take(&mut self.last_created_tokens);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for tid in minted {
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: DelayedKind::NextEndStep,
+                        effect: Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                        target: Some(crate::game::types::Target::Permanent(tid)),
+                        bound_token: Some(tid),
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::RevealUntilCreatureDoubleBasePt => {
+                // Amplifire — reveal until a creature card; its doubled P/T
+                // become the source's base P/T until the controller's next
+                // turn. The whole reveal goes to the bottom in a random order.
+                use rand::seq::SliceRandom;
+                let Some(source) = ctx.source else { return Ok(()) };
+                let p = ctx.controller;
+                let mut revealed: Vec<crate::card::CardInstance> = Vec::new();
+                let mut found: Option<(i32, i32)> = None;
+                while !self.players[p].library.is_empty() {
+                    let card = self.players[p].library.remove(0);
+                    let is_creature = card.definition.is_creature();
+                    let pt = (card.definition.power, card.definition.toughness);
+                    revealed.push(card);
+                    if is_creature {
+                        found = Some(pt);
+                        break;
+                    }
+                }
+                if let Some((pw, tf)) = found {
+                    let timestamp = self.next_timestamp();
+                    self.add_continuous_effect(crate::game::layers::ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: crate::game::layers::AffectedPermanents::Specific(vec![source]),
+                        layer: crate::game::layers::Layer::L7PowerTough,
+                        sublayer: Some(crate::game::layers::PtSublayer::SetValue),
+                        // "Until your next turn" — the source is the active
+                        // player's upkeep trigger, so next-turn expiry lands on
+                        // their following untap (CR 611.2b).
+                        duration: crate::game::layers::EffectDuration::UntilNextTurn,
+                        modification: crate::game::layers::Modification::SetPowerToughness(
+                            pw * 2,
+                            tf * 2,
+                        ),
+                    });
+                }
+                revealed.shuffle(&mut rand::rng());
+                self.players[p].library.extend(revealed);
+                Ok(())
+            }
+
+            Effect::CopyActivatedAbilityMayChooseTargets => {
+                // Illusionist's Bracers — copy the activation that fired this
+                // trigger. Mana abilities never use the stack, so anything
+                // still on it is a legal copy target (CR 706.10).
+                let Some(equipped) = ctx.source else { return Ok(()) };
+                let Some(idx) = self.stack.iter().rposition(|si| {
+                    matches!(si, StackItem::Trigger { source, activated: true, .. }
+                        if *source == equipped)
+                }) else {
+                    return Ok(());
+                };
+                let copy = self.stack[idx].clone();
+                self.stack.push(copy);
+                Ok(())
+            }
+
             Effect::FreeSpellsFromHandThisTurn => {
                 self.players[ctx.controller].free_spells_from_hand_this_turn = true;
                 Ok(())

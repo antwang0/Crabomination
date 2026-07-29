@@ -2485,3 +2485,143 @@ fn kaya_orzhov_usurper_ultimate() {
     assert_eq!(g.players[1].life, opp - 3, "3 damage = 3 cards owned in exile");
     assert_eq!(g.players[0].life, me + 3, "gained 3");
 }
+
+// ── RNA wave 2 (the set's last gap cards) ───────────────────────────────────
+
+/// Dovin's −1 makes a flying Thopter and gains a life; his +1 grows him off
+/// your creatures' combat damage.
+#[test]
+fn dovin_grand_arbiter_minus_one_and_plus_one() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let dovin = g.add_card_to_battlefield(0, catalog::dovin_grand_arbiter());
+    g.battlefield_find_mut(dovin).unwrap().add_counters(CounterType::Loyalty, 3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: dovin, ability_index: 1, target: None, x_value: None }).expect("-1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1);
+    let thopter = g.battlefield.iter().find(|c| c.definition.name == "Thopter").expect("Thopter");
+    assert!(thopter.definition.keywords.contains(&Keyword::Flying));
+
+    // +1 arms the turn-scoped watcher; a creature connecting adds loyalty.
+    g.battlefield_find_mut(dovin).unwrap().loyalty_uses_this_turn = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: dovin, ability_index: 0, target: None, x_value: None }).expect("+1");
+    drain_stack(&mut g);
+    let before = g.battlefield_find(dovin).unwrap().counter_count(CounterType::Loyalty);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("damage");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(dovin).unwrap().counter_count(CounterType::Loyalty), before + 1);
+}
+
+/// Gideon's +1 counts the opponent's creatures; his 0 animates him with P/T
+/// equal to his loyalty.
+#[test]
+fn gideon_champion_of_justice_plus_one_and_animate() {
+    use crabomination::card::{CardType, CounterType};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let gid = g.add_card_to_battlefield(0, catalog::gideon_champion_of_justice());
+    for _ in 0..3 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: gid, ability_index: 0, target: None, x_value: None }).expect("+1");
+    drain_stack(&mut g);
+    // +1 for the activation itself, then +3 for the opponent's creatures.
+    assert_eq!(g.battlefield_find(gid).unwrap().counter_count(CounterType::Loyalty), 8);
+    g.battlefield_find_mut(gid).unwrap().loyalty_uses_this_turn = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: gid, ability_index: 1, target: None, x_value: None }).expect("0");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(gid).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature) && cp.card_types.contains(&CardType::Planeswalker));
+    assert_eq!((cp.power, cp.toughness), (8, 8));
+    assert!(cp.keywords.contains(&Keyword::Indestructible));
+}
+
+/// Teysa Karlov doubles your permanents' death triggers and gives your tokens
+/// vigilance and lifelink.
+#[test]
+fn teysa_karlov_doubles_deaths_and_buffs_tokens() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teysa_karlov());
+    // Vindictive Vampire: "whenever another creature you control dies, it
+    // deals 1 damage to each opponent and you gain 1 life."
+    g.add_card_to_battlefield(0, catalog::vindictive_vampire());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.players[1].life;
+    g.remove_from_battlefield_to_graveyard_raw(fodder);
+    g.dispatch_triggers_for_events(&[GameEvent::CreatureDied { card_id: fodder }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "the death trigger fired twice");
+    // Token anthem.
+    let tok = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tok).unwrap().is_token = true;
+    let cp = g.computed_permanent(tok).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Lavinia stops an oversized noncreature spell and counters a free one.
+#[test]
+fn lavinia_azorius_renegade_locks_and_counters() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lavinia_azorius_renegade());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    // Opponent controls no lands: any noncreature spell with MV > 0 is locked.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None }).is_err());
+    // One land is enough for a one-mana spell.
+    g.add_card_to_battlefield(1, catalog::mountain());
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None }).expect("MV 1 <= 1 land");
+    drain_stack(&mut g);
+}
+
+/// Mass Manipulation steals X creatures.
+#[test]
+fn mass_manipulation_steals_x_creatures() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let cast = g.add_card_to_hand(0, catalog::mass_manipulation());
+    g.players[0].mana_pool.add(Color::Blue, 8);
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(a)), additional_targets: vec![Target::Permanent(b)], mode: None, x_value: Some(2) }).expect("cast for X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(b).unwrap().controller, 0);
+}
+
+/// Lazav copies a creature card that hits an opponent's graveyard.
+#[test]
+fn lazav_copies_a_creature_from_an_opponents_graveyard() {
+    let mut g = two_player_game();
+    let lazav = g.add_card_to_battlefield(0, catalog::lazav_dimir_mastermind());
+    let dead = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    g.remove_from_battlefield_to_graveyard_raw(dead);
+    g.dispatch_triggers_for_events(&[GameEvent::CreatureDied { card_id: dead }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(lazav).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "became a copy of the Hill Giant");
+}
+
+/// Illusionist's Bracers copies the equipped creature's activated ability.
+#[test]
+fn illusionists_bracers_copies_an_activation() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let adept = g.add_card_to_battlefield(0, catalog::passwall_adept()); // {2}{U}: unblockable
+    let bracers = g.add_card_to_battlefield(0, catalog::illusionists_bracers());
+    g.battlefield_find_mut(bracers).unwrap().attached_to = Some(adept);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.perform_action(GameAction::ActivateAbility { card_id: adept, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None }).expect("activate");
+    // The Bracers trigger and the original activation, plus the copy.
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+}

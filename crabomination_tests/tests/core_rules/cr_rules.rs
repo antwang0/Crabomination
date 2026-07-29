@@ -1157,6 +1157,7 @@ fn cr_608_2b_trigger_with_illegal_target_fizzles() {
         event_amount: 0,
         intervening_if: None,
         additional_targets: Vec::new(),
+        activated: false,
     });
     let mut events = Vec::new();
     let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
