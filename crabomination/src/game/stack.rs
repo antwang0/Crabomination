@@ -2762,16 +2762,29 @@ impl GameState {
     /// Auto-assignment spreads a player's creatures round-robin.
     pub(crate) fn assign_sectors(&mut self) {
         use crate::card::{Keyword, Sector};
-        let sculptors: Vec<usize> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.definition.keywords.contains(&Keyword::SpaceSculptor))
-            .map(|c| c.controller)
-            .collect();
-        if sculptors.is_empty() {
-            for c in &mut self.battlefield {
-                c.sector = None;
+        // Hot path: this runs on every SBA check, so bail before allocating
+        // when no sculptor is out and nothing carries a designation.
+        let mut sculptors: Vec<usize> = Vec::new();
+        let mut any_sector = false;
+        let mut any_unassigned = false;
+        for c in &self.battlefield {
+            if c.definition.keywords.contains(&Keyword::SpaceSculptor)
+                && !sculptors.contains(&c.controller)
+            {
+                sculptors.push(c.controller);
             }
+            any_sector |= c.sector.is_some();
+            any_unassigned |= c.sector.is_none() && c.definition.is_creature();
+        }
+        if sculptors.is_empty() {
+            if any_sector {
+                for c in &mut self.battlefield {
+                    c.sector = None;
+                }
+            }
+            return;
+        }
+        if !any_unassigned {
             return;
         }
         // Opponents of a sculptor's controller assign first (CR 702.158c).
