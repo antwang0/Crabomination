@@ -871,6 +871,35 @@ factory doc comment:
   unattach.
 - Bahamut/Dion meld pair still wants a second `Effect::Meld` card wiring.
 
+## Noticed this run (OTJ gap batch, `decks::recent309`)
+
+- **Cross-permanent death-trigger filters need the cast/SBA path.** A
+  `CreatureDied` / `AnotherOfYours` watcher with a `HasSupertype(Legendary)`
+  filter (Rakdos Joins Up) only fires when the creature dies through the
+  damage → SBA → dispatch cycle; `remove_from_battlefield_to_graveyard_raw`
+  and a bare `check_state_based_actions` after a manual damage poke don't
+  reach it. Worth making the raw removal path dispatch too so tests and
+  effect-driven sacrifices behave alike.
+- **`Effect::CastWithoutPayingImmediate { copy: true }` ignores
+  `exile_after`.** Kaervek, the Punisher's "exile … and copy it" leaves the
+  original in the graveyard.
+- **`EventKind::CommittedCrime` can fire twice for one crime** (Kaervek pays
+  4 life for a single targeted burn spell). Suspect a double dispatch between
+  target announce and resolution.
+- **Equip-granted triggers can't read `Value::TriggerEventAmount` reliably** —
+  they do get `event_amount` from combat, but `LookTopExileOneMayPlay` needed a
+  `who` field before The Key to the Vault could dig its own library. Audit the
+  other Gonti-shaped effects for the same hardcoded-opponent assumption.
+- **OTJ still-open gaps** (each blocked on one primitive): Lilah, Undefeated
+  Slickshot (a granted "exile this spell as it resolves; it becomes plotted"
+  replacement), Kellan the Kid (a cast-from-a-zone-other-than-hand trigger),
+  Another Round (a repeatable blink-all-your-creatures effect), Riku of Many
+  Paths (a modes-chosen count), Calamity / The Gitrog (saddler-scoped
+  copy/sacrifice bodies), Eriette (aura-attach control steal), Breeches
+  (second-spell coin-flip copy), Assimilation Aegis (exile-until-leaves plus a
+  becomes-a-copy-while-attached link), Taii Wakeen (a lethal-noncombat-damage
+  event and a this-turn damage boost), Ertha Jo's activated-ability copier.
+
 ## Discovered engine follow-ups (claude/modern_decks)
 
 - **Noticed but not tackled this run:**
@@ -7426,10 +7455,13 @@ stalled games via `eval_material`.
   activation rejects with `SelectionRequirementViolated`. Champion of Stray
   Souls works around it with a resolution-time `MoveChosen`. Fixing it unlocks
   faithful "X target …" activations generally.
-- **`EventKind::YourInstantOrSorceryDealtDamage` doesn't carry the victim.**
-  Satyr Firedancer wants "target creature *that player* controls"; the event
-  only says a spell dealt damage. Add the damaged player (and amount per
-  victim) to the event payload.
+- ✅ ~~**`EventKind::YourInstantOrSorceryDealtDamage` doesn't carry the
+  victim**~~ — shipped as a sibling event,
+  `YourInstantOrSorceryDealtDamageToPlayer`, which fires once per damaged
+  player with that player bound as the trigger subject;
+  `SelectionRequirement::ControlledByTriggerPlayer` reads it off
+  `GameState.trigger_event_player_scratch` (stamped at both target-enumeration
+  and resolution time). Satyr Firedancer is faithful.
 - **Perplexing Chimera's "you may choose new targets".** The control exchange
   ships; re-targeting the stolen spell does not
   (`CopySpellMayChooseTargets` has the prompt shape to borrow).

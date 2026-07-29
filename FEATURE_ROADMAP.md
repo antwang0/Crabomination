@@ -1150,6 +1150,20 @@ exercising each) was elided in a compaction pass; recover it from
   `Predicate::EnergyPaidThisTurnAtLeast` (Izzet Generatorium). Server `/metrics`
   + `/status.json` now expose `crab_catalog_cards`. Tests in `tests/mh3e.rs`;
   CR conformance in `tests/cr_rules.rs` (107.16, 508, 122.1).
+- **Plot / trigger-subject primitives (recent309 — OTJ):**
+  `ZoneDest::ExilePlotted` + `CounteredSpellZone::ExilePlotted` (CR 702.170 —
+  the effect-granted half of plot, no plot cost paid: Kellan Joins Up, Jace
+  Reawakened, Make Your Own Luck, Aven Interrupter);
+  `StaticEffect::MayPlotFromLibraryTop` (Fblthp plots off the top for the
+  card's own mana cost); `EventKind::YourInstantOrSorceryDealtDamageToPlayer` +
+  `SelectionRequirement::ControlledByTriggerPlayer` ("target creature *that
+  player* controls" — Satyr Firedancer);
+  `StaticEffect::DoubleControllerLegendaryCreatureTriggers` (Annie Joins Up),
+  with the whole subtype/supertype doubler family now applying on the cast ETB
+  path as well as `fire_self_etb_triggers`;
+  `Value::{OtherCreaturesOfTypeEnteredThisTurn, DistinctPowersAmongCreatures\
+Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
+  ("creatures you control but don't own" — Laughing Jasper Flint).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

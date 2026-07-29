@@ -1090,3 +1090,300 @@ pub fn lazav_familiar_stranger() -> CardDefinition {
         )
     }
 }
+
+// ── Batch 2: planeswalkers, graveyard theft, the Desert ─────────────────────
+
+/// Jace Reawakened — {U}{U} legendary planeswalker, loyalty 3. +1 loots; +1
+/// plots a cheap nonland card from hand; −6 copies your spells for the turn.
+/// (The "can't cast during your first three turns" restriction is dropped —
+/// no turn-number cast gate.)
+pub fn jace_reawakened() -> CardDefinition {
+    CardDefinition {
+        name: "Jace Reawakened",
+        cost: cost(&[u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Jace],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::MoveChosen {
+                    from: Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Hand,
+                        filter: R::Not(Box::new(R::Land)).and(R::ManaValueAtMost(3)),
+                    },
+                    filter: None,
+                    count: Value::ONE,
+                    up_to: true,
+                    to: ZoneDest::ExilePlotted,
+                },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::OnEachSpellCastThisTurn {
+                    body: Box::new(Effect::CopySpellMayChooseTargets {
+                        what: Selector::TriggerSource,
+                        count: Value::ONE,
+                    }),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Oko, the Ringleader — {2}{G}{U} legendary planeswalker, loyalty 3. He copies
+/// one of your creatures each combat; +1 draws two and discards (one after a
+/// crime); −1 makes a 3/3 Elk; −5 copies your other nonland permanents.
+pub fn oko_the_ringleader() -> CardDefinition {
+    CardDefinition {
+        name: "Oko, the Ringleader",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Oko],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            // "Except he has hexproof" rides as a separate EOT grant.
+            effect: Effect::Seq(vec![
+                Effect::BecomeCopyOfFor {
+                    what: Selector::This,
+                    source: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    duration: Duration::EndOfTurn,
+                    non_legendary: false,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Hexproof,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        loyalty_abilities: vec![
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                    Effect::If {
+                        cond: Predicate::CommittedCrimeThisTurn { who: PlayerRef::You },
+                        then: Box::new(Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                            random: false,
+                        }),
+                        else_: Box::new(Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(2),
+                            random: false,
+                        }),
+                    },
+                ]),
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Elk".into(),
+                        power: 3,
+                        toughness: 3,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Elk],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -5,
+                effect: Effect::CreateTokenCopyOf {
+                    source: Selector::EachPermanent(
+                        R::ControlledByYou
+                            .and(R::Not(Box::new(R::Land)))
+                            .and(R::OtherThanSource),
+                    ),
+                    count: Value::ONE,
+                    who: PlayerRef::You,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    extra_keywords: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    legendary: false,
+                    non_legendary: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kaervek, the Punisher — {1}{B}{B} 3/3 Human Warlock. Each crime you commit
+/// recasts a black card from your graveyard as a copy for 2 life. (The
+/// original stays in the graveyard — the copy path doesn't exile it.)
+pub fn kaervek_the_punisher() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::CastWithoutPayingImmediate {
+                    what: target_filtered(R::InYourGraveyard.and(R::HasColor(Color::Black))),
+                    source_zone: crate::card::Zone::Graveyard,
+                    exile_after: true,
+                    copy: true,
+                },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+        }],
+        ..legend(
+            "Kaervek, the Punisher",
+            cost(&[generic(1), b(), b()]),
+            3,
+            3,
+            vec![CreatureType::Human, CreatureType::Warlock],
+            vec![],
+        )
+    }
+}
+
+/// Tinybones, the Pickpocket — {B} 1/1 Skeleton Rogue with deathtouch. Combat
+/// damage to a player lets you cast a nonland permanent card from their
+/// graveyard. (Modeled as a free cast rather than "pay its cost with any
+/// mana".)
+pub fn tinybones_the_pickpocket() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::CastWithoutPayingImmediate {
+                what: target_filtered(
+                    R::PermanentCard.and(R::Not(Box::new(R::Land))).and(R::InGraveyard),
+                ),
+                source_zone: crate::card::Zone::Graveyard,
+                exile_after: false,
+                copy: false,
+            },
+        }],
+        ..legend(
+            "Tinybones, the Pickpocket",
+            cost(&[b()]),
+            1,
+            1,
+            vec![CreatureType::Skeleton, CreatureType::Rogue],
+            vec![Keyword::Deathtouch],
+        )
+    }
+}
+
+/// The Key to the Vault — {1}{U} legendary Equipment, equip {2}{U}. Combat
+/// damage from the equipped creature digs that many deep, exiles a card and
+/// lets you cast it for free.
+pub fn the_key_to_the_vault() -> CardDefinition {
+    CardDefinition {
+        name: "The Key to the Vault",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2), u()]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::LookTopExileOneMayPlay {
+                    count: Value::TriggerEventAmount,
+                    who: PlayerRef::You,
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Bucolic Ranch — Desert land. {T}: add {C}. {T}: add one mana of any color,
+/// spendable only on a Mount spell. {3},{T}: dig one deep for a Mount.
+pub fn bucolic_ranch() -> CardDefinition {
+    CardDefinition {
+        name: "Bucolic Ranch",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![crate::card::LandType::Desert],
+            ..Default::default()
+        },
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::ONE)),
+                        crate::mana::SpendRestriction::CreatureOfType(CreatureType::Mount),
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                effect: Effect::LookPickToHand {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    rest_to_graveyard: false,
+                    pick_filter: Some(R::HasCreatureType(CreatureType::Mount)),
+                    take: None,
+                    to_battlefield: false,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
+                    optional: true,
+                    rest_bottom_random: false,
+                    picked_lands_to_battlefield: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -13414,13 +13414,11 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopExileOneMayPlay { count } => {
+            Effect::LookTopExileOneMayPlay { count, who } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
-                let opp = self
-                    .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
-                    .or_else(|| {
-                        (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
-                    });
+                let opp = self.resolve_player(who, ctx).or_else(|| {
+                    (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
+                });
                 let Some(opp) = opp else { return Ok(()) };
                 let top: Vec<crate::card::CardId> =
                     self.players[opp].library.iter().take(n).map(|c| c.id).collect();

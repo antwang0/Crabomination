@@ -42766,7 +42766,7 @@ pub fn gonti_lord_of_luxury() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![crate::effect::shortcut::etb(
-            Effect::LookTopExileOneMayPlay { count: Value::Const(4) },
+            Effect::LookTopExileOneMayPlay { count: Value::Const(4), who: PlayerRef::Target(0) },
         )],
         ..Default::default()
     }

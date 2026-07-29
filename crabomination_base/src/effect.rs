@@ -3471,11 +3471,16 @@ pub enum Effect {
     /// revealed cards go to their graveyard and the named card goes back on
     /// top. Otherwise they shuffle." Tunnel Vision.
     NameCardRevealUntilThenBin { who: PlayerRef },
-    /// Gonti, Lord of Luxury's ETB: look at the top `count` cards of target
-    /// opponent's library, exile one face down (auto-pick: highest MV) with
-    /// a while-exiled cast permission for you, and bottom the rest randomly.
-    /// (The any-color spend clause is dropped.)
-    LookTopExileOneMayPlay { count: Value },
+    /// Gonti, Lord of Luxury's ETB: look at the top `count` cards of `who`'s
+    /// library, exile one face down (auto-pick: highest MV) with a
+    /// while-exiled cast permission for you, and bottom the rest randomly.
+    /// `who` defaults to an opponent (Gonti); The Key to the Vault points it
+    /// at `PlayerRef::You`. (The any-color spend clause is dropped.)
+    LookTopExileOneMayPlay {
+        count: Value,
+        #[serde(default = "player_ref_target_zero")]
+        who: PlayerRef,
+    },
     /// "Look at the top `count` cards. You may put a land card from among them
     /// onto the battlefield tapped. If you don't, put a card from among them
     /// into your hand. Put the rest on the bottom in a random order." Planar
@@ -6559,6 +6564,11 @@ mod query;
 /// deserialize cleanly.
 pub fn zero_value() -> Value {
     Value::Const(0)
+}
+
+/// Serde default for `LookTopExileOneMayPlay.who` (Gonti's target opponent).
+pub fn player_ref_target_zero() -> PlayerRef {
+    PlayerRef::Target(0)
 }
 
 /// Serde default for `ResetCreature` P/T (vanilla 1/1).

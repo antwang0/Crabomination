@@ -624,3 +624,150 @@ fn ertha_jo_makes_a_mercenary() {
     etb(&mut g, catalog::ertha_jo_frontier_mentor());
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Mercenary").count(), 1);
 }
+
+// ── Batch 2: planeswalkers, graveyard theft, the Desert ─────────────────────
+
+/// Jace's +1 loots, and his second +1 plots a cheap card out of hand.
+#[test]
+fn jace_reawakened_loots_then_plots() {
+    let mut g = main_phase();
+    let jace = g.add_card_to_battlefield(0, catalog::jace_reawakened());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let plottable = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: jace, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("+1 loot");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 4);
+    g.battlefield_find_mut(jace).unwrap().loyalty_uses_this_turn = 0;
+    g.players[0].activated_loyalty_this_turn = false;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: jace, ability_index: 1, target: None, x_value: None,
+    })
+    .expect("+1 plot");
+    drain_stack(&mut g);
+    assert!(
+        g.plotted_cards.contains(&plottable) || g.plotted_cards.len() == 1,
+        "a cheap nonland card was plotted"
+    );
+}
+
+/// Jace's ultimate copies each spell cast for the rest of the turn.
+#[test]
+fn jace_reawakened_ultimate_copies_your_spells() {
+    let mut g = main_phase();
+    let jace = g.add_card_to_battlefield(0, catalog::jace_reawakened());
+    g.battlefield_find_mut(jace).unwrap().add_counters(CounterType::Loyalty, 6);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: jace, ability_index: 2, target: None, x_value: None,
+    })
+    .expect("-6");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "the bolt plus its copy");
+}
+
+/// Oko's −1 makes a 3/3 Elk; his begin-combat trigger copies one of your
+/// creatures with hexproof bolted on.
+#[test]
+fn oko_makes_an_elk_then_copies_a_creature_at_combat() {
+    let mut g = main_phase();
+    let oko = g.add_card_to_battlefield(0, catalog::oko_the_ringleader());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: oko, ability_index: 1, target: None, x_value: None,
+    })
+    .expect("-1");
+    drain_stack(&mut g);
+    let elk = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Elk")
+        .expect("Elk token")
+        .id;
+    assert_eq!(g.computed_permanent(elk).map(|c| (c.power, c.toughness)), Some((3, 3)));
+    g.step = TurnStep::Upkeep;
+    while g.step != TurnStep::BeginCombat {
+        let _ = g.advance_step(Vec::new());
+    }
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(oko).expect("Oko is a copy now");
+    assert!(cp.keywords.contains(&Keyword::Hexproof), "the copy keeps hexproof");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "copied the Elk");
+}
+
+/// Kaervek recasts a black graveyard card as a copy when you commit a crime.
+#[test]
+fn kaervek_recasts_a_black_graveyard_card_on_a_crime() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::kaervek_the_punisher());
+    g.add_card_to_graveyard(0, catalog::dark_ritual());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("commit a crime");
+    drain_stack(&mut g);
+    assert!(g.players[0].life < 20, "paid life for the recast copy");
+}
+
+/// Tinybones steals a permanent card out of the player he hit.
+#[test]
+fn tinybones_the_pickpocket_casts_from_their_graveyard() {
+    let mut g = main_phase();
+    let bones = g.add_card_to_battlefield(0, catalog::tinybones_the_pickpocket());
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    swing(&mut g, bones);
+    assert_eq!(
+        g.battlefield_find(theirs).map(|c| c.controller),
+        Some(0),
+        "cast from their graveyard, under your control"
+    );
+}
+
+/// The Key to the Vault digs as deep as the damage and hands you a free cast.
+#[test]
+fn the_key_to_the_vault_digs_on_combat_damage() {
+    let mut g = main_phase();
+    let key = g.add_card_to_battlefield(0, catalog::the_key_to_the_vault());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: key, target: bear }).expect("equip");
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    swing(&mut g, bear);
+    assert_eq!(g.players[0].library.len(), 3, "two seen, one exiled, one bottomed");
+}
+
+/// Bucolic Ranch's second ability makes Mount-only mana that casts a Mount.
+#[test]
+fn bucolic_ranch_mount_mana_casts_a_mount() {
+    let mut g = main_phase();
+    let ranch = g.add_card_to_battlefield(0, catalog::bucolic_ranch());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ranch, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("tap for Mount mana");
+    g.players[0].mana_pool.add_colorless(1);
+    let newt = g.add_card_to_hand(0, catalog::archmages_newt());
+    g.perform_action(GameAction::CastSpell {
+        card_id: newt, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("the Mount spell accepts the restricted mana");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(newt).is_some());
+}

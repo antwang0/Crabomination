@@ -536,7 +536,7 @@ pub fn endrider_spikespitter() -> CardDefinition {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
             effect: Effect::If {
                 cond: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
-                then: Box::new(Effect::LookTopExileOneMayPlay { count: Value::ONE }),
+                then: Box::new(Effect::LookTopExileOneMayPlay { count: Value::ONE, who: PlayerRef::Target(0) }),
                 else_: Box::new(Effect::Noop),
             },
         }],
