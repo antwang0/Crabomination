@@ -222,6 +222,7 @@ impl Effect {
             | Effect::ReturnSelfTransformedAttached
             | Effect::ReturnSelfAttachedToTarget
             | Effect::SectorBlockLockThisTurn
+            | Effect::SearchTheCityReturn
             | Effect::SecondSunrise
             | Effect::PlayerTapsUntapped { .. }
             | Effect::TapAnyNumberThenPumpPerTapped { .. }

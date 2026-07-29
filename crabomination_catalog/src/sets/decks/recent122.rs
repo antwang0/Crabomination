@@ -80,7 +80,7 @@ pub fn curator_of_destinies() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::CantBeCountered, Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::FactOrFiction { count: Value::Const(5) })],
+        triggered_abilities: vec![etb(Effect::FactOrFiction { count: Value::Const(5), to_bottom: false })],
         ..Default::default()
     }
 }

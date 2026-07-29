@@ -6142,6 +6142,37 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SearchTheCityReturn => {
+                let Some(source) = ctx.source else { return Ok(()) };
+                let played = match ctx.trigger_source {
+                    Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
+                    _ => return Ok(()),
+                };
+                let Some(name) =
+                    self.find_card_anywhere(played).map(|c| c.definition.name.to_string())
+                else {
+                    return Ok(());
+                };
+                let hit = self
+                    .exile
+                    .iter()
+                    .find(|c| c.exiled_with == Some(source) && c.definition.name == name.as_str())
+                    .map(|c| c.id);
+                let Some(hit) = hit else { return Ok(()) };
+                let owner = self.find_card_anywhere(hit).map(|c| c.owner).unwrap_or(ctx.controller);
+                self.move_card_to(hit, &ZoneDest::Hand(PlayerRef::Seat(owner)), ctx, events);
+                if self.exile.iter().any(|c| c.exiled_with == Some(source)) {
+                    return Ok(());
+                }
+                // The pile is empty: sacrifice this and take an extra turn.
+                if self.battlefield.iter().any(|c| c.id == source) {
+                    let mut die = self.remove_to_graveyard_with_triggers(source);
+                    events.append(&mut die);
+                    self.players[ctx.controller].extra_turns += 1;
+                }
+                Ok(())
+            }
+
             Effect::ExileReturnNextEndStep { what } => {
                 // Exile each resolved permanent now; register a per-card
                 // NextEndStep delayed trigger that returns it under its owner's
@@ -16086,7 +16117,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::FactOrFiction { count } => {
+            Effect::FactOrFiction { count, to_bottom } => {
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
                 let n = (self.evaluate_value(count, ctx).max(0) as usize)
@@ -16115,12 +16146,20 @@ impl GameState {
                     }
                 }
                 let take_a = sum_a > sum_b || (sum_a == sum_b && pile_a.len() >= pile_b.len());
-                let (to_hand, to_gy) = if take_a { (pile_a, pile_b) } else { (pile_b, pile_a) };
+                let (to_hand, to_rest) = if take_a { (pile_a, pile_b) } else { (pile_b, pile_a) };
                 for cid in to_hand {
                     self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
                 }
-                for cid in to_gy {
-                    self.move_card_to(cid, &ZoneDest::Graveyard, ctx, events);
+                let rest_dest = if *to_bottom {
+                    ZoneDest::Library {
+                        who: PlayerRef::Seat(p),
+                        pos: crate::effect::LibraryPosition::Bottom,
+                    }
+                } else {
+                    ZoneDest::Graveyard
+                };
+                for cid in to_rest {
+                    self.move_card_to(cid, &rest_dest, ctx, events);
                 }
                 Ok(())
             }
@@ -19193,7 +19232,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CastAnyOrderWithoutPaying { what, source_zone } => {
+            Effect::CastAnyOrderWithoutPaying { what, source_zone, filter } => {
                 // "Cast any number ... without paying" with CONTROLLER-CHOSEN
                 // ORDER: offer each remaining castable card; after any accept,
                 // re-offer the declined ones (so declining A to cast B first,
@@ -19223,6 +19262,21 @@ impl GameState {
                         if card_ref.definition.card_types.contains(&crate::card::CardType::Land) {
                             remaining.retain(|c| *c != cid);
                             continue;
+                        }
+                        if let Some(f) = filter {
+                            // CR 601.2b — the filter may name the resolving
+                            // spell's X (Epic Experiment's "mana value X or
+                            // less"), so concretize it first.
+                            let f = f.resolve_x(ctx.x_value);
+                            if !self.evaluate_requirement_static(
+                                &f,
+                                &Target::Permanent(cid),
+                                ctx.controller,
+                                ctx.source,
+                            ) {
+                                remaining.retain(|c| *c != cid);
+                                continue;
+                            }
                         }
                         let name = card_ref.definition.name;
                         let card_def = card_ref.definition.clone();
@@ -19973,6 +20027,15 @@ impl GameState {
                         EntityRef::Card(cid)
                     }
                 })
+                .collect(),
+            Selector::LastDamagerOf(inner) => self
+                .resolve_selector(inner, ctx)
+                .into_iter()
+                .filter_map(|e| e.as_permanent_id())
+                .filter_map(|id| self.battlefield_find(id))
+                .filter_map(|c| c.damaged_by_this_turn.last().copied())
+                .filter(|id| self.battlefield_find(*id).is_some())
+                .map(EntityRef::Permanent)
                 .collect(),
             Selector::CreaturesInChosenSector => self
                 .battlefield

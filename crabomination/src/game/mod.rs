@@ -14918,6 +14918,9 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentLoyaltyActivationTax { .. }
             // UntapAllYoursEachUntapStep (Seedborn Muse) — consulted by
             // `do_untap`; no layer effect.
+            // CostReductionByValue (Rakdos) — read in `extra_cost_for_spell`;
+            // no layer effect.
+            | StaticEffect::CostReductionByValue { .. }
             | StaticEffect::UntapAllYoursEachUntapStep
             // UntapYoursEachUntapStepFiltered (Prophet of Kruphix) — consulted
             // by `do_untap`; no layer effect.

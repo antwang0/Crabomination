@@ -2264,6 +2264,7 @@ pub fn improvisation_capstone() -> CardDefinition {
             // paying their mana costs" — CONTROLLER-CHOSEN cast order: a
             // declined card is re-offered after each accepted cast.
             Effect::CastAnyOrderWithoutPaying {
+                filter: None,
                 what: Selector::LastMoved,
                 source_zone: Zone::Exile,
             },

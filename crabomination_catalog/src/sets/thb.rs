@@ -82,7 +82,7 @@ pub fn atris_oracle_of_half_truths() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Menace],
-        triggered_abilities: vec![etb(Effect::FactOrFiction { count: Value::Const(3) })],
+        triggered_abilities: vec![etb(Effect::FactOrFiction { count: Value::Const(3), to_bottom: false })],
         ..Default::default()
     }
 }

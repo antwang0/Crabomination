@@ -2046,3 +2046,200 @@ fn azors_elocutors_accrues_and_resets() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(azor).unwrap().counter_count(CounterType::Filibuster), 0, "combat damage cleared all counters");
 }
+
+// ── RTR gap wave 14 (gaps13.rs) ──────────────────────────────────────────────
+
+/// Epic Experiment free-casts the small instants and sorceries it exiles and
+/// bins the rest.
+#[test]
+fn epic_experiment_casts_and_bins() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Top three: a {R} burn spell, a fat creature, and a 6-drop sorcery.
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::rakdos_return());
+    let spell = g.add_card_to_hand(0, catalog::epic_experiment());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "the Bolt was cast for free");
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "the creature was never castable and went to the graveyard"
+    );
+    assert!(g.exile.is_empty(), "nothing stayed exiled");
+}
+
+/// Rakdos, Lord of Riots can't be cast until an opponent has lost life, then
+/// discounts creature spells by that much.
+#[test]
+fn rakdos_lord_of_riots_gate_and_discount() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let rakdos = g.add_card_to_hand(0, catalog::rakdos_lord_of_riots());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: rakdos,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "no opponent has lost life yet"
+    );
+
+    g.players[1].life -= 3;
+    g.players[1].life_lost_this_turn += 3;
+    g.players[1].lost_life_this_turn = true;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rakdos,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable now");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rakdos).is_some());
+    // A 2-mana bear now costs 0 generic — three life lost covers it.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("discounted");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the generic pip was discounted away");
+}
+
+/// Vraska's −3 blows up a nonland permanent and her −7 mints three assassins.
+#[test]
+fn vraska_the_unseen_removal_and_assassins() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let vraska = g.add_card_to_battlefield(0, catalog::vraska_the_unseen());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vraska,
+        ability_index: 1,
+        target: Some(crabomination::game::types::Target::Permanent(bear)),
+        x_value: None,
+    })
+    .expect("-3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "destroyed");
+    assert_eq!(g.battlefield_find(vraska).unwrap().counter_count(CounterType::Loyalty), 2);
+
+    g.battlefield_find_mut(vraska).unwrap().counters.insert(CounterType::Loyalty, 7);
+    g.battlefield_find_mut(vraska).unwrap().loyalty_uses_this_turn = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vraska,
+        ability_index: 2,
+        target: None,
+        x_value: None,
+    })
+    .expect("-7");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Assassin").count(),
+        3,
+        "three assassins"
+    );
+}
+
+/// Jace, Architect of Thought's −2 splits three cards; the losing pile is
+/// bottomed rather than binned.
+#[test]
+fn jace_architect_minus_two_bottoms_the_other_pile() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let jace = g.add_card_to_battlefield(0, catalog::jace_architect_of_thought());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: jace,
+        ability_index: 1,
+        target: None,
+        x_value: None,
+    })
+    .expect("-2");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty(), "nothing was binned");
+    assert_eq!(
+        g.players[0].hand.len() + g.players[0].library.len(),
+        3,
+        "the three revealed cards split between hand and library bottom"
+    );
+}
+
+/// Search the City returns a matching exiled card, then sacrifices itself and
+/// grants an extra turn once the pile empties.
+#[test]
+fn search_the_city_returns_then_grants_a_turn() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // One card in the library so the ETB exiles exactly one name.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let city = g.add_card_to_hand(0, catalog::search_the_city());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: city,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with.is_some()).count(), 1, "one card exiled");
+
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast a Bears");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "the exiled Bears came back to hand");
+    assert!(g.battlefield_find(city).is_none(), "sacrificed once the pile emptied");
+    assert_eq!(g.players[0].extra_turns, 1, "and banked an extra turn");
+}

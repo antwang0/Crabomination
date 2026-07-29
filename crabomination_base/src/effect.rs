@@ -182,6 +182,11 @@ pub enum Selector {
     /// to chain a `GrantMayPlay` immediately after the Move targets
     /// the same card(s). Cleared between resolution roots.
     LastMoved,
+    /// The most recent source that dealt damage to the permanent the inner
+    /// selector resolves to this turn (the last entry of
+    /// `CardInstance.damaged_by_this_turn`) — Vraska the Unseen's "destroy
+    /// that creature".
+    LastDamagerOf(Box<Selector>),
     /// Every creature in the sector picked by the enclosing
     /// `Effect::ChooseSector`.
     CreaturesInChosenSector,
@@ -3927,6 +3932,11 @@ pub enum Effect {
     /// return-when-the-source-leaves link — the effect that scheduled it owns
     /// the return (Legion's Initiative).
     ExileLinked { what: Selector },
+    /// Search the City — the trigger source is a card its controller just
+    /// played. If a card exiled with this source shares its name, return one
+    /// to its owner's hand; when that empties the pile, sacrifice this source
+    /// and its controller takes an extra turn.
+    SearchTheCityReturn,
     ExileUntilSourceLeaves {
         what: Selector,
         return_to: crate::card::ExileReturnZone,
@@ -5030,7 +5040,15 @@ pub enum Effect {
     /// controller effectively picks the CAST ORDER; the loop ends after a
     /// full pass with no accepts. Lands are skipped (played, not cast).
     /// Improvisation Capstone.
-    CastAnyOrderWithoutPaying { what: Selector, source_zone: crate::card::Zone },
+    /// `filter` narrows what may be cast this way — Epic Experiment's
+    /// "instant and sorcery spells with mana value X or less". `None` offers
+    /// every nonland card.
+    CastAnyOrderWithoutPaying {
+        what: Selector,
+        source_zone: crate::card::Zone,
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+    },
     /// "You may cast a [filter] spell from your hand without paying its
     /// mana cost" (Maelstrom Archangel; Oracle of Bones restricts to
     /// instants/sorceries). The controller picks one matching nonland hand
@@ -5855,7 +5873,13 @@ pub enum Effect {
     /// value heuristic (opponent isolates the single highest-mana-value card;
     /// you keep the pile with the greater total mana value), so it resolves
     /// without an interactive `Decision::SplitPiles`.
-    FactOrFiction { count: Value },
+    /// `to_bottom` sends the unchosen pile to the bottom of the library
+    /// instead of the graveyard (Jace, Architect of Thought's −2).
+    FactOrFiction {
+        count: Value,
+        #[serde(default)]
+        to_bottom: bool,
+    },
     /// Storm Herald — return all Aura cards from your graveyard to the
     /// battlefield, each attached to a legal creature (auras with no legal
     /// creature stay in the graveyard); exile them at the next end step.
@@ -6277,6 +6301,10 @@ pub enum DelayedTriggerKind {
     /// "At the beginning of the next combat" — the next Begin Combat step on
     /// any player's turn (Legion's Initiative).
     NextCombat,
+    /// "Until your next turn, whenever a creature attacks you or a
+    /// planeswalker you control, …" (Jace, Architect of Thought's +1). The
+    /// attacker is the trigger source.
+    CreatureAttacksYouUntilYourNextTurn,
     YourNextUpkeep,
     NextEndStep,
     /// "At end of combat, …" — fires once at the current turn's end-of-combat

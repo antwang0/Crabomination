@@ -497,6 +497,15 @@ pub fn cost_reduction_for_spell_full(
                 {
                     reduction += state.players[caster].experience;
                 }
+                StaticEffect::CostReductionByValue { filter, amount }
+                    if src.controller == caster
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    let ctx = crate::game::effects::EffectContext::for_trigger(
+                        src.id, caster, None, 0,
+                    );
+                    reduction += state.evaluate_value(amount, &ctx).max(0) as u32;
+                }
                 StaticEffect::CostReductionPerCounterOnSource { filter, kind }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
@@ -5325,6 +5334,15 @@ impl GameState {
         {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
+        }
+
+        // "You can't cast this spell unless …" (Rakdos, Lord of Riots).
+        if let Some(cond) = card.definition.cast_condition.clone() {
+            let ctx = crate::game::effects::EffectContext::for_trigger(card.id, p, None, 0);
+            if !self.evaluate_predicate(&cond, &ctx) {
+                self.players[p].hand.push(card);
+                return Err(GameError::SelectionRequirementViolated);
+            }
         }
 
         // CR 601.2b — additional cast costs ("As an additional cost to cast

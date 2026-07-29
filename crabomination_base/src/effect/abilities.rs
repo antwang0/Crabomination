@@ -339,6 +339,10 @@ pub enum StaticEffect {
     /// and sorcery spells you cast cost {X} less, where X is the number of
     /// experience counters you have"). Generic-only; clamped at the generic pip.
     CostReductionPerControllerExperience { filter: SelectionRequirement },
+    /// "[filter] spells you cast cost {1} less for each point of `amount`"
+    /// — a value-scaled controller-wide reduction (Rakdos, Lord of Riots
+    /// reads the life your opponents have lost this turn). Generic-only.
+    CostReductionByValue { filter: SelectionRequirement, amount: crate::effect::Value },
     /// Generic cost reduction equal to the source permanent's computed power,
     /// for spells matching `filter` (Golden-Tail Trainer — "Aura and Equipment
     /// spells you cast cost {X} less, where X is this creature's power").

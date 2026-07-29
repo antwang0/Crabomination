@@ -1692,7 +1692,7 @@ pub fn fact_or_fiction() -> CardDefinition {
         name: "Fact or Fiction",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::FactOrFiction { count: Value::Const(5) },
+        effect: Effect::FactOrFiction { count: Value::Const(5), to_bottom: false },
         ..Default::default()
     }
 }

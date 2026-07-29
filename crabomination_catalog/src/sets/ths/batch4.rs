@@ -367,7 +367,7 @@ pub fn steam_augury() -> CardDefinition {
         name: "Steam Augury",
         cost: cost(&[generic(2), u(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::FactOrFiction { count: Value::Const(5) },
+        effect: Effect::FactOrFiction { count: Value::Const(5), to_bottom: false },
         ..Default::default()
     }
 }

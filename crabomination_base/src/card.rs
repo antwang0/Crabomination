@@ -2439,6 +2439,10 @@ pub struct CardDefinition {
     /// "Cast this spell only during combat before blockers are declared"
     /// (Blaze of Glory). Gated in the cast-timing check.
     pub cast_only_before_blockers: bool,
+    /// "You can't cast this spell unless [condition]" (Rakdos, Lord of Riots).
+    /// Checked at the cast gate against the caster's game state.
+    #[serde(default)]
+    pub cast_condition: Option<crate::effect::Predicate>,
     /// Gate on casting via Flashback ("Corrupted — … this card has flashback"
     /// — Viral Spawning). Checked at the graveyard-cast gate.
     #[serde(default)]
