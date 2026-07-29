@@ -609,8 +609,9 @@ state-corrupting in ordinary play.
 ## Theros block — BNG COMPLETE, JOU next (good easy-card source)
 
 **BNG (Born of the Gods) is at zero `set_gaps.py` entries** — `sets::bng`,
-`bng2`, `bng3` ship all 165 cards. **JOU (Journey into Nyx) is untouched at
-132** and is the obvious next easy-card source: mostly commons and uncommons
+`bng2`, `bng3` ship all 165 cards. **JOU (Journey into Nyx) is down to 92** after wave 1
+(`sets::jou` — the primitive-free core) and is the obvious next easy-card
+source: mostly commons and uncommons
 riding primitives BNG already bought (bestow, heroic, inspired, tribute,
 devotion, the Fated-style "if it's your turn" rider).
 
@@ -7317,5 +7318,8 @@ stalled games via `eval_material`.
   sections are covered without grepping. A generated `CR_COVERAGE.md` (parse
   `cr_<section>_` test names) would make the roadmap's Tier-16 conformance row
   measurable.
-- **JOU (Journey into Nyx) is the next easy-card source** — 132 gaps, and BNG
-  just paid for every primitive it needs.
+- **JOU wave 2 wants two mechanics.** `sets::jou` wave 1 (28 cards) skipped
+  every **Strive** card ("costs N more for each target beyond the first" — a
+  cast-time per-extra-target surcharge, ~11 cards) and every **Constellation**
+  card ("whenever this or another enchantment you control enters", ~8 cards).
+  Both are one primitive each and would clear most of the remaining 92 gaps.

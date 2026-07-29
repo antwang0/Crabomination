@@ -6,7 +6,9 @@ use crate::card::{
     EnchantmentSubtype, EquipBonus, Keyword, SelectionRequirement as R, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, heroic, monstrosity, on_becomes_monstrous, target_any, target_filtered};
+use crate::effect::shortcut::{
+    etb, heroic, monstrosity, on_becomes_monstrous, target_filtered,
+};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
 
@@ -783,6 +785,3 @@ pub fn font_of_vigor() -> CardDefinition {
         Effect::GainLife { who: Selector::You, amount: Value::Const(7) },
     )
 }
-
-// Keep `target_any` reachable for future JOU burn without an unused import.
-const _: fn() -> Selector = target_any;
