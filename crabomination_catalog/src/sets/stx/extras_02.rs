@@ -219,6 +219,7 @@ pub fn electrolyze() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamageDivided {
+                retaliate_to_source: false,
                 total: Value::Const(2),
                 filter: SelectionRequirement::Creature
                     .or(SelectionRequirement::Player)
@@ -493,6 +494,7 @@ pub fn forked_bolt() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(2),
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)

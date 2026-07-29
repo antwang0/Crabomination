@@ -686,6 +686,7 @@ impl GameState {
                 what: crate::effect::Selector::This,
                 source: crate::effect::Selector::Target(0),
                 extra_creature_types: spec.extra_creature_types.clone(),
+                keep_own_triggered: false,
             },
             &ctx,
         ) {
@@ -3242,7 +3243,7 @@ impl GameState {
             // slots `0..max_targets` at cast time; the split is decided
             // here so a wants-UI controller / scripted test can choose it
             // (AutoDecider spreads evenly).
-            Effect::DealDamageDivided { total, .. } => {
+            Effect::DealDamageDivided { total, retaliate_to_source, .. } => {
                 let amt = self.evaluate_value(total, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }
                 // Only still-present targets receive damage.
@@ -3285,9 +3286,32 @@ impl GameState {
                 {
                     division = crate::decision::even_damage_split(amt, targets.len());
                 }
+                let mut damaged: Vec<CardId> = Vec::new();
                 for (t, n) in targets.iter().zip(division) {
                     if n == 0 { continue; }
+                    if let Target::Permanent(id) = t {
+                        damaged.push(*id);
+                    }
                     self.deal_damage_to_from(target_to_entity(t), n, ctx.source, events);
+                }
+                // Polukranos — the damaged creatures swing back at the source
+                // before SBA, so the exchange is simultaneous.
+                if *retaliate_to_source
+                    && let Some(src) = ctx.source
+                {
+                    for id in damaged {
+                        let power =
+                            self.computed_permanent(id).map(|cp| cp.power).unwrap_or(0).max(0)
+                                as u32;
+                        if power > 0 {
+                            self.deal_damage_to_from(
+                                EntityRef::Permanent(src),
+                                power,
+                                Some(id),
+                                events,
+                            );
+                        }
+                    }
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
@@ -5065,7 +5089,7 @@ impl GameState {
                         self.permanents_gained_counter_this_turn.insert(src);
                     }
                 }
-                events.push(GameEvent::BecameMonstrous { card_id: src });
+                events.push(GameEvent::BecameMonstrous { card_id: src, n: base });
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
                 Ok(())
@@ -6598,6 +6622,7 @@ impl GameState {
                         .map(|c| c.id);
                     if let Some(id) = pick {
                         self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                        self.last_moved_cards.push(id);
                     }
                 }
                 Ok(())
@@ -7557,6 +7582,56 @@ impl GameState {
                         if *skip_untap {
                             c.skip_next_untap = true;
                         }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::TapBlockedByAndSkipUntap { what } => {
+                let blockers: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                let victims: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| blockers.contains(&c.id))
+                    .flat_map(|c| c.blocked_attackers_this_turn.clone())
+                    .collect();
+                for cid in victims {
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        if !c.tapped {
+                            c.tapped = true;
+                            events.push(GameEvent::PermanentTapped {
+                                card_id: cid,
+                                actor: Some(ctx.controller),
+                                as_attacker: false,
+                            });
+                        }
+                        c.skip_next_untap = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::TapAndLockWhileSourcePresent { what } => {
+                // Shipbreaker Kraken — the lock releases when the source leaves
+                // the battlefield, not when it untaps.
+                let source = ctx.source;
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        if !c.tapped {
+                            c.tapped = true;
+                            events.push(GameEvent::PermanentTapped {
+                                card_id: cid,
+                                actor: Some(ctx.controller),
+                                as_attacker: false,
+                            });
+                        }
+                        c.untap_locked_while_present = source;
                     }
                 }
                 Ok(())
@@ -15159,10 +15234,11 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WithSacrificedPt { power, toughness, mana_value, body } => {
+            Effect::WithSacrificedPt { power, toughness, mana_value, card, body } => {
                 self.sacrificed_power = Some(*power);
                 self.sacrificed_toughness = Some(*toughness);
                 self.sacrificed_mana_value = Some(*mana_value);
+                self.sacrificed_card = *card;
                 self.run_effect(body, ctx, events)
             }
 
@@ -15662,12 +15738,15 @@ impl GameState {
                         Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
                         _ => return None,
                     };
-                    self.stack.iter().rev().find_map(|si| match si {
-                        StackItem::Spell { card, target, .. } if card.id == cid => {
-                            target.clone()
-                        }
-                        _ => None,
-                    })
+                    self.stack
+                        .iter()
+                        .rev()
+                        .find_map(|si| match si {
+                            StackItem::Spell { card, target, .. } if card.id == cid => {
+                                target.clone()
+                            }
+                            _ => None,
+                        })
                 });
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {
@@ -15678,6 +15757,26 @@ impl GameState {
                     target,
                     // Bind a token minted earlier in this resolution so the
                     // delayed body's `LastCreatedToken` still finds it.
+                    bound_token: self.last_created_token,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
+            Effect::DelayUntilWithCapture { kind, capture, body } => {
+                // The capture is resolved now, so the delayed body's
+                // `Selector::Target(0)` still names the right object later.
+                let target = self
+                    .resolve_selector(capture, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                    .map(Target::Permanent);
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                    kind: delayed_kind_from_effect(*kind),
+                    effect: (**body).clone(),
+                    target,
                     bound_token: self.last_created_token,
                     fires_once: true,
                 });
@@ -16505,6 +16604,7 @@ impl GameState {
                 what,
                 source,
                 extra_creature_types,
+                keep_own_triggered,
             } => {
                 // CR 707.2 — `what` becomes a copy of `source`'s copiable
                 // characteristics. One-shot definition rewrite: clone the
@@ -16526,6 +16626,11 @@ impl GameState {
                                 if !new_def.subtypes.creature_types.contains(t) {
                                     new_def.subtypes.creature_types.push(*t);
                                 }
+                            }
+                            if *keep_own_triggered {
+                                new_def
+                                    .triggered_abilities
+                                    .extend(c.definition.triggered_abilities.iter().cloned());
                             }
                             let original =
                                 std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
@@ -17459,6 +17564,36 @@ impl GameState {
                     &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     events,
                 );
+                Ok(())
+            }
+
+            Effect::ReturnSelfAttachedToTarget => {
+                // Gift of Immortality — return the source from its owner's
+                // graveyard attached to the slot-0 target.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(host) = ctx.targets.first().and_then(|t| match t {
+                    Target::Permanent(id) => Some(*id),
+                    Target::Player(_) => None,
+                }) else {
+                    return Ok(());
+                };
+                if self.battlefield_find(host).is_none() {
+                    return Ok(());
+                }
+                let Some(owner) =
+                    self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == src))
+                else {
+                    return Ok(());
+                };
+                self.move_card_to(
+                    src,
+                    &ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false },
+                    ctx,
+                    events,
+                );
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.attached_to = Some(host);
+                }
                 Ok(())
             }
 
@@ -19800,6 +19935,17 @@ impl GameState {
                 .copied()
                 .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
                 .map(EntityRef::Permanent)
+                .collect(),
+            Selector::SacrificedCard => self
+                .sacrificed_card
+                .into_iter()
+                .map(|cid| {
+                    if self.battlefield_find(cid).is_some() {
+                        EntityRef::Permanent(cid)
+                    } else {
+                        EntityRef::Card(cid)
+                    }
+                })
                 .collect(),
             Selector::LastMoved => self
                 .last_moved_cards

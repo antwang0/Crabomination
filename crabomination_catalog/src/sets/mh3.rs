@@ -164,6 +164,7 @@ pub fn mogg_mob() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
                 total: Value::Const(3),
                 filter: SelectionRequirement::Creature
                     .or(SelectionRequirement::Player)

@@ -473,6 +473,12 @@ impl GameState {
                     CleanupOutcome::TurnOver => return self.advance_step(events),
                 }
             }
+            TurnStep::EndCombat => {
+                // CR 511.1 — "at end of combat" triggers, including the
+                // `DelayedKind::EndOfCombat` queue (Triton Tactics, Fortune).
+                self.fire_step_triggers(TurnStep::EndCombat);
+                self.give_priority_to_active();
+            }
             _ => {
                 self.give_priority_to_active();
             }
@@ -1952,6 +1958,40 @@ impl GameState {
             }
             u
         };
+        // CR 502.3 — the filtered sibling (Prophet of Kruphix): an off-turn
+        // controller untaps only the permanents matching the static's filter.
+        let filtered_untap: std::collections::HashSet<crate::card::CardId> = {
+            let filters: Vec<(usize, SelectionRequirement)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller != p && !untappers.contains(&c.controller))
+                .flat_map(|c| {
+                    c.definition.static_abilities.iter().filter_map(move |sa| {
+                        match &sa.effect {
+                            StaticEffect::UntapYoursEachUntapStepFiltered(f) => {
+                                Some((c.controller, f.clone()))
+                            }
+                            _ => None,
+                        }
+                    })
+                })
+                .collect();
+            let mut set = std::collections::HashSet::new();
+            for (seat, req) in &filters {
+                for c in &self.battlefield {
+                    if c.controller == *seat
+                        && self.evaluate_requirement(
+                            req,
+                            &crate::game::types::Target::Permanent(c.id),
+                            *seat,
+                        )
+                    {
+                        set.insert(c.id);
+                    }
+                }
+            }
+            set
+        };
         let prevented: std::collections::HashSet<crate::card::CardId> = {
             let mut blocked = std::collections::HashSet::new();
             // Walk static abilities in play and OR each PreventUntap
@@ -2020,6 +2060,10 @@ impl GameState {
             self.battlefield.iter().filter_map(|c| c.untap_locked_by).collect();
         let tapped_now_set: std::collections::HashSet<crate::card::CardId> =
             self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect();
+        // Shipbreaker Kraken — a presence-lock holds while its source is still
+        // on the battlefield.
+        let on_battlefield: std::collections::HashSet<crate::card::CardId> =
+            self.battlefield.iter().map(|c| c.id).collect();
         // CR 502.3 — Winter Moon: "Players can't untap more than one nonbasic
         // land during their untap steps." Cap each untapping player's nonbasic
         // land untaps at one; the rest stay tapped.
@@ -2035,7 +2079,7 @@ impl GameState {
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
         for card in &mut self.battlefield {
-            if untappers.contains(&card.controller) {
+            if untappers.contains(&card.controller) || filtered_untap.contains(&card.id) {
                 // Summoning sickness clears only for the *active* player at the
                 // turn boundary (CR 302.1 / 506.4). A Seedborn-untapped
                 // permanent (controlled by another player) untaps but does not
@@ -2089,6 +2133,15 @@ impl GameState {
                         continue;
                     }
                     card.untap_locked_by = None;
+                }
+                if let Some(src) = card.untap_locked_while_present {
+                    if on_battlefield.contains(&src) {
+                        if active {
+                            card.summoning_sick = false;
+                        }
+                        continue;
+                    }
+                    card.untap_locked_while_present = None;
                 }
                 // CR 502.3 — Winter Moon nonbasic-land cap. A tapped nonbasic
                 // land beyond the first this player untaps stays tapped.
@@ -2180,6 +2233,7 @@ impl GameState {
             // CR 702.142 — "attacked this turn" (Boast gate) resets each turn.
             card.attacked_this_turn = false;
             card.blocked_this_turn = false;
+            card.blocked_attackers_this_turn.clear();
         }
         self.players[p].lands_played_this_turn = 0;
         self.players[p].graveyard_cast_types_this_turn.clear();
@@ -2578,8 +2632,10 @@ impl GameState {
         self.previous_turn_active = Some(active);
         if self.players[active].is_alive() && self.players[active].extra_turns > 0 {
             self.players[active].extra_turns -= 1;
+            self.current_turn_is_extra = true;
             self.turn_number += 1;
         } else {
+            self.current_turn_is_extra = false;
             // Advance to the next non-eliminated player's turn (TurnStarted
             // fires on Untap entry). If the next player has pending skip
             // turns (Ral Zarek's -7), decrement and skip past them — keep

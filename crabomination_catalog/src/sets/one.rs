@@ -5649,6 +5649,7 @@ pub fn nahiris_sacrifice() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::SacrificedManaValue,
             filter: SelectionRequirement::Creature,
             max_targets: 5,
@@ -5920,6 +5921,7 @@ pub fn lukka_bound_to_ruin() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -4,
                 effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
                     total: Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)),
                     filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                     max_targets: 5,

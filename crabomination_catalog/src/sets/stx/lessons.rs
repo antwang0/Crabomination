@@ -517,6 +517,7 @@ pub fn pyromathematics() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(3),
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)

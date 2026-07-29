@@ -5603,11 +5603,13 @@ impl GameState {
                 self.sacrificed_toughness,
                 self.sacrificed_mana_value,
             ) {
+                let sac_card = self.sacrificed_card;
                 let def = std::sync::Arc::make_mut(&mut card.definition);
                 def.effect = Effect::WithSacrificedPt {
                     power: pw,
                     toughness: tough,
                     mana_value: mv,
+                    card: sac_card,
                     body: Box::new(def.effect.clone()),
                 };
             }
@@ -5993,6 +5995,7 @@ impl GameState {
                             self.sacrificed_was_artifact = Some(is_artifact);
                             self.sacrificed_was_vehicle = Some(is_vehicle);
                             self.sacrificed_colors = Some(colors);
+                            self.sacrificed_card = Some(id);
                         }
                         if is_creature {
                             if let Some(c) = self.dying_snapshot(id) {
@@ -8544,6 +8547,12 @@ impl GameState {
             return Err(GameError::InvalidTarget);
         }
         let Some(card) = self.battlefield_find(*cid) else {
+            // Underworld Cerberus — cards in graveyards can't be targeted.
+            if self.graveyard_cards_untargetable()
+                && self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == *cid))
+            {
+                return Err(GameError::InvalidTarget);
+            }
             return Ok(());
         };
         // Read layer-computed keywords (CR 613) so granted *and* stripped
@@ -8572,6 +8581,18 @@ impl GameState {
         // Ward creature — the Ward trigger fires and counters the spell unless
         // the caster pays the Ward cost at resolution time.
         Ok(())
+    }
+
+    /// True while any player controls a `GraveyardCardsUntargetable` source
+    /// (Underworld Cerberus).
+    pub(crate) fn graveyard_cards_untargetable(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::GraveyardCardsUntargetable))
+        })
     }
 
     /// True while `player` controls a `LandsUntargetableByOpponents` source
@@ -12127,6 +12148,7 @@ impl GameState {
                     power,
                     toughness,
                     mana_value: cost_sac_mv,
+                    card: Some(card_id),
                     body: Box::new(ability.effect.clone()),
                 },
                 None => ability.effect.clone(),
@@ -12157,6 +12179,7 @@ impl GameState {
                     power,
                     toughness,
                     mana_value: cost_sac_mv,
+                    card: Some(card_id),
                     body: Box::new(ability.effect),
                 },
                 None => ability.effect,

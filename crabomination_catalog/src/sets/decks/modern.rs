@@ -13914,6 +13914,7 @@ pub fn fire_ice() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(2),
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
@@ -15784,6 +15785,7 @@ pub fn rolling_thunder() -> CardDefinition {
         cost: cost(&[x(), r(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::XFromCost,
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
@@ -16848,6 +16850,7 @@ pub fn flames_of_the_firebrand() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(3),
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
@@ -29784,11 +29787,13 @@ pub fn shatterskull_smashing() -> CardDefinition {
         effect: Effect::If {
             cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(6)),
             then: Box::new(Effect::DealDamageDivided {
+                retaliate_to_source: false,
                 total: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
                 filter: filter.clone(),
                 max_targets: 2,
             }),
             else_: Box::new(Effect::DealDamageDivided {
+                retaliate_to_source: false,
                 total: Value::XFromCost,
                 filter,
                 max_targets: 2,
@@ -33300,6 +33305,7 @@ pub fn dragonlord_atarka() -> CardDefinition {
         toughness: 8,
         keywords: vec![Keyword::Flying, Keyword::Trample],
         triggered_abilities: vec![etb(Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(5),
             filter: SelectionRequirement::ControlledByOpponent
                 .and(SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker)),
@@ -36306,6 +36312,7 @@ pub fn bogardan_hellkite() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![etb(Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(4),
             filter: SelectionRequirement::Creature.or(SelectionRequirement::Player),
             max_targets: 4,
@@ -57708,6 +57715,7 @@ pub fn mythos_of_vadrok() -> CardDefinition {
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(5),
             filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             max_targets: 5,
@@ -61329,6 +61337,7 @@ pub fn boulderfall() -> CardDefinition {
         cost: cost(&[generic(6), r(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(5),
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)

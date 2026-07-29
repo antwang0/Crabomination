@@ -3823,6 +3823,7 @@ pub fn hail_of_arrows() -> CardDefinition {
         cost: cost(&[crate::mana::x(), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::XFromCost,
             filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
             max_targets: 8,

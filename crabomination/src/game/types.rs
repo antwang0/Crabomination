@@ -1734,7 +1734,9 @@ pub enum GameEvent {
     /// `Value::TriggerEventAmount`).
     Discovered { player: usize, value: u32 },
     /// CR 701.31 — a permanent became monstrous.
-    BecameMonstrous { card_id: CardId },
+    /// CR 701.31 — `n` is the monstrosity value, read via
+    /// `Value::TriggerEventAmount` (Polukranos's X damage).
+    BecameMonstrous { card_id: CardId, n: u32 },
     /// CR 712 — a permanent transformed to its other face.
     Transformed { card_id: CardId },
     /// CR 711 — a flip card flipped to its flipped (bottom) face.

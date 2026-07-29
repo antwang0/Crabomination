@@ -1677,6 +1677,7 @@ pub fn skarrgan_hellkite() -> CardDefinition {
             mana_cost: cost(&[generic(3), r()]),
             condition: Some(Predicate::EntityMatches { what: Selector::This, filter: R::WithCounter(CounterType::PlusOnePlusOne) }),
             effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
                 total: Value::Const(2),
                 filter: R::Creature.or(R::Player).or(R::Planeswalker),
                 max_targets: 2,

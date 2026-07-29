@@ -1251,6 +1251,7 @@ pub fn pyrotechnics() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(4),
             filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             max_targets: 4,

@@ -549,6 +549,7 @@ pub fn pyrokinesis() -> CardDefinition {
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(4),
             filter: SelectionRequirement::Creature,
             max_targets: 4,

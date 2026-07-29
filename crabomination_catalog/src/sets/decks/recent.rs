@@ -5988,6 +5988,7 @@ pub fn ureni_the_song_unending() -> CardDefinition {
             Keyword::Protection(crate::mana::Color::Black),
         ],
         triggered_abilities: vec![etb(Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::CountOf(Box::new(Selector::EachPermanent(
                 SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
             ))),

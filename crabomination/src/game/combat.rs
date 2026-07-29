@@ -1328,6 +1328,9 @@ impl GameState {
             self.add_block(blocker_id, attacker_id);
             if let Some(b) = self.battlefield_find_mut(blocker_id) {
                 b.blocked_this_turn = true;
+                if !b.blocked_attackers_this_turn.contains(&attacker_id) {
+                    b.blocked_attackers_this_turn.push(attacker_id);
+                }
             }
             // CR 510.1c — once blocked, the attacker stays blocked for this
             // combat even if every blocker later leaves combat.

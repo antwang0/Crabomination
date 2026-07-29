@@ -212,13 +212,21 @@ pub fn hythonia_the_cruel() -> CardDefinition {
 }
 
 /// Medomai the Ageless — {4}{W}{U} 4/4 legendary Sphinx with flying. Combat
-/// damage to a player takes an extra turn. (The printed "can't attack during
-/// extra turns" rider needs an is-extra-turn predicate — TODO.md.)
+/// damage to a player takes an extra turn; it can't attack during extra turns.
 pub fn medomai_the_ageless() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "This creature can't attack during extra turns.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::IsExtraTurn,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::CantAttack],
+            },
         }],
         ..legend(
             "Medomai the Ageless",

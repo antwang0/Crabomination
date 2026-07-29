@@ -443,6 +443,9 @@ pub struct GameState {
     /// paths; reset between resolutions.
     #[serde(default)]
     pub(crate) sacrificed_colors: Option<Vec<crate::mana::Color>>,
+    /// Card id of the permanent sacrificed for the current cost/resolution —
+    /// read by `Selector::SacrificedCard` (Rescue from the Underworld).
+    pub(crate) sacrificed_card: Option<CardId>,
     /// Transient: whether the last card discarded during the current
     /// resolution was multicolored (Stormscale Anarch). Stamped in
     /// `discard_card`.
@@ -1217,6 +1220,11 @@ pub struct GameState {
     /// active player's spell count). `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub previous_turn_active: Option<usize>,
+    /// CR 500.7 — set while the current turn is an extra turn (taken from
+    /// `Player.extra_turns` rather than by passing). Read by
+    /// `Predicate::IsExtraTurn`.
+    #[serde(default)]
+    pub current_turn_is_extra: bool,
 }
 
 /// A pending control-reversion entry — see `GameState.temporary_control`.
@@ -1314,6 +1322,7 @@ impl Clone for GameState {
             sacrificed_was_outlaw: self.sacrificed_was_outlaw,
             sacrificed_was_vehicle: self.sacrificed_was_vehicle,
             sacrificed_colors: self.sacrificed_colors.clone(),
+            sacrificed_card: self.sacrificed_card,
             last_discarded_was_multicolored: self.last_discarded_was_multicolored,
             last_discarded_card_types: self.last_discarded_card_types,
             sacrificed_toughness: self.sacrificed_toughness,
@@ -1437,6 +1446,7 @@ impl Clone for GameState {
             monarch: self.monarch,
             day_night: self.day_night,
             previous_turn_active: self.previous_turn_active,
+            current_turn_is_extra: self.current_turn_is_extra,
         }
     }
 }
@@ -1509,6 +1519,7 @@ impl GameState {
             sacrificed_was_outlaw: None,
             sacrificed_was_vehicle: None,
             sacrificed_colors: None,
+            sacrificed_card: None,
             last_discarded_was_multicolored: None,
             last_discarded_card_types: 0,
             sacrificed_toughness: None,
@@ -1630,6 +1641,7 @@ impl GameState {
             monarch: None,
             day_night: None,
             previous_turn_active: None,
+            current_turn_is_extra: false,
         }
     }
 
@@ -13844,6 +13856,7 @@ impl GameState {
                 .or_else(|| self.find_card_anywhere(*card_id).map(|c| c.definition.cost.cmc()))
                 .unwrap_or(0),
             GameEvent::CardCycled { x, .. } => *x,
+            GameEvent::BecameMonstrous { n, .. } => *n,
             // Nicanzil: 1 when a land was explored, 0 for a nonland.
             GameEvent::Explored { explored_land, .. } => *explored_land as u32,
             _ => event_amount(ev),
@@ -14888,6 +14901,12 @@ fn static_effect_to_effects(
             // UntapAllYoursEachUntapStep (Seedborn Muse) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapAllYoursEachUntapStep
+            // UntapYoursEachUntapStepFiltered (Prophet of Kruphix) — consulted
+            // by `do_untap`; no layer effect.
+            | StaticEffect::UntapYoursEachUntapStepFiltered(_)
+            // GraveyardCardsUntargetable (Underworld Cerberus) — consulted by
+            // `check_target_legality`; no layer effect.
+            | StaticEffect::GraveyardCardsUntargetable
             // ControllerCreatureAbilitiesAsThoughHaste (Tyvar) — consulted at
             // the CR 602.5g activation gate; no layer effect.
             | StaticEffect::ControllerCreatureAbilitiesAsThoughHaste

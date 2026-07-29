@@ -1789,11 +1789,20 @@ pub enum StaticEffect {
     /// unpayable tax makes the search find nothing.
     SearchTax { amount: u32 },
     /// CR 502.3 — "Untap all permanents you control during each other player's
-    /// untap step." Seedborn Muse / Prophet of Kruphix. Consulted by
+    /// untap step." Seedborn Muse. Consulted by
     /// `do_untap`: while the active player is *not* this static's controller,
     /// the controller's permanents untap alongside the active player's (subject
     /// to the same Stun / `PreventUntap` / exert gates). No layer effect.
     UntapAllYoursEachUntapStep,
+    /// The filtered sibling — "untap all creatures and lands you control during
+    /// each other player's untap step" (Prophet of Kruphix). Only the
+    /// controller's permanents matching the filter untap off-turn.
+    UntapYoursEachUntapStepFiltered(SelectionRequirement),
+    /// "Cards in graveyards can't be the targets of spells or abilities"
+    /// (Underworld Cerberus, Ground Seal). Enforced in
+    /// `check_target_legality_with_source` — a target card id found in any
+    /// graveyard is rejected while such a source is on the battlefield.
+    GraveyardCardsUntargetable,
     /// CR 502.3 — "Untap this permanent during each other player's untap step."
     /// The source untaps itself on every untap step it doesn't already untap on
     /// (i.e. whenever the active player is someone else). Thousand Moons

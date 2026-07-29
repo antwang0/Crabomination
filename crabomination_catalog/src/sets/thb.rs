@@ -991,6 +991,7 @@ pub fn protean_thaumaturge() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Become a copy of another target creature?".into(),
                 body: Box::new(Effect::BecomeCopyOf {
+                    keep_own_triggered: false,
                     what: Selector::This,
                     source: target_filtered(
                         SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),

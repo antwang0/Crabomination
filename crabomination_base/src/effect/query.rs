@@ -220,6 +220,7 @@ impl Effect {
             | Effect::Venture
             | Effect::DoubleYourSourcesDamageThisTurn
             | Effect::ReturnSelfTransformedAttached
+            | Effect::ReturnSelfAttachedToTarget
             | Effect::SecondSunrise
             | Effect::PlayerTapsUntapped { .. }
             | Effect::TapAnyNumberThenPumpPerTapped { .. }
@@ -694,6 +695,8 @@ impl Effect {
             | Effect::ModularCounters { what }
             | Effect::Tap { what }
             | Effect::TapAndUntapLock { what }
+            | Effect::TapAndLockWhileSourcePresent { what }
+            | Effect::TapBlockedByAndSkipUntap { what }
             | Effect::RemoveFromCombat { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
@@ -850,7 +853,7 @@ impl Effect {
             Effect::PutOnLibraryFromHand { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
-            Effect::DelayUntil { body, .. } => body.requires_target(),
+            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } => body.requires_target(),
             // Needs a creature to watch for death (the watched target).
             Effect::WhenTargetDiesThisTurn { .. } => true,
             // Needs a creature to watch for damage (Paladin's Forecast).
@@ -1098,6 +1101,8 @@ impl Effect {
             | Effect::Tap { what }
             | Effect::SetSaddled { what }
             | Effect::TapAndUntapLock { what }
+            | Effect::TapAndLockWhileSourcePresent { what }
+            | Effect::TapBlockedByAndSkipUntap { what }
             | Effect::Untap { what, .. } => {
                 sel_filter(what).or_else(|| implicit_player_if_controlled_by_target(what))
             }
@@ -1179,7 +1184,7 @@ impl Effect {
             Effect::If { then, else_, .. } => then
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter()),
-            Effect::DelayUntil { body, .. } => body.primary_target_filter(),
+            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } => body.primary_target_filter(),
             Effect::OptionalTargets { body, .. } => body.primary_target_filter(),
             // The copy *source* is the targeted slot ("becomes a copy of
             // target land").
@@ -1351,7 +1356,7 @@ impl Effect {
                     .collect::<Vec<_>>()
                     .as_slice(),
             ),
-            Effect::DelayUntil { body, .. } | Effect::Repeat { body, .. } => {
+            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } | Effect::Repeat { body, .. } => {
                 body.prefers_friendly_target()
             }
             Effect::ForEach { body, .. }
@@ -1420,7 +1425,7 @@ impl Effect {
             Effect::If { then, else_, .. } => {
                 then.prefers_graveyard_target() || else_.prefers_graveyard_target()
             }
-            Effect::DelayUntil { body, .. }
+            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
@@ -1549,7 +1554,10 @@ impl Effect {
                     _ => format!("pump {t} until end of turn"),
                 }
             }
-            Effect::Tap { .. } | Effect::TapAndUntapLock { .. } => format!("tap {}", self.target_phrase()),
+            Effect::Tap { .. }
+            | Effect::TapAndUntapLock { .. }
+            | Effect::TapAndLockWhileSourcePresent { .. }
+            | Effect::TapBlockedByAndSkipUntap { .. } => format!("tap {}", self.target_phrase()),
             Effect::PhaseOut { .. } => format!("phase out {}", self.target_phrase()),
             Effect::RemoveFromCombat { .. } => format!("remove {} from combat", self.target_phrase()),
             Effect::Untap { .. } => format!("untap {}", self.target_phrase()),
@@ -1733,7 +1741,7 @@ impl Effect {
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. }
-            | Effect::DelayUntil { body, .. }
+            | Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::Reflexive { body }
             | Effect::ForEach { body, .. } => body.effect_short_text(),
@@ -1875,6 +1883,8 @@ impl Effect {
             | Effect::Tap { what }
             | Effect::SetSaddled { what }
             | Effect::TapAndUntapLock { what }
+            | Effect::TapAndLockWhileSourcePresent { what }
+            | Effect::TapBlockedByAndSkipUntap { what }
             | Effect::Untap { what, .. } => {
                 matches!(what, Selector::ControlledBy { who: PlayerRef::Target(_), .. })
             }
@@ -1933,7 +1943,7 @@ impl Effect {
                     then.accepts_player_target() || else_.accepts_player_target()
                 }
             }
-            Effect::DelayUntil { body, .. }
+            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
             Effect::MayDo { body, .. }
@@ -2302,6 +2312,8 @@ impl Effect {
                 | Effect::Tap { what }
                 | Effect::SetSaddled { what }
                 | Effect::TapAndUntapLock { what }
+            | Effect::TapAndLockWhileSourcePresent { what }
+            | Effect::TapBlockedByAndSkipUntap { what }
                 | Effect::Untap { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))
                 }
@@ -2425,7 +2437,7 @@ impl Effect {
                 | Effect::OnYourNextInstantSorceryThisTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::OptionalTargets { body, .. }
-                | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
+                | Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => eff_find(then, slot, mode, kicked),
                 Effect::PayEnergyOrElse { otherwise, .. }
                 | Effect::PayEnergyOrElseValue { otherwise, .. }

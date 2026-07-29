@@ -9555,6 +9555,7 @@ pub fn lorehold_ignis_b144() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(3),
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
@@ -14433,6 +14434,7 @@ pub fn lorehold_bookburn_b196() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(4),
             filter: SelectionRequirement::Creature,
             max_targets: 4,

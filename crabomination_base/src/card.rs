@@ -272,6 +272,8 @@ pub enum PlaneswalkerSubtype {
     Saheeli, Tamiyo, Dihada, Urza,
     // THB walker.
     Calix,
+    // THS walker.
+    Xenagos,
     // modern_decks: Narset, Parter of Veils.
     Narset,
     // STX: Kasmina, Enigma Sage.
@@ -4265,6 +4267,10 @@ pub struct CardInstance {
     /// untap step for as long as the linked source permanent stays tapped (and
     /// on the battlefield). Cleared once the source untaps or leaves.
     pub untap_locked_by: Option<CardId>,
+    /// Shipbreaker Kraken — this permanent doesn't untap for as long as the
+    /// linked source permanent remains on the battlefield (regardless of the
+    /// source's tapped state). Released once the source leaves.
+    pub untap_locked_while_present: Option<CardId>,
     /// CR 702.142 — set when this creature is declared as an attacker;
     /// gates Boast activated abilities ("activate only if this attacked
     /// this turn"). Cleared in per-turn cleanup. Transient — not
@@ -4274,6 +4280,11 @@ pub struct CardInstance {
     /// attacked or blocked this turn" filters (Gideon's Triumph). Cleared in
     /// per-turn cleanup. Transient — not serialized (defaults false on reload).
     pub blocked_this_turn: bool,
+    /// Attackers this creature blocked this turn, in declaration order.
+    /// Outlives combat teardown (`block_map` is cleared at end of combat) so
+    /// delayed "each creature that was blocked by one of those creatures this
+    /// turn" clauses resolve (Triton Tactics). Cleared in per-turn cleanup.
+    pub blocked_attackers_this_turn: Vec<CardId>,
     /// CR 702.39 — Provoke: the attacker this creature must block this
     /// combat if able. Set when an attacker provokes it (untap + force
     /// block); cleared at end of combat. Transient — not serialized.
@@ -4566,8 +4577,10 @@ impl CardInstance {
             cant_regenerate_this_turn: false,
             skip_next_untap: false,
             untap_locked_by: None,
+            untap_locked_while_present: None,
             attacked_this_turn: false,
             blocked_this_turn: false,
+            blocked_attackers_this_turn: Vec::new(),
             must_block: None,
             exiled_by: None,
             exiled_with: None,

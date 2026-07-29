@@ -63,6 +63,7 @@ pub fn chandras_pyrohelix() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(2),
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
@@ -81,6 +82,7 @@ pub fn forked_lightning() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(4),
             filter: SelectionRequirement::Creature,
             max_targets: 3,
@@ -97,6 +99,7 @@ pub fn arc_lightning() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(3),
             filter: SelectionRequirement::Creature.or(SelectionRequirement::Player),
             max_targets: 3,
@@ -1299,6 +1302,7 @@ pub fn conflagrate() -> CardDefinition {
         cost: cost(&[x(), x(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::XFromCost,
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)

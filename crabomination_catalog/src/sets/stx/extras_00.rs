@@ -1422,6 +1422,7 @@ pub fn magma_opus() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamageDivided {
+                retaliate_to_source: false,
                 total: Value::Const(4),
                 filter: SelectionRequirement::Creature
                     .or(SelectionRequirement::Player)

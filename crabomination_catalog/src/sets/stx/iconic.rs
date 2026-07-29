@@ -1083,6 +1083,7 @@ pub fn prismari_flameseeker() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
                 total: Value::Const(2),
                 filter: SelectionRequirement::Creature
                     .or(SelectionRequirement::Player)

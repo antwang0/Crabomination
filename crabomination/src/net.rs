@@ -2362,7 +2362,7 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::Discovered { player, value } => {
                 GameEventWire::Discovered { player: *player, value: *value }
             }
-            GameEvent::BecameMonstrous { card_id } => {
+            GameEvent::BecameMonstrous { card_id, .. } => {
                 GameEventWire::BecameMonstrous { card_id: *card_id }
             }
             GameEvent::Transformed { card_id } => {

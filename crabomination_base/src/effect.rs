@@ -182,6 +182,11 @@ pub enum Selector {
     /// to chain a `GrantMayPlay` immediately after the Move targets
     /// the same card(s). Cleared between resolution roots.
     LastMoved,
+    /// The permanent sacrificed to pay the current spell's / ability's cost
+    /// (`GameState.sacrificed_card`, stamped by `Effect::WithSacrificedPt`).
+    /// Now a card in its owner's graveyard — Rescue from the Underworld
+    /// reanimates it alongside its target.
+    SacrificedCard,
 
     /// The chosen target slot (0-indexed) of the spell whose cast
     /// triggered this ability. Resolves against the topmost matching
@@ -1042,6 +1047,10 @@ pub enum Predicate {
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
+    /// CR 500.7 — the current turn is an extra turn. Backed by
+    /// `GameState.current_turn_is_extra`. Medomai the Ageless's
+    /// "can't attack during extra turns".
+    IsExtraTurn,
     /// CR 701.31 — the source permanent is monstrous. Backed by
     /// `CardInstance.monstrous`. Powers "as long as this is monstrous, …"
     /// statics (Fleecemane Lion's hexproof + indestructible).
@@ -2730,6 +2739,11 @@ pub enum Effect {
         total: Value,
         filter: SelectionRequirement,
         max_targets: u8,
+        /// "Each of those creatures deals damage equal to its power to
+        /// [this]" (Polukranos, World Eater) — every damaged target swings
+        /// back at the source before state-based actions are checked.
+        #[serde(default)]
+        retaliate_to_source: bool,
     },
     /// "Deals N damage divided evenly, rounded down, among any number of
     /// targets" (Fireball). Same slot shape as `DealDamageDivided`, but each
@@ -3791,6 +3805,10 @@ pub enum Effect {
     /// control" (auto-pick: greatest power). No-op if the source isn't in a
     /// graveyard, has no back face, or its owner controls no creature.
     ReturnSelfTransformedAttached,
+    /// "Return this card to the battlefield attached to [slot-0 target]"
+    /// (Gift of Immortality's end-step re-attach). No-op if the source isn't
+    /// in a graveyard or the target isn't a battlefield permanent.
+    ReturnSelfAttachedToTarget,
     /// "Return the top creature card of `who`'s graveyard to the battlefield."
     /// Top = most recently put into the graveyard (Mistmoon Griffin). No-op if
     /// the graveyard holds no creature card.
@@ -3982,6 +4000,14 @@ pub enum Effect {
     /// Entrancing Lyre — tap `what` and lock it from untapping for as long as
     /// the source permanent stays tapped (`CardInstance.untap_locked_by`).
     TapAndUntapLock { what: Selector },
+    /// Shipbreaker Kraken — tap `what` and lock it from untapping for as long
+    /// as the source permanent stays on the battlefield
+    /// (`CardInstance.untap_locked_while_present`).
+    TapAndLockWhileSourcePresent { what: Selector },
+    /// "Tap each creature that was blocked by [what] this turn; those
+    /// creatures don't untap during their controllers' next untap steps"
+    /// (Triton Tactics), reading `CardInstance.blocked_attackers_this_turn`.
+    TapBlockedByAndSkipUntap { what: Selector },
     /// CR 506.4 — remove every targeted creature from combat: an attacker is
     /// pulled from the attack (its blocks released), a blocker is unassigned.
     /// It stops being an attacking/blocking creature but stays on the
@@ -4698,6 +4724,11 @@ pub enum Effect {
         source: Selector,
         #[serde(default)]
         extra_creature_types: Vec<crate::card::CreatureType>,
+        /// CR 707.2 "except it has this ability" — the copier keeps its own
+        /// triggered abilities on top of the copied ones, so the copy can
+        /// copy again (Artisan of Forms).
+        #[serde(default)]
+        keep_own_triggered: bool,
     },
     /// CR 707.2 — continuous (layer-1) sibling of `BecomeCopyOf`: each
     /// `what` becomes a copy of `source` for `duration`, via a
@@ -5535,7 +5566,16 @@ pub enum Effect {
     /// even after intervening resolutions reset the scratch (Witch's Oven,
     /// Transfigure). Wrapped around the queued ability effect by
     /// `activate_ability`; not meant for card definitions.
-    WithSacrificedPt { power: i32, toughness: i32, #[serde(default)] mana_value: u32, body: Box<Effect> },
+    WithSacrificedPt {
+        power: i32,
+        toughness: i32,
+        #[serde(default)]
+        mana_value: u32,
+        /// The sacrificed permanent itself, for `Selector::SacrificedCard`.
+        #[serde(default)]
+        card: Option<crate::card::CardId>,
+        body: Box<Effect>,
+    },
 
     /// Internal plumbing: re-stamp the power of the creature tapped to pay a
     /// Station ability's cost (CR 702.184a) before running `body`, so
@@ -5634,6 +5674,15 @@ pub enum Effect {
     /// `ctx.targets[0]` so the body can reference it via `Selector::Target(0)`.
     DelayUntil {
         kind: DelayedTriggerKind,
+        body: Box<Effect>,
+    },
+    /// `DelayUntil` with an explicit capture: `capture` is resolved NOW and
+    /// becomes the delayed body's slot-0 target, so "that creature" survives
+    /// the wait (Gift of Immortality's re-attach, Rescue from the Underworld's
+    /// sacrificed card).
+    DelayUntilWithCapture {
+        kind: DelayedTriggerKind,
+        capture: Selector,
         body: Box<Effect>,
     },
     /// "Add an amount of {C} equal to [amount] at the beginning of your

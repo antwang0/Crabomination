@@ -299,7 +299,7 @@ pub(crate) fn event_matches_spec(
             // CR 701.31 — "When this becomes monstrous." Source must equal
             // the permanent that became monstrous.
             event,
-            GameEvent::BecameMonstrous { card_id } if *card_id == source.id
+            GameEvent::BecameMonstrous { card_id, .. } if *card_id == source.id
         ) || matches!(
             // CR 712 — "When this transforms." Source must equal the
             // permanent that transformed.
@@ -645,7 +645,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::MountSaddled { mount, .. } => Some(EntityRef::Permanent(*mount)),
         GameEvent::PermanentPhasedIn { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Explored { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
-        GameEvent::BecameMonstrous { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::BecameMonstrous { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Transformed { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Mutated { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::TokenCreated { card_id } => Some(EntityRef::Permanent(*card_id)),
@@ -794,7 +794,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::PermanentUntapped { card_id }
         | GameEvent::PermanentPhasedIn { card_id }
         | GameEvent::Explored { card_id, .. }
-        | GameEvent::BecameMonstrous { card_id }
+        | GameEvent::BecameMonstrous { card_id, .. }
         | GameEvent::Transformed { card_id }
         | GameEvent::Mutated { card_id }
         | GameEvent::TokenCreated { card_id }

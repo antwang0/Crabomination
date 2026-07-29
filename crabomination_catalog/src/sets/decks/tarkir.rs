@@ -1782,6 +1782,7 @@ pub fn twin_bolt() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamageDivided {
+                retaliate_to_source: false,
             total: Value::Const(2),
             filter: SelectionRequirement::Any,
             max_targets: 2,

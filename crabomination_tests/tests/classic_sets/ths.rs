@@ -1342,3 +1342,373 @@ fn ths_batch4_stat_lines() {
         }
     }
 }
+
+/// Stat / keyword lines for the batch-5 bodies.
+#[test]
+fn ths_batch5_stat_lines() {
+    let table: &[(fn() -> crabomination::card::CardDefinition, i32, i32, &[Keyword])] = &[
+        (catalog::artisan_of_forms, 1, 1, &[]),
+        (catalog::ashen_rider, 5, 5, &[Keyword::Flying]),
+        (catalog::daxos_of_meletis, 2, 2, &[Keyword::CantBeBlockedByPowerAtLeast(3)]),
+        (catalog::polis_crusher, 4, 4, &[Keyword::Trample]),
+        (catalog::polukranos_world_eater, 5, 5, &[]),
+        (catalog::prophet_of_kruphix, 2, 3, &[]),
+        (catalog::shipbreaker_kraken, 6, 6, &[]),
+        (catalog::triad_of_fates, 3, 3, &[]),
+        (catalog::underworld_cerberus, 6, 6, &[Keyword::CantBeBlockedExceptByN(3)]),
+    ];
+    for (f, p, t, kws) in table {
+        let d = f();
+        assert_eq!((d.power, d.toughness), (*p, *t), "{}", d.name);
+        for kw in *kws {
+            assert!(d.keywords.contains(kw), "{} lacks {:?}", d.name, kw);
+        }
+    }
+    assert_eq!(catalog::xenagos_the_reveler().base_loyalty, 3);
+}
+
+/// Step forward to `seat`'s next `step`, draining triggers along the way.
+fn advance_to(g: &mut GameState, seat: usize, step: TurnStep) {
+    for _ in 0..400 {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+        if g.active_player_idx == seat && g.step == step {
+            return;
+        }
+    }
+    panic!("never reached seat {seat}'s {step:?}");
+}
+
+/// Ashen Rider exiles a permanent on entry and again when it dies.
+#[test]
+fn ashen_rider_exiles_on_entry_and_death() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rider = g.add_card_to_hand(0, catalog::ashen_rider());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast_at(&mut g, rider, Some(Target::Permanent(a)));
+    assert!(g.battlefield_find(a).is_none(), "ETB exiled the first bear");
+
+    g.players[0].mana_pool.add(Color::Black, 3);
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast_at(&mut g, murder, Some(Target::Permanent(rider)));
+    assert!(g.battlefield_find(b).is_none(), "the death trigger exiled the second bear");
+}
+
+/// Chained to the Rocks only enchants a Mountain you control, and exiles a
+/// creature until it leaves.
+#[test]
+fn chained_to_the_rocks_exiles_until_it_leaves() {
+    let mut g = main_phase();
+    let mountain = g.add_card_to_battlefield(0, catalog::mountain());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::chained_to_the_rocks());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast_at(&mut g, aura, Some(Target::Permanent(mountain)));
+    assert!(g.battlefield_find(victim).is_none(), "creature exiled");
+
+    g.destroy_permanent(aura, false, &mut Vec::new());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_some(), "returns when the Aura leaves");
+}
+
+/// Curse of the Swine exiles X creatures and gives each controller a Boar.
+#[test]
+fn curse_of_the_swine_swaps_creatures_for_boars() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let curse = g.add_card_to_hand(0, catalog::curse_of_the_swine());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: curse,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "exiled");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Boar"),
+        "the victim's controller got the Boar"
+    );
+}
+
+/// Prophet of Kruphix untaps its controller's creatures and lands — but not
+/// their other permanents — on the opponent's untap step.
+#[test]
+fn prophet_of_kruphix_untaps_creatures_and_lands_off_turn() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::prophet_of_kruphix());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    for id in [land, bear, rock] {
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
+    advance_to(&mut g, 1, TurnStep::PreCombatMain);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "land untapped");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "creature untapped");
+    assert!(g.battlefield_find(rock).unwrap().tapped, "the artifact stayed tapped");
+}
+
+/// Underworld Cerberus makes graveyard cards illegal targets.
+#[test]
+fn underworld_cerberus_protects_graveyards() {
+    let mut g = main_phase();
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    assert!(g.check_target_legality(&Target::Permanent(corpse), 0).is_ok());
+    g.add_card_to_battlefield(1, catalog::underworld_cerberus());
+    assert!(
+        g.check_target_legality(&Target::Permanent(corpse), 0).is_err(),
+        "graveyard cards can't be targeted"
+    );
+}
+
+/// Shipbreaker Kraken's monstrosity taps creatures that stay tapped while it
+/// is on the battlefield.
+#[test]
+fn shipbreaker_kraken_locks_creatures_while_present() {
+    let mut g = main_phase();
+    let kraken = g.add_card_to_battlefield(0, catalog::shipbreaker_kraken());
+    g.battlefield_find_mut(kraken).unwrap().summoning_sick = false;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kraken,
+        ability_index: 0,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("monstrosity");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped, "tapped by the monstrous trigger");
+
+    advance_to(&mut g, 1, TurnStep::PreCombatMain);
+    assert!(g.battlefield_find(victim).unwrap().tapped, "still locked");
+    g.destroy_permanent(kraken, false, &mut Vec::new());
+    drain_stack(&mut g);
+    advance_to(&mut g, 1, TurnStep::PreCombatMain);
+    assert!(!g.battlefield_find(victim).unwrap().tapped, "released once the Kraken left");
+}
+
+/// Polukranos's monstrosity divides X damage and takes the creatures' power
+/// back.
+#[test]
+fn polukranos_trades_damage_with_its_victims() {
+    let mut g = main_phase();
+    let poly = g.add_card_to_battlefield(0, catalog::polukranos_world_eater());
+    g.battlefield_find_mut(poly).unwrap().summoning_sick = false;
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: poly,
+        ability_index: 0,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        x_value: Some(2),
+    })
+    .expect("monstrosity X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(poly).unwrap().monstrous);
+    assert_eq!(
+        g.battlefield_find(poly).unwrap().damage,
+        4,
+        "the 4/4 swung back for its power"
+    );
+    assert_eq!(g.battlefield_find(victim).unwrap().damage, 2);
+}
+
+/// Triad of Fates marks a creature, then exiles it to draw two cards.
+#[test]
+fn triad_of_fates_cashes_a_fate_counter() {
+    let mut g = main_phase();
+    let triad = g.add_card_to_battlefield(0, catalog::triad_of_fates());
+    g.battlefield_find_mut(triad).unwrap().summoning_sick = false;
+    let mark = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: triad,
+        ability_index: 0,
+        target: Some(Target::Permanent(mark)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("fate counter");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mark).unwrap().counter_count(CounterType::Fate), 1);
+
+    g.battlefield_find_mut(triad).unwrap().tapped = false;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let before = g.players[1].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: triad,
+        ability_index: 2,
+        target: Some(Target::Permanent(mark)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("exile for cards");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mark).is_none(), "exiled");
+    assert_eq!(g.players[1].hand.len(), before + 2, "its controller drew two");
+}
+
+/// Medomai can't attack during an extra turn (CR 500.7).
+#[test]
+fn medomai_cant_attack_during_extra_turns() {
+    let mut g = main_phase();
+    let medomai = g.add_card_to_battlefield(0, catalog::medomai_the_ageless());
+    g.battlefield_find_mut(medomai).unwrap().summoning_sick = false;
+    assert!(!g.computed_permanent(medomai).unwrap().keywords.contains(&Keyword::CantAttack));
+    g.current_turn_is_extra = true;
+    assert!(
+        g.computed_permanent(medomai).unwrap().keywords.contains(&Keyword::CantAttack),
+        "the extra-turn rider applies"
+    );
+}
+
+/// Xenagos's +1 adds one mana per creature you control.
+#[test]
+fn xenagos_plus_one_scales_with_creatures() {
+    let mut g = main_phase();
+    let xenagos = g.add_card_to_battlefield(0, catalog::xenagos_the_reveler());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: xenagos,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("+1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2, "one mana per creature");
+    assert_eq!(g.battlefield_find(xenagos).unwrap().counter_count(CounterType::Loyalty), 4);
+}
+
+/// Gift of Immortality returns the creature, then re-attaches at the next end
+/// step.
+#[test]
+fn gift_of_immortality_recurs_its_host() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gift = g.add_card_to_hand(0, catalog::gift_of_immortality());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, gift, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(gift).unwrap().attached_to, Some(bear));
+
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast_at(&mut g, murder, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_some(), "the creature came back");
+    assert!(g.battlefield_find(gift).is_none(), "the Aura is in the graveyard for now");
+
+    while g.step != TurnStep::End {
+        g.advance_step(Vec::new()).expect("advance");
+    }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(gift).map(|c| c.attached_to),
+        Some(Some(bear)),
+        "re-attached at the end step"
+    );
+}
+
+/// Rescue from the Underworld returns both the sacrificed creature and the
+/// targeted graveyard creature at your next upkeep.
+#[test]
+fn rescue_from_the_underworld_returns_both() {
+    let mut g = main_phase();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let corpse = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let rescue = g.add_card_to_hand(0, catalog::rescue_from_the_underworld());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast_at(&mut g, rescue, Some(Target::Permanent(corpse)));
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed as a cost");
+
+    advance_to(&mut g, 0, TurnStep::PreCombatMain);
+    for _ in 0..4 {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(corpse).is_some(), "the target came back");
+    assert!(g.battlefield_find(fodder).is_some(), "the sacrificed creature came back");
+}
+
+/// Psychic Intrusion exiles a nonland card and lets you cast it.
+#[test]
+fn psychic_intrusion_steals_a_card() {
+    let mut g = main_phase();
+    let stolen = g.add_card_to_hand(1, catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, catalog::psychic_intrusion());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == stolen).expect("exiled");
+    assert_eq!(exiled.may_play_until.map(|p| p.player), Some(0), "seat 0 may cast it");
+}
+
+/// Triton Tactics untaps its targets and taps what they blocked at end of
+/// combat.
+#[test]
+fn triton_tactics_locks_down_blocked_attackers() {
+    let mut g = main_phase();
+    let attacker = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let blocker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(attacker).unwrap().summoning_sick = false;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.declare_blockers(vec![(blocker, attacker)]).expect("block");
+    drain_stack(&mut g);
+
+    let tactics = g.add_card_to_hand(0, catalog::triton_tactics());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tactics,
+        target: Some(Target::Permanent(blocker)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(blocker).unwrap().toughness, 5, "+0/+3");
+
+    while g.step != TurnStep::EndCombat {
+        g.advance_step(Vec::new()).expect("advance");
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    let a = g.battlefield_find(attacker).unwrap();
+    assert!(a.tapped, "the blocked attacker was tapped");
+    assert!(a.skip_next_untap, "and skips its next untap");
+}

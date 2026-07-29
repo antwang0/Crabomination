@@ -19,6 +19,7 @@ pub fn aurelias_fury() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamageDivided {
+                retaliate_to_source: false,
                 total: Value::XFromCost,
                 filter: R::Creature.or(R::Player).or(R::Planeswalker),
                 max_targets: 20,
