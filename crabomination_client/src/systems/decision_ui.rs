@@ -495,7 +495,14 @@ pub fn spawn_decision_ui(
                 .unwrap_or_else(|| "Attacker".to_string());
             let ordered: Vec<(CardId, String)> =
                 state.damage_order.iter().map(|id| (*id, name_of(*id))).collect();
-            spawn_damage_order_modal(&mut commands, &asset_server, &ui_fonts, &attacker_name, &ordered);
+            spawn_damage_order_modal(
+                &mut commands,
+                &asset_server,
+                &ui_fonts,
+                &attacker_name,
+                damage_recipient_noun(cv, *attacker),
+                &ordered,
+            );
         }
         DecisionWire::AssignCombatDamage { attacker, attacker_power, blockers } => {
             if state.damage_assign.is_empty() {
@@ -526,6 +533,7 @@ pub fn spawn_decision_ui(
                 &asset_server,
                 &ui_fonts,
                 &attacker_name,
+                damage_recipient_noun(cv, *attacker),
                 *attacker_power,
                 blockers,
                 &state.damage_assign,
@@ -1010,11 +1018,24 @@ fn spawn_order_triggers_modal(
 /// CR 510.1c — modal letting the attacking player order blockers for damage
 /// assignment. Same layout as the trigger-order modal: cards in a row,
 /// ← / → to reorder, leftmost is damaged first.
+/// CR 509.2 / 510.1e — the damage-order and assignment modals are shared by
+/// both sides of combat: an attacker ordering its blockers, or a multi-block
+/// blocker ordering the attackers it blocks. Pick the noun off the live view.
+fn damage_recipient_noun(cv: &crabomination::net::ClientView, source: CardId) -> &'static str {
+    let is_blocker = cv
+        .battlefield
+        .iter()
+        .find(|p| p.id == source)
+        .is_some_and(|p| !p.attacking && !p.blocking_attackers.is_empty());
+    if is_blocker { "attackers" } else { "blockers" }
+}
+
 fn spawn_damage_order_modal(
     commands: &mut Commands,
     asset_server: &AssetServer,
     ui_fonts: &UiFonts,
     attacker_name: &str,
+    recipients: &str,
     ordered: &[(CardId, String)],
 ) {
     let root = commands
@@ -1055,7 +1076,7 @@ fn spawn_damage_order_modal(
     commands.entity(panel).with_children(|panel| {
         panel.spawn((
             Text::new(format!(
-                "{attacker_name}: order blockers for damage  ·  ← → to reorder  ·  leftmost damaged first",
+                "{attacker_name}: order {recipients} for damage  ·  ← → to reorder  ·  leftmost damaged first",
             )),
             ui_fonts.tf(16.0),
             TextColor(theme::TEXT_PRIMARY),
@@ -1173,15 +1194,17 @@ fn spawn_damage_order_modal(
     });
 }
 
-/// CR 510.1d — modal letting the attacking player split combat damage among
-/// blockers with per-blocker +/- steppers. The engine validates the split and
-/// falls back to lethal-in-order if it breaks the ordering rule.
+/// CR 510.1d / 510.1e — modal letting the damage source's controller split
+/// combat damage among the recipients with per-recipient +/- steppers. The
+/// engine validates the split and falls back to lethal-in-order if it breaks
+/// the ordering rule.
 #[allow(clippy::too_many_arguments)]
 fn spawn_damage_assign_modal(
     commands: &mut Commands,
     asset_server: &AssetServer,
     ui_fonts: &UiFonts,
     attacker_name: &str,
+    recipients: &str,
     attacker_power: u32,
     blockers: &[(CardId, String, u32)],
     assign: &[(CardId, u32)],
@@ -1224,7 +1247,7 @@ fn spawn_damage_assign_modal(
     commands.entity(panel).with_children(|panel| {
         panel.spawn((
             Text::new(format!(
-                "{attacker_name}: assign combat damage  ·  {assigned} / {attacker_power} assigned",
+                "{attacker_name}: assign combat damage to {recipients}  ·  {assigned} / {attacker_power} assigned",
             )),
             ui_fonts.tf(16.0),
             TextColor(theme::TEXT_PRIMARY),

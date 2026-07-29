@@ -120,12 +120,10 @@ impl NetOutbox {
 /// suspend replays (see `ResumeContext::CastXPick`).
 pub fn patch_cast_x(action: &mut GameAction, x: u32) {
     match action {
-        GameAction::CastSpell { x_value, .. }
-        | GameAction::CastPrepareSpell { x_value, .. }
-        | GameAction::CastFlashback { x_value, .. } => {
-            if x_value.is_none() {
-                *x_value = Some(x);
-            }
+        GameAction::CastSpell { x_value: x_value @ None, .. }
+        | GameAction::CastPrepareSpell { x_value: x_value @ None, .. }
+        | GameAction::CastFlashback { x_value: x_value @ None, .. } => {
+            *x_value = Some(x);
         }
         _ => {}
     }

@@ -545,12 +545,12 @@ fn build_shape<R: Rng>(
     pool: &[CardFactory],
     colors: &[Color],
     splash_colors: &[Color],
-    spells: usize,
-    lands: u32,
-    noise: i32,
+    // (spell slots, land count, pick jitter)
+    shape: (usize, u32, i32),
     cfg: &SimConfig,
     rng: &mut R,
 ) -> Option<CandidateBuild> {
+    let (spells, lands, noise) = shape;
     let splash: Vec<CardFactory> = splash_colors
         .iter()
         .flat_map(|&c| splash_cards(pool, colors, c, cfg))
@@ -613,9 +613,7 @@ pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<Candid
             pool,
             &colors,
             &splash_colors,
-            cfg.target_spells,
-            cfg.total_lands,
-            0,
+            (cfg.target_spells, cfg.total_lands, 0),
             cfg,
             &mut rng,
         ) else {
@@ -674,7 +672,7 @@ fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, rng: &mut R
     let (spells, lands) = sample_deck_split(cfg, rng);
     let noise = (t * 2.0).round() as i32;
     let build =
-        build_shape(pulls, &chosen.colors, &chosen.splash, spells, lands, noise, cfg, rng)
+        build_shape(pulls, &chosen.colors, &chosen.splash, (spells, lands, noise), cfg, rng)
             .unwrap_or_else(|| {
                 // The noisy rebuild can only fail if the shape was hollow —
                 // and it came from enumerate, so it isn't. Defensive: fall
@@ -683,9 +681,7 @@ fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, rng: &mut R
                     pulls,
                     &chosen.colors,
                     &chosen.splash,
-                    cfg.target_spells,
-                    cfg.total_lands,
-                    0,
+                    (cfg.target_spells, cfg.total_lands, 0),
                     cfg,
                     rng,
                 )
@@ -839,8 +835,8 @@ fn play_one_game(
     let (mut actions, mut stale) = (0usize, 0usize);
     while !g.is_game_over() && actions < max_actions && stale < 8 {
         let mut any = false;
-        for s in 0..2 {
-            let Some(a) = bots[s].next_action(&g, s) else { continue };
+        for (s, bot) in bots.iter_mut().enumerate() {
+            let Some(a) = bot.next_action(&g, s) else { continue };
             if g.perform_action(a).is_ok() {
                 any = true;
                 actions += 1;
@@ -1069,7 +1065,7 @@ where
                 (s, l, noise + (v as i32 / 16) * 2)
             };
             let Some(mut build) =
-                build_shape(pool, &shape.colors, &shape.splash, spells, lands, n, cfg, &mut rng)
+                build_shape(pool, &shape.colors, &shape.splash, (spells, lands, n), cfg, &mut rng)
             else {
                 continue;
             };

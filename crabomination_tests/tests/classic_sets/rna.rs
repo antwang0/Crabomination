@@ -2625,3 +2625,43 @@ fn illusionists_bracers_copies_an_activation() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
 }
+
+/// Mirror March flips until a loss and mints that many hasty token copies.
+#[test]
+fn mirror_march_copies_per_won_flip() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mirror_march());
+    // Two wins, then a loss.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+    ]));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bear }]);
+    drain_stack(&mut g);
+    let copies: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.is_token && c.definition.name == "Grizzly Bears")
+        .collect();
+    assert_eq!(copies.len(), 2, "one copy per won flip");
+    assert!(copies.iter().all(|c| g.computed_permanent(c.id).unwrap().keywords.contains(&Keyword::Haste)));
+}
+
+/// Amplifire's upkeep reveal sets its base P/T to twice the revealed
+/// creature's.
+#[test]
+fn amplifire_doubles_the_revealed_creatures_pt() {
+    let mut g = two_player_game();
+    let amp = g.add_card_to_battlefield(0, catalog::amplifire());
+    // Library top: a non-creature, then the Hill Giant it stops on.
+    g.add_card_to_library(0, catalog::hill_giant()); // 3/3
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(amp).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "twice the Hill Giant's 3/3");
+}

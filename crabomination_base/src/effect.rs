@@ -3886,8 +3886,10 @@ pub enum Effect {
     /// that card's. The reveal is bottomed in a random order.
     RevealUntilCreatureDoubleBasePt,
     /// Illusionist's Bracers — copy the activated ability that just triggered
-    /// this (skipping mana abilities), with new targets allowed. Reads the
-    /// activation off the stack, so it belongs on an `AbilityActivated` trigger.
+    /// this. Mana abilities never reach the stack, so the topmost `activated`
+    /// stack item from the source is always a legal copy target (CR 706.10).
+    /// The copy inherits the original's targets; the printed "you may choose
+    /// new targets" prompt is a TODO.md follow-up.
     CopyActivatedAbilityMayChooseTargets,
     /// Exile each resolved permanent, then return it to the battlefield under
     /// its owner's control at the beginning of the next end step, entering with

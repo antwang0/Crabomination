@@ -29,5 +29,6 @@ mod rtr;
 mod spm;
 mod tdm;
 mod thb;
+mod ths;
 mod tla;
 mod war;

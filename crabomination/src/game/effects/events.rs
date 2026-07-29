@@ -437,6 +437,14 @@ pub(crate) fn event_matches_spec(
                 .battlefield_find(source.id)
                 .and_then(|a| a.attached_to)
                 .is_some_and(|host| host == *cid),
+            // "Whenever enchanted creature attacks" (the Theros Ordeals) —
+            // the host is still on the battlefield, so read `attached_to`.
+            GameEvent::AttackerDeclared(cid) | GameEvent::PermanentTapped { card_id: cid, .. } => {
+                state
+                    .battlefield_find(source.id)
+                    .and_then(|a| a.attached_to)
+                    .is_some_and(|host| host == *cid)
+            }
             _ => false,
         },
         // "Whenever you tap …" — the tap must have been performed by an effect

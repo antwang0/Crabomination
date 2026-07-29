@@ -8396,8 +8396,8 @@ mod stack_response_tests {
             let (mut actions, mut stale) = (0usize, 0usize);
             while !g.is_game_over() && actions < 50_000 && stale < 8 {
                 let mut any = false;
-                for s in 0..2 {
-                    let Some(a) = bots[s].next_action(&g, s) else { continue };
+                for (s, bot) in bots.iter_mut().enumerate() {
+                    let Some(a) = bot.next_action(&g, s) else { continue };
                     if g.perform_action(a).is_ok() {
                         any = true;
                         actions += 1;

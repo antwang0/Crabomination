@@ -120,7 +120,7 @@ fn main() {
     // score undervalues.
     let pins: Vec<String> = args
         .next()
-        .map(|s| s.split(',').map(|p| normalize_label(p)).collect())
+        .map(|s| s.split(',').map(normalize_label).collect())
         .unwrap_or_default();
     // Stage-2 refinement: variants per top shape. 0 disables (default).
     let refine_top: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(0);
@@ -215,7 +215,7 @@ fn main() {
     let rec = recommend::recommend_prepared(candidates, &cfg, |evals| {
         // One status line every ~40 finished jobs.
         let n = progress.fetch_add(1, Ordering::Relaxed);
-        if n % 40 == 0 {
+        if n.is_multiple_of(40) {
             let total: u32 = evals.iter().map(|e| e.decided() + e.undecided).sum();
             eprint!("\r  {total} games played …");
         }
@@ -232,7 +232,7 @@ fn main() {
         );
         let refined = recommend::refine(&pool, &rec, &cfg, |evals| {
             let n = progress.fetch_add(1, Ordering::Relaxed);
-            if n % 40 == 0 {
+            if n.is_multiple_of(40) {
                 let total: u32 = evals.iter().map(|e| e.decided() + e.undecided).sum();
                 eprint!("\r  {total} variant games played …");
             }
@@ -257,7 +257,7 @@ fn main() {
         );
         let searched = recommend::local_search(&rec, &cfg, |evals| {
             let n = progress.fetch_add(1, Ordering::Relaxed);
-            if n % 40 == 0 {
+            if n.is_multiple_of(40) {
                 let total: u32 = evals.iter().map(|e| e.decided() + e.undecided).sum();
                 eprint!("\r  {total} search games played …");
             }

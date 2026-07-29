@@ -16,6 +16,33 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Multi-block (CR 509.1b / 509.2 / 510.1e):** `block_map` is blocker →
+  `Vec<attacker>`; `Keyword::CanBlockAdditional(n)` / `CanBlockAnyNumber` cap
+  the per-combat assignment; a creature blocking several attackers orders them
+  and divides its combat damage (defending player decides, suspends for a UI
+  seat). `PermanentView.blocking_attackers` is a Vec; the combat-math preview
+  and the bot's block planner both follow; the client's damage order/assign
+  modals are noun-aware (a blocker orders "attackers", not "blockers").
+  Cards: Guardian of the Gateless,
+  Knight of Sorrows, Valor Made Real, Lumbering Battlement. Tests in
+  `core_rules/cr_recent35`.
+- **RNA + GTC complete (both sets at zero `set_gaps.py` gaps):** Dovin Grand
+  Arbiter, Gideon Champion of Justice, Teysa Karlov, Mass Manipulation,
+  Lavinia Azorius Renegade, Mirror March, Amplifire, Lazav Dimir Mastermind,
+  Illusionist's Bracers. New:
+  `StaticEffect::{OpponentsCantCastNoncreatureAboveLandCount, PumpSelfByValue}`,
+  `Effect::{FlipUntilLossThenTokenCopies, RevealUntilCreatureDoubleBasePt,
+  CopyActivatedAbilityMayChooseTargets, ExileAnyNumberUntilSourceLeaves}`,
+  `Value::CreaturesBlockedBy`, and a `StackItem::Trigger.activated` flag that
+  distinguishes activated abilities from triggered ones on the stack.
+- **THS heroic / bestow / Ordeal batch (22 cards):** the three heroic Hoplites,
+  the two-target pump instants, five Auras, six bestow creatures, and the whole
+  Ordeal cycle. `EventScope::EnchantedBySource` now covers attack/tap events
+  (it previously only handled deaths, exiles, and damage), and
+  `Effect::prefers_friendly_target` judges a `Seq`/`If` by the children that
+  actually declare a target — a non-targeting friendly prelude no longer aims a
+  hostile payload at its own controller. Tests in `classic_sets/ths`.
+
 - **RNA wave (modern_decks, this run, 100 cards):** Locket cycle, adapt/riot/
   spectacle/afterlife/addendum commons + uncommons, flash Auras, guildmages,
   the RNA split cycle (Depose/Consecrate/Warrant/Thrash/Collision/Carnival),

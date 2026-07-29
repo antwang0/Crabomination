@@ -3310,7 +3310,7 @@ impl GameState {
                 // Power); slots beyond the paid X are dropped.
                 let mut sub = ctx.clone();
                 sub.targets.truncate(ctx.x_value as usize);
-                return self.run_effect(body, &sub, events);
+                self.run_effect(body, &sub, events)
             }
 
             Effect::ApplyToTargets { effect: inner, .. } => {

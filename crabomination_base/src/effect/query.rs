@@ -1284,6 +1284,17 @@ impl Effect {
     /// Returns true for unconditional self-buffs (positive `PumpPT`,
     /// `GrantKeyword`, `+1/+1` `AddCounter`). Returns false for hostile
     /// effects (Destroy, Exile, DealDamage, …) and ambiguous ones.
+    /// Friendliness of the children that actually declare a target slot,
+    /// falling back to every child when none of them target.
+    fn friendliness_of_targeting_children(children: &[Effect]) -> bool {
+        let mut targeting = children.iter().filter(|e| e.requires_target()).peekable();
+        if targeting.peek().is_some() {
+            targeting.any(|e| e.prefers_friendly_target())
+        } else {
+            children.iter().any(|e| e.prefers_friendly_target())
+        }
+    }
+
     pub fn prefers_friendly_target(&self) -> bool {
         match self {
             Effect::PumpPT { power, toughness, .. } => {
@@ -1312,10 +1323,20 @@ impl Effect {
                 keywords.iter().any(Self::keyword_is_friendly)
             }
             Effect::AddCounter { kind, .. } => matches!(kind, CounterType::PlusOnePlusOne),
-            Effect::Seq(v) => v.iter().any(|e| e.prefers_friendly_target()),
-            Effect::If { then, else_, .. } => {
-                then.prefers_friendly_target() || else_.prefers_friendly_target()
-            }
+            // Only the sub-effects that actually surface a target slot get a
+            // say: a non-targeting friendly prelude (Ordeal of Purphoros's
+            // "+1/+1 counter on it") must not aim the hostile payload ("3
+            // damage to any target") at its own controller. With no targeting
+            // child, fall back to the whole batch's flavor.
+            Effect::Seq(v) => Self::friendliness_of_targeting_children(v),
+            Effect::If { then, else_, .. } => Self::friendliness_of_targeting_children(
+                std::slice::from_ref(then.as_ref())
+                    .iter()
+                    .chain(std::slice::from_ref(else_.as_ref()))
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .as_slice(),
+            ),
             Effect::DelayUntil { body, .. } | Effect::Repeat { body, .. } => {
                 body.prefers_friendly_target()
             }
