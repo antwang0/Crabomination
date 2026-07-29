@@ -52,6 +52,10 @@ pub enum PlayerRef {
     /// Every player except the controller of the selected entity, in APNAP
     /// order ("each player other than its controller" — Fractured Identity).
     EachPlayerExceptControllerOf(Box<Selector>),
+    /// CR 303.4a — the player the source Aura enchants ("enchanted player":
+    /// the Curse cycle, Psychic Possession). Resolves to nothing when the
+    /// source isn't attached to a player.
+    EnchantedPlayer,
     /// The player who triggered the event (for triggered abilities).
     Triggerer,
     /// A specific seat index. Used internally to flatten selector-based

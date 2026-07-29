@@ -3630,6 +3630,11 @@ impl GameState {
                         {
                             d += 1;
                         }
+                        StaticEffect::DoubleDamageToEnchantedPlayer
+                            if c.attached_to_player == Some(p) =>
+                        {
+                            d += 1;
+                        }
                         StaticEffect::HalveDamageToYou if c.controller == p => h += 1,
                         StaticEffect::AddDamageToOpponents { source_color, amount: bonus }
                             if !self.same_team(c.controller, p) =>
@@ -5377,23 +5382,50 @@ impl GameState {
                 else {
                     continue;
                 };
-                let crate::effect::Selector::EachPermanent(req) = applies_to else { continue };
-                if !requirement_needs_live_resolution(req) {
-                    continue;
-                }
-                let ids: Vec<CardId> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| {
-                        self.evaluate_requirement_static(
-                            req,
-                            &Target::Permanent(c.id),
+                // CR 303.4a — a player-scoped anthem ("creatures enchanted
+                // player controls get -1/-1", Curse of Death's Hold) resolves
+                // here too: the seat is live `attached_to_player` state.
+                let ids: Vec<CardId> = match applies_to {
+                    crate::effect::Selector::EachPermanent(req) => {
+                        if !requirement_needs_live_resolution(req) {
+                            continue;
+                        }
+                        self.battlefield
+                            .iter()
+                            .filter(|c| {
+                                self.evaluate_requirement_static(
+                                    req,
+                                    &Target::Permanent(c.id),
+                                    card.controller,
+                                    Some(card.id),
+                                )
+                            })
+                            .map(|c| c.id)
+                            .collect()
+                    }
+                    crate::effect::Selector::ControlledBy { who, filter } => {
+                        let ctx = crate::game::effects::EffectContext::for_ability(
+                            card.id,
                             card.controller,
-                            Some(card.id),
-                        )
-                    })
-                    .map(|c| c.id)
-                    .collect();
+                            None,
+                        );
+                        let Some(seat) = self.resolve_player(who, &ctx) else { continue };
+                        self.battlefield
+                            .iter()
+                            .filter(|c| c.controller == seat)
+                            .filter(|c| {
+                                self.evaluate_requirement_static(
+                                    filter,
+                                    &Target::Permanent(c.id),
+                                    card.controller,
+                                    Some(card.id),
+                                )
+                            })
+                            .map(|c| c.id)
+                            .collect()
+                    }
+                    _ => continue,
+                };
                 if ids.is_empty() {
                     continue;
                 }
@@ -8185,6 +8217,10 @@ impl GameState {
             let blocked = self.battlefield.iter().any(|c| {
                 c.definition.static_abilities.iter().any(|sa| match sa.effect {
                     StaticEffect::OneSpellPerTurn => pl.spells_cast_this_game_turn >= 1,
+                    StaticEffect::EnchantedPlayerOneSpellPerTurn => {
+                        c.attached_to_player == Some(self.priority.player_with_priority)
+                            && pl.spells_cast_this_game_turn >= 1
+                    }
                     StaticEffect::OneNoncreatureSpellPerTurn => {
                         !is_creature && pl.noncreature_spells_cast_this_game_turn >= 1
                     }
@@ -15075,6 +15111,8 @@ fn static_effect_to_effects(
             // Consulted at the damage-to-player life sites.
             | StaticEffect::DamageWontReduceControllerLifeBelowOne { .. }
             | StaticEffect::OneSpellPerTurn
+            | StaticEffect::EnchantedPlayerOneSpellPerTurn
+            | StaticEffect::DoubleDamageToEnchantedPlayer
             | StaticEffect::OneNoncreatureSpellPerTurn
             | StaticEffect::OneNonartifactSpellPerTurn
             | StaticEffect::SpellsCostMoreExceptOnControllerTurn { .. }

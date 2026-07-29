@@ -556,6 +556,9 @@ pub enum StaticEffect {
     /// Eidolon of Rhetoric, Archon of Emeria). Enforced at the central
     /// `perform_action` cast gate against `Player.spells_cast_this_turn`.
     OneSpellPerTurn,
+    /// CR 303.4a — "Enchanted player can't cast more than one spell each turn"
+    /// (Curse of Exhaustion). Scoped to the source Aura's enchanted seat.
+    EnchantedPlayerOneSpellPerTurn,
     /// "Each player can't cast more than one noncreature spell each turn"
     /// (Deafening Silence). Enforced at the central `perform_action` cast gate
     /// against `Player.noncreature_spells_cast_this_turn`.
@@ -931,6 +934,9 @@ pub enum StaticEffect {
     /// (Gisela, Blade of Goldnight.) Scoped to the static's controller's
     /// opponents; consulted by `GameState::scale_damage_to`.
     DoubleDamageToOpponents,
+    /// CR 614.5 / 303.4a — "If a source would deal damage to enchanted player,
+    /// it deals double that damage instead" (Curse of Bloodletting).
+    DoubleDamageToEnchantedPlayer,
     /// CR 614.5 — "If a creature you control that entered this turn would deal
     /// damage, it deals twice that much damage instead." (Neriv, Heart of the
     /// Storm.) Combat and noncombat alike; consulted by `scale_damage_to`.

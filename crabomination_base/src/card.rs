@@ -3988,6 +3988,10 @@ pub struct CardInstance {
     pub perm_toughness_bonus: i32,
     pub counters: HashMap<CounterType, u32>,
     pub attached_to: Option<CardId>,
+    /// CR 303.4a — the seat this Aura enchants, for "enchant player" Auras
+    /// (the Curse cycle, Psychic Possession). Mutually exclusive with
+    /// `attached_to`.
+    pub attached_to_player: Option<usize>,
     /// CR 702.95 — the creature this one is Soulbond-paired with, if any.
     /// Either member of a pair points at the other. Cleared when either
     /// creature leaves the battlefield (SBA in `stack.rs`).
@@ -4563,6 +4567,7 @@ impl CardInstance {
             perm_toughness_bonus: 0,
             counters,
             attached_to: None,
+            attached_to_player: None,
             soulbond_partner: None,
             kicked: false,
             granted_activated_abilities: Vec::new(),
@@ -5078,6 +5083,9 @@ struct CardInstanceWire {
     perm_toughness_bonus: i32,
     counters: Vec<(CounterType, u32)>,
     attached_to: Option<CardId>,
+    /// CR 303.4a — enchanted seat for "enchant player" Auras.
+    #[serde(default)]
+    attached_to_player: Option<usize>,
     /// CR 702.95 Soulbond partner. `#[serde(default)]` so older snapshots load
     /// as `None`.
     #[serde(default)]
@@ -5392,6 +5400,7 @@ impl serde::Serialize for CardInstance {
             perm_toughness_bonus: self.perm_toughness_bonus,
             counters: self.counters.iter().map(|(k, v)| (*k, *v)).collect(),
             attached_to: self.attached_to,
+            attached_to_player: self.attached_to_player,
             soulbond_partner: self.soulbond_partner,
             kicked: self.kicked,
             kick_count: self.kick_count,
@@ -5511,6 +5520,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.perm_toughness_bonus = wire.perm_toughness_bonus;
         c.counters = wire.counters.into_iter().collect();
         c.attached_to = wire.attached_to;
+        c.attached_to_player = wire.attached_to_player;
         c.soulbond_partner = wire.soulbond_partner;
         c.kicked = wire.kicked;
         c.kick_count = wire.kick_count;

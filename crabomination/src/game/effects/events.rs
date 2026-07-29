@@ -450,6 +450,12 @@ pub(crate) fn event_matches_spec(
                     .and_then(|a| a.attached_to)
                     .is_some_and(|host| host == *cid)
             }
+            // CR 303.4a — "whenever enchanted PLAYER …" (Psychic Possession,
+            // the Curse cycle). Player-anchored Auras match on the seat.
+            GameEvent::CardDrawn { player, .. } => state
+                .battlefield_find(source.id)
+                .and_then(|a| a.attached_to_player)
+                .is_some_and(|seat| seat == *player),
             _ => false,
         },
         // "Whenever you tap …" — the tap must have been performed by an effect

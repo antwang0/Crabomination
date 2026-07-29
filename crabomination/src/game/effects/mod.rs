@@ -14785,13 +14785,19 @@ impl GameState {
             }
 
             Effect::Attach { what, to } => {
-                let anchor = self.resolve_selector(to, ctx)
-                    .into_iter()
-                    .find_map(|e| e.as_permanent_id());
+                // CR 303.4a — the anchor may be a player ("enchant player":
+                // the Curse cycle, Psychic Possession) or a permanent.
+                let resolved = self.resolve_selector(to, ctx);
+                let anchor = resolved.iter().find_map(|e| e.as_permanent_id());
+                let anchor_seat = resolved.iter().find_map(|e| match e {
+                    EntityRef::Player(p) => Some(*p),
+                    _ => None,
+                });
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find_mut(cid) {
                             c.attached_to = anchor;
+                            c.attached_to_player = anchor_seat;
                             events.push(GameEvent::AttachmentMoved { attachment: cid, attached_to: anchor });
                         }
                 }
@@ -20739,6 +20745,10 @@ impl GameState {
             PlayerRef::EachPlayerExceptControllerOf(_) => {
                 self.resolve_players(pref, ctx).into_iter().next()
             }
+            PlayerRef::EnchantedPlayer => ctx
+                .source
+                .and_then(|src| self.battlefield_find(src))
+                .and_then(|c| c.attached_to_player),
             PlayerRef::DefendingPlayer => ctx
                 .source
                 .and_then(|src| self.attack_for(src).map(|a| a.target))

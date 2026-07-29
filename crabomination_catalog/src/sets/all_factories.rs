@@ -502,6 +502,14 @@ static CHK: &[Factory] = &[
     super::chk::heartbeat_of_spring,
     super::chk::journeyers_kite,
 ];
+static CURSES: &[Factory] = &[
+    super::curses::psychic_possession,
+    super::curses::curse_of_the_pierced_heart,
+    super::curses::curse_of_deaths_hold,
+    super::curses::curse_of_exhaustion,
+    super::curses::curse_of_bloodletting,
+    super::curses::cruel_reality,
+];
 static DECKS: &[Factory] = &[
     super::decks::springing_tiger,
     super::decks::mystic_enforcer,
@@ -15464,6 +15472,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("bro", BRO),
     ("c21", C21),
     ("chk", CHK),
+    ("curses", CURSES),
     ("decks", DECKS),
     ("dgm", DGM),
     ("dis", DIS),

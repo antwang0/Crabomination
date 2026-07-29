@@ -1276,6 +1276,14 @@ impl GameState {
                     // Also attaches a bestowed enchantment-creature (CR
                     // 702.103) cast as an Aura, even though its printed type
                     // line isn't an Aura.
+                    // CR 303.4a — "enchant player" Auras anchor to a seat.
+                    if let Some(crate::game::types::Target::Player(seat)) = target
+                        && let Some(aura) =
+                            self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        && aura.definition.is_aura()
+                    {
+                        aura.attached_to_player = Some(seat);
+                    }
                     if self
                         .battlefield
                         .iter()
@@ -3426,17 +3434,33 @@ impl GameState {
             self.defeat_battle(id, &mut events);
         }
 
-        // CR 702.103e — a bestowed permanent whose enchanted creature has
-        // left the battlefield is no longer an Aura; it stays in play and
-        // reverts to a creature (clear `bestowed` + the attachment link).
-        // Run before the orphan-Aura sweep so it isn't sent to the gy.
+        // CR 702.103f — a bestowed permanent that is unattached, or attached
+        // to an illegal object, ceases to be bestowed: it stays in play and
+        // reverts to a creature (the rule's stated exception to 704.5m, so it
+        // never hits the graveyard). Run before the orphan-Aura sweep so it
+        // isn't swept away.
         let unbestowed: Vec<CardId> = self
             .battlefield
             .iter()
             .filter(|c| c.bestowed)
             .filter(|c| match c.attached_to {
                 None => true,
-                Some(host) => !self.battlefield.iter().any(|b| b.id == host),
+                Some(host) => {
+                    let Some(h) = self.battlefield.iter().find(|b| b.id == host) else {
+                        return true;
+                    };
+                    // The host must still be legal to enchant: a creature, not
+                    // protected from the bestowed Aura, and matching the
+                    // printed "enchant ___" filter.
+                    self.is_protected_from(c.id, host)
+                        || !self
+                            .computed_permanent(host)
+                            .map(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
+                            .unwrap_or_else(|| h.definition.is_creature())
+                        || c.definition.aura_enchant_filter().is_some_and(|f| {
+                            !self.evaluate_requirement(f, &Target::Permanent(host), c.controller)
+                        })
+                }
             })
             .map(|c| c.id)
             .collect();
@@ -3451,7 +3475,7 @@ impl GameState {
         let orphaned_auras: Vec<CardId> = self
             .battlefield
             .iter()
-            .filter(|c| c.definition.is_aura())
+            .filter(|c| c.definition.is_aura() && c.attached_to_player.is_none())
             .filter(|c| {
                 match c.attached_to {
                     None => true, // not attached to anything
