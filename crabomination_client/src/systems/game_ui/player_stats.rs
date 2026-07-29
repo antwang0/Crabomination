@@ -106,6 +106,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Phased out (CR 702.26) — a ghostly translucent grey; the permanents
         // are treated as nonexistent until they phase in.
         StatChipKind::PhasedOut => (Color::srgba(0.20, 0.20, 0.28, 0.9), theme::TEXT_SECONDARY),
+        // Enchanted player (CR 303.4a) — a bruised purple; Curses are a
+        // lasting drag on the seat they're stuck to.
+        StatChipKind::Cursed => (Color::srgba(0.26, 0.14, 0.28, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -151,6 +154,20 @@ pub(super) enum StatChipKind {
     /// Maze's End win progress (DGM) — differently-named Gates controlled,
     /// win at 10. Shown only for a seat that controls a Maze's End.
     MazesEnd,
+    /// CR 303.4a — Auras enchanting this *player* (the Curse cycle, Psychic
+    /// Possession). They sit on no permanent, so the chip is the only place
+    /// they show up.
+    Cursed,
+}
+
+/// Label for the "enchanted player" chip (CR 303.4a): the Aura names while
+/// there are few, a count once the pile grows. `None` when the seat is clean.
+pub(super) fn cursed_chip_body(names: &[String]) -> Option<String> {
+    match names.len() {
+        0 => None,
+        1..=2 => Some(format!("⛧ {}", names.join(", "))),
+        n => Some(format!("⛧ cursed ×{n}")),
+    }
 }
 
 /// Label for the pending "your next creature spell" rider chip (CR 603.7e),
@@ -731,6 +748,12 @@ pub fn update_player_stats_chips(
             };
             spawn_stat_chip(row, &ui_fonts, StatChipKind::PhasedOut, label);
         }
+        // CR 303.4a — Auras enchanting this player. Named when few, counted
+        // when many; they live on no permanent, so this is the only place the
+        // table can see them.
+        if let Some(label) = cursed_chip_body(&p.enchanted_by) {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Cursed, label);
+        }
         // Storm / magecraft count — surface once a second spell lands this
         // turn so Storm / prowess / magecraft payoffs can be read at a glance.
         if storm_chip_visible(p.spells_cast_this_turn) {
@@ -1199,6 +1222,10 @@ pub fn update_opponent_stats_rows(
                 // CR 724 monarch crown — show which opponent holds the crown.
                 if p.is_monarch {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, "👑".to_string());
+                }
+                // CR 303.4a — Curses stuck to this opponent.
+                if let Some(label) = cursed_chip_body(&p.enchanted_by) {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Cursed, label);
                 }
                 // CR 700.6 city's blessing on an opponent.
                 if p.has_city_blessing {

@@ -933,6 +933,36 @@ fn run_match_inner(
 
 /// Sanitize an inbound chat line: strip control characters, trim, and
 /// clamp to 200 chars (on a char boundary). `None` for an empty result.
+/// Clamp a player-supplied *display* name (seat name, lobby name) to
+/// something safe to broadcast: control characters dropped, whitespace runs
+/// collapsed to single spaces, truncated to `max` characters, trimmed.
+/// `None` once nothing printable is left, so callers can fall back to a
+/// generated name. Lobby names and seat names both ride the lobby list to
+/// every browsing connection, so they get the same treatment as chat.
+pub(crate) fn sanitize_name(raw: &str, max: usize) -> Option<String> {
+    let mut out = String::new();
+    let mut pending_space = false;
+    for c in raw.chars() {
+        if c.is_control() {
+            continue;
+        }
+        if c.is_whitespace() {
+            pending_space = !out.is_empty();
+            continue;
+        }
+        if pending_space && out.chars().count() < max {
+            out.push(' ');
+            pending_space = false;
+        }
+        if out.chars().count() >= max {
+            break;
+        }
+        out.push(c);
+    }
+    let trimmed = out.trim();
+    if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+}
+
 pub(crate) fn sanitize_chat(raw: &str) -> Option<String> {
     let cleaned: String = raw
         .chars()

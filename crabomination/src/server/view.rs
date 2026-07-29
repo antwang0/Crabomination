@@ -701,6 +701,13 @@ fn project_player(
         damage_fully_prevented,
         devotion,
         is_monarch,
+        // CR 303.4a — Auras enchanting this player (Curses, Psychic Possession).
+        enchanted_by: state
+            .battlefield
+            .iter()
+            .filter(|c| c.attached_to_player == Some(player_seat))
+            .map(|c| c.definition.name.to_string())
+            .collect(),
         has_city_blessing: player.city_blessing,
         cannot_gain_life,
         cant_cast_noncreature: player.cant_cast_noncreature_this_turn,
@@ -1309,6 +1316,8 @@ fn project_permanent(
                 .find(|o| o.id == host)
                 .map(|o| o.definition.name.to_string())
         }),
+        // CR 303.4a — an "enchant player" Aura anchors to a seat instead.
+        attached_to_player: card.attached_to_player,
         // CR 702.95 — Soulbond partner (only while still on the battlefield).
         soulbond_partner: card
             .soulbond_partner

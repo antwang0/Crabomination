@@ -242,9 +242,8 @@ impl LobbyManager {
                 // Remember the announced name (used when this connection later
                 // takes a seat); a connection already seated keeps the name it
                 // was seated with.
-                let clean = name.trim();
-                if !clean.is_empty() {
-                    self.conn_name.insert(conn, clean.chars().take(24).collect());
+                if let Some(clean) = super::sanitize_name(&name, 24) {
+                    self.conn_name.insert(conn, clean);
                 }
                 let mut out = LobbyOutcome::default();
                 out.send(conn, self.lobby_list_msg());
@@ -304,11 +303,10 @@ impl LobbyManager {
             });
             return out;
         }
-        // Lobby names are broadcast to every browsing connection; clamp them
-        // like display names (:237) so a hostile client can't amplify a huge
-        // payload through the lobby list.
-        let name: String = name.trim().chars().take(48).collect();
-        let name = if name.is_empty() { format!("Lobby {}", self.next_id) } else { name };
+        // Lobby names are broadcast to every browsing connection, so they get
+        // the same control-character/length clamp as display names and chat.
+        let name = super::sanitize_name(&name, 48)
+            .unwrap_or_else(|| format!("Lobby {}", self.next_id));
         let id = self.next_id;
         self.next_id += 1;
         let lobby = Lobby {
@@ -1518,5 +1516,33 @@ mod flood_tests {
         let out = mgr.handle(c, ClientMsg::Chat { text: "hello".into() });
         assert!(out.sends.iter().any(|(to, msg)| *to == c
             && matches!(msg, ServerMsg::LobbyError { .. })));
+    }
+
+    /// Player-supplied names ride the lobby list to every browsing connection,
+    /// so control characters are dropped and whitespace runs collapse.
+    #[test]
+    fn display_and_lobby_names_are_sanitized() {
+        let mut mgr = LobbyManager::new();
+        let c = ConnId(7);
+        mgr.register(c);
+        mgr.handle(c, ClientMsg::JoinMatch { name: "  ali\nce\t \r Q  ".into() });
+        assert_eq!(mgr.name_of(c), "alice Q");
+        mgr.handle(
+            c,
+            ClientMsg::CreateLobby { name: "\u{7}\n\t".into(), format: LobbyFormat::Modern },
+        );
+        let lobby = mgr.lobbies.first().expect("lobby created");
+        assert!(lobby.name.starts_with("Lobby "), "unprintable name fell back: {}", lobby.name);
+        assert_eq!(lobby.member_names(), vec!["alice Q".to_string()]);
+    }
+
+    /// A name longer than the cap is truncated rather than rejected.
+    #[test]
+    fn long_names_are_truncated_not_dropped() {
+        let mut mgr = LobbyManager::new();
+        let c = ConnId(8);
+        mgr.register(c);
+        mgr.handle(c, ClientMsg::JoinMatch { name: "x".repeat(200) });
+        assert_eq!(mgr.name_of(c).chars().count(), 24);
     }
 }

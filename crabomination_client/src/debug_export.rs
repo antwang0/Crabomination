@@ -209,6 +209,7 @@ mod tests {
                 devotion: [0; 5],
                 is_monarch: false,
                 has_city_blessing: false,
+                enchanted_by: Vec::new(),
                 cannot_gain_life: false,
                 cant_cast_noncreature: false,
                 life_locked: false,

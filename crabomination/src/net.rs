@@ -731,6 +731,11 @@ pub struct PlayerView {
     /// Surfaced so UIs can show a "blessed" badge. `#[serde(default)]`.
     #[serde(default)]
     pub has_city_blessing: bool,
+    /// CR 303.4a — names of the Auras enchanting this PLAYER (the Curse cycle,
+    /// Psychic Possession). Player-anchored Auras don't sit on any permanent,
+    /// so the HUD needs its own listing. `#[serde(default)]`.
+    #[serde(default)]
+    pub enchanted_by: Vec<String>,
     /// CR 119.7 — true when this player can't gain life right now (Sunspine
     /// Lynx, Erebos, Sulfuric Vortex). Surfaced so UIs can warn the player.
     /// `#[serde(default)]` for snapshot back-compat.
@@ -1565,6 +1570,10 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub attached_to_name: Option<String>,
+    /// CR 303.4a — the seat this Aura enchants, when it enchants a player
+    /// rather than a permanent. `#[serde(default)]`.
+    #[serde(default)]
+    pub attached_to_player: Option<usize>,
     /// CR 702.95 — the `CardId` of this creature's Soulbond partner, if it's
     /// paired. Lets the client draw a pairing link / badge "Soulbonded with …"
     /// in the tooltip without scanning the battlefield. `None` for the common

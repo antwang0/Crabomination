@@ -208,6 +208,9 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if let Some(host) = &p.attached_to_name {
         let verb = if p.card_types.contains(&CardType::Enchantment) { "Enchanting" } else { "Equipping" };
         lines.push(format!("{verb}: {host}"));
+    } else if let Some(seat) = p.attached_to_player {
+        // CR 303.4a — an "enchant player" Aura has no host permanent.
+        lines.push(format!("Enchanting: player {}", seat + 1));
     }
 
     // Soulbond pairing (CR 702.95): flag the pair so the player sees the
@@ -1202,6 +1205,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::MinusOneMinusZero => "-1/-0",
         CounterType::Loyalty => "Loyalty",
         CounterType::Charge => "Charge",
+        CounterType::Manifestation => "Manifestation",
         CounterType::Stun => "Stun",
         CounterType::Time => "Time",
         CounterType::Poison => "Poison",
@@ -1392,6 +1396,7 @@ mod tests {
             chosen_mode_label: None,
             attachments: vec![],
             attached_to_name: None,
+            attached_to_player: None,
             soulbond_partner: None,
             saga_final_chapter: None,
             has_other_face: false,
