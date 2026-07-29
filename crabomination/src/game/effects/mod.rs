@@ -14949,6 +14949,70 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopMayPutOntoBattlefield { who, filter, counter, extra_types } => {
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                };
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first() else { continue };
+                    let (cid, name, is_land) =
+                        (top.id, top.definition.name, top.definition.is_land());
+                    events.push(GameEvent::TopCardRevealed {
+                        player: p,
+                        card_name: name,
+                        is_land,
+                    });
+                    let matches = self.players[p]
+                        .library
+                        .first()
+                        .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, p));
+                    if !matches {
+                        continue;
+                    }
+                    let mut cursor = 0;
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        p,
+                        format!("Put {name} onto the battlefield?"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    if !yes {
+                        continue;
+                    }
+                    self.move_card_to(
+                        cid,
+                        &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                        ctx,
+                        events,
+                    );
+                    if self.battlefield_find(cid).is_none() {
+                        continue;
+                    }
+                    if let Some(k) = counter
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.add_counters(*k, 1);
+                    }
+                    for t in extra_types {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source: cid,
+                            affected: AffectedPermanents::Specific(vec![cid]),
+                            layer: Layer::L4Type,
+                            sublayer: None,
+                            duration: EffectDuration::Indefinite,
+                            modification: Modification::AddCardType(t.clone()),
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::RevealTopNPutMatchingToBattlefield { who, count, filter } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
@@ -17587,16 +17651,12 @@ impl GameState {
                         _ => None,
                     }));
                 self.prevention_shields.push(crate::game::types::PreventionShield {
-                    mint_mites_for: None,
                     target: crate::game::types::PreventionTarget::Player(ctx.controller),
-                    destroy: false,
-                    remaining: None,
-                    gain_life: false,
                     source: Some(chosen),
                     one_event: true,
                     reflect: *reflect,
                     source_controller: src_ctrl,
-                    redirect_to: None,
+                    ..Default::default()
                 });
                 Ok(())
             }
@@ -17746,16 +17806,9 @@ impl GameState {
                 if n > 0 {
                     for s in self.prevention_targets(target, ctx) {
                         self.prevention_shields.push(crate::game::types::PreventionShield {
-                            mint_mites_for: None,
                             target: s,
-                            destroy: false,
                             remaining: Some(n),
-                            gain_life: false,
-                            source: None,
-                            one_event: false,
-                        reflect: false,
-                            source_controller: None,
-                            redirect_to: None,
+                            ..Default::default()
                         });
                     }
                 }
@@ -17766,23 +17819,23 @@ impl GameState {
                 // CR 614.9 — push a "redirect the next N damage to `target`
                 // onto `to`" shield consumed by `apply_prevention_shields`.
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
-                let dst = self.resolve_selector(to, ctx).into_iter().find_map(|e| match e {
-                    EntityRef::Permanent(c) => Some(c),
-                    _ => None,
-                });
-                if n > 0 && let Some(dst) = dst {
+                let mut dst = None;
+                let mut dst_player = None;
+                for e in self.resolve_selector(to, ctx) {
+                    match e {
+                        EntityRef::Permanent(c) => dst = dst.or(Some(c)),
+                        EntityRef::Player(p) => dst_player = dst_player.or(Some(p)),
+                        _ => {}
+                    }
+                }
+                if n > 0 && (dst.is_some() || dst_player.is_some()) {
                     for s in self.prevention_targets(target, ctx) {
                         self.prevention_shields.push(crate::game::types::PreventionShield {
-                            mint_mites_for: None,
                             target: s,
-                            destroy: false,
                             remaining: Some(n),
-                            gain_life: false,
-                            source: None,
-                            one_event: false,
-                            reflect: false,
-                            source_controller: None,
-                            redirect_to: Some(dst),
+                            redirect_to: dst,
+                            redirect_to_player: dst_player,
+                            ..Default::default()
                         });
                     }
                 }
@@ -17796,16 +17849,10 @@ impl GameState {
                 if n > 0 {
                     for s in self.prevention_targets(target, ctx) {
                         self.prevention_shields.push(crate::game::types::PreventionShield {
-                            mint_mites_for: None,
                             target: s,
-                            destroy: false,
                             remaining: Some(n),
                             gain_life: true,
-                            source: None,
-                            one_event: false,
-                        reflect: false,
-                            source_controller: None,
-                            redirect_to: None,
+                            ..Default::default()
                         });
                     }
                 }
@@ -17816,16 +17863,8 @@ impl GameState {
                 // CR 615 — a fog scoped to one player/permanent.
                 for s in self.prevention_targets(target, ctx) {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
-                        mint_mites_for: None,
                         target: s,
-                        destroy: false,
-                        remaining: None,
-                        gain_life: false,
-                        source: None,
-                        one_event: false,
-                        reflect: false,
-                        source_controller: None,
-                        redirect_to: None,
+                        ..Default::default()
                     });
                 }
                 Ok(())
@@ -17838,15 +17877,9 @@ impl GameState {
                 for s in self.prevention_targets(target, ctx) {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
-                        remaining: None,
-                        gain_life: false,
-                        source: None,
                         one_event: true,
-                        reflect: false,
-                        source_controller: None,
-                        redirect_to: None,
-                        mint_mites_for: None,
                         destroy: true,
+                        ..Default::default()
                     });
                 }
                 Ok(())
@@ -18347,15 +18380,11 @@ impl GameState {
                 for seat in 0..self.players.len() {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
                         target: crate::game::types::PreventionTarget::Player(seat),
-                        remaining: None,
-                        gain_life: false,
                         source: Some(tgt),
                         one_event: true,
-                        reflect: false,
-                        source_controller: None,
-                        redirect_to: None,
                         mint_mites_for: Some(ctx.controller),
-                        destroy: false,                    });
+                        ..Default::default()
+                    });
                 }
                 Ok(())
             }

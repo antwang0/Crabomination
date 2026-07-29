@@ -5354,6 +5354,18 @@ pub enum Effect {
     /// onto the battlefield under its owner's control (firing ETB). Otherwise
     /// it stays on top. Chaos Warp.
     RevealTopPutPermanentOntoBattlefield { who: PlayerRef },
+    /// Reveal the top card of `who`'s library. If it matches `filter`, they may
+    /// put it onto the battlefield with a `counter` counter on it and
+    /// `extra_types` added to its types; a miss or a decline leaves it on top.
+    /// Arbiter of the Ideal.
+    RevealTopMayPutOntoBattlefield {
+        who: PlayerRef,
+        filter: SelectionRequirement,
+        #[serde(default)]
+        counter: Option<crate::card::CounterType>,
+        #[serde(default)]
+        extra_types: Vec<crate::card::CardType>,
+    },
     /// Reveal the top `count` cards; put every card matching `filter` onto the
     /// battlefield under `who`'s control, the rest on the bottom of the library.
     /// Gishath, Sun's Avatar's combat-damage trigger (reveal = damage dealt,

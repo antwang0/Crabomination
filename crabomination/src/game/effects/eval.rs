@@ -2440,6 +2440,8 @@ impl GameState {
                     R::IsEquipped => self.attached_equipment_count(*cid) > 0,
                     // CR 701.60 — suspected.
                     R::IsSuspected => card.suspected,
+                    // CR 702.103 — on the battlefield as a bestowed Aura.
+                    R::IsBestowed => card.bestowed,
                     // CR 301.5 — equipped by at least `n` Equipment (Balan).
                     R::EquippedByAtLeast(n) => {
                         self.attached_equipment_count(*cid) as u32 >= *n
@@ -2956,7 +2958,7 @@ impl GameState {
             | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
-            | R::DealtDamageToControllerThisTurn | R::IsEnchanted
+            | R::DealtDamageToControllerThisTurn | R::IsEnchanted | R::IsBestowed
             | R::IsEquipped | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::PlayerDamagedBySourceThisTurn => false,
         }

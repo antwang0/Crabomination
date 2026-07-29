@@ -2424,43 +2424,22 @@ mod tests {
         let mut state = two_player_game();
         let bear = state.add_card_to_battlefield(1, catalog::grizzly_bears());
         state.prevention_shields.push(PreventionShield {
-            mint_mites_for: None,
             target: PreventionTarget::Player(0),
-            destroy: false,
-            remaining: None,
-            gain_life: false,
-            source: None,
-            one_event: false,
-            reflect: false,
-            source_controller: None,
-            redirect_to: None,
+            ..Default::default()
         });
         state.prevention_shields.push(PreventionShield {
-            mint_mites_for: None,
             target: PreventionTarget::Permanent(bear),
-            destroy: false,
             remaining: Some(2),
-            gain_life: false,
-            source: None,
-            one_event: false,
-            reflect: false,
-            source_controller: None,
-            redirect_to: None,
+            ..Default::default()
         });
         // A Kill-Suit Cultist "destroy on next damage" shield on a second
         // creature reads as `doomed_next_damage`, NOT as protection.
         let doomed = state.add_card_to_battlefield(1, catalog::grizzly_bears());
         state.prevention_shields.push(PreventionShield {
-            mint_mites_for: None,
             target: PreventionTarget::Permanent(doomed),
             destroy: true,
-            remaining: None,
-            gain_life: false,
-            source: None,
             one_event: true,
-            reflect: false,
-            source_controller: None,
-            redirect_to: None,
+            ..Default::default()
         });
         state.damage_cant_be_prevented_this_turn = true;
         let v = project(&state, 0);

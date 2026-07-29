@@ -198,6 +198,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeBlockedByPowerAtMost(_)
         | Keyword::CantBeBlockedByPowerAtLeast(_)
         | Keyword::CantBeBlockedIfControllerCastSpells(_)
+        | Keyword::AttackCostBounce(_)
         | Keyword::CantBeBlockedByPowerLessThanCount(_)
         | Keyword::CantBeBlockedUnlessAllBlock
         | Keyword::HexproofUnlessAttackingOrBlocking

@@ -495,6 +495,50 @@ impl GameState {
             }
         }
 
+        // CR 508.1g — Floodtide Serpent's attack cost: each such attacker
+        // returns one matching permanent its controller controls to hand. The
+        // pool is checked and consumed together so two Serpents need two
+        // enchantments.
+        {
+            let mut spent: Vec<CardId> = Vec::new();
+            for atk in &attacks {
+                let filters: Vec<crate::card::SelectionRequirement> = computed_kw(atk.attacker)
+                    .iter()
+                    .filter_map(|k| match k {
+                        Keyword::AttackCostBounce(f) => Some((**f).clone()),
+                        _ => None,
+                    })
+                    .collect();
+                for f in filters {
+                    let pick = self.battlefield.iter().find(|c| {
+                        c.controller == p
+                            && !spent.contains(&c.id)
+                            && self.evaluate_requirement_static(
+                                &f,
+                                &crate::game::types::Target::Permanent(c.id),
+                                p,
+                                Some(atk.attacker),
+                            )
+                    });
+                    match pick {
+                        Some(c) => spent.push(c.id),
+                        None => return Err(GameError::CannotAttack(atk.attacker)),
+                    }
+                }
+            }
+            let mut events = Vec::new();
+            let ctx = crate::game::effects::EffectContext::for_ability(CardId(0), p, None);
+            for id in spent {
+                self.move_card_to(
+                    id,
+                    &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                    &ctx,
+                    &mut events,
+                );
+            }
+            self.dispatch_triggers_for_events(&events);
+        }
+
         let any_attackers = !attacks.is_empty();
         // CR 702.121 — Melee counts the distinct opponents this player attacked
         // this combat (a player targeted directly, or the controller of a

@@ -335,6 +335,11 @@ pub enum StaticEffect {
     ExtraLandPerTurn,
     /// Generic cost reduction for spells matching filter.
     CostReduction { filter: SelectionRequirement, amount: u32 },
+    /// CR 601.2f — "[filter] spells you cast cost `less` less to cast", where
+    /// `less` names COLORED pips (Ragemonger's "{B}{R} less"). Applied via
+    /// `ManaCost::reduce_by_cost`, so an unmatched colored pip falls back to
+    /// removing one generic instead. Mandatory, like every cost reduction.
+    ColoredCostReduction { filter: SelectionRequirement, less: crate::mana::ManaCost },
     /// Cost reduction for spells whose name matches the source's `named_card`
     /// (chosen via `Effect::NameCard`). Council of the Absolute — "spells with
     /// the chosen name you cast cost {2} less".

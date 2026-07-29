@@ -782,3 +782,331 @@ fn thassas_rebuff_taxes_by_devotion() {
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "unpaid tax — countered");
 }
+
+// ── Wave 4 (bng3) ────────────────────────────────────────────────────────────
+
+/// The Fated cycle scries only on your own turn.
+#[test]
+fn fated_cycle_scries_only_on_your_turn() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::great_hart());
+    cast(
+        &mut g,
+        catalog::fated_conflagration(),
+        Some(Target::Permanent(bear)),
+        1,
+        &[(Color::Red, 3)],
+    );
+    assert!(g.battlefield_find(bear).is_none(), "5 damage killed it");
+
+    // Same spell on the opponent's turn: no scry, so the library is untouched.
+    g.active_player_idx = 1;
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let lib = g.players[0].library.len();
+    cast(
+        &mut g,
+        catalog::fated_conflagration(),
+        Some(Target::Permanent(other)),
+        1,
+        &[(Color::Red, 3)],
+    );
+    assert_eq!(g.players[0].library.len(), lib, "no scry off-turn");
+}
+
+/// Fated Retribution wipes creatures and planeswalkers alike.
+#[test]
+fn fated_retribution_wipes_the_board() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::great_hart());
+    g.add_card_to_library(0, catalog::great_hart());
+    cast(&mut g, catalog::fated_retribution(), None, 4, &[(Color::White, 3)]);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(mine).is_none());
+}
+
+/// Fated Return reanimates with indestructible attached.
+#[test]
+fn fated_return_reanimates_indestructible() {
+    let mut g = main_phase();
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::great_hart());
+    cast(&mut g, catalog::fated_return(), Some(Target::Permanent(dead)), 4, &[(Color::Black, 3)]);
+    let c = g.battlefield_find(dead).expect("reanimated");
+    assert_eq!(c.controller, 0, "under your control");
+    assert!(g.computed_permanent(dead).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
+/// Tribute declined (the AutoDecider's default) fires the "if tribute wasn't
+/// paid" half; the Archon mints its Birds.
+#[test]
+fn ornitharch_tribute_declined_mints_birds() {
+    let mut g = main_phase();
+    cast(&mut g, catalog::ornitharch(), None, 3, &[(Color::White, 2)]);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Bird").count(),
+        2,
+        "tribute declined → two Birds"
+    );
+}
+
+/// Tribute paid suppresses the ETB half and leaves the counters instead.
+#[test]
+fn ornitharch_tribute_paid_adds_counters() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let id = cast(&mut g, catalog::ornitharch(), None, 3, &[(Color::White, 2)]);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Bird").count(), 0);
+}
+
+/// Bestow: Ghostblade Eidolon cast for its bestow cost is an Aura that hands
+/// over +1/+1 and double strike.
+#[test]
+fn ghostblade_eidolon_bestows_double_strike() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::ghostblade_eidolon());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastBestow {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bestow");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Everflame Eidolon pumps itself as a creature and the host as an Aura.
+#[test]
+fn everflame_eidolon_pumps_the_right_body() {
+    let mut g = main_phase();
+    let id = cast(&mut g, catalog::everflame_eidolon(), None, 1, &[(Color::Red, 1)]);
+    g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("pump self");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).map(|c| c.power), Some(2), "as a creature it pumps itself");
+}
+
+/// Eidolon of Countless Battles scales off creatures and Auras you control.
+#[test]
+fn eidolon_of_countless_battles_scales() {
+    let mut g = main_phase();
+    let id = cast(&mut g, catalog::eidolon_of_countless_battles(), None, 1, &[(Color::White, 2)]);
+    // Itself is one creature.
+    assert_eq!(g.computed_permanent(id).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(id).map(|c| (c.power, c.toughness)), Some((2, 2)));
+}
+
+/// Ragemonger strips {B}{R} off Minotaur spells.
+#[test]
+fn ragemonger_discounts_minotaurs_colored() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::ragemonger());
+    let butcher = g.add_card_to_hand(0, catalog::kragma_butcher()); // {2}{R} Minotaur
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: butcher,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{2} covers {2}{R} minus {B}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(butcher).is_some());
+}
+
+/// Pillar of War can attack once it's enchanted.
+#[test]
+fn pillar_of_war_attacks_while_enchanted() {
+    let mut g = main_phase();
+    let pillar = g.add_card_to_battlefield(0, catalog::pillar_of_war());
+    g.battlefield_find_mut(pillar).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    let attack = vec![crabomination::game::Attack {
+        attacker: pillar,
+        target: crabomination::game::AttackTarget::Player(1),
+    }];
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(attack.clone())).is_err(),
+        "defender keeps it home"
+    );
+    g.step = TurnStep::PreCombatMain;
+    cast(
+        &mut g,
+        catalog::weight_of_the_underworld(),
+        Some(Target::Permanent(pillar)),
+        3,
+        &[(Color::Black, 1)],
+    );
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(attack)).expect("enchanted, so it can attack");
+}
+
+/// Floodtide Serpent's attack cost bounces one of your enchantments.
+#[test]
+fn floodtide_serpent_pays_by_bouncing_an_enchantment() {
+    let mut g = main_phase();
+    let serpent = g.add_card_to_battlefield(0, catalog::floodtide_serpent());
+    g.battlefield_find_mut(serpent).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    let attack = vec![crabomination::game::Attack {
+        attacker: serpent,
+        target: crabomination::game::AttackTarget::Player(1),
+    }];
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(attack.clone())).is_err(),
+        "no enchantment to return"
+    );
+    let ench = g.add_card_to_battlefield(0, catalog::fate_unraveler());
+    g.perform_action(GameAction::DeclareAttackers(attack)).expect("cost paid");
+    assert!(g.battlefield_find(ench).is_none(), "the enchantment bounced");
+}
+
+/// Acolyte's Reward prevents by devotion and throws the prevented damage back.
+#[test]
+fn acolytes_reward_prevents_and_reflects() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::vanguard_of_brimaz()); // {W}{W}
+    }
+    let mine = g.add_card_to_battlefield(0, catalog::great_hart());
+    let spell = g.add_card_to_hand(0, catalog::acolytes_reward());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    let mut events = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(mine),
+        4,
+        None,
+        &mut events,
+    );
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "6 devotion soaked all 4");
+    assert_eq!(g.players[1].life, life - 4, "the prevented damage was reflected");
+}
+
+/// Arbiter of the Ideal cheats the revealed permanent in as an enchantment
+/// with a manifestation counter.
+#[test]
+fn arbiter_of_the_ideal_cheats_in_an_enchantment() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let arbiter = g.add_card_to_battlefield(0, catalog::arbiter_of_the_ideal());
+    let top = g.add_card_to_library(0, catalog::great_hart());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = crabomination::game::effects::EffectContext::for_ability(arbiter, 0, None);
+    g.resolve_effect(&catalog::arbiter_of_the_ideal().triggered_abilities[0].effect, &ctx)
+        .expect("inspired body");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(top).is_some(), "put onto the battlefield");
+    assert_eq!(g.battlefield_find(top).unwrap().counter_count(CounterType::Manifestation), 1);
+    assert!(
+        g.computed_permanent(top)
+            .unwrap()
+            .card_types
+            .contains(&crabomination::card::CardType::Enchantment),
+        "an enchantment in addition to its other types"
+    );
+}
+
+/// Champion of Stray Souls trades X creatures for X reanimations.
+#[test]
+fn champion_of_stray_souls_reanimates_x() {
+    let mut g = main_phase();
+    let champ = g.add_card_to_battlefield(0, catalog::champion_of_stray_souls());
+    g.battlefield_find_mut(champ).unwrap().summoning_sick = false;
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(0, catalog::great_hart());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: champ,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(1),
+    })
+    .expect("sac one, return one");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed");
+    assert!(g.battlefield_find(dead).is_some(), "reanimated");
+}
+
+/// Vortex Elemental shuffles itself and its blockers away.
+#[test]
+fn vortex_elemental_shuffles_the_combat_away() {
+    let mut g = main_phase();
+    let vortex = g.add_card_to_battlefield(0, catalog::vortex_elemental());
+    g.battlefield_find_mut(vortex).unwrap().summoning_sick = false;
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::Attack {
+        attacker: vortex,
+        target: crabomination::game::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, vortex)])).expect("block");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vortex,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("shuffle away");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vortex).is_none());
+    assert!(g.battlefield_find(blocker).is_none(), "the blocker went too");
+}
+
+/// Satyr Firedancer forwards instant/sorcery damage onto an opposing creature.
+#[test]
+fn satyr_firedancer_forwards_spell_damage() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::satyr_firedancer());
+    let target = g.add_card_to_battlefield(1, catalog::great_hart());
+    g.add_card_to_library(0, catalog::great_hart());
+    let bolt = g.add_card_to_hand(0, catalog::bolt_of_keranos());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(target)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).map(|c| c.damage), Some(3), "3 forwarded");
+}

@@ -14592,6 +14592,7 @@ fn static_effect_to_effects(
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
+            | StaticEffect::ColoredCostReduction { .. }
             | StaticEffect::NamedSpellCostReduction { .. }
             | StaticEffect::CostReductionPerControllerExperience { .. }
             | StaticEffect::CostReductionBySourcePower { .. }

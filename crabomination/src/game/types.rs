@@ -1511,11 +1511,18 @@ pub enum PreventionTarget {
     Permanent(CardId),
 }
 
+impl Default for PreventionTarget {
+    fn default() -> Self { PreventionTarget::Player(0) }
+}
+
 /// A continuous prevention effect (CR 615.1) modelled as a "shield" around
 /// a player or permanent. Created by `Effect::PreventNextDamage` /
 /// `PreventAllDamageThisTurn`; consumed by the non-combat damage path and
 /// cleared at cleanup (the "this turn" window, CR 514.2).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// `Default` is derived so construction sites only spell out the fields that
+/// differ (`..Default::default()`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PreventionShield {
     pub target: PreventionTarget,
     /// `None` = prevent all damage to the target this turn; `Some(n)` =
@@ -1556,6 +1563,10 @@ pub struct PreventionShield {
     /// `reflect`'s "deal to the source's controller").
     #[serde(default)]
     pub redirect_to: Option<crate::card::CardId>,
+    /// The player-target sibling of `redirect_to` — the soaked damage is
+    /// dealt to this seat instead (Acolyte's Reward aimed at a player).
+    #[serde(default)]
+    pub redirect_to_player: Option<usize>,
 }
 
 /// CR 731 — the game's day/night designation. The game starts as neither

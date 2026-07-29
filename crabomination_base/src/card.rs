@@ -338,6 +338,9 @@ pub enum CounterType {
     MinusOneMinusZero,
     Loyalty,
     Charge,
+    /// CR 122 — the manifestation counter Arbiter of the Ideal puts on the
+    /// permanent it cheats in. A pure marker.
+    Manifestation,
     /// Blood counter — Font of Agonies banks one per point of life paid;
     /// remove four to destroy a creature. Not the Blood artifact token.
     Blood,
@@ -1024,6 +1027,11 @@ pub enum Keyword {
     /// aggro). Enforced in `declare_attackers` against the controller's
     /// `creatures_cast_this_turn` tally.
     CantAttackUnlessCastCreatureThisTurn,
+    /// CR 508.1g — "This creature can't attack unless you return a [filter]
+    /// you control to its owner's hand." An additional cost paid as attackers
+    /// are declared (Floodtide Serpent); enforced in `declare_attackers`,
+    /// which picks and bounces one matching permanent per such attacker.
+    AttackCostBounce(Box<SelectionRequirement>),
     /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
     /// unless you have N or fewer cards in hand" (Hazoret the Fervent, the
     /// Amonkhet Gods). Enforced in `declare_attackers` / blocker legality
@@ -1527,6 +1535,10 @@ pub enum SelectionRequirement {
     /// `suspected` flag). Powers "Sacrifice a suspected creature" costs
     /// (Rune-Brand Juggler) and suspected-creature payoffs.
     IsSuspected,
+    /// CR 702.103 — true while the candidate is on the battlefield as a
+    /// bestowed Aura rather than a creature ("if it's an Aura" —
+    /// Everflame Eidolon).
+    IsBestowed,
     /// True when the candidate is currently attached to *some* permanent
     /// (`attached_to.is_some()`). Source-precise "attached to this creature"
     /// filters (Faunsbane Troll's "Sacrifice an Aura attached to this

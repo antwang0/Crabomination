@@ -24,15 +24,7 @@ fn cr_615_12_excruciator_source_scoped_unpreventable() {
     // A shield that would prevent all damage dealt to player 1.
     g.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Player(1),
-        remaining: None,
-        gain_life: false,
-        source: None,
-        one_event: false,
-        reflect: false,
-        source_controller: None,
-        redirect_to: None,
-        mint_mites_for: None,
-        destroy: false,
+        ..Default::default()
     });
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![

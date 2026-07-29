@@ -841,6 +841,7 @@ impl Effect {
             | Effect::LookTopLandToHandElseBin { who }
             | Effect::RevealTopPutPermanentMvElseHand { who, .. }
             | Effect::RevealTopNPutMatchingToBattlefield { who, .. }
+            | Effect::RevealTopMayPutOntoBattlefield { who, .. }
             | Effect::RevealTopPutPermanentOntoBattlefield { who } => {
                 player_has_target(who)
             }

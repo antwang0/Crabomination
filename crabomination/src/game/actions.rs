@@ -430,6 +430,32 @@ fn requirement_mentions_controller(req: &crate::card::SelectionRequirement) -> b
     }
 }
 
+/// CR 601.2f — the COLORED half of static cost reduction
+/// (`StaticEffect::ColoredCostReduction`, Ragemonger). Returns the summed
+/// reduction cost; callers fold it in with `ManaCost::reduce_by_cost` right
+/// after the generic reduction.
+pub fn colored_cost_reduction_for_spell(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+) -> crate::mana::ManaCost {
+    use crate::effect::StaticEffect;
+    let mut out = crate::mana::ManaCost::default();
+    for src in &state.battlefield {
+        if src.controller != caster {
+            continue;
+        }
+        for sa in &src.definition.static_abilities {
+            if let StaticEffect::ColoredCostReduction { filter, less } = &sa.effect
+                && state.evaluate_requirement_on_card(filter, card, caster)
+            {
+                out.symbols.extend(less.symbols.iter().cloned());
+            }
+        }
+    }
+    out
+}
+
 pub fn cost_reduction_for_spell(
     state: &crate::game::GameState,
     caster: usize,
@@ -5435,6 +5461,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
         // Colored-aware target-conditional reduction (Brush Off's "{1}{U}
         // less if it targets an instant or sorcery spell") — mandatory per
         // CR 601.2f, removed pip-by-pip.
@@ -6901,6 +6928,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
         apply_spell_cost_floor(self, &mut cost);
         let snapshot = self.snapshot_payment_state(p);
         let forced_only = self.players[p].wants_ui;
@@ -7095,6 +7123,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
         apply_spell_cost_floor(self, &mut cost);
         // CR 601.2g — float-spend confirmation. Nothing is mutated yet (the
         // card is still in the graveyard; additional costs unpaid), so suspend
@@ -7372,6 +7401,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
         apply_spell_cost_floor(self, &mut cost);
         let receipt = self.try_pay_with_auto_tap(p, &cost)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
@@ -7474,6 +7504,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
@@ -7926,6 +7957,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
         apply_spell_cost_floor(self, &mut cost);
 
         // Pay. On failure put the card back in the command zone.
