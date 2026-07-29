@@ -447,6 +447,10 @@ pub enum SpendRestriction {
     MulticoloredSpell,
     /// "Spend this mana only to cast planeswalker spells." (Interplanar Beacon.)
     PlaneswalkerSpellsOnly,
+    /// "If that mana is spent on a creature spell, it gains haste until end of
+    /// turn." (Generator Servant.) Unrestricted spend; funding a creature
+    /// stamps the pending-haste rider like `InstantSorceryUncounterable`.
+    CreatureHaste,
 }
 
 impl SpendRestriction {
@@ -482,6 +486,7 @@ impl SpendRestriction {
             SpendRestriction::EnchantmentSpell => kind.enchantment,
             SpendRestriction::MulticoloredSpell => kind.multicolored,
             SpendRestriction::PlaneswalkerSpellsOnly => kind.planeswalker,
+            SpendRestriction::CreatureHaste => true,
         }
     }
 }

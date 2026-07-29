@@ -2054,10 +2054,6 @@ pub fn spark_double() -> CardDefinition {
         },
         enters_as_copy: Some(EntersAsCopy {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            extra_creature_types: vec![],
-            extra_keywords: vec![],
-            keep_name: false,
-            non_legendary: false,
             extra_triggered: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::AddCounter {
@@ -2066,7 +2062,7 @@ pub fn spark_double() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             }],
-            extra_card_types: vec![],
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -2379,12 +2375,7 @@ pub fn clone_card() -> CardDefinition {
         },
         enters_as_copy: Some(EntersAsCopy {
             filter: SelectionRequirement::Creature,
-            extra_creature_types: vec![],
-            extra_triggered: vec![],
-            extra_keywords: vec![],
-            keep_name: false,
-            non_legendary: false,
-            extra_card_types: vec![],
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -2406,12 +2397,8 @@ pub fn phyrexian_metamorph() -> CardDefinition {
         },
         enters_as_copy: Some(EntersAsCopy {
             filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
-            extra_creature_types: vec![],
-            extra_triggered: vec![],
-            extra_keywords: vec![],
-            keep_name: false,
-            non_legendary: false,
             extra_card_types: vec![CardType::Artifact],
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -2456,12 +2443,8 @@ pub fn stunt_double() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         enters_as_copy: Some(EntersAsCopy {
             filter: SelectionRequirement::Creature,
-            extra_creature_types: vec![],
-            extra_triggered: vec![],
             extra_keywords: vec![Keyword::Flash],
-            keep_name: false,
-            non_legendary: false,
-            extra_card_types: vec![],
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -2491,10 +2474,7 @@ pub fn phantasmal_image() -> CardDefinition {
                     to: ZoneDest::Graveyard,
                 },
             }],
-            extra_keywords: vec![],
-            keep_name: false,
-            non_legendary: false,
-            extra_card_types: vec![],
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -2517,12 +2497,8 @@ pub fn mockingbird() -> CardDefinition {
         enters_as_copy: Some(EntersAsCopy {
             filter: SelectionRequirement::Creature
                 .and(SelectionRequirement::ControlledByYou),
-            extra_creature_types: vec![],
-            extra_triggered: vec![],
-            extra_keywords: vec![],
             keep_name: true,
-            non_legendary: false,
-            extra_card_types: vec![],
+            ..Default::default()
         }),
         ..Default::default()
     }

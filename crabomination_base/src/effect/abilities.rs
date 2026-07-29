@@ -1898,6 +1898,18 @@ pub enum StaticEffect {
     /// their hands." Drannith Magistrate. Checked in `cast_from_zone_blocked`
     /// for every non-hand cast path (flashback / escape / retrace / free-cast).
     OpponentsCantCastFromAnywhereButHand,
+    /// "You can't play lands." Aggressive Mining. Gated in `play_land`.
+    ControllerCantPlayLands,
+    /// "[filter] spells you cast have convoke" (CR 702.51 — Chief Engineer).
+    /// Consulted by the convoke cast path alongside the printed keyword.
+    GrantConvokeToSpells { filter: SelectionRequirement },
+    /// "If a source would deal damage to the attached creature, prevent N of
+    /// that damage, where N is the number of `filter` permanents the source's
+    /// controller controls." Shield of the Avatar.
+    PreventDamageToAttachedPerPermanent { filter: SelectionRequirement },
+    /// "If a source would deal damage to you or a planeswalker you control,
+    /// prevent all but 1 of that damage." Ajani Steadfast's emblem.
+    PreventAllButOneDamageToYouAndYourPlaneswalkers,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
@@ -2271,6 +2283,12 @@ pub struct ActivatedAbility {
     /// controlled spell matches. Defaults to None.
     #[serde(default)]
     pub exile_spell_cost: Option<SelectionRequirement>,
+    /// Optional cost: put `u32` counters of the given kind on the source
+    /// ("Put a verse counter on this:" — Yisan, the Wanderer Bard). Paid
+    /// before the effect goes on the stack, so a body reading
+    /// `Value::CountersOn { This, kind }` sees the new total.
+    #[serde(default)]
+    pub add_counter_cost: Option<(crate::card::CounterType, u32)>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

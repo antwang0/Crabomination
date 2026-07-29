@@ -1639,6 +1639,13 @@ pub enum Predicate {
     /// creatures `who` controls is eight or greater. Gates formidable
     /// activated/triggered riders (Boltwing Marauder-era, Atarka Monument).
     FormidableActive { who: PlayerRef },
+    /// "If `who` controls each creature on the battlefield with the greatest
+    /// power" (Might Makes Right). True when every creature tied for the
+    /// highest power is theirs; vacuously true on an empty board.
+    ControlsEachGreatestPowerCreature { who: PlayerRef },
+    /// CR 606.3 — "`who` activated a loyalty ability of a planeswalker this
+    /// turn." The Chain Veil's end-step upkeep tax reads its negation.
+    ActivatedLoyaltyThisTurn { who: PlayerRef },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────
@@ -2198,6 +2205,12 @@ pub enum EventKind {
     /// Alchemist, Longhorn Sharpshooter). Modeled as a `SelfSource` trigger
     /// dispatched directly by `plot_card`.
     BecomesPlotted,
+    /// CR 701.19 — a player searched their own library. The searcher is the
+    /// event subject; pair with `EventScope::OpponentControl` ("whenever an
+    /// opponent searches their library" — Ob Nixilis, Unshackled). Fires once
+    /// per search, whether or not a card was found. Matched to
+    /// `GameEvent::PlayerSearchedLibrary`.
+    PlayerSearchedLibrary,
 }
 
 /// Whose events does this trigger listen for?
@@ -6358,6 +6371,29 @@ pub enum Effect {
     /// prompt today (degraded to the auto-decider choice — same as
     /// other implicit-choice cards).
     DiminishCreaturesExceptChosenType { power: Value, toughness: Value },
+
+    /// CR 615 — "Prevent all damage that would be dealt to `target` this turn
+    /// by sources of the color of your choice." Avacyn, Guardian Angel. The
+    /// color is picked as the effect resolves (`Decision::ChooseColor`).
+    PreventAllDamageFromChosenColorThisTurn { target: Selector },
+
+    /// "Search your graveyard, hand, and/or library for an Aura card and put
+    /// it onto the battlefield attached to [the source]. If you search your
+    /// library this way, shuffle." Boonweaver Giant. Candidates pool all three
+    /// zones; the Aura's own enchant filter is not re-checked.
+    SearchAuraAttachToSource,
+
+    /// "For each planeswalker you control, you may activate one of its loyalty
+    /// abilities this turn as though none of its loyalty abilities have been
+    /// activated this turn." The Chain Veil. Bumps the controller's
+    /// `extra_loyalty_activations` budget.
+    GrantExtraLoyaltyActivations,
+
+    /// "Choose a card in your hand. `who` guesses whether its mana value is
+    /// greater than `threshold`. If they guessed wrong, you may cast that card
+    /// without paying its mana cost." Master of Predicaments. The guess is a
+    /// `Decision::OptionalTrigger` on the guesser's seat (true = "greater").
+    GuessManaValueAboveElseCastFree { who: PlayerRef, threshold: u32 },
 }
 
 /// CR 702.172 — one Spree mode: an additional mana cost paired with the

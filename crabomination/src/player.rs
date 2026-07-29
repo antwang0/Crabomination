@@ -123,6 +123,14 @@ pub struct Player {
     /// play `1 + extra_land_plays` lands per turn total.
     #[serde(default)]
     pub extra_land_plays: u32,
+    /// The Chain Veil — extra loyalty activations available this turn on top
+    /// of the CR 606.3 one-per-planeswalker limit. Cleared each turn.
+    #[serde(default)]
+    pub extra_loyalty_activations: u32,
+    /// Whether this player has activated a loyalty ability this turn (The
+    /// Chain Veil's end-step "if you didn't …" check). Cleared each turn.
+    #[serde(default)]
+    pub activated_loyalty_this_turn: bool,
     /// How many spells this player has cast this turn. Reset on
     /// `TurnStarted`. Powers Damping Sphere's "second-and-onward spells
     /// cost {1} more" static.
@@ -761,6 +769,8 @@ impl Player {
             commanders: Vec::new(),
             lands_played_this_turn: 0,
             extra_land_plays: 0,
+            extra_loyalty_activations: 0,
+            activated_loyalty_this_turn: false,
             spells_cast_this_turn: 0,
             spells_cast_by_name_this_game: std::collections::HashMap::new(),
             spells_cast_this_game_turn: 0,

@@ -379,6 +379,12 @@ impl GameState {
                 let blessing_locked =
                     kws.contains(&Keyword::CantAttackOrBlockUnlessCityBlessing)
                         && !self.players[p].city_blessing;
+                // CR 508.1a — Glacial Crasher: needs a land of the named
+                // type on the battlefield (anyone's).
+                let land_locked = kws.iter().any(|k| {
+                    matches!(k, Keyword::CantAttackUnlessLandTypeOnBattlefield(lt)
+                        if !self.battlefield.iter().any(|c| c.definition.subtypes.land_types.contains(lt)))
+                });
                 let defender_locked =
                     kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
                 let can_attack = is_creature_now
@@ -387,6 +393,7 @@ impl GameState {
                     && !defender_locked
                     && !kws.contains(&Keyword::CantAttack)
                     && !cohort_locked
+                    && !land_locked
                     && !hand_locked
                     && !delirium_locked
                     && !creature_died_locked
@@ -402,6 +409,7 @@ impl GameState {
                         || defender_locked
                         || kws.contains(&Keyword::CantAttack)
                         || cohort_locked
+                        || land_locked
                         || hand_locked
                         || delirium_locked
                         || descend_locked

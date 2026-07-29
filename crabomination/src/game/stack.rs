@@ -466,6 +466,10 @@ impl GameState {
                     // riders expire with the turn.
                     pl.pending_creature_etb_counters.clear();
                     pl.pending_creature_etb_keywords.clear();
+                    // The Chain Veil's banked activations and the
+                    // "did you activate a loyalty ability" flag are per-turn.
+                    pl.extra_loyalty_activations = 0;
+                    pl.activated_loyalty_this_turn = false;
                 }
                 self.mana_spent_on_spells_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
@@ -3524,7 +3528,17 @@ impl GameState {
                 // CR 704.5m — protection covers "can't be Enchanted by": a
                 // host with protection from the Aura's qualities (its color,
                 // card type, "everything", …) sheds the Aura.
-                if self.is_protected_from(c.id, host) {
+                // CR 702.16k — Spectra Ward's "this effect doesn't remove
+                // Auras": a `protection_keeps_auras` Aura on the host makes
+                // the whole host immune to the protection shed.
+                let keeps_auras = self.battlefield.iter().any(|a| {
+                    a.attached_to == Some(host)
+                        && a.definition
+                            .equipped_bonus
+                            .as_ref()
+                            .is_some_and(|b| b.protection_keeps_auras)
+                });
+                if !keeps_auras && self.is_protected_from(c.id, host) {
                     return Some(c.id);
                 }
                 let filter = c.definition.aura_enchant_filter()?;

@@ -698,6 +698,7 @@ impl GameState {
         // exception (Mockingbird). `original_name` was captured before the
         // copy rewrite stamped the source's name over it.
         if (!spec.extra_triggered.is_empty()
+            || !spec.extra_activated.is_empty()
             || !spec.extra_keywords.is_empty()
             || !spec.extra_card_types.is_empty()
             || spec.keep_name
@@ -707,6 +708,8 @@ impl GameState {
             let def = std::sync::Arc::make_mut(&mut c.definition);
             def.triggered_abilities
                 .extend(spec.extra_triggered.iter().cloned());
+            def.activated_abilities
+                .extend(spec.extra_activated.iter().cloned());
             for kw in &spec.extra_keywords {
                 if !def.keywords.contains(kw) {
                     def.keywords.push(kw.clone());
@@ -1429,10 +1432,17 @@ impl GameState {
                 // Illusionist's Bracers — copy the activation that fired this
                 // trigger. Mana abilities never use the stack, so anything
                 // still on it is a legal copy target (CR 706.10).
-                let Some(equipped) = ctx.source else { return Ok(()) };
+                // The activation's source is the trigger's subject when the
+                // watcher is a separate permanent (Kurkesh); the equipped
+                // creature itself when the trigger rides Equipment (Bracers).
+                let owner = match ctx.trigger_source {
+                    Some(EntityRef::Permanent(id)) | Some(EntityRef::Card(id)) => Some(id),
+                    _ => ctx.source,
+                };
+                let Some(owner) = owner else { return Ok(()) };
                 let Some(idx) = self.stack.iter().rposition(|si| {
                     matches!(si, StackItem::Trigger { source, activated: true, .. }
-                        if *source == equipped)
+                        if *source == owner)
                 }) else {
                     return Ok(());
                 };
@@ -12239,15 +12249,28 @@ impl GameState {
                 if !self.pay_search_tax(p) {
                     return Ok(());
                 }
-                // CR 701.19 — `p` searched their library this turn (Archive Trap).
+                // CR 701.19 — `p` searched their library this turn (Archive
+                // Trap) and the search itself is an event (Ob Nixilis).
                 self.players[p].searched_library_this_turn = true;
+                events.push(GameEvent::PlayerSearchedLibrary { player: p });
                 // Aven Mindcensor — an opponent's search only sees the top N.
                 let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
 
                 // Collect candidates from the library using definition-level evaluation
                 // (cards are not on the battlefield so battlefield_find would fail).
                 // X-dependent filters concretize against the paid X (Chord of Calling).
-                let filter = filter.resolve_x(ctx.x_value).resolve_converge(ctx.converged_value);
+                // Concretize source-counter-relative MV gates (Yisan's
+                // "mana value equal to the number of verse counters").
+                let src_counts = |kind: CounterType| -> u32 {
+                    ctx.source
+                        .and_then(|sid| self.battlefield_find(sid))
+                        .map(|c| c.counter_count(kind))
+                        .unwrap_or(0)
+                };
+                let filter = filter
+                    .resolve_source_counters(&src_counts)
+                    .resolve_x(ctx.x_value)
+                    .resolve_converge(ctx.converged_value);
                 let mut candidates: Vec<(crate::card::CardId, String)> = self.players[p]
                     .library
                     .iter()
@@ -18145,6 +18168,131 @@ impl GameState {
                         });
                     }
                 }
+                Ok(())
+            }
+
+            Effect::PreventAllDamageFromChosenColorThisTurn { target } => {
+                // CR 615 — Avacyn: a fog scoped to one recipient and one
+                // chosen source color. The color is picked synchronously off
+                // `self.decider` (no separate UI prompt today).
+                use crate::decision::{Decision, DecisionAnswer};
+                let legal =
+                    vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+                let decision =
+                    Decision::ChooseColor { source: ctx.source.unwrap_or(CardId(0)), legal };
+                let color = match self.decider.decide(&decision) {
+                    DecisionAnswer::Color(c) => c,
+                    _ => Color::Black,
+                };
+                for s in self.prevention_targets(target, ctx) {
+                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                        target: s,
+                        source_color: Some(color),
+                        ..Default::default()
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::SearchAuraAttachToSource => {
+                // Boonweaver Giant — pool graveyard + hand + library for an
+                // Aura and put it onto the battlefield attached to the source.
+                let Some(source) = ctx.source else { return Ok(()) };
+                let Some(host) = self.battlefield_find(source).map(|c| c.id) else {
+                    return Ok(());
+                };
+                let p = ctx.controller;
+                let is_aura = |c: &crate::card::CardInstance| {
+                    c.definition.subtypes.enchantment_subtypes.contains(&crate::card::EnchantmentSubtype::Aura)
+                };
+                let searched_library =
+                    self.players[p].library.iter().any(is_aura);
+                let pick = self.players[p]
+                    .graveyard
+                    .iter()
+                    .chain(self.players[p].hand.iter())
+                    .chain(self.players[p].library.iter())
+                    .find(|c| is_aura(c))
+                    .map(|c| c.id);
+                if let Some(aura) = pick {
+                    self.move_card_to(
+                        aura,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                        ctx,
+                        events,
+                    );
+                    if let Some(c) = self.battlefield_find_mut(aura) {
+                        c.attached_to = Some(host);
+                    }
+                }
+                if searched_library {
+                    use rand::seq::SliceRandom;
+                    self.players[p].library.shuffle(&mut rand::rng());
+                }
+                Ok(())
+            }
+
+            Effect::GrantExtraLoyaltyActivations => {
+                // The Chain Veil — one extra loyalty activation per
+                // planeswalker the controller controls, this turn.
+                let n = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_planeswalker())
+                    .count();
+                self.players[ctx.controller].extra_loyalty_activations += n as u32;
+                Ok(())
+            }
+
+            Effect::GuessManaValueAboveElseCastFree { who, threshold } => {
+                // Master of Predicaments — you pick a card, they guess whether
+                // its mana value is greater than `threshold`; a wrong guess
+                // lets you cast it for free.
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let Some(guesser) = self.resolve_players(who, ctx).first().copied() else {
+                    return Ok(());
+                };
+                // Auto-pick the hand card whose mana value the guesser is
+                // least likely to call (the extreme farthest from the line).
+                let Some((chosen, mv)) = self.players[p]
+                    .hand
+                    .iter()
+                    .map(|c| (c.id, c.definition.cost.cmc()))
+                    .max_by_key(|(_, mv)| mv.abs_diff(*threshold))
+                else {
+                    return Ok(());
+                };
+                let decision = Decision::OptionalTrigger {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    description: format!("Is the chosen card's mana value greater than {threshold}?"),
+                };
+                let _ = guesser;
+                let guess = matches!(self.decider.decide(&decision), DecisionAnswer::Bool(true));
+                if guess == (mv > *threshold) {
+                    return Ok(());
+                }
+                let auto_target = self
+                    .players[p]
+                    .hand
+                    .iter()
+                    .find(|c| c.id == chosen)
+                    .map(|c| c.definition.effect.clone())
+                    .and_then(|e| self.auto_target_for_effect_avoiding(&e, p, Some(chosen)));
+                let cast = self.cast_card_for_free(
+                    p,
+                    chosen,
+                    crate::card::Zone::Hand,
+                    auto_target,
+                    vec![],
+                    None,
+                    None,
+                    false,
+                );
+                events.extend(cast.unwrap_or_default());
                 Ok(())
             }
 

@@ -1027,6 +1027,10 @@ pub enum Keyword {
     /// aggro). Enforced in `declare_attackers` against the controller's
     /// `creatures_cast_this_turn` tally.
     CantAttackUnlessCastCreatureThisTurn,
+    /// CR 508.1a restriction — "This creature can't attack unless there is a
+    /// [land type] on the battlefield" (Glacial Crasher). Any player's land
+    /// counts; enforced in `declare_attackers`.
+    CantAttackUnlessLandTypeOnBattlefield(LandType),
     /// CR 508.1g — "This creature can't attack unless you return a [filter]
     /// you control to its owner's hand." An additional cost paid as attackers
     /// are declared (Floodtide Serpent); enforced in `declare_attackers`,
@@ -2816,6 +2820,10 @@ pub struct EntersAsCopy {
     /// Legendary supertype so it doesn't trigger the legend rule (Mirror Image).
     #[serde(default)]
     pub non_legendary: bool,
+    /// Activated abilities layered on top of the copy (Mercurial Pretender's
+    /// "except it has '{2}{U}{U}: Return this creature to its owner's hand'").
+    #[serde(default)]
+    pub extra_activated: Vec<crate::effect::ActivatedAbility>,
 }
 
 /// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters
@@ -3034,6 +3042,11 @@ pub struct EquipBonus {
     /// enchantment you control"). `None` for the common static-bonus case.
     #[serde(default)]
     pub scale: Option<EquipScale>,
+    /// CR 702.16k — "This effect doesn't remove Auras" (Spectra Ward). The
+    /// protection this bonus grants doesn't shed Auras attached to the host,
+    /// so the 704.5m sweep skips that host entirely.
+    #[serde(default)]
+    pub protection_keeps_auras: bool,
     /// Triggered abilities granted to the equipped creature (CR 702.6e). Each
     /// fires as though printed on the equipped creature — `EventScope::
     /// SelfSource` reads the creature, and a `DealsCombatDamageToPlayer` body

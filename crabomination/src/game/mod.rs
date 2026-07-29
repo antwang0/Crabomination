@@ -11640,8 +11640,14 @@ impl GameState {
         } else {
             1
         };
+        // The Chain Veil banks extra activations for the turn; each one spent
+        // buys back a single use past the CR 606.3 cap.
+        let chain_veil = self.players[p].extra_loyalty_activations > 0;
         if self.battlefield[pos].loyalty_uses_this_turn >= allowed {
-            return Err(GameError::LoyaltyAbilityAlreadyUsed(card_id));
+            if !chain_veil {
+                return Err(GameError::LoyaltyAbilityAlreadyUsed(card_id));
+            }
+            self.players[p].extra_loyalty_activations -= 1;
         }
 
         // Printed + statics-granted abilities (Kasmina's sharing static,
@@ -11774,6 +11780,7 @@ impl GameState {
             .insert(crate::card::CounterType::Loyalty, new_loyalty as u32);
         self.battlefield[pos].loyalty_uses_this_turn =
             self.battlefield[pos].loyalty_uses_this_turn.saturating_add(1);
+        self.players[p].activated_loyalty_this_turn = true;
         let mut events = vec![
             GameEvent::LoyaltyAbilityActivated {
                 planeswalker: card_id,
@@ -14022,6 +14029,16 @@ impl GameState {
     /// library → exile → stack. General-purpose helper for predicates
     /// or effects that need to introspect a card regardless of where
     /// it currently lives.
+    /// CR 105.2 — the colors of `id` wherever it lives (battlefield permanents
+    /// read their computed definition so layer effects count). Empty for
+    /// colorless objects and for ids that have left every visible zone.
+    pub fn card_colors_anywhere(&self, id: CardId) -> Vec<crate::mana::Color> {
+        if let Some(cp) = self.computed_permanent(id) {
+            return cp.colors;
+        }
+        self.find_card_anywhere(id).map(|c| c.definition.printed_colors()).unwrap_or_default()
+    }
+
     pub fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);
@@ -14717,6 +14734,14 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::PreventAllDamageToThis
             | StaticEffect::PreventAllCombatDamageToThisFromBlockers
+            // Prevention statics read at damage time in
+            // `apply_prevention_shields`; no layer effect.
+            | StaticEffect::PreventDamageToAttachedPerPermanent { .. }
+            | StaticEffect::PreventAllButOneDamageToYouAndYourPlaneswalkers
+            // Gated at their action dispatch (`can_player_play_land`,
+            // the convoke cast path); no layer effect.
+            | StaticEffect::ControllerCantPlayLands
+            | StaticEffect::GrantConvokeToSpells { .. }
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn
             | StaticEffect::DoubleDamageFromControlledCreatures

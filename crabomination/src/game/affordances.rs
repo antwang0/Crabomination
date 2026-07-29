@@ -321,6 +321,10 @@ impl GameState {
                         self.players[seat].hand.len() as u32 <= *n
                     }
                     Keyword::CantAttackOrBlockUnlessDelirium => self.delirium_active(seat),
+                    Keyword::CantAttackUnlessLandTypeOnBattlefield(lt) => self
+                        .battlefield
+                        .iter()
+                        .any(|p| p.definition.subtypes.land_types.contains(lt)),
                     // CR 508.1g — the pay gate is legal only if the seat can
                     // actually produce {N} (pool + auto-tappable sources).
                     Keyword::CantAttackOrBlockUnlessPay(n) => self.could_pay_generic(seat, *n),

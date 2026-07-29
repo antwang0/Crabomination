@@ -2054,3 +2054,856 @@ pub fn spirit_bonds() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── The M15 tail: planeswalkers, rares, and the last uncommons ───────────────
+
+/// Aetherspouts — {3}{U}{U} Instant. Each attacking creature's owner puts it
+/// on top or bottom of their library.
+pub fn aetherspouts() -> CardDefinition {
+    spell(
+        "Aetherspouts",
+        cost(&[generic(3), u(), u()]),
+        CardType::Instant,
+        Effect::Move {
+            what: Selector::EachPermanent(R::Creature.and(R::IsAttacking)),
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOfMoved,
+                pos: crate::effect::LibraryPosition::OwnerChoice,
+            },
+        },
+    )
+}
+
+/// Aggressive Mining — {3}{R} Enchantment. You can't play lands; once each
+/// turn, sacrifice a land to draw two cards.
+pub fn aggressive_mining() -> CardDefinition {
+    CardDefinition {
+        name: "Aggressive Mining",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "You can't play lands.",
+            effect: StaticEffect::ControllerCantPlayLands,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::Land.and(R::ControlledByYou), 1)),
+            once_per_turn: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ajani Steadfast — {3}{W} planeswalker, loyalty 4.
+pub fn ajani_steadfast() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
+    CardDefinition {
+        name: "Ajani Steadfast",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Ajani],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::PumpPT {
+                            what: Selector::Target(0),
+                            power: Value::ONE,
+                            toughness: Value::ONE,
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::FirstStrike,
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::Vigilance,
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::Lifelink,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::AddCounter {
+                        what: Selector::EachPermanent(
+                            R::Planeswalker.and(R::ControlledByYou).and(R::OtherThanSource),
+                        ),
+                        kind: CounterType::Loyalty,
+                        amount: Value::ONE,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Ajani Steadfast".into(),
+                    triggered: vec![],
+                    statics: vec![StaticAbility {
+                        description: "Prevent all but 1 damage to you and your planeswalkers.",
+                        effect: StaticEffect::PreventAllButOneDamageToYouAndYourPlaneswalkers,
+                    }],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Avacyn, Guardian Angel — {2}{W}{W}{W} 5/4. Two color-of-your-choice
+/// prevention shields, one for a creature and one for a player/planeswalker.
+pub fn avacyn_guardian_angel() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), w()]),
+                effect: Effect::PreventAllDamageFromChosenColorThisTurn {
+                    target: target_filtered(R::Creature),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5), w(), w()]),
+                effect: Effect::PreventAllDamageFromChosenColorThisTurn {
+                    target: target_filtered(R::Player.or(R::Planeswalker)),
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature(
+            "Avacyn, Guardian Angel",
+            cost(&[generic(2), w(), w(), w()]),
+            5,
+            4,
+            vec![CreatureType::Angel],
+            vec![Keyword::Flying, Keyword::Vigilance],
+        )
+    }
+}
+
+/// Boonweaver Giant — {6}{W} 4/4. Enters searching graveyard, hand, and
+/// library for an Aura to attach to itself.
+pub fn boonweaver_giant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search for an Aura to attach?".into(),
+            body: Box::new(Effect::SearchAuraAttachToSource),
+        })],
+        ..creature(
+            "Boonweaver Giant",
+            cost(&[generic(6), w()]),
+            4,
+            4,
+            vec![CreatureType::Giant, CreatureType::Monk],
+            vec![],
+        )
+    }
+}
+
+/// Chief Engineer — {1}{U} 1/3. Artifact spells you cast have convoke.
+pub fn chief_engineer() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Artifact spells you cast have convoke.",
+            effect: StaticEffect::GrantConvokeToSpells { filter: R::Artifact },
+        }],
+        ..creature(
+            "Chief Engineer",
+            cost(&[generic(1), u()]),
+            1,
+            3,
+            vec![CreatureType::Vedalken, CreatureType::Artificer],
+            vec![],
+        )
+    }
+}
+
+/// Constricting Sliver — {5}{W} 3/3. Sliver creatures you control gain an
+/// exile-until-this-leaves ETB.
+pub fn constricting_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Sliver creatures you control have an exile-on-enter trigger.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature
+                    .and(R::ControlledByYou)
+                    .and(R::HasCreatureType(CreatureType::Sliver)),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                    effect: Effect::MayDo {
+                        description: "Exile target creature an opponent controls?".into(),
+                        body: Box::new(Effect::ExileUntilSourceLeaves {
+                            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                            return_to: crate::card::ExileReturnZone::Battlefield,
+                        }),
+                    },
+                }),
+            },
+        }],
+        ..creature(
+            "Constricting Sliver",
+            cost(&[generic(5), w()]),
+            3,
+            3,
+            vec![CreatureType::Sliver],
+            vec![],
+        )
+    }
+}
+
+/// Garruk, Apex Predator — {5}{B}{G} planeswalker, loyalty 5.
+pub fn garruk_apex_predator() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
+    CardDefinition {
+        name: "Garruk, Apex Predator",
+        cost: cost(&[generic(5), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Garruk],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Destroy { what: target_filtered(R::Planeswalker) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Beast".into(),
+                        power: 3,
+                        toughness: 3,
+                        colors: vec![Color::Black],
+                        card_types: vec![CardType::Creature],
+                        keywords: vec![Keyword::Deathtouch],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Beast],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Seq(vec![
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+                    },
+                    Effect::Destroy { what: target_filtered(R::Creature) },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::EachOpponent,
+                    name: "Garruk, Apex Predator".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::Attacks, EventScope::OpponentControl),
+                        effect: Effect::Seq(vec![
+                            Effect::PumpPT {
+                                what: Selector::TriggerSource,
+                                power: Value::Const(5),
+                                toughness: Value::Const(5),
+                                duration: Duration::EndOfTurn,
+                            },
+                            Effect::GrantKeyword {
+                                what: Selector::TriggerSource,
+                                keyword: Keyword::Trample,
+                                duration: Duration::EndOfTurn,
+                            },
+                        ]),
+                    }],
+                    statics: vec![],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Generator Servant — {1}{R} 2/1. Sacrifices for {C}{C} that hastes the
+/// creature spell it funds.
+pub fn generator_servant() -> CardDefinition {
+    use crate::mana::SpendRestriction;
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::Restricted(
+                    Box::new(crate::effect::ManaPayload::Colorless(Value::Const(2))),
+                    SpendRestriction::CreatureHaste,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Generator Servant",
+            cost(&[generic(1), r()]),
+            2,
+            1,
+            vec![CreatureType::Elemental],
+            vec![],
+        )
+    }
+}
+
+/// Glacial Crasher — {4}{U}{U} 5/5 trample that can't attack without a
+/// Mountain on the battlefield.
+pub fn glacial_crasher() -> CardDefinition {
+    creature(
+        "Glacial Crasher",
+        cost(&[generic(4), u(), u()]),
+        5,
+        5,
+        vec![CreatureType::Elemental],
+        vec![
+            Keyword::Trample,
+            Keyword::CantAttackUnlessLandTypeOnBattlefield(LandType::Mountain),
+        ],
+    )
+}
+
+/// Goblin Kaboomist — {1}{R} 1/2. Mints a Land Mine each upkeep, then risks
+/// two damage to itself on a lost coin flip.
+pub fn goblin_kaboomist() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crabomination_base::turn_step::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Land Mine".into(),
+                        card_types: vec![CardType::Artifact],
+                        activated_abilities: vec![ActivatedAbility {
+                            mana_cost: cost(&[r()]),
+                            sac_cost: true,
+                            effect: Effect::DealDamage {
+                                to: target_filtered(
+                                    R::Creature
+                                        .and(R::IsAttacking)
+                                        .and(R::HasKeyword(Keyword::Flying).negate()),
+                                ),
+                                amount: Value::Const(2),
+                            },
+                            ..Default::default()
+                        }],
+                        ..Default::default()
+                    },
+                },
+                Effect::FlipCoin {
+                    count: Value::ONE,
+                    on_heads: Box::new(Effect::Noop),
+                    on_tails: Box::new(Effect::DealDamage {
+                        to: Selector::This,
+                        amount: Value::Const(2),
+                    }),
+                },
+            ]),
+        }],
+        ..creature(
+            "Goblin Kaboomist",
+            cost(&[generic(1), r()]),
+            1,
+            2,
+            vec![CreatureType::Goblin, CreatureType::Warrior],
+            vec![],
+        )
+    }
+}
+
+/// Jace, the Living Guildpact — {2}{U}{U} planeswalker, loyalty 5.
+pub fn jace_the_living_guildpact() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
+    CardDefinition {
+        name: "Jace, the Living Guildpact",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Jace],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::LookTopKeepOneRestToGraveyard {
+                    count: Value::Const(2),
+                    who: None,
+                    exile_rest: false,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Move {
+                    what: target_filtered(
+                        R::Permanent.and(R::Nonland).and(R::OtherThanSource),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::Seq(vec![
+                    Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::EachPlayer },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(7) },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Jalira, Master Polymorphist — {3}{U} 2/2. Polymorphs a sacrificed creature
+/// into the first nonlegendary creature card off your library.
+pub fn jalira_master_polymorphist() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            tap_cost: true,
+            sac_other_filter: Some((R::Creature.and(R::ControlledByYou), 1)),
+            effect: Effect::RevealUntilFind {
+                who: PlayerRef::You,
+                find: R::Creature.and(R::HasSupertype(Supertype::Legendary).negate()),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                cap: Value::Const(500),
+                life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::BottomRandom,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Jalira, Master Polymorphist",
+            cost(&[generic(3), u()]),
+            2,
+            2,
+            vec![CreatureType::Human, CreatureType::Wizard],
+            vec![],
+        )
+    }
+}
+
+/// Kurkesh, Onakke Ancient — {2}{R}{R} 4/3. Pay {R} to copy a nonmana
+/// activated ability of an artifact you control.
+pub fn kurkesh_onakke_ancient() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact,
+                }),
+            effect: Effect::MayPay {
+                description: "Pay {R} to copy that ability?".into(),
+                mana_cost: cost(&[r()]),
+                body: Box::new(Effect::CopyActivatedAbilityMayChooseTargets),
+                else_: None,
+            },
+        }],
+        ..creature(
+            "Kurkesh, Onakke Ancient",
+            cost(&[generic(2), r(), r()]),
+            4,
+            3,
+            vec![CreatureType::Ogre, CreatureType::Spirit],
+            vec![Keyword::Flying],
+        )
+    }
+}
+
+/// Master of Predicaments — {3}{U}{U} 4/4 flying. Its combat damage makes the
+/// damaged player guess a hand card's mana value.
+pub fn master_of_predicaments() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::GuessManaValueAboveElseCastFree {
+                who: PlayerRef::DefendingPlayer,
+                threshold: 4,
+            },
+        }],
+        ..creature(
+            "Master of Predicaments",
+            cost(&[generic(3), u(), u()]),
+            4,
+            4,
+            vec![CreatureType::Sphinx],
+            vec![Keyword::Flying],
+        )
+    }
+}
+
+/// Mercurial Pretender — {4}{U} Shapeshifter. Enters as a copy of a creature
+/// you control that can bounce itself for {2}{U}{U}.
+pub fn mercurial_pretender() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Creature.and(R::ControlledByYou),
+            extra_activated: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(2), u(), u()]),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..creature(
+            "Mercurial Pretender",
+            cost(&[generic(4), u()]),
+            0,
+            0,
+            vec![CreatureType::Shapeshifter],
+            vec![],
+        )
+    }
+}
+
+/// Might Makes Right — {5}{R} Enchantment. While you control every creature
+/// tied for greatest power, steal one at each of your combats.
+pub fn might_makes_right() -> CardDefinition {
+    CardDefinition {
+        name: "Might Makes Right",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crabomination_base::turn_step::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::ControlsEachGreatestPowerCreature { who: PlayerRef::You }),
+            effect: Effect::Seq(vec![
+                Effect::GainControl {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    to: None,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Untap { what: Selector::Target(0), up_to: None },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nissa, Worldwaker — {3}{G}{G} planeswalker, loyalty 3.
+pub fn nissa_worldwaker() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
+    let animate = |what: Selector| Effect::BecomeCreature {
+        what,
+        power: Value::Const(4),
+        toughness: Value::Const(4),
+        creature_types: vec![CreatureType::Elemental],
+        keywords: vec![Keyword::Trample],
+        duration: Duration::Permanent,
+    };
+    CardDefinition {
+        name: "Nissa, Worldwaker",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Nissa],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: animate(Selector::Target(0)),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Untap {
+                    what: target_filtered(R::HasLandType(LandType::Forest)),
+                    up_to: Some(Value::Const(4)),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::Seq(vec![
+                    Effect::SearchUpToN {
+                        who: PlayerRef::You,
+                        filter: R::IsBasicLand,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                        count: Value::Const(5),
+                    },
+                    animate(Selector::EachPermanent(R::Land.and(R::ControlledByYou))),
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ob Nixilis, Unshackled — {4}{B}{B} 4/4. Punishes opponents' tutors and
+/// grows on every other creature's death.
+pub fn ob_nixilis_unshackled() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PlayerSearchedLibrary,
+                    EventScope::OpponentControl,
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        filter: R::Creature,
+                        count: Value::ONE,
+                    },
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::Const(10),
+                    },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::OtherThanSource,
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        ..creature(
+            "Ob Nixilis, Unshackled",
+            cost(&[generic(4), b(), b()]),
+            4,
+            4,
+            vec![CreatureType::Demon],
+            vec![Keyword::Flying, Keyword::Trample],
+        )
+    }
+}
+
+/// Shield of the Avatar — {1} Equipment. Prevents damage to the equipped
+/// creature equal to your creature count.
+pub fn shield_of_the_avatar() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Prevent damage to equipped creature equal to your creature count.",
+            effect: StaticEffect::PreventDamageToAttachedPerPermanent {
+                filter: R::Creature.and(R::ControlledByYou),
+            },
+        }],
+        ..equipment(
+            "Shield of the Avatar",
+            cost(&[generic(1)]),
+            cost(&[generic(2)]),
+            EquipBonus::default(),
+        )
+    }
+}
+
+/// Spectra Ward — {3}{W}{W} Aura. +2/+2 and protection from each color.
+pub fn spectra_ward() -> CardDefinition {
+    aura(
+        "Spectra Ward",
+        cost(&[generic(3), w(), w()]),
+        R::Creature,
+        EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![
+                Keyword::Protection(Color::White),
+                Keyword::Protection(Color::Blue),
+                Keyword::Protection(Color::Black),
+                Keyword::Protection(Color::Red),
+                Keyword::Protection(Color::Green),
+            ],
+            protection_keeps_auras: true,
+            ..Default::default()
+        },
+    )
+}
+
+/// Stain the Mind — {4}{B} Sorcery with convoke. Name a nonland card and exile
+/// every copy from target player's graveyard, hand, and library.
+pub fn stain_the_mind() -> CardDefinition {
+    convoke_spell(
+        "Stain the Mind",
+        cost(&[generic(4), b()]),
+        CardType::Sorcery,
+        Effect::NameCardExileMatchingAllZones,
+    )
+}
+
+/// The Chain Veil — {4} Legendary Artifact. Buys an extra loyalty activation
+/// per planeswalker; taxes you 2 life on turns you don't use one.
+pub fn the_chain_veil() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "The Chain Veil",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crabomination_base::turn_step::TurnStep::End),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::Not(Box::new(Predicate::ActivatedLoyaltyThisTurn {
+                who: PlayerRef::You,
+            }))),
+            effect: Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: Effect::GrantExtraLoyaltyActivations,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Waste Not — {1}{B} Enchantment. Each opponent discard pays off by card
+/// type: Zombies, black mana, or a card.
+pub fn waste_not() -> CardDefinition {
+    let on_discard = |filter: R, effect: Effect| TriggeredAbility {
+        event: EventSpec::new(EventKind::CardDiscarded, EventScope::OpponentControl)
+            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter }),
+        effect,
+    };
+    CardDefinition {
+        name: "Waste Not",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            on_discard(
+                R::Creature,
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Zombie".into(),
+                        power: 2,
+                        toughness: 2,
+                        colors: vec![Color::Black],
+                        card_types: vec![CardType::Creature],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Zombie],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            ),
+            on_discard(
+                R::Land,
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colors(vec![Color::Black, Color::Black]),
+                },
+            ),
+            on_discard(
+                R::Noncreature.and(R::Nonland),
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Yisan, the Wanderer Bard — {2}{G} 2/3. Each verse counter tutors a creature
+/// with that exact mana value onto the battlefield.
+pub fn yisan_the_wanderer_bard() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            tap_cost: true,
+            add_counter_cost: Some((CounterType::Verse, 1)),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::ManaValueEqualsSourceCounters(CounterType::Verse)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Yisan, the Wanderer Bard",
+            cost(&[generic(2), g()]),
+            2,
+            3,
+            vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Bard],
+            vec![],
+        )
+    }
+}

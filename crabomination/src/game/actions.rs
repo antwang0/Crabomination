@@ -1601,6 +1601,13 @@ impl crate::game::GameState {
         }) {
             self.cast_paid_uncounterable = true;
         }
+        // Generator Servant — mana spent on a creature spell grants it haste.
+        if kind.creature
+            && receipt.side_effects.spent_restrictions.contains(&SpendRestriction::CreatureHaste)
+        {
+            let p = self.priority.player_with_priority;
+            self.players[p].pending_creature_etb_keywords.push(crate::card::Keyword::Haste);
+        }
     }
 
     /// True if any battlefield permanent's static abilities include
@@ -1649,6 +1656,15 @@ impl crate::game::GameState {
     /// turn. Compares lands already played to the active per-turn cap
     /// (which honors `ExtraLandPerTurn` static effects).
     pub fn can_player_play_land(&self, player: usize) -> bool {
+        // CR 305.1 — "You can't play lands" (Aggressive Mining) is absolute.
+        if self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::ControllerCantPlayLands)
+                })
+        }) {
+            return false;
+        }
         self.players[player].lands_played_this_turn < self.max_lands_per_turn(player)
     }
 
@@ -4753,6 +4769,20 @@ impl GameState {
         )
     }
 
+    /// CR 702.51 — true when a `StaticEffect::GrantConvokeToSpells` permanent
+    /// `p` controls (Chief Engineer) grants convoke to this spell.
+    pub(crate) fn spell_granted_convoke(&self, p: usize, card: &CardInstance) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::GrantConvokeToSpells { filter } => {
+                        crate::game::layers::requirement_matches_card(filter, card, p)
+                    }
+                    _ => false,
+                })
+        })
+    }
+
     /// Internal cast-spell helper with optional convoke creatures and delve
     /// cards. Each convoke creature must be untapped + controlled by the
     /// caster + the spell must have `Keyword::Convoke`; each tap adds {1}
@@ -5075,7 +5105,8 @@ impl GameState {
         // Validate convoke/improvise helpers up-front (before any state
         // mutation). Convoke taps untapped creatures (CR 702.52); Improvise
         // taps untapped artifacts (CR 702.126); each pays {1}.
-        let has_convoke = card.definition.keywords.contains(&crate::card::Keyword::Convoke);
+        let has_convoke = card.definition.keywords.contains(&crate::card::Keyword::Convoke)
+            || self.spell_granted_convoke(p, &card);
         let has_improvise = card.definition.keywords.contains(&crate::card::Keyword::Improvise);
         // CR 701.67 — waterbend helpers ride the same `convoke_creatures` slot;
         // any untapped artifact or creature you control may tap to pay {1} of
@@ -12020,6 +12051,20 @@ impl GameState {
             if kind == crate::card::CounterType::Oil {
                 self.players[ctrl].oil_activity_this_turn = true;
             }
+        }
+
+        // Add-counter-as-cost (CR 602.5b "Put a verse counter on this:"):
+        // paid before the ability goes on the stack, so a body reading the
+        // source's counters sees the new total. Yisan.
+        if let Some((kind, count)) = ability.add_counter_cost
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            c.add_counters(kind, count);
+            events.push(GameEvent::CounterAdded {
+                card_id,
+                counter_type: kind,
+                count,
+            });
         }
 
         // Remove-X-counters-as-cost (Arcbound Javelineer): strip the paid X.

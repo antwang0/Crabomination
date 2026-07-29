@@ -53,11 +53,7 @@ pub fn visage_bandit() -> CardDefinition {
         enters_as_copy: Some(EntersAsCopy {
             filter: R::Creature.and(R::ControlledByYou),
             extra_creature_types: vec![CreatureType::Shapeshifter, CreatureType::Rogue],
-            extra_triggered: vec![],
-            extra_keywords: vec![],
-            keep_name: false,
-            non_legendary: false,
-            extra_card_types: vec![],
+            ..Default::default()
         }),
         plot_cost: Some(cost(&[generic(2), u()])),
         ..Default::default()

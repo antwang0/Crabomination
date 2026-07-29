@@ -204,6 +204,9 @@ impl Effect {
         }
         match self {
             Effect::Noop
+            | Effect::SearchAuraAttachToSource
+            | Effect::GrantExtraLoyaltyActivations
+            | Effect::GuessManaValueAboveElseCastFree { .. }
             | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }
             | Effect::ExchangeControlWithTriggeringSpell { .. }
             | Effect::ExileAnyNumberUntilSourceLeaves { .. }
@@ -950,6 +953,7 @@ impl Effect {
                 sel_has_target(target) || value_has_target(amount)
             }
             Effect::PreventAllDamageThisTurn { target }
+            | Effect::PreventAllDamageFromChosenColorThisTurn { target }
             | Effect::PreventDamageToAndByUntilYourNextTurn { target } => sel_has_target(target),
             Effect::PreventAllDamageBetweenThisTurn { from, to } => {
                 sel_has_target(from) || sel_has_target(to)
@@ -2245,6 +2249,7 @@ impl Effect {
                 Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target }
+                | Effect::PreventAllDamageFromChosenColorThisTurn { target }
                 | Effect::PreventDamageToAndByUntilYourNextTurn { target }
                 | Effect::ReplaceNextDamageWithDestroy { target }
                 | Effect::PreventAllCombatDamageInvolving { target }

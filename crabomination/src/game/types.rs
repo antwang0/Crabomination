@@ -1563,6 +1563,10 @@ pub struct PreventionShield {
     /// `reflect`'s "deal to the source's controller").
     #[serde(default)]
     pub redirect_to: Option<crate::card::CardId>,
+    /// CR 615.7 — shield only soaks damage from sources of this color
+    /// (Avacyn, Guardian Angel's chosen color). `None` = any source color.
+    #[serde(default)]
+    pub source_color: Option<crate::mana::Color>,
     /// The player-target sibling of `redirect_to` — the soaked damage is
     /// dealt to this seat instead (Acolyte's Reward aimed at a player).
     #[serde(default)]
@@ -1666,6 +1670,8 @@ pub enum GameEvent {
     /// ability targeting an opponent, something they control or own, or a
     /// spell/ability they control). Fires once per qualifying spell or ability.
     CommittedCrime { player: usize },
+    /// CR 701.19 — `player` searched their own library.
+    PlayerSearchedLibrary { player: usize },
     /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
     CoinFlipWon { player: usize },
     /// CR 701.49 — `player` ventured into `room` of `dungeon`.

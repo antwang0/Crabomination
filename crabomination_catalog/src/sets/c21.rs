@@ -459,12 +459,7 @@ pub fn sculpting_steel() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         enters_as_copy: Some(EntersAsCopy {
             filter: SelectionRequirement::Artifact,
-            extra_creature_types: vec![],
-            extra_triggered: vec![],
-            extra_keywords: vec![],
-            keep_name: false,
-            extra_card_types: vec![],
-            non_legendary: false,
+            ..Default::default()
         }),
         ..Default::default()
     }

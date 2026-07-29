@@ -2051,6 +2051,20 @@ impl GameState {
                     .sum();
                 total >= 8
             }
+            Predicate::ControlsEachGreatestPowerCreature { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let powers: Vec<(usize, i32)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .filter_map(|c| self.computed_permanent(c.id).map(|cp| (c.controller, cp.power)))
+                    .collect();
+                let Some(best) = powers.iter().map(|(_, pw)| *pw).max() else { return true };
+                powers.iter().all(|(ctrl, pw)| *pw < best || *ctrl == p)
+            }
+            Predicate::ActivatedLoyaltyThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].activated_loyalty_this_turn),
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this

@@ -150,6 +150,84 @@ impl GameState {
                 }
             }
         }
+        // Shield of the Avatar — an attached source prevents N of the damage,
+        // where N counts the equipment controller's matching permanents.
+        if let EntityRef::Permanent(cid) = ent
+            && amount > 0
+        {
+            let shields: Vec<_> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.attached_to == Some(cid))
+                .flat_map(|c| {
+                    c.definition.static_abilities.iter().filter_map(move |sa| match &sa.effect {
+                        crate::effect::StaticEffect::PreventDamageToAttachedPerPermanent {
+                            filter,
+                        } => Some((c.controller, filter.clone())),
+                        _ => None,
+                    })
+                })
+                .collect();
+            let soak: u32 = shields
+                .iter()
+                .map(|(ctrl, filter)| {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| {
+                            self.evaluate_requirement(
+                                filter,
+                                &crate::game::types::Target::Permanent(c.id),
+                                *ctrl,
+                            )
+                        })
+                        .count() as u32
+                })
+                .sum();
+            let soaked = soak.min(amount);
+            if soaked > 0 {
+                events.push(GameEvent::DamagePrevented {
+                    amount: soaked,
+                    to_player: None,
+                    to_card: Some(cid),
+                });
+                amount -= soaked;
+                if amount == 0 {
+                    return 0;
+                }
+            }
+        }
+        // Ajani Steadfast's emblem — "prevent all but 1 of that damage" to its
+        // owner and to planeswalkers they control.
+        if amount > 1 {
+            let protected_seat = match ent {
+                EntityRef::Player(p) => Some(p),
+                EntityRef::Permanent(cid) => self
+                    .battlefield_find(cid)
+                    .filter(|c| c.definition.is_planeswalker())
+                    .map(|c| c.controller),
+                EntityRef::Card(_) => None,
+            };
+            if let Some(seat) = protected_seat
+                && self.players[seat].emblems.iter().any(|e| {
+                    e.statics.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::PreventAllButOneDamageToYouAndYourPlaneswalkers
+                        )
+                    })
+                })
+            {
+                events.push(GameEvent::DamagePrevented {
+                    amount: amount - 1,
+                    to_player: matches!(ent, EntityRef::Player(_)).then_some(seat),
+                    to_card: match ent {
+                        EntityRef::Permanent(c) => Some(c),
+                        _ => None,
+                    },
+                });
+                return 1;
+            }
+        }
         // "If damage would be dealt to this while it has a [kind] counter,
         // prevent that damage and remove that many counters" (Polukranos,
         // Unchained). Prevents the whole event; removes min(amount, counters).
@@ -234,12 +312,17 @@ impl GameState {
         // Kill-Suit Cultist — the permanent to destroy after the shield pass
         // when a `destroy` shield soaks this event.
         let mut destroy_after: Option<crate::card::CardId> = None;
+        // CR 615.7 — colors of the damage source, resolved before the loop
+        // borrows the shield list (Avacyn's chosen-color shields).
+        let src_colors = source.map(|id| self.card_colors_anywhere(id)).unwrap_or_default();
         for (i, shield) in self
             .prevention_shields
             .iter_mut()
             .enumerate()
             .filter(|(_, s)| {
-                s.target == key && (s.source.is_none() || s.source == source)
+                s.target == key
+                    && (s.source.is_none() || s.source == source)
+                    && s.source_color.is_none_or(|c| src_colors.contains(&c))
             })
         {
             if remaining == 0 {

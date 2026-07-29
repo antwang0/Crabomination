@@ -508,3 +508,466 @@ fn spirit_bonds_mints_on_nontoken_arrivals() {
     cast(&mut g, catalog::grizzly_bears(), None, 1, &[(Color::Green, 1)]);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count(), 1);
 }
+
+// ── The M15 tail ────────────────────────────────────────────────────────────
+
+/// Aetherspouts bounces every attacker to a library (AutoDecider = bottom).
+#[test]
+fn aetherspouts_clears_the_attack() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(a).unwrap().summoning_sick = false;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: a,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    g.priority.player_with_priority = 0;
+    cast(&mut g, catalog::aetherspouts(), None, 3, &[(Color::Blue, 2)]);
+    assert!(g.battlefield_find(a).is_none());
+    assert_eq!(g.players[1].library.len(), 1);
+}
+
+/// Aggressive Mining locks land drops and pays two cards for a land.
+#[test]
+fn aggressive_mining_trades_lands_for_cards() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::aggressive_mining());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    assert!(!g.can_player_play_land(0));
+    let hand = g.players[0].hand.len();
+    activate(&mut g, mine, 0, None);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+    assert!(g.battlefield_find(land).is_none());
+}
+
+/// Ajani Steadfast's −2 grows the team and every other planeswalker.
+#[test]
+fn ajani_steadfast_minus_two_spreads_counters() {
+    let mut g = main_phase();
+    let ajani = g.add_card_to_battlefield(0, catalog::ajani_steadfast());
+    let other = g.add_card_to_battlefield(0, catalog::garruk_apex_predator());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: ajani,
+        ability_index: 1,
+        target: None,
+        x_value: None,
+    })
+    .expect("minus two");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::Loyalty), 6);
+    assert_eq!(g.battlefield_find(ajani).unwrap().counter_count(CounterType::Loyalty), 2);
+}
+
+/// Ajani's emblem shaves damage to its owner down to 1.
+#[test]
+fn ajani_emblem_prevents_all_but_one() {
+    let mut g = main_phase();
+    let ajani = g.add_card_to_battlefield(0, catalog::ajani_steadfast());
+    g.battlefield_find_mut(ajani).unwrap().counters.insert(CounterType::Loyalty, 7);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: ajani,
+        ability_index: 2,
+        target: None,
+        x_value: None,
+    })
+    .expect("ultimate");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    let mut events = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Player(0), 6, None, &mut events);
+    assert_eq!(g.players[0].life, life - 1);
+}
+
+/// Avacyn's {1}{W} fogs a creature against one chosen color (AutoDecider = black).
+#[test]
+fn avacyn_prevents_damage_from_the_chosen_color() {
+    let mut g = main_phase();
+    let avacyn = g.add_card_to_battlefield(0, catalog::avacyn_guardian_angel());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // AutoDecider takes the first legal color (white).
+    let white = g.add_card_to_battlefield(1, catalog::sungrace_pegasus());
+    let green = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    activate(&mut g, avacyn, 0, Some(Target::Permanent(bear)));
+    let mut events = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(bear), 2, Some(white), &mut events);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0);
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(bear), 1, Some(green), &mut events);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 1, "other colors still land");
+}
+
+/// Boonweaver Giant drags an Aura out of the library onto itself.
+#[test]
+fn boonweaver_giant_fetches_an_aura() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::spectra_ward());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let giant = cast(&mut g, catalog::boonweaver_giant(), None, 6, &[(Color::White, 1)]);
+    let aura = g.battlefield.iter().find(|c| c.definition.name == "Spectra Ward").expect("aura");
+    assert_eq!(aura.attached_to, Some(giant));
+    let cp = g.computed_permanent(giant).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6));
+}
+
+/// Chief Engineer lets a creature tap to help cast an artifact.
+#[test]
+fn chief_engineer_grants_convoke_to_artifacts() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::chief_engineer());
+    let helper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let art = g.add_card_to_hand(0, catalog::shield_of_the_avatar());
+    g.perform_action(GameAction::CastSpellConvoke {
+        card_id: art,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        convoke_creatures: vec![helper],
+    })
+    .expect("convoke cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_some());
+    assert!(g.battlefield_find(helper).unwrap().tapped);
+}
+
+/// Constricting Sliver hands the exile ETB to every Sliver you control.
+#[test]
+fn constricting_sliver_grants_the_exile_trigger() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let sliver = cast(&mut g, catalog::constricting_sliver(), None, 5, &[(Color::White, 1)]);
+    assert!(g.battlefield_find(victim).is_none(), "its own arrival triggers");
+    g.destroy_permanent(sliver, false, &mut Vec::new());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_some(), "returns when the Sliver leaves");
+}
+
+/// Garruk's −3 kills a creature and pays its toughness in life.
+#[test]
+fn garruk_apex_predator_minus_three_drains() {
+    let mut g = main_phase();
+    let garruk = g.add_card_to_battlefield(0, catalog::garruk_apex_predator());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: garruk,
+        ability_index: 2,
+        target: Some(Target::Permanent(bear)),
+        x_value: None,
+    })
+    .expect("minus three");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Generator Servant's mana hastes the creature it pays for.
+#[test]
+fn generator_servant_hastes_its_creature() {
+    let mut g = main_phase();
+    let servant = g.add_card_to_battlefield(0, catalog::generator_servant());
+    g.battlefield_find_mut(servant).unwrap().summoning_sick = false;
+    activate(&mut g, servant, 0, None);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Glacial Crasher stays home without a Mountain.
+#[test]
+fn glacial_crasher_needs_a_mountain() {
+    let mut g = main_phase();
+    let crasher = g.add_card_to_battlefield(0, catalog::glacial_crasher());
+    g.battlefield_find_mut(crasher).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    let attack = |g: &mut GameState| {
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: crasher,
+            target: AttackTarget::Player(1),
+        }]))
+    };
+    assert!(attack(&mut g).is_err());
+    g.add_card_to_battlefield(1, catalog::mountain());
+    assert!(attack(&mut g).is_ok(), "anyone's Mountain unlocks it");
+}
+
+/// Goblin Kaboomist mints a Land Mine each upkeep.
+#[test]
+fn goblin_kaboomist_mints_land_mines() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::goblin_kaboomist());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Land Mine").count(), 1);
+}
+
+/// Jace's +1 mills one of the top two.
+#[test]
+fn jace_living_guildpact_plus_one_bins_a_card() {
+    let mut g = main_phase();
+    let jace = g.add_card_to_battlefield(0, catalog::jace_the_living_guildpact());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: jace,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("plus one");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 1);
+    assert_eq!(g.players[0].library.len(), 2);
+}
+
+/// Jalira polymorphs a sacrificed creature into a nonlegendary one.
+#[test]
+fn jalira_polymorphs_into_a_nonlegendary() {
+    let mut g = main_phase();
+    let jalira = g.add_card_to_battlefield(0, catalog::jalira_master_polymorphist());
+    g.battlefield_find_mut(jalira).unwrap().summoning_sick = false;
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::avacyn_guardian_angel());
+    g.add_card_to_library(0, catalog::siege_dragon());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    activate(&mut g, jalira, 0, None);
+    assert!(g.battlefield_find(fodder).is_none());
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Siege Dragon"));
+}
+
+/// Kurkesh copies an artifact's activated ability for {R}.
+#[test]
+fn kurkesh_copies_artifact_abilities() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::kurkesh_onakke_ancient());
+    let mill = g.add_card_to_battlefield(0, catalog::millstone());
+    for _ in 0..6 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    activate(&mut g, mill, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].graveyard.len(), 4, "the ability resolved twice");
+}
+
+/// Master of Predicaments casts a hand card free on a wrong guess.
+#[test]
+fn master_of_predicaments_punishes_a_bad_guess() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let master = g.add_card_to_battlefield(0, catalog::master_of_predicaments());
+    // The MV-0 card is the pick; guessing "greater than 4" is wrong, so it's free.
+    g.add_card_to_hand(0, catalog::ornithopter());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_combat_damage_to_player_triggers(master, 1, 4);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Ornithopter"));
+}
+
+/// Mercurial Pretender copies a creature and keeps its bounce ability.
+#[test]
+fn mercurial_pretender_copies_with_a_bounce() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pretender = cast(&mut g, catalog::mercurial_pretender(), None, 4, &[(Color::Blue, 1)]);
+    let cp = g.computed_permanent(pretender).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    activate(&mut g, pretender, 0, None);
+    assert!(g.battlefield_find(pretender).is_none());
+}
+
+/// Might Makes Right only steals while you own the biggest creature.
+#[test]
+fn might_makes_right_gates_on_greatest_power() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::might_makes_right());
+    let theirs = g.add_card_to_battlefield(1, catalog::siege_dragon());
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 1, "they have the 5/5");
+    g.add_card_to_battlefield(0, catalog::phytotitan());
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
+}
+
+/// Nissa's +1 animates a land into a 4/4 trampler that's still a land.
+#[test]
+fn nissa_worldwaker_animates_a_land() {
+    let mut g = main_phase();
+    let nissa = g.add_card_to_battlefield(0, catalog::nissa_worldwaker());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: nissa,
+        ability_index: 0,
+        target: Some(Target::Permanent(land)),
+        x_value: None,
+    })
+    .expect("plus one");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(land).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Land));
+}
+
+/// Ob Nixilis taxes an opponent's tutor and grows on other deaths.
+#[test]
+fn ob_nixilis_punishes_searches_and_grows() {
+    let mut g = main_phase();
+    let ob = g.add_card_to_battlefield(0, catalog::ob_nixilis_unshackled());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::forest());
+    let tutor = g.add_card_to_hand(1, catalog::lay_of_the_land());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tutor,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tutor");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 10);
+    assert!(g.battlefield_find(theirs).is_none(), "sacrificed to the trigger");
+    assert_eq!(g.battlefield_find(ob).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Shield of the Avatar soaks damage equal to your creature count.
+#[test]
+fn shield_of_the_avatar_soaks_by_creature_count() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let shield = g.add_card_to_battlefield(0, catalog::shield_of_the_avatar());
+    g.battlefield_find_mut(shield).unwrap().attached_to = Some(bear);
+    let mut events = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(bear), 3, None, &mut events);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 1);
+}
+
+/// Spectra Ward grants protection from every color.
+#[test]
+fn spectra_ward_grants_five_protections() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast(&mut g, catalog::spectra_ward(), Some(Target::Permanent(bear)), 3, &[(Color::White, 2)]);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        assert!(cp.keywords.contains(&Keyword::Protection(c)), "{c:?}");
+    }
+}
+
+/// Stain the Mind exiles every copy of a named card from all of a player's zones.
+#[test]
+fn stain_the_mind_strips_a_name() {
+    let mut g = main_phase();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let gy_id = g.next_id();
+    g.players[1]
+        .graveyard
+        .push(crabomination::card::CardInstance::new(gy_id, catalog::grizzly_bears(), 1));
+    cast(&mut g, catalog::stain_the_mind(), Some(Target::Player(1)), 4, &[(Color::Black, 1)]);
+    assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 3);
+}
+
+/// The Chain Veil buys a second loyalty activation and taxes idle turns.
+#[test]
+fn the_chain_veil_buys_an_extra_activation() {
+    let mut g = main_phase();
+    let veil = g.add_card_to_battlefield(0, catalog::the_chain_veil());
+    let jace = g.add_card_to_battlefield(0, catalog::jace_the_living_guildpact());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let plus = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateLoyaltyAbility {
+            card_id: jace,
+            ability_index: 0,
+            target: None,
+            x_value: None,
+        })
+    };
+    plus(&mut g).expect("first");
+    drain_stack(&mut g);
+    assert!(plus(&mut g).is_err(), "CR 606.3 caps at one");
+    g.players[0].mana_pool.add_colorless(4);
+    activate(&mut g, veil, 0, None);
+    plus(&mut g).expect("bought back");
+    drain_stack(&mut g);
+    // The end-step tax only bites on a turn with no loyalty activation.
+    let life = g.players[0].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life);
+}
+
+/// Waste Not pays out per discarded card type.
+#[test]
+fn waste_not_pays_by_card_type() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::waste_not());
+    let creature = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(1, catalog::forest());
+    let hand = g.players[0].hand.len();
+    let mut events = Vec::new();
+    g.discard_card(1, creature, &mut events);
+    g.discard_card(1, land, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count(), 1);
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+    assert_eq!(g.players[0].hand.len(), hand, "no noncreature nonland discard yet");
+}
+
+/// Yisan's verse counter picks the mana value it tutors for.
+#[test]
+fn yisan_tutors_by_verse_count() {
+    let mut g = main_phase();
+    let yisan = g.add_card_to_battlefield(0, catalog::yisan_the_wanderer_bard());
+    g.battlefield_find_mut(yisan).unwrap().summoning_sick = false;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let elves = g.add_card_to_library(0, catalog::llanowar_elves());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(elves))]));
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    activate(&mut g, yisan, 0, None);
+    assert_eq!(g.battlefield_find(yisan).unwrap().counter_count(CounterType::Verse), 1);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Llanowar Elves"), "MV 1 hit");
+}
