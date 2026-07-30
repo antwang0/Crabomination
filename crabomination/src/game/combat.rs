@@ -2107,7 +2107,7 @@ impl GameState {
                         && !kws.contains(&Keyword::DealsNoCombatDamage)
                         && !self.combat_damage_prevented_creatures.contains(&cp.id)
                         // CR 615.7 — chosen-source prevention (Forge-Tender).
-                        && !self.damage_prevented_sources.contains(&cp.id),
+                        && !self.damage_prevented_sources.iter().any(|(s, _)| *s == cp.id),
                 })
             })
             .collect();
@@ -2329,6 +2329,7 @@ impl GameState {
                             to_card: Some(blocker_id),
                             combat: true,
                             from_controller: Some(atk.controller),
+                            from_card: Some(atk.id),
                         });
                         creature_damage.push((atk.id, blocker_id, dealt as u32));
                     }
@@ -2374,7 +2375,7 @@ impl GameState {
                     // CR 615.1 — "prevent all combat damage it would deal" (Azorius Ploy).
                     .filter(|bid| !self.combat_damage_prevented_from(*bid))
                     // CR 615.7 — chosen-source prevention (Forge-Tender).
-                    .filter(|bid| !self.damage_prevented_sources.contains(bid))
+                    .filter(|bid| !self.damage_prevented_sources.iter().any(|(s, _)| *s == *bid))
                     // CR 615.1 — fog (with Inspire Awe's per-dealer exception).
                     .filter(|&bid| !self.combat_damage_prevented_for_dealer(bid))
                     // CR 702.16e — a blocker whose color the attacker has
@@ -2466,6 +2467,7 @@ impl GameState {
                                     to_card: Some(atk.id),
                                     combat: true,
                                     from_controller: Some(bc.controller),
+                                    from_card: Some(bid),
                                 });
                             }
                         }
@@ -2756,9 +2758,17 @@ impl GameState {
                     return;
                 }
                 // CR 614.9 — Palisade-Giant-style redirect: combat damage
-                // aimed at the player lands on the redirector instead.
-                if let Some(redirect) =
-                    self.damage_redirect_target(crate::game::effects::EntityRef::Player(p))
+                // aimed at the player lands on the redirector instead. Turn
+                // the Tables' combat-only redirect is checked first; both
+                // require the destination to still be on the battlefield.
+                if let Some(redirect) = self
+                    .combat_damage_redirect_this_turn
+                    .iter()
+                    .find(|(seat, to)| *seat == p && self.battlefield_find(*to).is_some())
+                    .map(|(_, to)| *to)
+                    .or_else(|| {
+                        self.damage_redirect_target(crate::game::effects::EntityRef::Player(p))
+                    })
                 {
                     if let Some(c) = self.battlefield_find_mut(redirect) {
                         c.damage += amount;
@@ -2771,6 +2781,7 @@ impl GameState {
                         to_card: Some(redirect),
                         combat: true,
                         from_controller: Some(atk.controller),
+                        from_card: Some(atk.id),
                     });
                     return;
                 }
@@ -2788,6 +2799,7 @@ impl GameState {
                         to_card: None,
                         combat: true,
                         from_controller: Some(atk.controller),
+                        from_card: Some(atk.id),
                     });
                     let amount = (-applied).max(0) as u32;
                     events.push(GameEvent::LifeLost {
@@ -2875,6 +2887,7 @@ impl GameState {
                         to_card: Some(pw_id),
                         combat: true,
                         from_controller: Some(atk.controller),
+                        from_card: Some(atk.id),
                     });
                     events.push(GameEvent::LoyaltyChanged {
                         card_id: pw_id,
@@ -2922,6 +2935,7 @@ impl GameState {
                         to_card: Some(b_id),
                         combat: true,
                         from_controller: Some(atk.controller),
+                        from_card: Some(atk.id),
                     });
                 }
             }

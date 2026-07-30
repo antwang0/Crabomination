@@ -398,6 +398,13 @@ pub(crate) fn event_matches_spec(
                 if state.same_team(*fc, source.controller)
                     && !state.same_team(*p, source.controller)
         ),
+        EventScope::YourOtherSourceDamagedOpponent => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), from_card, .. }
+                if state.same_team(*fc, source.controller)
+                    && !state.same_team(*p, source.controller)
+                    && *from_card != Some(source.id)
+        ),
         EventScope::YourPermanentTargetedByOpponent => {
             // The targeted permanent must be controlled by the trigger's
             // controller, and the caster must be an opponent. Battle Mammoth.
@@ -790,6 +797,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::YourCreatureTargeted
         | EventScope::EnchantedBySource
         | EventScope::YourSourceDamagedOpponent
+        | EventScope::YourOtherSourceDamagedOpponent
         | EventScope::ControllerAttackedByOpponent
         | EventScope::ControllerPlaneswalkerAttackedByOpponent => false,
     }

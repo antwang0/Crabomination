@@ -1254,13 +1254,14 @@ impl GameState {
             .battlefield_find(cid)
             .map(|c| c.definition.is_creature())
             .unwrap_or(false);
+        // Cache the dying card's snapshot for AnotherOfYours-scope triggers,
+        // type filter predicates (token deaths vanish before dispatch) and
+        // post-destruction LKI reads of its counters (CR 603.10 — Dismantle).
+        // Snapshot every permanent, like the sacrifice path.
+        if let Some(c) = self.battlefield_find(cid) {
+            self.died_card_snapshots.insert(cid, c.clone());
+        }
         if is_creature {
-            // Cache the dying card's snapshot for AnotherOfYours-scope
-            // triggers and type filter predicates (token deaths vanish
-            // before dispatch).
-            if let Some(c) = self.battlefield_find(cid) {
-                self.died_card_snapshots.insert(cid, c.clone());
-            }
             events.push(GameEvent::CreatureDied { card_id: cid });
         }
         let mut dies = self.remove_to_graveyard_with_triggers(cid);
@@ -3417,7 +3418,9 @@ impl GameState {
             // Transparent at resolution — the wrapper only marks slots optional
             // for the targeting walk; the body's selectors no-op on absent slots.
             Effect::OptionalTargets { body, .. } => self.run_effect(body, ctx, events),
-            Effect::CapTargetsAtX { body } => {
+            // Both cap the supplied slots at the paid X; they differ only in
+            // whether the targeting walk treats slots below X as optional.
+            Effect::CapTargetsAtX { body } | Effect::TargetsExactlyX { body } => {
                 // "Up to X targets" — X is the true cap (Crackle with
                 // Power); slots beyond the paid X are dropped.
                 let mut sub = ctx.clone();
@@ -10275,8 +10278,17 @@ impl GameState {
                     });
                 let Some(target) = target else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
+                // Mint-time dynamic P/T, resolved in the minting effect's
+                // context (Gemini Engine's Twin copies the Engine's P/T).
+                let dyn_pt = definition.dynamic_pt.as_ref().map(|(pv, tv)| {
+                    (self.evaluate_value(pv, ctx), self.evaluate_value(tv, ctx))
+                });
                 for _ in 0..n {
-                    let def = token_to_card_definition(definition);
+                    let mut def = token_to_card_definition(definition);
+                    if let Some((pw, tn)) = dyn_pt {
+                        def.power = pw;
+                        def.toughness = tn;
+                    }
                     let id = self.mint_token_onto_battlefield(def, p, true, events);
                     // Join combat tapped + attacking (CR 508.3a) — bypasses the
                     // declare-attackers timing/sickness gates, like Ninjutsu.
@@ -12827,6 +12839,107 @@ impl GameState {
                 });
                 if let Some(cid) = chosen {
                     self.damage_redirect_this_turn.push((ctx.controller, cid));
+                }
+                Ok(())
+            }
+
+            Effect::AddCountersOfChosenKind { onto, kinds, amount } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let n = self.evaluate_value(amount, ctx).max(0);
+                if n == 0 || kinds.is_empty() {
+                    return Ok(());
+                }
+                let mut candidates: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == ctx.controller
+                            && self.evaluate_requirement_static(
+                                onto,
+                                &Target::Permanent(c.id),
+                                ctx.controller,
+                                ctx.source,
+                            )
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                // Highest mana value first, so the non-UI auto-pick lands on
+                // the most substantial permanent.
+                candidates.sort_by_key(|id| {
+                    std::cmp::Reverse(
+                        self.battlefield_find(*id).map(|c| c.definition.cost.cmc()).unwrap_or(0),
+                    )
+                });
+                let kind = if kinds.len() == 1 {
+                    kinds[0]
+                } else {
+                    let answer = self.decider.decide(&Decision::ChooseModes {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        num_modes: kinds.len(),
+                        count: 1,
+                        default: vec![0],
+                        mode_texts: kinds.iter().map(|k| format!("{k:?} counters")).collect(),
+                    });
+                    match answer {
+                        DecisionAnswer::Modes(picks) => picks
+                            .first()
+                            .and_then(|i| kinds.get(*i as usize))
+                            .copied()
+                            .unwrap_or(kinds[0]),
+                        _ => kinds[0],
+                    }
+                };
+                let target = if candidates.len() == 1 {
+                    candidates[0]
+                } else {
+                    let answer = self.decider.decide(&Decision::ChooseTarget {
+                        optional: false,
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                        source_name: ctx.source_name.unwrap_or("").to_string(),
+                        description: format!("choose a permanent for {n} counters"),
+                    });
+                    match answer {
+                        DecisionAnswer::Target(Target::Permanent(id))
+                            if candidates.contains(&id) => id,
+                        _ => candidates[0],
+                    }
+                };
+                let mut sub = ctx.clone();
+                sub.targets = vec![Target::Permanent(target)];
+                self.run_effect(
+                    &Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind,
+                        amount: crate::effect::Value::Const(n),
+                    },
+                    &sub,
+                    events,
+                )
+            }
+
+            Effect::DamagedCreaturesDieThisTurn => {
+                self.damaged_creatures_die_this_turn = true;
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::CreatureDeathsDrainToughnessThisTurn => {
+                self.creature_deaths_drain_toughness_this_turn = true;
+                Ok(())
+            }
+
+            Effect::RedirectYourCombatDamageToTarget { what } => {
+                let chosen = self.resolve_selector(what, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Card(cid) | EntityRef::Permanent(cid) => Some(cid),
+                    _ => None,
+                });
+                if let Some(cid) = chosen {
+                    self.combat_damage_redirect_this_turn.push((ctx.controller, cid));
                 }
                 Ok(())
             }
@@ -15722,6 +15835,9 @@ impl GameState {
                 use crate::decision::Decision;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
+                // Concretize `{X}`-relative atoms against the activation's X
+                // (Panoptic Mirror's "instant or sorcery card with mana value X").
+                let filter = &filter.resolve_x(ctx.x_value);
                 let picker = ctx.controller;
                 let seats: Vec<usize> = self
                     .resolve_selector(from, ctx)
@@ -18102,8 +18218,23 @@ impl GameState {
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());
                 };
-                if !self.damage_prevented_sources.contains(&chosen) {
-                    self.damage_prevented_sources.push(chosen);
+                if !self.damage_prevented_sources.iter().any(|(id, _)| *id == chosen) {
+                    self.damage_prevented_sources.push((chosen, None));
+                }
+                Ok(())
+            }
+
+            Effect::PreventAllDamageFromTargetThisTurn { what, gain_life } => {
+                let beneficiary = gain_life.then_some(ctx.controller);
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Permanent(id) | EntityRef::Card(id)) = ent else { continue };
+                    if let Some(slot) =
+                        self.damage_prevented_sources.iter_mut().find(|(s, _)| *s == id)
+                    {
+                        slot.1 = slot.1.or(beneficiary);
+                    } else {
+                        self.damage_prevented_sources.push((id, beneficiary));
+                    }
                 }
                 Ok(())
             }

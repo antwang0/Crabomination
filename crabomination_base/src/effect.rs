@@ -2278,6 +2278,10 @@ pub enum EventScope {
     /// controller and whose damaged player is an opponent of them ("a source
     /// you control deals damage to an opponent" — Quest for Pure Flame).
     YourSourceDamagedOpponent,
+    /// [`YourSourceDamagedOpponent`](Self::YourSourceDamagedOpponent) with the
+    /// printed "other than this <permanent>" exclusion (Talon of Pain): the
+    /// damage event's own source must not be the trigger's source.
+    YourOtherSourceDamagedOpponent,
     /// A permanent **you control** (any, including the source) becomes the
     /// target of a spell or ability an **opponent** controls. Used with
     /// `EventKind::BecameTarget` — Battle Mammoth. Unlike SelfSource, the
@@ -3755,6 +3759,18 @@ pub enum Effect {
     /// Registers a `(controller, chosen)` entry in `damage_redirect_this_turn`
     /// (CR 614.9), consulted by `damage_redirect_target`.
     RedirectYourDamageToChosen { what: Selector },
+    /// Turn the Tables — "All combat damage that would be dealt to you this
+    /// turn is dealt to `what` instead." The combat-only, player-only sibling
+    /// of `RedirectYourDamageToChosen`; registers a `(controller, what)` entry
+    /// in `combat_damage_redirect_this_turn`.
+    RedirectYourCombatDamageToTarget { what: Selector },
+    /// Shriveling Rot mode 1 — "until end of turn, whenever a creature is dealt
+    /// damage, destroy it". The lethal-damage SBA treats *any* marked damage as
+    /// lethal for the rest of the turn (indestructible still survives).
+    DamagedCreaturesDieThisTurn,
+    /// Shriveling Rot mode 2 — "until end of turn, whenever a creature dies,
+    /// that creature's controller loses life equal to its toughness".
+    CreatureDeathsDrainToughnessThisTurn,
     /// Deliver Unto Evil — up to `max_targets` target cards in your graveyard
     /// (slots `0..max_targets`, filter `filter`). On resolution: if you control
     /// a Bolas planeswalker, return them all to your hand; otherwise an
@@ -4688,6 +4704,12 @@ pub enum Effect {
     /// the static slot ceiling). Cast-time slot enumeration still offers
     /// the ceiling; an over-select at small X is dropped at resolution.
     CapTargetsAtX { body: Box<Effect> },
+    /// "N target …" where N is the paid {X} (CR 601.2c — Synod Artificer's
+    /// "Tap X target noncreature artifacts"). Like `CapTargetsAtX`, but slots
+    /// `0..X` are *required* rather than optional, so an activation that supplies
+    /// too few targets is rejected instead of half-firing. `body` is normally an
+    /// `ApplyToTargets` whose `max_targets` is the static slot ceiling.
+    TargetsExactlyX { body: Box<Effect> },
     /// The `Value`-driven sibling of `CapTargetsAtX`: "up to [amount] target
     /// creatures", where the cap is computed at resolution rather than paid as
     /// {X} (Mogis's Marauder's devotion-to-black cap).
@@ -6226,6 +6248,27 @@ pub enum Effect {
     /// picks a stack spell first, else the highest-power permanent).
     /// Burrenton Forge-Tender.
     PreventAllDamageFromChosenSourceThisTurn { filter: crate::card::SelectionRequirement },
+    /// "Put `amount` +1/+1 counters *or* charge counters on a permanent
+    /// matching `onto` you control" (Dismantle) — both the counter kind and the
+    /// recipient are picked as the effect resolves. A `wants_ui` controller
+    /// gets a `ChooseModes` kind pick and a `ChooseTarget` recipient pick;
+    /// other seats take the first listed kind and the highest-mana-value
+    /// recipient. A zero `amount` or an empty candidate set is a no-op.
+    AddCountersOfChosenKind {
+        onto: crate::card::SelectionRequirement,
+        kinds: Vec<CounterType>,
+        amount: Value,
+    },
+    /// CR 615.7 — "Prevent all damage `what` would deal this turn." The
+    /// targeted sibling of `PreventAllDamageFromChosenSourceThisTurn`; `what`
+    /// may name a permanent or a spell on the stack. With `gain_life`, the
+    /// effect's controller gains life equal to the damage prevented this way,
+    /// event by event (Hallow).
+    PreventAllDamageFromTargetThisTurn {
+        what: Selector,
+        #[serde(default)]
+        gain_life: bool,
+    },
     /// CR 615.7 — "The next time a [filter] source of your choice would deal
     /// damage to you this turn, prevent that damage." A one-event,
     /// source-restricted shield around the controller. Circle of Protection

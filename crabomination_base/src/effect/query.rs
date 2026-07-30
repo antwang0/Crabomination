@@ -484,6 +484,7 @@ impl Effect {
             | Effect::ChooseUnchosenMode { .. } => false,
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. } => body.requires_target(),
             Effect::MayPayX { body, .. } => body.requires_target(),
             Effect::OptionalTargets { body, .. } => body.requires_target(),
@@ -658,7 +659,9 @@ impl Effect {
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),
-            Effect::RedirectYourDamageToChosen { what } => sel_has_target(what),
+            Effect::RedirectYourDamageToChosen { what }
+            | Effect::RedirectYourCombatDamageToTarget { what }
+            | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_has_target(what),
             Effect::AddManaKeptThisTurn { who, .. }
             | Effect::AddManaKeptThisTurnCount { who, .. } => player_has_target(who),
             Effect::AddManaEqualToPermanentCost { .. } => false,
@@ -869,7 +872,10 @@ impl Effect {
             | Effect::ReturnFromExileWithCounter { .. } => false,
             Effect::BecomeMonarch { who } | Effect::Ascend { who } => player_has_target(who),
             Effect::BecomeDay | Effect::BecomeNight | Effect::EndTheTurn => false,
-            Effect::PreventAllDamageFromChosenSourceThisTurn { .. } => false,
+            Effect::PreventAllDamageFromChosenSourceThisTurn { .. }
+            | Effect::DamagedCreaturesDieThisTurn
+            | Effect::CreatureDeathsDrainToughnessThisTurn => false,
+            Effect::AddCountersOfChosenKind { amount, .. } => value_has_target(amount),
             Effect::ExileSelfReturnTransformed => false,
             Effect::PutOnLibraryFromHand { who, count } => {
                 player_has_target(who) || value_has_target(count)
@@ -1206,7 +1212,9 @@ impl Effect {
             Effect::BottomChosenFromHandAndDraw { from, .. } => sel_filter(from),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_filter(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
-            Effect::RedirectYourDamageToChosen { what } => sel_filter(what),
+            Effect::RedirectYourDamageToChosen { what }
+            | Effect::RedirectYourCombatDamageToTarget { what }
+            | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_filter(what),
             Effect::ManaClash { opponent } => sel_filter(opponent),
             // Edict-class effects: "target player sacrifices a permanent."
             // The `who` selector usually carries a `target_filtered(Player)`
@@ -1257,6 +1265,7 @@ impl Effect {
             Effect::MayDo { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. } => body.primary_target_filter(),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.primary_target_filter(),
             Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => then.primary_target_filter(),
@@ -1404,6 +1413,7 @@ impl Effect {
             Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. } => {
                 body.prefers_friendly_target()
@@ -1472,6 +1482,7 @@ impl Effect {
             | Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
@@ -1780,6 +1791,7 @@ impl Effect {
             }
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
@@ -1991,6 +2003,7 @@ impl Effect {
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
@@ -2211,6 +2224,7 @@ impl Effect {
                 },
                 Effect::MayDo { body, .. }
                 | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::MayPayX { body, .. }
                 | Effect::MayPay { body, .. }
@@ -2328,7 +2342,9 @@ impl Effect {
                 Effect::BottomChosenFromHandAndDraw { from, .. } => sel_find(from, slot),
                 Effect::SearchSplitOpponentChooses { opponent, .. } => sel_find(opponent, slot),
                 Effect::RedirectSpellTargetToSelf { what } => sel_find(what, slot),
-                Effect::RedirectYourDamageToChosen { what } => sel_find(what, slot),
+                Effect::RedirectYourDamageToChosen { what }
+                | Effect::RedirectYourCombatDamageToTarget { what }
+                | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_find(what, slot),
                 Effect::ManaClash { opponent } => sel_find(opponent, slot),
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
                 Effect::SetMaxHandSize { who, .. } => sel_find(who, slot),
@@ -2362,6 +2378,7 @@ impl Effect {
                 Effect::ExilePlayerGraveyard { who }
                 | Effect::ExileHand { who }
                 | Effect::ShuffleGraveyardCardsIntoLibrary { who, .. }
+                | Effect::RevealUntilFind { who, .. }
                 | Effect::DiscardUnlessKind { who, .. } => implicit_player_for_ref_slot(who, slot),
                 Effect::PhaseOut { what, .. }
                 | Effect::GrantSuspend { what, .. }
@@ -2560,6 +2577,7 @@ impl Effect {
             },
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
@@ -2571,8 +2589,29 @@ impl Effect {
     /// True when the effect's slot-`slot` target pick may be declined by
     /// the chooser ("up to N targets" / "any number of targets").
     pub fn target_slot_optional(&self, slot: u8, mode: Option<usize>) -> bool {
-        self.min_targets_in_mode(mode)
-            .is_some_and(|min| slot >= min)
+        self.target_slot_optional_x(slot, mode, 0)
+    }
+
+    /// [`target_slot_optional`](Self::target_slot_optional) with the cast's /
+    /// activation's paid {X}, so an `Effect::TargetsExactlyX` requires exactly
+    /// that many slots (Synod Artificer). Callers with no X use the wrapper.
+    pub fn target_slot_optional_x(&self, slot: u8, mode: Option<usize>, x: u32) -> bool {
+        match self {
+            Effect::TargetsExactlyX { .. } => u32::from(slot) >= x,
+            Effect::MayDo { body, .. }
+            | Effect::CapTargetsAtX { body }
+            | Effect::CapTargetsAt { body, .. }
+            | Effect::MayPayX { body, .. }
+            | Effect::MayPay { body, .. }
+            | Effect::MayPayLife { body, .. } => body.target_slot_optional_x(slot, mode, x),
+            Effect::ChooseMode(modes) => match mode {
+                Some(m) => modes
+                    .get(m)
+                    .is_some_and(|e| e.target_slot_optional_x(slot, None, x)),
+                None => self.min_targets_in_mode(mode).is_some_and(|min| slot >= min),
+            },
+            _ => self.min_targets_in_mode(mode).is_some_and(|min| slot >= min),
+        }
     }
 
     /// CR 115.3 — the count of mutually-distinct targets a *single* multi-target
@@ -2597,6 +2636,7 @@ impl Effect {
             },
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }

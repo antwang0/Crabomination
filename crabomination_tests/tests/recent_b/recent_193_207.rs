@@ -598,8 +598,7 @@ mod recent202 {
             to_player: Some(1),
             to_card: None,
             from_controller: Some(0),
-            combat: false,
-        }];
+            combat: false, from_card: None, }];
         g.dispatch_triggers_for_events(&evs);
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand0 + 3, "drew 3 for 3 noncombat damage");

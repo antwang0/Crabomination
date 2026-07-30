@@ -2632,8 +2632,7 @@ mod recent {
         g.dispatch_triggers_for_events(&[crabomination::game::GameEvent::DamageDealt {
             amount: 3,
             to_card: Some(nem),
-            to_player: None, combat: false, from_controller: None,
-        }]);
+            to_player: None, combat: false, from_controller: None, from_card: None, }]);
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life1 - 3, "redirected 3 to the opponent");
         // CR 119.7 — the damaged player can't gain life for the rest of the game.

@@ -976,9 +976,26 @@ pub struct GameState {
     #[serde(default)]
     pub turn_scoped_spell_taxes: Vec<TurnScopedSpellTax>,
     /// CR 615.7 — sources whose damage is prevented entirely this turn
-    /// (Burrenton Forge-Tender's chosen source). Cleared at cleanup.
+    /// (Burrenton Forge-Tender's chosen source). The optional seat gains life
+    /// equal to each prevented event (Hallow). Cleared at cleanup.
     #[serde(default)]
-    pub(crate) damage_prevented_sources: Vec<CardId>,
+    pub(crate) damage_prevented_sources: Vec<(CardId, Option<usize>)>,
+    /// Shriveling Rot mode 1 — "until end of turn, whenever a creature is
+    /// dealt damage, destroy it". Any creature with damage marked on it is
+    /// destroyed by the lethal-damage SBA while set. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) damaged_creatures_die_this_turn: bool,
+    /// Shriveling Rot mode 2 — "until end of turn, whenever a creature dies,
+    /// that creature's controller loses life equal to its toughness". Applied
+    /// in `remove_to_graveyard_with_triggers`. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) creature_deaths_drain_toughness_this_turn: bool,
+    /// "All combat damage that would be dealt to you this turn is dealt to
+    /// `to` instead" — `(protected seat, to)` pairs (CR 614.9, Turn the
+    /// Tables). Narrower than `damage_redirect_this_turn`: combat damage only,
+    /// and only damage aimed at the player. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_redirect_this_turn: Vec<(usize, CardId)>,
     /// Lightning, Army of One's Stagger — `(victim, registrant)` pairs: until
     /// the registrant's next turn, damage to the victim or a permanent they
     /// control is doubled (applied in `scale_damage_to`). Cleared as the
@@ -1452,6 +1469,9 @@ impl Clone for GameState {
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
             damage_redirect_this_turn: self.damage_redirect_this_turn.clone(),
+            combat_damage_redirect_this_turn: self.combat_damage_redirect_this_turn.clone(),
+            damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
+            creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
             no_search_this_turn: self.no_search_this_turn,
             replacement_effects: self.replacement_effects.clone(),
             next_replacement_id: self.next_replacement_id,
@@ -1653,6 +1673,9 @@ impl GameState {
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
             damage_redirect_this_turn: Vec::new(),
+            combat_damage_redirect_this_turn: Vec::new(),
+            damaged_creatures_die_this_turn: false,
+            creature_deaths_drain_toughness_this_turn: false,
             no_search_this_turn: false,
             replacement_effects: Vec::new(),
             next_replacement_id: 1,
@@ -4475,6 +4498,47 @@ impl GameState {
     /// Phyrexian Unlife — true when `seat` controls a
     /// `ControllerDoesntLoseFromLife` static: the life-≤-0 loss SBA is
     /// skipped, and at ≤ 0 life all damage to them lands as poison.
+    /// CR 609.4b — true while any permanent grants every player "you may spend
+    /// mana as though it were mana of any color" (Mycosynth Lattice). Costs
+    /// paid through `try_pay_after_snapshot_mode` have their coloured pips
+    /// relaxed to generic while this holds.
+    pub fn spend_mana_as_any_color_active(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|src| {
+            src.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::PlayersMaySpendManaAsAnyColor))
+        })
+    }
+
+    /// The cost as it must actually be paid: with a Lattice-style
+    /// spend-as-any-color permission active, every coloured pip becomes generic
+    /// (`{C}` pips are unaffected — CR 609.4b speaks of colours only).
+    pub fn relax_cost_colors(&self, cost: &crate::mana::ManaCost) -> crate::mana::ManaCost {
+        use crate::mana::ManaSymbol;
+        if !self.spend_mana_as_any_color_active() {
+            return cost.clone();
+        }
+        let mut relaxed = 0;
+        let mut symbols: Vec<ManaSymbol> = Vec::with_capacity(cost.symbols.len());
+        for s in &cost.symbols {
+            match s {
+                // Each coloured / hybrid pip becomes one mana of any type.
+                // Phyrexian pips keep their pay-2-life alternative and so are
+                // left for the normal payment path.
+                ManaSymbol::Colored(_)
+                | ManaSymbol::Hybrid(..)
+                | ManaSymbol::MonoHybrid(..) => relaxed += 1,
+                other => symbols.push(*other),
+            }
+        }
+        if relaxed > 0 {
+            symbols.push(ManaSymbol::Generic(relaxed));
+        }
+        crate::mana::ManaCost::new(symbols)
+    }
+
     pub fn player_unlife_active(&self, seat: usize) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|src| {
@@ -5764,6 +5828,36 @@ impl GameState {
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::RemoveCardType(CardType::Creature),
                 });
+            }
+        }
+        // Death-Mask Duplicant — the imprinted card's evasion keywords bleed
+        // onto the Duplicant. Matched by variant so the printed "landwalk" /
+        // "protection" families cover any land type / colour.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::GainKeywordsFromExiledWith { keywords } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                let wanted: Vec<std::mem::Discriminant<crate::card::Keyword>> =
+                    keywords.iter().map(std::mem::discriminant).collect();
+                for exiled in self.exile.iter().filter(|c| c.exiled_with == Some(card.id)) {
+                    for kw in &exiled.definition.keywords {
+                        if !wanted.contains(&std::mem::discriminant(kw)) {
+                            continue;
+                        }
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Source,
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(kw.clone()),
+                        });
+                    }
+                }
             }
         }
         // Alpine Moon — opponents' lands matching the source's chosen name
@@ -14669,6 +14763,20 @@ fn static_effect_to_effects(
                     None => vec![],
                 }
             }
+            StaticEffect::GrantColorless { applies_to } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L5Color,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::LoseAllColors,
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::GrantAllColors { applies_to } => {
                 use crate::mana::Color;
                 match selector_to_affected(applies_to, card) {
@@ -14824,6 +14932,9 @@ fn static_effect_to_effects(
             | StaticEffect::LandsUntargetableByOpponents
             | StaticEffect::OpponentsCantSearchLibraries
             | StaticEffect::LandsTapColorlessOnly
+            // PlayersMaySpendManaAsAnyColor — read by the payment funnel via
+            // `relax_cost_colors` (Mycosynth Lattice); no layer effect.
+            | StaticEffect::PlayersMaySpendManaAsAnyColor
             // ArtifactActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Collector Ouphe); no layer effect.
             | StaticEffect::ArtifactActivatedAbilitiesLocked
@@ -14983,6 +15094,9 @@ fn static_effect_to_effects(
             // `gather_continuous_effects_inner` (needs the source's named_card).
             | StaticEffect::NamedLandsNeutralized
             | StaticEffect::BlightedLandsNeutralized
+            // GainKeywordsFromExiledWith — live-resolved in
+            // `gather_continuous_effects_inner` (reads the exile zone).
+            | StaticEffect::GainKeywordsFromExiledWith { .. }
             // TokenCreationAddsToken — consulted in the resolve_effect
             // epilogue (Quina's extra-Frog rider); not a layer effect.
             | StaticEffect::TokenCreationAddsToken { .. }

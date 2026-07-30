@@ -560,6 +560,7 @@ impl GameState {
             | EventScope::YourCreatureTargeted
             | EventScope::EnchantedBySource
             | EventScope::YourSourceDamagedOpponent
+            | EventScope::YourOtherSourceDamagedOpponent
             | EventScope::YouTapped => false, // event-based
             EventScope::ControllerAttackedByOpponent
             | EventScope::ControllerPlaneswalkerAttackedByOpponent => false, // combat-based
@@ -2650,6 +2651,9 @@ impl GameState {
         self.prevention_shields.clear();
         self.damage_cant_be_prevented_this_turn = false;
         self.damage_redirect_this_turn.clear();
+        self.combat_damage_redirect_this_turn.clear();
+        self.damaged_creatures_die_this_turn = false;
+        self.creature_deaths_drain_toughness_this_turn = false;
         self.no_search_this_turn = false;
         self.block_poison_this_turn = 0;
         // CR 500.4 — "kept this turn" mana (Savage Ventmaw) expires now, so the
@@ -3227,6 +3231,12 @@ impl GameState {
                 if c.damage > 0 && (c.damage as i32) >= lethal_threshold {
                     return true;
                 }
+                // Shriveling Rot — "whenever a creature is dealt damage,
+                // destroy it" for the rest of the turn. Indestructible has
+                // already returned above, matching "destroy".
+                if self.damaged_creatures_die_this_turn && c.damage > 0 {
+                    return true;
+                }
                 c.dealt_deathtouch_damage && c.damage > 0
             })
             .map(|c| c.id)
@@ -3271,6 +3281,7 @@ impl GameState {
                 continue;
             }
 
+            self.apply_death_toughness_drain(id);
             events.push(GameEvent::CreatureDied { card_id: id });
             // Cache the dying card's snapshot so AnotherOfYours-scope
             // triggers AND printed-type filter predicates fire reliably
@@ -4112,6 +4123,29 @@ impl GameState {
     /// Remove a permanent from the battlefield to its graveyard and collect any
     /// `Dies` triggered abilities, returning them as events after the fact.
     /// (This is the version used by destroy/damage effects that want to fire triggers.)
+    /// Shriveling Rot mode 2 — while
+    /// `creature_deaths_drain_toughness_this_turn` is set, a creature leaving
+    /// the battlefield for the graveyard drains its controller for its
+    /// *computed* toughness. Called from both death funnels (the SBA lethal
+    /// sweep and the destroy/sacrifice route) before the card is removed.
+    pub(crate) fn apply_death_toughness_drain(&mut self, id: CardId) {
+        if !self.creature_deaths_drain_toughness_this_turn {
+            return;
+        }
+        let Some(controller) = self.battlefield.iter().find(|c| c.id == id).map(|c| c.controller)
+        else {
+            return;
+        };
+        let toughness = self
+            .computed_permanent(id)
+            .map(|cp| cp.toughness)
+            .or_else(|| self.battlefield.iter().find(|c| c.id == id).map(|c| c.toughness()))
+            .unwrap_or(0);
+        if toughness > 0 {
+            self.adjust_life(controller, -toughness);
+        }
+    }
+
     pub fn remove_to_graveyard_with_triggers(&mut self, id: CardId) -> Vec<GameEvent> {
         // Collect both `CreatureDied` and `PermanentLeavesBattlefield`
         // self-source triggers off the leaving permanent. CreatureDied
@@ -4200,6 +4234,9 @@ impl GameState {
                     }
                 }
             }
+        }
+        if dying_creature_controller.is_some() {
+            self.apply_death_toughness_drain(id);
         }
         // Capture Persist/Undying info before the card leaves the battlefield.
         let (persist_has, undying_has, persist_minus, persist_plus, persist_owner) = self

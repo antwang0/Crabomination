@@ -321,14 +321,16 @@ pub fn geths_grimoire() -> CardDefinition {
     }
 }
 
-/// Talon of Pain — charges whenever a source you control damages an opponent;
-/// {X}, {T}, remove X charge counters: X damage to any target. (The printed
-/// "other than this artifact" exclusion isn't expressible on the scope, so its
-/// own X shot re-charges it by one.)
+/// Talon of Pain — charges whenever a source you control other than itself
+/// damages an opponent; {X}, {T}, remove X charge counters: X damage to any
+/// target.
 pub fn talon_of_pain() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::YourSourceDamagedOpponent),
+            event: EventSpec::new(
+                EventKind::PlayerDamaged,
+                EventScope::YourOtherSourceDamagedOpponent,
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::Charge,
@@ -489,7 +491,6 @@ pub fn heartseeker() -> CardDefinition {
 }
 
 /// Auriok Siege Sled — {1}: force or forbid a block from an artifact creature.
-/// (The forbid half is modeled as a blanket can't-block for the turn.)
 pub fn auriok_siege_sled() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
@@ -506,10 +507,8 @@ pub fn auriok_siege_sled() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(1)]),
-                effect: Effect::GrantKeyword {
-                    what: target_filtered(R::Artifact.and(R::Creature)),
-                    keyword: Keyword::CantBlock,
-                    duration: Duration::EndOfTurn,
+                effect: Effect::CantBlockSourceThisTurn {
+                    target: target_filtered(R::Artifact.and(R::Creature)),
                 },
                 ..Default::default()
             },
@@ -518,9 +517,8 @@ pub fn auriok_siege_sled() -> CardDefinition {
     }
 }
 
-/// Gemini Engine — attacking mints an attacking 3/4 Twin that is sacrificed at
-/// end of combat. (The Twin's printed "P/T equal to this creature's" is fixed
-/// at the Engine's base.)
+/// Gemini Engine — attacking mints an attacking Twin whose P/T copies the
+/// Engine's; the token is sacrificed at end of combat.
 pub fn gemini_engine() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
@@ -541,6 +539,10 @@ pub fn gemini_engine() -> CardDefinition {
                     },
                     power: 3,
                     toughness: 4,
+                    dynamic_pt: Some((
+                        Value::PowerOf(Box::new(Selector::This)),
+                        Value::ToughnessOf(Box::new(Selector::This)),
+                    )),
                     ..Default::default()
                 },
             },

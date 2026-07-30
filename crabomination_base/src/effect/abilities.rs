@@ -831,6 +831,24 @@ pub enum StaticEffect {
     /// Guildpact's color half). Emits a layer-5 `SetColors([W,U,B,R,G])`, so
     /// devotion / protection-from-color / color matters reads see all five.
     GrantAllColors { applies_to: Selector },
+    /// "Permanents `applies_to` are colorless" (CR 105.2c — Mycosynth Lattice's
+    /// colour half). Emits a layer-5 `LoseAllColors`, the mirror of
+    /// `GrantAllColors`. Only the battlefield half is materialized; the printed
+    /// clause also blanks the colour of cards in other zones, which nothing in
+    /// the engine reads.
+    GrantColorless { applies_to: Selector },
+    /// Death-Mask Duplicant — "as long as a card exiled with this creature has
+    /// [keyword], this creature has [keyword]". Each entry in `keywords` is
+    /// matched against the exiled cards' keywords by *variant*, so
+    /// `Landwalk(Island)` / `Protection(White)` stand for any landwalk / any
+    /// protection-from-a-colour. Live-resolved in
+    /// `gather_continuous_effects_inner` (it reads the exile zone).
+    GainKeywordsFromExiledWith { keywords: Vec<Keyword> },
+    /// CR 609.4b — "Players may spend mana as though it were mana of any
+    /// color" (Mycosynth Lattice). Consulted by the payment funnel, which
+    /// relaxes the cost's coloured pips to generic for every seat while any
+    /// source of this static is on the battlefield.
+    PlayersMaySpendManaAsAnyColor,
     /// Collector Ouphe / Karn-style lock: "Activated abilities of artifacts
     /// can't be activated unless they're mana abilities." Checked globally
     /// in `activate_ability` (affects every player). Mana abilities pass.

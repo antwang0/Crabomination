@@ -603,9 +603,9 @@ fn talon_of_pain_banks_damage_then_burns() {
     .expect("spend two charges");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 20 - 3 - 2);
-    // Its own shot at the opponent re-charges it (documented deviation from
-    // the printed "other than this artifact").
-    assert_eq!(g.battlefield_find(talon).unwrap().counter_count(CounterType::Charge), 1);
+    // CR-faithful: "a source you control OTHER than this artifact", so its own
+    // shot doesn't re-charge it.
+    assert_eq!(g.battlefield_find(talon).unwrap().counter_count(CounterType::Charge), 0);
 }
 
 /// Test of Faith turns prevented damage into +1/+1 counters.
@@ -934,4 +934,363 @@ fn scrounge_reanimates_an_opposing_artifact() {
     .expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(buried).map(|c| c.controller), Some(0));
+}
+
+// ── Darksteel completion batch 4 (`decks::recent314`) ──
+
+/// Mycosynth Lattice lets any mana pay a coloured pip and blanks colour.
+#[test]
+fn mycosynth_lattice_relaxes_colors_and_makes_everything_an_artifact() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(bear).unwrap().colors.is_empty(), "a Bear starts green");
+    g.add_card_to_battlefield(0, catalog::mycosynth_lattice());
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.colors.is_empty(), "everything is colourless");
+    assert!(cp.card_types.contains(&CardType::Artifact), "everything is an artifact");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("{C} pays {R} under the Lattice");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+}
+
+/// Gemini Engine's Twin copies the Engine's live P/T.
+#[test]
+fn gemini_engine_twin_copies_pumped_pt() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase();
+    let engine = g.add_card_to_battlefield(0, catalog::gemini_engine());
+    g.clear_sickness(engine);
+    // A +1/+1 counter makes the Engine a 4/5; the Twin must follow.
+    g.battlefield_find_mut(engine).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: engine, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    let twin = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Twin")
+        .map(|c| c.id)
+        .expect("Twin minted");
+    let cp = g.computed_permanent(twin).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 5));
+}
+
+/// Auriok Siege Sled's second mode only bars blocking the Sled itself.
+#[test]
+fn auriok_siege_sled_forbids_only_its_own_block() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase();
+    let sled = g.add_card_to_battlefield(0, catalog::auriok_siege_sled());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::ornithopter());
+    g.clear_sickness(sled);
+    g.clear_sickness(other);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sled, ability_index: 1, target: Some(Target::Permanent(blocker)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("forbid the block");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![
+        Attack { attacker: sled, target: AttackTarget::Player(1) },
+        Attack { attacker: other, target: AttackTarget::Player(1) },
+    ])
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(blocker, sled)])).is_err(),
+        "it can't block the Sled",
+    );
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, other)]))
+        .expect("but it can block anything else");
+}
+
+/// Synod Artificer taps exactly X noncreature artifacts.
+#[test]
+fn synod_artificer_taps_x_artifacts() {
+    let mut g = main_phase();
+    let artificer = g.add_card_to_battlefield(0, catalog::synod_artificer());
+    g.clear_sickness(artificer);
+    let a = g.add_card_to_battlefield(1, catalog::angels_feather());
+    let b = g.add_card_to_battlefield(1, catalog::demons_horn());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: artificer, ability_index: 0, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], x_value: Some(2),
+    })
+    .expect("tap two");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped);
+    assert!(g.battlefield_find(b).unwrap().tapped);
+}
+
+/// One target isn't enough for X = 2 (CR 601.2c).
+#[test]
+fn synod_artificer_rejects_too_few_targets() {
+    let mut g = main_phase();
+    let artificer = g.add_card_to_battlefield(0, catalog::synod_artificer());
+    g.clear_sickness(artificer);
+    let a = g.add_card_to_battlefield(1, catalog::angels_feather());
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: artificer, ability_index: 0, target: Some(Target::Permanent(a)),
+            additional_targets: vec![], x_value: Some(2),
+        })
+        .is_err(),
+        "X = 2 needs two targets",
+    );
+}
+
+/// Thought Dissector digs X deep, steals the artifact and sacrifices itself.
+#[test]
+fn thought_dissector_steals_an_artifact_and_sacrifices_itself() {
+    let mut g = main_phase();
+    let dissector = g.add_card_to_battlefield(0, catalog::thought_dissector());
+    g.players[1].library.clear();
+    let bear = g.add_card_to_library(1, catalog::grizzly_bears());
+    let rock = g.add_card_to_library(1, catalog::coretapper());
+    // Library front is the top of the deck: Bear, then the artifact.
+    assert_eq!(g.players[1].library[0].id, bear);
+    assert_eq!(g.players[1].library[1].id, rock);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dissector, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: Some(3),
+    })
+    .expect("dig three");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rock).map(|c| c.controller), Some(0), "you keep the artifact");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "the miss is milled");
+    assert!(g.battlefield_find(dissector).is_none(), "the Dissector is sacrificed");
+}
+
+/// Thought Dissector survives a whiff.
+#[test]
+fn thought_dissector_survives_finding_nothing() {
+    let mut g = main_phase();
+    let dissector = g.add_card_to_battlefield(0, catalog::thought_dissector());
+    g.players[1].library.clear();
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dissector, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: Some(1),
+    })
+    .expect("dig one");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dissector).is_some(), "no artifact, no sacrifice");
+}
+
+/// Hallow zeroes a burn spell and refunds the damage as life.
+#[test]
+fn hallow_prevents_a_spells_damage_and_gains_that_much_life() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("they aim a Bolt at you");
+    let hallow = g.add_card_to_hand(0, catalog::hallow());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hallow, target: Some(Target::Permanent(bolt)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Hallow the Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "3 prevented, 3 gained");
+}
+
+/// Dismantle hands the destroyed artifact's counter total on.
+#[test]
+fn dismantle_moves_the_counter_tally_to_your_artifact() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::coretapper());
+    g.battlefield_find_mut(theirs).unwrap().add_counters(CounterType::Charge, 3);
+    let mine = g.add_card_to_battlefield(0, catalog::angels_feather());
+    let spell = g.add_card_to_hand(0, catalog::dismantle());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(theirs)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "destroyed");
+    assert_eq!(
+        g.battlefield_find(mine).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "three counters follow (the auto-pick takes the first listed kind)",
+    );
+}
+
+/// Pulse of the Dross discards a revealed card and recurs while they're ahead.
+#[test]
+fn pulse_of_the_dross_discards_and_returns_itself() {
+    let mut g = main_phase();
+    for _ in 0..4 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::pulse_of_the_dross());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 1, "one card discarded");
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == spell),
+        "they still hold more than you, so it comes back",
+    );
+}
+
+/// Turn the Tables sends only combat damage at the chosen attacker.
+#[test]
+fn turn_the_tables_redirects_combat_damage_to_an_attacker() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let spell = g.add_card_to_hand(0, catalog::turn_the_tables());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(attacker)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast at the attacker");
+    drain_stack(&mut g);
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, 20, "you take nothing");
+    assert!(g.battlefield_find(attacker).is_none(), "the Bear kills itself");
+}
+
+/// Shriveling Rot mode 1 destroys any creature that takes damage.
+#[test]
+fn shriveling_rot_destroys_damaged_creatures() {
+    let mut g = main_phase();
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_blossoms());
+    let rot = g.add_card_to_hand(0, catalog::shriveling_rot());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rot, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    })
+    .expect("cast mode 1");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(wall)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("ping the 0/4");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wall).is_none(), "3 damage on a 0/4 is still lethal now");
+}
+
+/// Shriveling Rot mode 2 drains the dying creature's controller.
+#[test]
+fn shriveling_rot_drains_toughness_on_death() {
+    let mut g = main_phase();
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_blossoms());
+    let rot = g.add_card_to_hand(0, catalog::shriveling_rot());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rot, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("cast mode 2");
+    drain_stack(&mut g);
+    let kill = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: kill, target: Some(Target::Permanent(wall)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("kill the Wall");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wall).is_none());
+    assert_eq!(g.players[1].life, 16, "the 0/4 drains its controller for 4");
+}
+
+/// Death-Mask Duplicant wears the imprinted creature's evasion.
+#[test]
+fn death_mask_duplicant_gains_imprinted_keywords() {
+    let mut g = main_phase();
+    let dup = g.add_card_to_battlefield(0, catalog::death_mask_duplicant());
+    let flier = g.add_card_to_graveyard(0, catalog::serra_angel());
+    assert!(!g.computed_permanent(dup).unwrap().keywords.contains(&Keyword::Flying));
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dup, ability_index: 0, target: Some(Target::Permanent(flier)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("imprint the Angel");
+    drain_stack(&mut g);
+    let kws = g.computed_permanent(dup).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Flying), "flying bleeds through");
+    assert!(!kws.contains(&Keyword::Vigilance), "vigilance isn't on the printed list");
+}
+
+/// Panoptic Mirror imprints an X-matching spell and recasts it free each upkeep.
+#[test]
+fn panoptic_mirror_recasts_the_imprinted_spell_for_free() {
+    let mut g = main_phase();
+    let mirror = g.add_card_to_battlefield(0, catalog::panoptic_mirror());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mirror, ability_index: 0, target: None, additional_targets: vec![],
+        x_value: Some(1),
+    })
+    .expect("imprint a 1-drop instant");
+    drain_stack(&mut g);
+    assert!(
+        g.exile.iter().any(|c| c.id == bolt && c.exiled_with == Some(mirror)),
+        "the Bolt is imprinted",
+    );
+    // Two yes/no asks: the printed "you may copy", then the free cast itself.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.step, TurnStep::Upkeep);
+    assert_eq!(g.players[1].life, 17, "the free copy resolves");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the original stays imprinted");
 }

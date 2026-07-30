@@ -2954,7 +2954,11 @@ impl GameState {
                                 card.definition.name.to_string(),
                                 // "Up to N targets" slots past the printed
                                 // minimum may be declined.
-                                card.definition.effect.target_slot_optional(slot, mode),
+                                card.definition.effect.target_slot_optional_x(
+                                    slot,
+                                    mode,
+                                    x_value.unwrap_or(0),
+                                ),
                                 // CR 601.4d — the slots of one multi-target
                                 // instance must name distinct objects.
                                 card.definition
@@ -9605,6 +9609,11 @@ impl GameState {
         // `forced_only` (human) path.
         spend_float: Option<bool>,
     ) -> Result<PaymentReceipt, GameError> {
+        // CR 609.4b — Mycosynth Lattice's "players may spend mana as though it
+        // were mana of any color": relax the coloured pips before anything
+        // downstream (auto-tap, float protection, `pay_for_spell`) reads them.
+        let relaxed = self.relax_cost_colors(cost);
+        let cost = &relaxed;
         if forced_only {
             // "Keep my leftover floating mana": lift out only the *excess*
             // float (the off-pip mana that would hit the generic), pay the cost
@@ -11142,7 +11151,7 @@ impl GameState {
         let next_slot = 1 + additional_targets.len() as u8;
         if target.is_some()
             && ability.effect.target_filter_for_slot(next_slot).is_some()
-            && !ability.effect.target_slot_optional(next_slot, None)
+            && !ability.effect.target_slot_optional_x(next_slot, None, x_value.unwrap_or(0))
         {
             return Err(GameError::SelectionRequirementViolated);
         }

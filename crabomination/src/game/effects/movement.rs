@@ -502,8 +502,29 @@ impl GameState {
         // turn" (Burrenton Forge-Tender), unless prevention is off (615.12).
         if let Some(src) = source
             && !self.damage_cant_be_prevented_this_turn
-            && self.damage_prevented_sources.contains(&src)
+            && let Some((_, beneficiary)) =
+                self.damage_prevented_sources.iter().find(|(s, _)| *s == src).copied()
         {
+            events.push(GameEvent::DamagePrevented {
+                amount,
+                to_player: match ent {
+                    EntityRef::Player(p) => Some(p),
+                    _ => None,
+                },
+                to_card: match ent {
+                    EntityRef::Permanent(id) | EntityRef::Card(id) => Some(id),
+                    _ => None,
+                },
+            });
+            // Hallow — "you gain life equal to the damage prevented this way."
+            if let Some(seat) = beneficiary
+                && amount > 0
+            {
+                let applied = self.adjust_life_applied(seat, amount as i32);
+                if applied > 0 {
+                    events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });
+                }
+            }
             return;
         }
         // CR 614.9 — redirect the whole event to a Palisade-Giant-style
@@ -739,6 +760,7 @@ impl GameState {
                         to_card: None,
                         combat: false,
                         from_controller,
+                        from_card: source,
                     });
                 } else {
                     // Angel's Grace / Worship — the damage is dealt in full
@@ -746,7 +768,7 @@ impl GameState {
                     // reduction is clamped to the floor.
                     let life_delta = self.clamp_damage_to_life_floor(p, amount);
                     let applied = self.adjust_life_applied(p, -(life_delta as i32));
-                    events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None, combat: false, from_controller });
+                    events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None, combat: false, from_controller, from_card: source });
                     let lost = (-applied).max(0) as u32;
                     if lost > 0 {
                         events.push(GameEvent::LifeLost { player: p, amount: lost });
@@ -815,6 +837,7 @@ impl GameState {
                             to_card: Some(cid),
                             combat: false,
                             from_controller,
+                            from_card: source,
                         });
                         events.push(GameEvent::LoyaltyChanged {
                             card_id: cid,
@@ -840,6 +863,7 @@ impl GameState {
                             to_card: Some(cid),
                             combat: false,
                             from_controller,
+                            from_card: source,
                         });
                     }
                 } else {
@@ -886,6 +910,7 @@ impl GameState {
                         to_card: Some(cid),
                         combat: false,
                         from_controller,
+                        from_card: source,
                     });
                     let is_creature = c.definition.is_creature();
                     if source_exiles_damaged && is_creature {

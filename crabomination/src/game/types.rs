@@ -1637,6 +1637,10 @@ pub enum GameEvent {
         /// Controller of the damage's source (None when unattributable).
         /// Powers "a source you control deals damage to …" scoping.
         from_controller: Option<usize>,
+        /// The damage source's own identity (None when unattributable).
+        /// Powers the "other than this <permanent>" exclusion on
+        /// source-scoped watchers (Talon of Pain).
+        from_card: Option<CardId>,
     },
     /// Some or all of a damage event was prevented by a shield (CR 615.13).
     /// `amount` is the prevented portion.

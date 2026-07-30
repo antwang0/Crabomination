@@ -12,7 +12,7 @@ use crate::card::{CardDefinition, CardId};
 use crate::decision::{AutoDecider, Decider};
 use crate::effect::{ActivatedAbility, Effect, ManaPayload};
 use crate::game::{Attack, AttackTarget, GameAction, GameState, Target, TurnStep};
-use crate::mana::ManaPool;
+use crate::mana::{ManaCost, ManaPool};
 
 /// Drives one seat without a human client. Implementations see the full
 /// `GameState` and return the single next action they'd like to submit.
@@ -4323,7 +4323,7 @@ fn is_free_mana_ability(a: &ActivatedAbility) -> bool {
 /// main_phase_action uses; the simpler signature is kept for
 /// existing callers that don't have a `GameState` handy.
 pub fn can_afford(def: &CardDefinition, pool: &ManaPool) -> bool {
-    can_afford_with_extra(def, pool, 0, 0)
+    can_afford_with_extra(&def.cost, pool, 0, 0)
 }
 
 /// State-aware affordability check: queries the engine for any
@@ -4345,7 +4345,10 @@ pub fn can_afford_in_state(
     // and never casts it. Target-dependent reductions are skipped (no target
     // chosen yet), so this stays conservative.
     let reduction = crate::game::actions::cost_reduction_for_spell(state, seat, card, None);
-    can_afford_with_extra(&card.definition, &state.players[seat].mana_pool, extra, reduction)
+    // Mirror the payment funnel's Lattice relaxation so the bot doesn't
+    // pass on a spell whose coloured pips any mana can now cover.
+    let cost = state.relax_cost_colors(&card.definition.cost);
+    can_afford_with_extra(&cost, &state.players[seat].mana_pool, extra, reduction)
 }
 
 /// For an X-cost spell (or a spell whose effect reads
@@ -4523,16 +4526,12 @@ fn mode_branch(eff: &Effect, mode: Option<usize>) -> &Effect {
 }
 
 fn can_afford_with_extra(
-    def: &CardDefinition,
+    printed: &ManaCost,
     pool: &ManaPool,
     extra_generic: u32,
     reduction: u32,
 ) -> bool {
-    let mut cost = if def.cost.has_x() {
-        def.cost.with_x_value(0)
-    } else {
-        def.cost.clone()
-    };
+    let mut cost = if printed.has_x() { printed.with_x_value(0) } else { printed.clone() };
     if reduction > 0 {
         cost.reduce_generic(reduction);
     }
