@@ -2281,6 +2281,11 @@ pub enum EventKind {
     /// CR 103.2c — a spell or ability caused a player to shuffle their library.
     /// The shuffling player is the event subject (Psychogenic Probe).
     LibraryShuffled,
+    /// A permanent left the battlefield for its owner's hand (Azorius
+    /// Aethermage's "whenever a permanent is returned to your hand"). The
+    /// trigger's subject is the bounced card; `EventScope::YourControl` reads
+    /// the hand it landed in.
+    PermanentReturnedToHand,
     /// CR 605 — a permanent was tapped to pay a mana ability's `{T}` cost.
     /// The tapped permanent is the event subject (Extraplanar Lens).
     TappedForMana,
@@ -4175,6 +4180,20 @@ pub enum Effect {
     /// Reroute — change the target of the resolved activated ability on the
     /// stack to a new legal one (CR 115.7b). Single-target abilities only.
     ChangeTargetOfAbility { what: Selector },
+    /// Aetherplasm — return the source to its owner's hand, then put a
+    /// creature card from the controller's hand onto the battlefield blocking
+    /// the creature the source was blocking (CR 509.1 — a late blocker).
+    ReturnSelfDeployBlocker,
+    /// Ink-Treader Nephilim — copy the resolved spell once for each other
+    /// creature it could legally target, each copy aimed at a different one.
+    CopySpellForEachOtherLegalCreature { what: Selector },
+    /// Mimeofacture — search the resolved permanent's controller's library for
+    /// a card with that permanent's name and put it onto the battlefield under
+    /// *your* control; then that player shuffles.
+    SearchOpponentLibraryForSameName { what: Selector },
+    /// Development — "create a 3/1 red Elemental token unless any opponent has
+    /// you draw a card", `times` times. Each iteration asks an opponent.
+    TokenUnlessOpponentLetsYouDraw { token: TokenDefinition, times: u32 },
     /// Warp World — each player shuffles all permanents they own into their
     /// library, reveals that many cards, battlefields every artifact, creature
     /// and land, then every enchantment, and bottoms the rest.
@@ -5833,6 +5852,9 @@ pub enum Effect {
     /// Creator's -2). Chosen via `Decision::ChooseCards` for a `wants_ui`
     /// controller; auto-picks the first sideboard match otherwise.
     WishToHand { filter: SelectionRequirement },
+    /// "Shuffle up to `max` cards you own matching `filter` from outside the
+    /// game into your library" (Research // Development's left half).
+    WishToLibrary { filter: SelectionRequirement, max: Value },
 
     /// CR 702.166 — Manifest dread: look at the top two cards of `who`'s
     /// library, put one onto the battlefield face down as a 2/2 creature, and

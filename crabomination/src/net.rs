@@ -2248,6 +2248,7 @@ pub enum GameEventWire {
     Flipped { card_id: CardId },
     TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },
+    PermanentReturnedToHand { card_id: CardId, player: usize },
     CardMilled { player: usize, card_id: CardId },
     ManifestedDread { player: usize, milled: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
@@ -2488,6 +2489,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::TokenCreated { card_id } => {
                 GameEventWire::TokenCreated { card_id: *card_id }
+            }
+            GameEvent::PermanentReturnedToHand { card_id, player } => {
+                GameEventWire::PermanentReturnedToHand { card_id: *card_id, player: *player }
             }
             GameEvent::CardMilled { player, card_id } => GameEventWire::CardMilled {
                 player: *player,
@@ -2761,6 +2765,9 @@ impl GameEventWire {
             E::Flipped { card_id } => format!("{} flipped", name(*card_id)),
             E::TurnedFaceUp { card_id } => format!("{} was turned face up", name(*card_id)),
             E::TokenCreated { card_id } => format!("token {} created", name(*card_id)),
+            E::PermanentReturnedToHand { card_id, player } => {
+                format!("{} returned to P{player}'s hand", name(*card_id))
+            }
             E::CardMilled { player, card_id } => {
                 format!("{} milled {}", pn(*player), name(*card_id))
             }

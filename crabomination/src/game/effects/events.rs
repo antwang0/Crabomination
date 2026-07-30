@@ -112,6 +112,10 @@ pub(crate) fn event_matches_spec(
         (EventKind::Mutated, GameEvent::Mutated { .. }) => true,
         (EventKind::TurnedFaceUp, GameEvent::TurnedFaceUp { .. }) => true,
         (EventKind::TokenCreated, GameEvent::TokenCreated { .. }) => true,
+        (
+            EventKind::PermanentReturnedToHand,
+            GameEvent::PermanentReturnedToHand { .. },
+        ) => true,
         (EventKind::EnergyGained, GameEvent::EnergyGained { .. }) => true,
         (EventKind::DiscardedOneOrMore, GameEvent::DiscardedBatch { .. }) => true,
         (EventKind::Expend, GameEvent::Expended { .. }) => true,
@@ -601,6 +605,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::Discovered { player, .. }
         | GameEvent::Expended { player, .. }
         | GameEvent::CoinFlipWon { player }
+        | GameEvent::PermanentReturnedToHand { player, .. }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
         | GameEvent::RingTempted { player, .. }
@@ -689,6 +694,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::Transformed { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Mutated { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::TokenCreated { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::PermanentReturnedToHand { card_id, .. } => Some(EntityRef::Card(*card_id)),
         // DSK — bind `Selector::TriggerSource` to the turned-up permanent
         // ("put a +1/+1 counter on it" — Sumala Sentry) and to the Room that
         // was fully unlocked.

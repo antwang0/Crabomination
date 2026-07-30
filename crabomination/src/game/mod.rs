@@ -8006,6 +8006,30 @@ impl GameState {
         self.continuous_effects.push(effect);
     }
 
+    /// CR 702.107 — the replicate cost a static grants this spell (Djinn
+    /// Illuminatus: every instant/sorcery you cast replicates for its own
+    /// mana cost). `None` when no such static is in play.
+    pub(crate) fn granted_replicate_cost(
+        &self,
+        caster: usize,
+        def: &CardDefinition,
+    ) -> Option<crate::mana::ManaCost> {
+        if !def.card_types.iter().any(|t| {
+            matches!(t, crate::card::CardType::Instant | crate::card::CardType::Sorcery)
+        }) {
+            return None;
+        }
+        self.battlefield
+            .iter()
+            .any(|c| {
+                c.controller == caster
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::YourISSpellsHaveReplicate)
+                    })
+            })
+            .then(|| def.cost.clone())
+    }
+
     /// Allocate a new monotonically-increasing timestamp.
     /// Grant `kw` to a battlefield permanent until end of turn, stamping
     /// the grant's layer timestamp (CR 613.7) so it orders correctly
@@ -15524,6 +15548,12 @@ fn static_effect_to_effects(
             // CreatureSpellsMayPayExtraForCounters — an additional-cost offer
             // read at cast time; no continuous-layer effect.
             | StaticEffect::CreatureSpellsMayPayExtraForCounters
+            // YourISSpellsHaveReplicate — read on the replicate cast path;
+            // no continuous-layer effect.
+            | StaticEffect::YourISSpellsHaveReplicate
+            // HasActivatedAbilitiesOfCounteredCreatures — surfaced as virtual
+            // activated abilities, not a layer effect.
+            | StaticEffect::HasActivatedAbilitiesOfCounteredCreatures
             // SpellsYouCastHaveDelve (Teval) — read at cast time by
             // `controller_grants_spells_delve`; no layer effect.
             | StaticEffect::SpellsYouCastHaveDelve

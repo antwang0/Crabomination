@@ -1312,6 +1312,14 @@ impl GameState {
             }
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
             self.on_left_battlefield(cid, events);
+            // "Whenever a permanent is returned to your hand" (Azorius
+            // Aethermage) — reported after the move so the hand it landed in
+            // is the one the scope reads.
+            if matches!(resolved_dest, ZoneDest::Hand(_))
+                && let Some(p) = self.players.iter().position(|pl| pl.hand.iter().any(|c| c.id == cid))
+            {
+                events.push(GameEvent::PermanentReturnedToHand { card_id: cid, player: p });
+            }
             if let Some((card_id, controller)) = leaver {
                 events.push(GameEvent::CreatureLeftWithoutDying { card_id, controller });
             }

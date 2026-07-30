@@ -1698,6 +1698,10 @@ pub enum SelectionRequirement {
     /// spell that targets you or a permanent you control"). Only meaningful
     /// against a `StackItem::Spell`.
     SpellTargetsControllerOrControlled,
+    /// True when the candidate stack spell targets *only* the ability's
+    /// source — one target slot, filled with the source (Ink-Treader
+    /// Nephilim's "if that spell targets only this creature").
+    SpellTargetsOnlySource,
     /// A stack spell that was NOT cast from its owner's hand (Wash Away's
     /// bracketed base mode — flashback/graveyard/exile casts qualify).
     SpellNotCastFromHand,

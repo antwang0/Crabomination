@@ -503,6 +503,15 @@ static CHK: &[Factory] = &[
     super::chk::journeyers_kite,
 ];
 static CHK2: &[Factory] = &[
+    super::gpt::aetherplasm,
+    super::gpt::djinn_illuminatus,
+    super::gpt::ink_treader_nephilim,
+    super::gpt::mimeofacture,
+    super::dis::azorius_aethermage,
+    super::dis::experiment_kraj,
+    super::dis::bound_determined,
+    super::dis::odds_ends,
+    super::dis::research_development,
     super::rav::cloudstone_curio,
     super::rav::circu_dimir_lobotomist,
     super::rav::sins_of_the_past,

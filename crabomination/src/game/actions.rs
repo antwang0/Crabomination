@@ -3614,7 +3614,12 @@ impl GameState {
             .find(|c| c.id == card_id)
             .map(|c| &c.definition)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        let mana_replicate = def.replicate_cost().cloned();
+        // Djinn Illuminatus grants replicate to the caster's instants and
+        // sorceries, with the spell's own mana cost as the replicate cost.
+        let mana_replicate = def
+            .replicate_cost()
+            .cloned()
+            .or_else(|| self.granted_replicate_cost(p, def));
         let energy_per = def.replicate_energy_cost();
         // Energy-paid replicate (Reiterating Bolt) must have the energy up front.
         if let Some(n) = energy_per
@@ -10625,6 +10630,23 @@ impl GameState {
                         out.push(ab.clone());
                     }
                 }
+            }
+        }
+        // Experiment Kraj — every activated ability of each *other* creature
+        // carrying a +1/+1 counter.
+        if self.battlefield_find(card_id).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, StaticEffect::HasActivatedAbilitiesOfCounteredCreatures)
+            })
+        }) {
+            for other in &self.battlefield {
+                if other.id == card_id
+                    || !other.definition.is_creature()
+                    || other.counter_count(crate::card::CounterType::PlusOnePlusOne) == 0
+                {
+                    continue;
+                }
+                out.extend(other.definition.activated_abilities.iter().cloned());
             }
         }
         // Mirran Safehouse — every battlefield-usable activated ability of

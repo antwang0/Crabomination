@@ -1788,6 +1788,9 @@ pub enum GameEvent {
     /// CR 708.8 — a face-down permanent was turned face up.
     TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },
+    /// A permanent left the battlefield for a hand (Azorius Aethermage).
+    /// `player` is whose hand it landed in.
+    PermanentReturnedToHand { card_id: CardId, player: usize },
     CardMilled { player: usize, card_id: CardId },
     /// DSK — `player` manifested dread, putting `milled` into their graveyard
     /// this way (the non-manifested of the top two). Drives

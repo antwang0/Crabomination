@@ -800,7 +800,12 @@ impl Effect {
             | Effect::LookAtHandCastFree { who } => sel_has_target(who),
             Effect::MayReturnSharingPermanentType { with: what }
             | Effect::ChangeTargetOfAbility { what } => sel_has_target(what),
-            Effect::WarpWorld => false,
+            Effect::WishToLibrary { .. }
+            | Effect::WarpWorld
+            | Effect::ReturnSelfDeployBlocker
+            | Effect::TokenUnlessOpponentLetsYouDraw { .. } => false,
+            Effect::CopySpellForEachOtherLegalCreature { what }
+            | Effect::SearchOpponentLibraryForSameName { what } => sel_has_target(what),
             Effect::ChooseColorForSelf => false,
             Effect::Populate { .. } => false,
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
@@ -1185,7 +1190,9 @@ impl Effect {
             | Effect::PutTopOnBottom { who }
             | Effect::LookAtHandCastFree { who } => sel_filter(who),
             Effect::MayReturnSharingPermanentType { with: what }
-            | Effect::ChangeTargetOfAbility { what } => sel_filter(what),
+            | Effect::ChangeTargetOfAbility { what }
+            | Effect::CopySpellForEachOtherLegalCreature { what }
+            | Effect::SearchOpponentLibraryForSameName { what } => sel_filter(what),
             Effect::RevealLibraryNamedCountPunish { who, .. }
             | Effect::AlternatingExileFromHand { who } => sel_filter(who),
             // The target may be the moved object (`what`: Kor Outfitter's
@@ -2446,7 +2453,12 @@ impl Effect {
                 | Effect::LookAtHandCastFree { who } => sel_find(who, slot),
                 Effect::MayReturnSharingPermanentType { with: what }
                 | Effect::ChangeTargetOfAbility { what } => sel_find(what, slot),
-                Effect::WarpWorld => None,
+                Effect::WishToLibrary { .. }
+                | Effect::WarpWorld
+                | Effect::ReturnSelfDeployBlocker
+                | Effect::TokenUnlessOpponentLetsYouDraw { .. } => None,
+                Effect::CopySpellForEachOtherLegalCreature { what }
+                | Effect::SearchOpponentLibraryForSameName { what } => sel_find(what, slot),
                 Effect::ExileFromGraveyardBecomeCopy { what }
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),

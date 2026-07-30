@@ -1656,3 +1656,113 @@ fn moratorium_stone_exiles_a_graveyard_card() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == dead));
 }
+
+// ── Gap wave 9 (set closure) ─────────────────────────────────────────────────
+
+/// Aetherplasm swaps itself for a creature from hand, already blocking.
+#[test]
+fn aetherplasm_swaps_itself_for_a_blocker_from_hand() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let plasm = g.add_card_to_battlefield(1, catalog::aetherplasm());
+    let reserve = g.add_card_to_hand(1, catalog::serra_angel());
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![reserve]),
+    ]));
+    g.perform_action(GameAction::DeclareBlockers(vec![(plasm, attacker)]))
+        .expect("block");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == plasm), "Aetherplasm bounced");
+    assert!(
+        g.battlefield_find(reserve).is_some_and(|c| c.controller == 1),
+        "the Angel came down"
+    );
+    assert!(g.attackers_blocked_by(reserve).contains(&attacker), "and is blocking");
+}
+
+/// Djinn Illuminatus gives your instants and sorceries replicate for their
+/// own mana cost.
+#[test]
+fn djinn_illuminatus_grants_replicate() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::djinn_illuminatus());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpellReplicate {
+        card_id: bolt,
+        times: 1,
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("replicate the Bolt once");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "original plus one copy");
+}
+
+/// Ink-Treader Nephilim spreads a spell aimed only at it across the board.
+#[test]
+fn ink_treader_nephilim_copies_for_each_other_creature() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let ink = g.add_card_to_battlefield(0, catalog::ink_treader_nephilim());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(ink)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt the Nephilim");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(mine).is_none(), "the copy killed my Bear");
+    assert!(g.battlefield_find(theirs).is_none(), "and theirs");
+}
+
+/// Mimeofacture pulls a duplicate of the target out of its controller's deck.
+#[test]
+fn mimeofacture_steals_a_copy_from_their_library() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let twin = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::mimeofacture());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(twin).map(|c| c.controller),
+        Some(0),
+        "the library copy came down under the caster"
+    );
+}

@@ -2591,6 +2591,18 @@ impl GameState {
                                 .any(|o| o.id == *id && o.controller == controller),
                         })
                     }),
+                    R::SpellTargetsOnlySource => source.is_some_and(|src| {
+                        self.stack.iter().any(|si| {
+                            let StackItem::Spell { card: c, target, additional_targets, .. } = si
+                            else {
+                                return false;
+                            };
+                            c.id == card.id
+                                && additional_targets.is_empty()
+                                && *target
+                                    == Some(crate::game::types::Target::Permanent(src))
+                        })
+                    }),
                     // Wash Away's base mode: a stack spell cast from
                     // anywhere but its owner's hand (CR 702.148 bracket).
                     R::SpellNotCastFromHand => self.stack.iter().any(|si| matches!(
@@ -3212,6 +3224,7 @@ impl GameState {
             | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
+            | R::SpellTargetsOnlySource
             | R::DealtDamageToControllerThisTurn | R::IsBestowed
             | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::PlayerDamagedBySourceThisTurn => false,

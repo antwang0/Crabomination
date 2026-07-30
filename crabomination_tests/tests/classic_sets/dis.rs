@@ -2152,3 +2152,148 @@ fn brace_for_impact_banks_prevented_damage_as_counters() {
         "one counter per point prevented",
     );
 }
+
+// ── Gap wave 9 (set closure) ─────────────────────────────────────────────────
+
+/// Azorius Aethermage turns a bounce into a card for {1}.
+#[test]
+fn azorius_aethermage_draws_off_a_bounce() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::azorius_aethermage());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let bounce = g.add_card_to_hand(0, catalog::unsummon());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bounce,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bounce my own Bear");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Forest"),
+        "paid one generic, drew a card"
+    );
+}
+
+/// Bound trades a creature for one card back per colour it was.
+#[test]
+fn bound_returns_one_card_per_colour_sacrificed() {
+    let mut g = two_player_game();
+    let gold = g.add_card_to_battlefield(0, catalog::shambling_shell());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::bound_determined());
+    for c in Color::ALL {
+        g.players[0].mana_pool.add(c, 3);
+    }
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Bound");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gold).is_none(), "the creature was sacrificed");
+    assert!(g.exile.iter().any(|c| c.id == spell), "Bound exiled itself");
+}
+
+/// Ends makes the defender give up two attackers.
+#[test]
+fn ends_sacrifices_two_attacking_creatures() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [a, b, c] {
+        g.clear_sickness(id);
+    }
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack with two");
+    let spell = g.add_card_to_hand(1, catalog::odds_ends());
+    for col in Color::ALL {
+        g.players[1].mana_pool.add(col, 3);
+    }
+    g.players[1].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::PassPriority).expect("pass to the defender");
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: spell,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Ends");
+    drain_stack(&mut g);
+    assert_eq!(
+        [a, b, c].iter().filter(|id| g.battlefield_find(**id).is_some()).count(),
+        1,
+        "both attackers were sacrificed, the idle Bear survived"
+    );
+}
+
+/// Research shuffles sideboard cards back into the deck.
+#[test]
+fn research_shuffles_sideboard_cards_into_the_library() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_sideboard(0, catalog::grizzly_bears());
+    }
+    let before = g.players[0].library.len();
+    let spell = g.add_card_to_hand(0, catalog::research_development());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Research");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), before + 2);
+    assert!(g.players[0].sideboard.is_empty());
+}
+
+/// Experiment Kraj borrows the abilities of a +1/+1-countered creature.
+#[test]
+fn experiment_kraj_borrows_countered_creatures_abilities() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let kraj = g.add_card_to_battlefield(0, catalog::experiment_kraj());
+    g.clear_sickness(kraj);
+    let pinger = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer());
+    let printed = g.granted_abilities_for(kraj).len();
+    assert_eq!(printed, 0, "no counter, no borrowed abilities");
+    g.battlefield_find_mut(pinger).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert_eq!(g.granted_abilities_for(kraj).len(), 1, "borrowed the ping");
+    g.clear_sickness(kraj);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kraj,
+        ability_index: 1,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("use the borrowed ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+}

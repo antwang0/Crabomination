@@ -1811,6 +1811,13 @@ pub enum StaticEffect {
     /// spells, you may pay any amount of mana; that creature enters with that
     /// many additional +1/+1 counters."
     CreatureSpellsMayPayExtraForCounters,
+    /// Djinn Illuminatus — "each instant and sorcery spell you cast has
+    /// replicate; the replicate cost equals its mana cost" (CR 702.107).
+    YourISSpellsHaveReplicate,
+    /// Experiment Kraj — the source has all activated abilities of each other
+    /// creature with a +1/+1 counter on it. Surfaced as virtual abilities by
+    /// `granted_abilities_for`, like Necrotic Ooze's graveyard sibling.
+    HasActivatedAbilitiesOfCounteredCreatures,
     /// Dress Down / Humility-lite — all creatures lose all abilities
     /// (layer 6 `RemoveAllAbilities`).
     CreaturesLoseAllAbilities,

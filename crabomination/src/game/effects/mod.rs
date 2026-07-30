@@ -10937,6 +10937,172 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnSelfDeployBlocker => {
+                // Aetherplasm. The replacement blocker is put onto the
+                // battlefield already blocking whatever the source blocked
+                // (CR 509.1 lets an effect do this without a declaration).
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(src) = ctx.source else { return Ok(()) };
+                let attackers: Vec<CardId> = self.attackers_blocked_by(src).to_vec();
+                self.move_card_to(
+                    src,
+                    &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                    ctx,
+                    events,
+                );
+                let Some(attacker) = attackers.first().copied() else { return Ok(()) };
+                let candidates: Vec<(CardId, String)> = self.players[ctx.controller]
+                    .hand
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let pick = match self.decider.decide(&Decision::ChooseCards {
+                    source: src,
+                    prompt: "Put a creature onto the battlefield blocking?".to_string(),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: 1,
+                }) {
+                    DecisionAnswer::Cards(ids) => ids.into_iter().next(),
+                    _ => None,
+                };
+                let Some(cid) = pick.filter(|id| candidates.iter().any(|(c, _)| c == id)) else {
+                    return Ok(());
+                };
+                self.move_card_to(
+                    cid,
+                    &crate::effect::ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                        tapped: false,
+                    },
+                    ctx,
+                    events,
+                );
+                if self.battlefield_find(cid).is_some() {
+                    self.block_map.entry(cid).or_default().push(attacker);
+                    if !self.blocked_attackers.contains(&attacker) {
+                        self.blocked_attackers.push(attacker);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CopySpellForEachOtherLegalCreature { what } => {
+                // Ink-Treader Nephilim. One copy per other creature the spell
+                // could target; each copy is retargeted to its own creature.
+                let Some(spell_id) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                else {
+                    return Ok(());
+                };
+                let others: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature() && Some(c.id) != ctx.source)
+                    .map(|c| c.id)
+                    .collect();
+                if others.is_empty() {
+                    return Ok(());
+                }
+                self.copy_stack_spell(spell_id, others.len(), false, events);
+                // Retarget the fresh copies, newest first, one creature each.
+                let mut fresh: Vec<usize> = Vec::new();
+                for (i, item) in self.stack.iter().enumerate().rev() {
+                    if let StackItem::Spell { card, .. } = item
+                        && card.is_token
+                        && fresh.len() < others.len()
+                    {
+                        fresh.push(i);
+                    }
+                }
+                for (slot, target) in fresh.into_iter().zip(others) {
+                    if let StackItem::Spell { target: t, .. } = &mut self.stack[slot] {
+                        *t = Some(Target::Permanent(target));
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SearchOpponentLibraryForSameName { what } => {
+                let Some(pid) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let Some((name, owner)) = self
+                    .battlefield_find(pid)
+                    .map(|c| (c.definition.name.to_string(), c.controller))
+                else {
+                    return Ok(());
+                };
+                if let Some(hit) = self.players[owner]
+                    .library
+                    .iter()
+                    .find(|c| c.definition.name == name)
+                    .map(|c| c.id)
+                {
+                    self.move_card_to(
+                        hit,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                            tapped: false,
+                        },
+                        ctx,
+                        events,
+                    );
+                }
+                self.shuffle_library(owner, events);
+                Ok(())
+            }
+
+            Effect::TokenUnlessOpponentLetsYouDraw { token, times } => {
+                // Development. Each round an opponent picks: hand over the
+                // token, or hand over a card. The AutoDecider's `false`
+                // gives the token (the printed default when nobody acts).
+                use crate::decision::{Decision, DecisionAnswer};
+                let src = ctx.source.unwrap_or(CardId(0));
+                let opponent = self.opponents_of(ctx.controller).first().copied();
+                for _ in 0..*times {
+                    let draw_instead = opponent.is_some()
+                        && matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: src,
+                                description: "Have them draw instead of a token?".to_string(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        );
+                    if draw_instead {
+                        self.run_effect(
+                            &Effect::Draw {
+                                who: Selector::You,
+                                amount: crate::effect::Value::ONE,
+                            },
+                            ctx,
+                            events,
+                        )?;
+                    } else {
+                        self.run_effect(
+                            &Effect::CreateToken {
+                                definition: token.clone(),
+                                count: crate::effect::Value::ONE,
+                                who: crate::effect::PlayerRef::You,
+                            },
+                            ctx,
+                            events,
+                        )?;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::WarpWorld => {
                 // CR 701.20 — every player shuffles their permanents in, then
                 // reveals that many and redeploys in two waves so an Aura has
@@ -13602,6 +13768,54 @@ impl GameState {
 
 
             Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx, events),
+
+            Effect::WishToLibrary { filter, max } => {
+                // Research — the sideboard half of a Wish, shuffled in rather
+                // than drawn. The controller picks; the headless default takes
+                // the priciest cards available.
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let n = self.evaluate_value(max, ctx).max(0) as usize;
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .sideboard
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() || n == 0 {
+                    return Ok(());
+                }
+                let picked = match self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Shuffle which cards into your library?".into(),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: n.min(candidates.len()) as u32,
+                }) {
+                    DecisionAnswer::Cards(ids) if !ids.is_empty() => ids,
+                    _ => {
+                        let mut by_cost: Vec<CardId> = self.players[p]
+                            .sideboard
+                            .iter()
+                            .filter(|c| candidates.iter().any(|(id, _)| *id == c.id))
+                            .map(|c| (c.id, c.definition.cost.cmc()))
+                            .collect::<Vec<_>>()
+                            .into_iter()
+                            .map(|(id, _)| id)
+                            .collect();
+                        by_cost.truncate(n);
+                        by_cost
+                    }
+                };
+                for cid in picked.into_iter().take(n) {
+                    if let Some(i) = self.players[p].sideboard.iter().position(|c| c.id == cid) {
+                        let card = self.players[p].sideboard.remove(i);
+                        self.players[p].library.push(card);
+                    }
+                }
+                self.shuffle_library(p, events);
+                Ok(())
+            }
 
 
             Effect::Manifest { who, amount } => {
