@@ -2521,6 +2521,10 @@ impl GameState {
                     }
                     R::IsBlocked => self.blocked_attackers.contains(&card.id),
                     R::IsBlocking => self.block_map.contains_key(&card.id),
+                    R::InCombatWithSource => source.is_some_and(|src| {
+                        self.blockers_of(src).contains(cid)
+                            || self.attackers_blocked_by(*cid).contains(&src)
+                    }),
                     R::AttackedThisTurn => card.attacked_this_turn,
                     R::BlockedThisTurn => card.blocked_this_turn,
                     R::FaceDown => card.face_down,
@@ -3203,7 +3207,8 @@ impl GameState {
             R::IsEquipped => self.attached_equipment_count(card.id) > 0,
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_) | R::WithAnyCounter
-            | R::IsUnblocked | R::IsBlocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
+            | R::IsUnblocked | R::IsBlocked | R::IsBlocking | R::InCombatWithSource
+            | R::IsAttackingAlone | R::IsBlockingAlone
             | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled

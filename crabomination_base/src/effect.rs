@@ -4144,6 +4144,27 @@ pub enum Effect {
     /// Exile all cards from `who`'s hand (each resolved player). Ashiok's
     /// −10 pairs this with `ExilePlayerGraveyard`.
     ExileHand { who: PlayerRef },
+    /// Exile the controller's whole hand face down, stamped
+    /// `exiled_with = source` (Bottled Cloister, Moonring Mirror).
+    ExileHandLinked,
+    /// Return every card the controller owns stamped `exiled_with = source`
+    /// from exile to their hand (Bottled Cloister's upkeep half).
+    ReturnLinkedExilesToHand,
+    /// "Look at the top `count` cards of `who`'s library. Exile any number of
+    /// them, then put the rest back in any order." Dimir Machinations. The
+    /// headless pick exiles the priciest nonland cards.
+    LookExileAnyNumberRestBack { who: Selector, count: Value },
+    /// "Exile target creature card from a graveyard. This permanent becomes a
+    /// copy of it, except it keeps the ability that did this." Dimir
+    /// Doppelganger — the granting ability is re-appended after the copy.
+    ExileFromGraveyardBecomeCopy { what: Selector },
+    /// "Each player returns all cards with the same name as `what` from their
+    /// graveyard to the battlefield" (Bloodbond March). `what` resolves the
+    /// name-bearing object (the triggering creature spell).
+    ReturnSameNameFromAllGraveyards { what: Selector },
+    /// "Put the top card of your library on the bottom of your library."
+    /// Crown of Convergence's {G}{W}.
+    PutTopOnBottom { who: Selector },
     /// "You choose a card matching `filter` from `who`'s graveyard or hand
     /// and exile it." A single cross-zone choice (Memory Leak). Auto-picks
     /// the highest-mana-value match (a `wants_ui` chooser is a follow-up).

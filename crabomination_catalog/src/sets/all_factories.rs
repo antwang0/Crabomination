@@ -503,6 +503,14 @@ static CHK: &[Factory] = &[
     super::chk::journeyers_kite,
 ];
 static CHK2: &[Factory] = &[
+    super::rav::blood_funnel,
+    super::rav::bottled_cloister,
+    super::rav::crown_of_convergence,
+    super::rav::dimir_doppelganger,
+    super::rav::dimir_machinations,
+    super::rav::bloodbond_march,
+    super::rav::gaze_of_the_gorgon,
+    super::rav::sisters_of_stone_death,
     super::chk3::hisokas_guard,
     super::chk3::mindblaze,
     super::chk3::moonring_mirror,

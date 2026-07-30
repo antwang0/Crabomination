@@ -2537,3 +2537,240 @@ fn concerted_effort_shares_keywords_at_upkeep() {
     assert!(kws.contains(&K::Vigilance), "and vigilance");
     let _ = flyer;
 }
+
+// ── Gap wave 21 ──────────────────────────────────────────────────────────────
+
+/// Cast `def` with mana pre-floated and drain the stack.
+fn cast21(
+    g: &mut GameState,
+    seat: usize,
+    def: crabomination::card::CardDefinition,
+    target: Option<crabomination::game::types::Target>,
+) -> CardId {
+    let id = g.add_card_to_hand(seat, def);
+    g.players[seat].mana_pool.add_colorless(20);
+    for c in Color::ALL {
+        g.players[seat].mana_pool.add(c, 10);
+    }
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast spell");
+    drain_stack(g);
+    id
+}
+
+/// Blood Funnel discounts your noncreature spells and taxes each one a creature.
+#[test]
+fn blood_funnel_discounts_then_taxes_noncreature_spells() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blood_funnel());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let card = g.players[0].hand.iter().find(|c| c.id == bolt).unwrap().clone();
+    assert_eq!(
+        crabomination::game::actions::cost_reduction_for_spell(&g, 0, &card, None),
+        2,
+        "noncreature spells get the full two generic off"
+    );
+    // No creature to feed it -> the spell is countered.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20, "countered — no damage");
+}
+
+/// Bottled Cloister banks the hand on an opponent's upkeep and hands it back
+/// with a card on yours.
+#[test]
+fn bottled_cloister_banks_and_returns_the_hand() {
+    use crabomination::game::types::TurnStep;
+    let cloister_owner = 0;
+    let mut g = two_player_game();
+    let cloister = g.add_card_to_battlefield(cloister_owner, catalog::bottled_cloister());
+    let held = g.add_card_to_hand(cloister_owner, catalog::grizzly_bears());
+    g.add_card_to_library(cloister_owner, catalog::forest());
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(
+        g.exile.iter().any(|c| c.id == held && c.exiled_with == Some(cloister)),
+        "banked under the Cloister"
+    );
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == held), "returned");
+    assert_eq!(g.players[0].hand.len(), 2, "plus the draw");
+}
+
+/// Crown of Convergence pumps only the creatures sharing a color with a
+/// revealed creature card on top, and its {G}{W} bottoms that card.
+#[test]
+fn crown_of_convergence_pumps_on_a_shared_color() {
+    let mut g = two_player_game();
+    let crown = g.add_card_to_battlefield(0, catalog::crown_of_convergence());
+    let green = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let white = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::llanowar_elves());
+    g.add_card_to_library(0, catalog::forest());
+    assert_eq!(g.computed_permanent(green).unwrap().power, 3, "shares green");
+    assert_eq!(g.computed_permanent(white).unwrap().power, 4, "no shared color");
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crown, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("bottom the top card");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(green).unwrap().power, 2, "top card is gone");
+}
+
+/// Dimir Doppelganger copies a graveyard creature and keeps its own ability.
+#[test]
+fn dimir_doppelganger_keeps_its_ability_after_copying() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let dop = g.add_card_to_battlefield(0, catalog::dimir_doppelganger());
+    let corpse = g.add_card_to_graveyard(1, catalog::serra_angel());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dop, ability_index: 0, target: Some(Target::Permanent(corpse)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let now = g.battlefield_find(dop).unwrap();
+    assert_eq!(now.definition.name, "Serra Angel");
+    assert_eq!(now.definition.activated_abilities.len(), 1, "kept the copy ability");
+    assert!(g.exile.iter().any(|c| c.id == corpse));
+}
+
+/// Dimir Machinations strips the priciest card off the top three.
+#[test]
+fn dimir_machinations_exiles_from_the_top_three() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.players[1].library.clear();
+    g.add_card_to_library(1, catalog::forest());
+    let angel = g.add_card_to_library(1, catalog::serra_angel());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    cast21(&mut g, 0, catalog::dimir_machinations(), Some(Target::Player(1)));
+    assert!(g.exile.iter().any(|c| c.id == angel), "the Angel was exiled");
+    assert_eq!(g.players[1].library.len(), 2);
+}
+
+/// Bloodbond March reanimates every copy of a cast creature's name.
+#[test]
+fn bloodbond_march_reanimates_matching_names() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bloodbond_march());
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let ignored = g.add_card_to_graveyard(1, catalog::serra_angel());
+    cast21(&mut g, 0, catalog::grizzly_bears(), None);
+    assert!(g.battlefield_find(mine).is_some(), "your copy came back");
+    assert!(g.battlefield_find(theirs).is_some(), "and theirs, under them");
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 1);
+    assert!(g.battlefield_find(ignored).is_none(), "other names stay put");
+}
+
+/// Gaze of the Gorgon saves the blocked attacker and kills its blockers at
+/// end of combat.
+#[test]
+fn gaze_of_the_gorgon_kills_what_it_fought() {
+    use crabomination::game::types::{Attack, AttackTarget, Target, TurnStep};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .expect("block");
+    cast21(&mut g, 0, catalog::gaze_of_the_gorgon(), Some(Target::Permanent(attacker)));
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(blocker).is_none(), "the blocker was destroyed");
+    assert!(g.battlefield_find(attacker).is_some(), "regeneration saved the attacker");
+}
+
+/// Sisters of Stone Death lures a blocker, exiles it, then redeploys it.
+#[test]
+fn sisters_of_stone_death_eats_and_redeploys_a_blocker() {
+    use crabomination::game::types::{Attack, AttackTarget, Target, TurnStep};
+    let mut g = two_player_game();
+    let sisters = g.add_card_to_battlefield(0, catalog::sisters_of_stone_death());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(sisters);
+    for c in Color::ALL {
+        g.players[0].mana_pool.add(c, 5);
+    }
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sisters, ability_index: 0, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("lure");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sisters,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(victim, sisters)]))
+        .expect("forced block");
+    for c in Color::ALL {
+        g.players[0].mana_pool.add(c, 5);
+    }
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sisters, ability_index: 1, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("exile the blocker");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "blocker exiled");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sisters, ability_index: 2, target: None,
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("redeploy");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(victim).map(|c| c.controller),
+        Some(0),
+        "redeployed under the Sisters' controller"
+    );
+}

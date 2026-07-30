@@ -22,6 +22,7 @@ mod gaps5;
 mod gaps6;
 mod gaps7;
 mod gaps8;
+mod gaps21;
 mod gaps9;
 mod instants;
 
@@ -46,4 +47,5 @@ pub use gaps17::*;
 pub use gaps18::*;
 pub use gaps19::*;
 pub use gaps20::*;
+pub use gaps21::*;
 pub use instants::*;

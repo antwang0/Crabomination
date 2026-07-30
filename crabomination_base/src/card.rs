@@ -1596,6 +1596,10 @@ pub enum SelectionRequirement {
     /// combat state — Smite's "destroy target blocked creature".
     IsBlocked,
     IsBlocking,
+    /// True when the candidate is blocking, or is blocked by, the ability's
+    /// source — the symmetric combat-partner filter (Sisters of Stone Death's
+    /// "creature blocking or blocked by this creature").
+    InCombatWithSource,
     /// True when the candidate creature was declared as an attacker at any
     /// point this turn (`CardInstance.attacked_this_turn`). Relentless
     /// Assault's "untap all creatures that attacked this turn".

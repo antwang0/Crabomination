@@ -788,7 +788,15 @@ impl Effect {
             | Effect::SacrificeThenRevealUntilSharedType { what } => sel_has_target(what),
             Effect::RevealLibraryNamedCountPunish { who, .. }
             | Effect::AlternatingExileFromHand { who } => sel_has_target(who),
-            Effect::ExileHandThenReclaimLinked => false,
+            Effect::ExileHandThenReclaimLinked
+            | Effect::ExileHandLinked
+            | Effect::ReturnLinkedExilesToHand => false,
+            Effect::LookExileAnyNumberRestBack { who, count } => {
+                sel_has_target(who) || value_has_target(count)
+            }
+            Effect::ExileFromGraveyardBecomeCopy { what }
+            | Effect::ReturnSameNameFromAllGraveyards { what } => sel_has_target(what),
+            Effect::PutTopOnBottom { who } => sel_has_target(who),
             Effect::ChooseColorForSelf => false,
             Effect::Populate { .. } => false,
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
@@ -1165,8 +1173,13 @@ impl Effect {
             | Effect::GainControlWhileSourceTapped { what }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
             | Effect::SacrificeThenRevealUntilSharedType { what }
+            | Effect::ExileFromGraveyardBecomeCopy { what }
+            | Effect::ReturnSameNameFromAllGraveyards { what }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::WeldArtifacts { what } => sel_filter(what),
+            Effect::LookExileAnyNumberRestBack { who, .. } | Effect::PutTopOnBottom { who } => {
+                sel_filter(who)
+            }
             Effect::RevealLibraryNamedCountPunish { who, .. }
             | Effect::AlternatingExileFromHand { who } => sel_filter(who),
             // The target may be the moved object (`what`: Kor Outfitter's
@@ -2419,7 +2432,13 @@ impl Effect {
                 | Effect::WeldArtifacts { what } => sel_find(what, slot),
                 Effect::RevealLibraryNamedCountPunish { who, .. }
                 | Effect::AlternatingExileFromHand { who } => sel_find(who, slot),
-                Effect::ExileHandThenReclaimLinked => None,
+                Effect::ExileHandThenReclaimLinked
+                | Effect::ExileHandLinked
+                | Effect::ReturnLinkedExilesToHand => None,
+                Effect::LookExileAnyNumberRestBack { who, .. }
+                | Effect::PutTopOnBottom { who } => sel_find(who, slot),
+                Effect::ExileFromGraveyardBecomeCopy { what }
+                | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::ExilePlayerGraveyard { who }
                 | Effect::ExileHand { who }

@@ -204,6 +204,10 @@ pub enum StaticEffect {
     /// for each of the four other colors; inert until the source's
     /// `chosen_color` is stamped.
     AllColorWordsBecomeChosen,
+    /// Crown of Convergence — while the top card of the controller's library
+    /// is a creature card, their creatures sharing a color with it get
+    /// +`power`/+`toughness`. Gathered live (it reads the library).
+    AnthemForColorSharedWithLibraryTop { power: i32, toughness: i32 },
     /// "Your opponents can't cast spells of the chosen color" — reads the
     /// source's `chosen_color` ETB stamp (Iona, Shield of Emeria). Gated at
     /// the cast dispatch.

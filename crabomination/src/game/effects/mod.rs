@@ -10626,6 +10626,181 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileHandLinked => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let p = ctx.controller;
+                let hand: Vec<CardInstance> = std::mem::take(&mut *self.players[p].hand);
+                for mut card in hand {
+                    card.exiled_with = Some(src);
+                    card.face_down = true;
+                    let cid = card.id;
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                }
+                Ok(())
+            }
+
+            Effect::ReturnLinkedExilesToHand => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let p = ctx.controller;
+                let ids: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src) && c.owner == p)
+                    .map(|c| c.id)
+                    .collect();
+                for cid in ids {
+                    if let Some(i) = self.exile.iter().position(|c| c.id == cid) {
+                        let mut card = self.exile.remove(i);
+                        card.face_down = false;
+                        card.exiled_with = None;
+                        self.players[p].hand.push(card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::LookExileAnyNumberRestBack { who, count } => {
+                // Dimir Machinations. The look is implicit (the controller is
+                // shown the cards by the pick prompt); the rest go back on top
+                // in the order they were in.
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_selector(who, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Player(p) => Some(p),
+                    _ => None,
+                }) else {
+                    return Ok(());
+                };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let top: Vec<(CardId, String)> = self.players[p]
+                    .library
+                    .iter()
+                    .take(n)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if top.is_empty() {
+                    return Ok(());
+                }
+                let picked = match self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Exile any number of these".to_string(),
+                    candidates: top.clone(),
+                    min: 0,
+                    max: top.len() as u32,
+                }) {
+                    DecisionAnswer::Cards(ids) if !ids.is_empty() => ids,
+                    // Headless: strip the priciest nonland card, the usual
+                    // reason to cast this at an opponent.
+                    _ => self.players[p]
+                        .library
+                        .iter()
+                        .take(n)
+                        .filter(|c| !c.definition.is_land())
+                        .max_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| vec![c.id])
+                        .unwrap_or_default(),
+                };
+                for cid in picked {
+                    if let Some(i) = self.players[p].library.iter().position(|c| c.id == cid) {
+                        let card = self.players[p].library.remove(i);
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExileFromGraveyardBecomeCopy { what } => {
+                // Dimir Doppelganger. The granting ability is re-appended after
+                // the copy so the permanent can keep re-copying.
+                let Some(cid) = ctx.source else { return Ok(()) };
+                let own = self
+                    .battlefield_find(cid)
+                    .and_then(|c| c.definition.activated_abilities.first().cloned());
+                let Some(card_id) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                else {
+                    return Ok(());
+                };
+                let Some(def) = self
+                    .players
+                    .iter()
+                    .find_map(|pl| pl.graveyard.iter().find(|c| c.id == card_id))
+                    .map(|c| c.definition.clone())
+                else {
+                    return Ok(());
+                };
+                self.move_card_to(card_id, &crate::effect::ZoneDest::Exile, ctx, events);
+                let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) else {
+                    return Ok(());
+                };
+                let mut new_def = (*def).clone();
+                if let Some(a) = own {
+                    new_def.activated_abilities.push(a);
+                }
+                let original = std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
+                self.temporary_copies.push(crate::game::TempCopy {
+                    card: cid,
+                    original_name: original.name.to_string(),
+                    original: Some(original),
+                    duration: crate::effect::Duration::Permanent,
+                });
+                Ok(())
+            }
+
+            Effect::ReturnSameNameFromAllGraveyards { what } => {
+                // Bloodbond March — every graveyard gives up every copy of the
+                // triggering creature spell's name, to its owner's battlefield.
+                let Some(name) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                    .and_then(|id| self.find_card_anywhere(id))
+                    .map(|c| c.definition.name.to_string())
+                else {
+                    return Ok(());
+                };
+                let ids: Vec<(usize, CardId)> = self
+                    .players
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(p, pl)| {
+                        pl.graveyard
+                            .iter()
+                            .filter(|c| c.definition.name == name)
+                            .map(move |c| (p, c.id))
+                            .collect::<Vec<_>>()
+                    })
+                    .collect();
+                for (p, cid) in ids {
+                    self.move_card_to(
+                        cid,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::Seat(p),
+                            tapped: false,
+                        },
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
+            Effect::PutTopOnBottom { who } => {
+                for p in self.resolve_selector(who, ctx).into_iter().filter_map(|e| match e {
+                    EntityRef::Player(p) => Some(p),
+                    _ => None,
+                }) {
+                    if !self.players[p].library.is_empty() {
+                        let card = self.players[p].library.remove(0);
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileHandThenReclaimLinked => {
                 // Moonring Mirror's upkeep. "If you do" — declining leaves the
                 // stash alone; an empty hand still counts as doing it (CR

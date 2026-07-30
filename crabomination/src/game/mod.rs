@@ -6749,6 +6749,43 @@ impl GameState {
                 }
             }
         }
+        // Crown of Convergence — the anthem reads the top of the controller's
+        // library, so it can only be gathered live.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::AnthemForColorSharedWithLibraryTop {
+                    power,
+                    toughness,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let Some(top) = self.players[card.controller].library.first() else { continue };
+                if !top.definition.is_creature() {
+                    continue;
+                }
+                let colors = top.definition.cost.colors();
+                let ids: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == card.controller && c.definition.is_creature())
+                    .filter(|c| c.definition.cost.colors().iter().any(|x| colors.contains(x)))
+                    .map(|c| c.id)
+                    .collect();
+                if ids.is_empty() {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(ids),
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(*power, *toughness),
+                });
+            }
+        }
         // State-aware `SetBasePtForFilter` / `GrantKeyword` — when the
         // `applies_to` selector carries a *stateful* filter (e.g. `IsEnchanted`,
         // which must scan the battlefield for attached Auras — Archon of the
@@ -15645,6 +15682,7 @@ fn static_effect_to_effects(
             // (opponents / predicate eval); resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForFilter { .. }
             | StaticEffect::AnthemForFilterIf { .. }
+            | StaticEffect::AnthemForColorSharedWithLibraryTop { .. }
             | StaticEffect::PumpPerBushido { .. }
             | StaticEffect::SelfBasePtFromValue { .. }
             | StaticEffect::SelfHasKeywordIf { .. }
