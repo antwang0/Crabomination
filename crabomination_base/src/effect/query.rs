@@ -204,6 +204,7 @@ impl Effect {
         }
         match self {
             Effect::Noop
+            | Effect::CopyForEachOtherTargetableCreature
             | Effect::SearchRevealPunishSameNameCasters { .. }
             | Effect::ExileTopGreatestManaValueTakesExtraTurn
             | Effect::ChooseStepToSkipThisTurn { .. }

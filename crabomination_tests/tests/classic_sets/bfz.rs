@@ -559,3 +559,55 @@ fn ondu_rising_grants_attackers_lifelink() {
         "the attacker gained lifelink"
     );
 }
+
+/// Zada copies a spell that targets only her, once per other creature it could
+/// target.
+#[test]
+fn zada_copies_a_self_targeting_pump_for_each_other_creature() {
+    let mut g = two_player_game();
+    let zada = g.add_card_to_battlefield(0, catalog::zada_hedron_grinder());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pump = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump,
+        target: Some(Target::Permanent(zada)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(zada).unwrap().power, 6, "the original still hits Zada");
+    assert_eq!(g.computed_permanent(a).unwrap().power, 5, "a copy hit the first bear");
+    assert_eq!(g.computed_permanent(b).unwrap().power, 5, "and the second");
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 2, "not an opponent's creature");
+}
+
+/// Gruesome Slaughter turns your colorless creatures into pingers for the turn.
+#[test]
+fn gruesome_slaughter_grants_a_tap_to_ping() {
+    let mut g = two_player_game();
+    let devastator = g.add_card_to_battlefield(0, catalog::eldrazi_devastator());
+    g.clear_sickness(devastator);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let slaughter = g.add_card_to_hand(0, catalog::gruesome_slaughter());
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: slaughter, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: devastator,
+        ability_index: 0,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("granted ping");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "an 8/9 pinging a 2/2 kills it");
+}

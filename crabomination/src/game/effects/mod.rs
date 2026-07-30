@@ -19671,6 +19671,76 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CopyForEachOtherTargetableCreature => {
+                use crate::game::types::StackItem;
+                // The spell that triggered this (Zada's cast trigger binds it
+                // as the trigger source).
+                let Some(spell_id) = ctx
+                    .trigger_source
+                    .and_then(|e| e.as_card_id())
+                    .or(ctx.source)
+                else {
+                    return Ok(());
+                };
+                let Some(idx) = self
+                    .stack
+                    .iter()
+                    .rposition(|s| matches!(s, StackItem::Spell { card, .. } if card.id == spell_id))
+                else {
+                    return Ok(());
+                };
+                let StackItem::Spell {
+                    card, caster, target, additional_targets, mode, x_value, converged_value, ..
+                } = &self.stack[idx]
+                else {
+                    return Ok(());
+                };
+                // "Targets only [this creature]" — one target slot, and it is
+                // the source permanent.
+                let me = ctx.source;
+                let targets_only_me = additional_targets.is_empty()
+                    && matches!((target, me), (Some(Target::Permanent(t)), Some(m)) if *t == m);
+                if !targets_only_me {
+                    return Ok(());
+                }
+                let (def, caster) = (card.definition.clone(), *caster);
+                let (mode, x_value, converged_value) = (*mode, *x_value, *converged_value);
+                let others: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == caster && Some(c.id) != me)
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                let legal = self.enumerate_legal_targets(&def.effect, caster);
+                for id in others {
+                    let t = Target::Permanent(id);
+                    if !legal.contains(&t) {
+                        continue;
+                    }
+                    let new_id = self.next_id();
+                    let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), caster);
+                    copy_inst.is_token = true;
+                    self.stack.push(StackItem::Spell {
+                        card: Box::new(copy_inst),
+                        caster,
+                        target: Some(t),
+                        additional_targets: Vec::new(),
+                        mode,
+                        x_value,
+                        converged_value,
+                        mana_spent: 0,
+                        uncounterable: true,
+                    });
+                    events.push(GameEvent::SpellsCopied {
+                        original: spell_id,
+                        count: 1,
+                        controller: caster,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::Demonstrate => {
                 // CR 702.150 — copy this spell for its caster, then an
                 // opponent of the caster's choosing also copies it; every

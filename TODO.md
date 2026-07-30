@@ -7665,14 +7665,11 @@ stalled games via `eval_material`.
 
 ## Noticed this run (modern_decks — OGW closure + BFZ)
 
-- **Zada, Hedron Grinder** (the last BFZ card beside Gruesome Slaughter) needs
-  a "copy a spell that targets only this creature, once per other creature it
-  could target, each copy retargeted" primitive. `CopySpellMayChooseTargets`
-  has the copy machinery; what's missing is the targets-only-me gate plus the
-  per-copy distinct retarget.
-- **Gruesome Slaughter** wants a one-shot `Effect` that grants an *activated*
-  ability for the turn — `StaticEffect::GrantActivatedAbility` only exists on
-  the static side.
+- **`Effect::CopyForEachOtherTargetableCreature` skips modal/X re-choice.**
+  Zada's copies inherit the original's mode, X and converged value verbatim
+  (CR 707.10 says they should) but the copy count is fixed at cast time, so a
+  creature entering in response isn't counted — which is correct — while one
+  leaving still leaves its copy on the stack to fizzle.
 - **Lithomancer's Focus** ships as a plain +2/+2; "prevent all damage colorless
   sources would deal to that creature" needs a prevention shield filtered by
   the damage *source's* characteristics (the existing shields are per-source-id

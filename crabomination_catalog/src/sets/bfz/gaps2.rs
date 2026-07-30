@@ -7,12 +7,23 @@ use crate::card::{
     Supertype, TokenDefinition, Value,
 };
 use crate::effect::shortcut::{
-    drain, each_your_creature, etb, gain_life, landfall, on_cast, pump_target, rally,
-    target_filtered,
+    cast_is_instant_or_sorcery, drain, each_your_creature, etb, gain_life, landfall, pump_target,
+    rally, target_filtered,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 use crabomination_base::tokens::eldrazi_scion_token;
+
+/// "Whenever you cast an instant or sorcery spell, …" — the spell is the
+/// trigger source.
+fn on_your_is_cast(effect: Effect) -> crate::card::TriggeredAbility {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(cast_is_instant_or_sorcery()),
+        effect,
+    }
+}
 
 fn enchantment(name: &'static str, c: crate::mana::ManaCost, t: Vec<crate::card::TriggeredAbility>)
 -> CardDefinition {
@@ -456,7 +467,7 @@ pub fn prism_array() -> CardDefinition {
 pub fn noyan_dar_roil_shaper() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
-        triggered_abilities: vec![on_cast(Effect::MayDo {
+        triggered_abilities: vec![on_your_is_cast(Effect::MayDo {
             description: "Put three +1/+1 counters on a land you control?".into(),
             body: Box::new(crate::effect::shortcut::animate_land(0, 3)),
         })],
@@ -762,6 +773,48 @@ pub fn kiora_master_of_the_depths() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Zada, Hedron Grinder — {3}{R} 3/3 Goblin Ally. An instant or sorcery that
+/// targets only Zada is copied for each other creature you control it could
+/// target, one copy each.
+pub fn zada_hedron_grinder() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![on_your_is_cast(Effect::CopyForEachOtherTargetableCreature)],
+        ..creature(
+            "Zada, Hedron Grinder",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Goblin, CreatureType::Ally],
+            3,
+            3,
+        )
+    }
+}
+
+/// Gruesome Slaughter — {6} Sorcery. Your colorless creatures gain "{T}: deal
+/// damage equal to this creature's power to target creature" this turn.
+pub fn gruesome_slaughter() -> CardDefinition {
+    CardDefinition {
+        name: "Gruesome Slaughter",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::GainActivatedAbility {
+            what: Selector::EachPermanent(
+                R::Creature.and(R::Colorless).and(R::ControlledByYou),
+            ),
+            ability: Box::new(ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::DealDamageEqualToPower {
+                    source: Selector::This,
+                    target: target_filtered(R::Creature),
+                },
+                ..Default::default()
+            }),
+            duration: Duration::EndOfTurn,
+        },
         ..Default::default()
     }
 }

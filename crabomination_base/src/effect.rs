@@ -5349,6 +5349,11 @@ pub enum Effect {
     /// Reverberate / Fork / Twincast. AutoDecider keeps the original
     /// target (first legal); a scripted/UI decider can repoint it.
     CopySpellMayChooseTargets { what: Selector, count: Value },
+    /// Zada, Hedron Grinder — the triggering spell targets only this source, so
+    /// copy it once per *other* creature its controller controls that the spell
+    /// could legally target, each copy aimed at a different one. No-op when the
+    /// spell targets anything besides the source.
+    CopyForEachOtherTargetableCreature,
     /// CR 115.7 — "You may choose new targets for target spell." Repoints
     /// the targeted spell's primary target in place (Redirect). The
     /// spell's controller's opponent (the redirector) is consulted via

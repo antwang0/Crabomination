@@ -1318,9 +1318,11 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   Tomb), `AdditionalCastCost::RevealFromHand` +
   `Value::RevealedForCostPower` (Titan's Presence),
   `Value::GreatestManaValueAmongPermanents` (Ugin's Insight),
-  `SelectionRequirement::HasAwaken` (Halimar Tidecaller). Emblem
-  `AnthemForFilter` statics now reach the live anthem gather, so Gideon, Ally
-  of Zendikar's −4 actually pumps.
+  `SelectionRequirement::HasAwaken` (Halimar Tidecaller),
+  `Effect::CopyForEachOtherTargetableCreature` (Zada, Hedron Grinder — a spell
+  targeting only the source is copied once per other creature it could target).
+  Emblem `AnthemForFilter` statics now reach the live anthem gather, so Gideon,
+  Ally of Zendikar's −4 actually pumps.
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
