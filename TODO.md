@@ -13,10 +13,12 @@ Items are grouped by area and roughly ordered by impact within each group.
   full-helper dry-run probe) plus `KnownCard.has_convoke` / `has_improvise`
   so the picker knows which permanent types can help. Residual: the picker
   lists candidates but doesn't preview how much each tap saves.
-- **Interactive color choice for prevention.** `Effect::PreventAllDamage
-  FromChosenColorThisTurn` (Avacyn) resolves its `Decision::ChooseColor`
-  synchronously off `self.decider`; a UI seat gets the auto-picked color
-  rather than a prompt, like the other implicit-choice effects.
+- ✅ ~~**Interactive color choice for prevention.**~~ — shipped. Avacyn's
+  `PreventAllDamageFromChosenColorThisTurn` suspends on a real
+  `Decision::ChooseColor` for a `wants_ui` seat
+  (`PendingEffectState::PreventFromChosenColorPending`); bots keep the
+  synchronous decider. Test
+  `cr_615_7_chosen_color_prevention_prompts_a_ui_seat`.
 - **Master of Predicaments' hand pick.** The chosen card is auto-picked
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
@@ -62,7 +64,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   Breath of Fury, Chorus of the Conclave (a "pay any amount of mana as an
   additional cost" static), Circu, Cloudstone Curio (a shares-a-permanent-type
   filter), Crown of Convergence, Dimir Doppelganger, Dimir Machinations
-  (+ Transmute, which is a whole unimplemented keyword), Eye of the Storm,
+  (Transmute itself already ships — `shortcut::transmute`), Eye of the Storm,
   Flickerform, Gaze of the Gorgon, Master Warcraft, Mindleech Mass,
   Reroute (retarget an activated ability), Sins of the Past, Sisters of Stone
   Death, Sunforger, Warp World, Experiment Kraj, and the DIS split cards.
@@ -871,15 +873,46 @@ factory doc comment:
   unattach.
 - Bahamut/Dion meld pair still wants a second `Effect::Meld` card wiring.
 
-## Noticed this run (OTJ + Darksteel gap batches)
+## Noticed this run (Darksteel/Fifth Dawn completion)
 
-- **Darksteel remainder** (`scripts/set_gaps.py dst`): `decks::recent310`
-  shipped 13; the rest still want primitives — Drooling Ogre (a cast-triggered
-  control handover), Death Cloud / Aether Snap (mass counter removal), the
-  Arcbound modular cycle, Chimeric Egg / Darksteel Reactor (charge-counter
-  win/animation thresholds), Death-Mask Duplicant (imprint-scoped keyword
-  theft), Eater of Days (skip-your-next-two-turns), Dismantle's
-  counter-relocation rider.
+- **Darksteel remainder** (`scripts/set_gaps.py dst` — 15, was ~90). Each
+  wants one primitive:
+  - **Death-Mask Duplicant** — imprint-scoped keyword theft (the exiled card's
+    evasion keywords bleed onto the Duplicant).
+  - **Dismantle** — "if that artifact had counters on it, put that many +1/+1
+    *or* charge counters on an artifact you control": needs the destroyed
+    permanent's counter total off LKI plus a counter-kind pick.
+  - **Hallow / Shunt** — both target a *spell*: prevent-all-damage-from-a-
+    spell-source, and retarget-a-single-target-spell.
+  - **Mycosynth Lattice** — two of three clauses are missing: an
+    everything-is-colorless static and a global "spend mana as any color".
+  - **Panoptic Mirror / Spellbinder** — imprint an instant/sorcery and cast a
+    free copy of it later; `CastWithoutPayingImmediate` has no
+    copy-the-exiled-card entry point.
+  - **Savage Beating / Shriveling Rot / Stir the Pride** — Entwine modals whose
+    bodies need an extra-combat-phase grant, a turn-scoped "damage destroys"
+    replacement, and a turn-scoped granted lifelink respectively.
+  - **Pulse of the Dross** — reveal-three-and-an-opponent-picks-one discard.
+  - **Scrounge** — target an artifact card in an *opponent's* graveyard
+    (`SelectionRequirement` has `InYourGraveyard` / `InGraveyard` but no
+    opponent-scoped sibling).
+  - **Synod Artificer** — `{X}, {T}: Tap X target noncreature artifacts`: an
+    X-scaled *target count*, which no cast/activate path collects.
+  - **Thought Dissector** — reveal-until-artifact with an X cap.
+- **Talon of Pain re-charges off its own shot.** `EventScope::
+  YourSourceDamagedOpponent` can't express the printed "a source you control
+  *other than this artifact*"; the scope matches on the damage event's
+  `from_controller`, which has no source identity to exclude.
+- **Auriok Siege Sled's second mode is a blanket can't-block.** "Target
+  artifact creature can't block *this creature*" needs a per-pair block lock
+  (the `cant_block_pairs` table exists — wire an `Effect` onto it).
+- **Gemini Engine's Twin has fixed P/T.** `TokenDefinition.dynamic_pt` is
+  evaluated in the token's own context, so "equal to this creature's power"
+  can't read the minting Engine.
+- **`add_card_to_battlefield` skips `enters_with_counters`.** Every test that
+  wants a modular/sunburst body has to add the counters by hand. A
+  `put_onto_battlefield` test helper that runs the CR 614.12 replacement would
+  remove a recurring footgun.
 
 ## Noticed this run (OTJ gap batch, `decks::recent309`)
 
@@ -4492,6 +4525,20 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   protector choice.
 
 ### Partial (🟡) — remaining gap noted
+- ✅ **CR 702.43 — Modular.** `Keyword::Modular(N)` is a real marker keyword
+  alongside `enters_with_counters` + `shortcut::modular_dies()`;
+  `SelectionRequirement::HasModular` is the value-agnostic filter (Arcbound
+  Overseer). Tests `cr_recent41::cr_702_43*`.
+- ✅ **CR 702.44 — Sunburst.** `Keyword::Sunburst` resolves in the
+  permanent-entry path off the cast's converge count: +1/+1 counters when it
+  enters as a creature, charge counters otherwise. A real CR 614.12
+  replacement (a counter lock blanks it), so Pentad Prism's old ETB trigger is
+  gone. "Modular—Sunburst" (Arcbound Wanderer) composes. Tests
+  `cr_recent41::cr_702_44*`.
+- ✅ **CR 704.8 — LKI across one SBA sweep.** Persist/Undying read the ±1/±1
+  pile from before the 122.3 annihilation, so Young Wolf with a +1/+1 counter
+  that takes three -1/-1 counters stays dead. Tests `cr_recent41::cr_704_8*`.
+
 - 🟡 **CR 509.2 / 510.1c — Banding** — a banding blocker routes the blocked
   attacker's damage order + assignment to the defending player (Benalish Hero;
   test `cr_509_2_banding_blocker_lets_defender_assign_damage`). Remaining:

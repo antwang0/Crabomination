@@ -110,6 +110,21 @@ exercising each) was elided in a compaction pass; recover it from
   `core_rules/cr_recent34` (118.8 pay-life, 614.16 counter-doubling, 508.1g
   temporary attack tax).
 
+- **Darksteel/Fifth Dawn completion (modern_decks, this run — 100 cards).**
+  `scripts/set_gaps.py dst` went ~90 → 15. New engine:
+  `Keyword::Modular(N)` + `SelectionRequirement::HasModular` (CR 702.43),
+  `Keyword::Sunburst` as a real CR 614.12 enters-with replacement off the
+  cast's converge count (CR 702.44 — the five open-coded Sunburst cards
+  migrated onto it, Pentad Prism's ETB trigger deleted),
+  `SelectionRequirement::IsHostOfSource` (the mirror of `AttachedToSource`, so
+  "{T}, Unattach this Equipment" taps the right creature),
+  `Effect::AddCardTypeIndefinitely { until_eot }`,
+  `Effect::LoseCardTypeUntilEot`, `Effect::PreventNextDamageWithCounters`,
+  `StaticEffect::ReduceCombatDamageToControllerWhileUntapped`. Correctness:
+  CR 704.8 — Persist/Undying now read the pre-SBA-sweep ±1/±1 pile.
+  Cards in `decks::recent311`–`recent313`; tests in `recent_b/dst` and
+  `core_rules/cr_recent41`.
+
 - **Ravnica-block gap sweep (modern_decks, this run — 25 cards across RAV/GPT/DIS)**
   plus the CR 612 / 400 / 708 conformance pass. New engine:
   `Modification::AddColor` on a real continuous effect for Grave Betrayal's

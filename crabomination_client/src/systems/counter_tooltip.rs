@@ -669,13 +669,6 @@ pub(crate) fn companion_restriction_text(rule: &crabomination::card::CompanionRu
     }
 }
 
-/// Render a `Keyword` as a short human string for the tooltip. Keeps
-/// the labels short ("Lifelink", "First Strike") so a card with several
-/// granted keywords doesn't blow out the tooltip line.
-/// Short reminder text for the evergreen keywords. `None` for keywords
-/// whose name is self-explanatory or that carry their own cost label
-/// (Ward, Cycling, Flashback, …), so the reminder block stays compact.
-
 /// Render a CR 615 shield's remaining points and source restriction as the
 /// tooltip's parenthetical: "all damage prevented this turn", "prevents the
 /// next 3 damage", plus " from red sources" when the shield is color-scoped.
@@ -697,6 +690,9 @@ pub(crate) fn prevention_summary(
     out
 }
 
+/// Short reminder text for the evergreen keywords. `None` for keywords
+/// whose name is self-explanatory or that carry their own cost label
+/// (Ward, Cycling, Flashback, …), so the reminder block stays compact.
 pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
     use crabomination::card::Keyword as K;
     Some(match kw {
@@ -920,6 +916,9 @@ fn describe_count_filter(req: &crabomination::card::SelectionRequirement) -> Str
     }
 }
 
+/// Render a `Keyword` as a short human string for the tooltip. Keeps the
+/// labels short ("Lifelink", "First Strike") so a card with several granted
+/// keywords doesn't blow out the tooltip line.
 pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
     use crabomination::card::Keyword as K;
     use crabomination::mana::Color;
