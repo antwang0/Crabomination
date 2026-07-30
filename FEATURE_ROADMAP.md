@@ -16,6 +16,18 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Darksteel (DST) complete** (`set_gaps.py dst` at zero). The primitives that
+  closure added: `GameEvent::DamageDealt.from_card` +
+  `EventScope::YourOtherSourceDamagedOpponent` (the printed "other than this
+  permanent" exclusion), `TokenDefinition.dynamic_pt` on the attacking-token
+  mint, `StaticEffect::{GrantColorless, PlayersMaySpendManaAsAnyColor,
+  GainKeywordsFromExiledWith, ControllerCantCastCreatureSpells}`,
+  `Effect::{TargetsExactlyX, PreventAllDamageFromTargetThisTurn,
+  RedirectYourCombatDamageToTarget, AddCountersOfChosenKind,
+  DamagedCreaturesDieThisTurn, CreatureDeathsDrainToughnessThisTurn,
+  ReplaceControllerLossWithReset}`, and `target_slot_optional_x` threading the
+  paid {X} through slot validation. Tests in `recent_b/dst`,
+  `core_rules/cr_recent42`.
 - **Multi-block (CR 509.1b / 509.2 / 510.1e):** `block_map` is blocker →
   `Vec<attacker>`; `Keyword::CanBlockAdditional(n)` / `CanBlockAnyNumber` cap
   the per-combat assignment; a creature blocking several attackers orders them
@@ -1435,6 +1447,12 @@ Each unblocks a large swath of cards.
   in `deal_damage_to_from` — `Predicate::ExcessDamageDealtThisResolution` gates
   "if excess damage was dealt this way" (Orbital Plunge). Remaining: the broader
   marking-interplay audit, and excess-to-another-permanent redirection (120.4a).)
+- ✅ **Prevention funnel is single-entry** — CR 615.5/615.8: chosen-source
+  shields (`damage_prevented_sources`, carrying a life-gain beneficiary and a
+  one-instance flag) are applied inside `apply_prevention_shields`, and combat
+  no longer short-circuits a fully-prevented dealer, so a shield's riders fire
+  on combat damage and `DamagePrevented` is emitted uniformly (615.13).
+  Hallow (turn-long + life refund), Awe Strike (next instance only).
 - 🟡 **Loyalty fidelity:** loyalty-set effects ✅, proliferate on loyalty ✅
   (`CounterType::Loyalty`, test `cr_701_34_proliferate_adds_loyalty_counter`),
   combat damage to a planeswalker removes loyalty ✅ (CR 306.9, test

@@ -873,47 +873,49 @@ factory doc comment:
   unattach.
 - Bahamut/Dion meld pair still wants a second `Effect::Meld` card wiring.
 
-## Noticed this run (Darksteel/Fifth Dawn completion)
+## Noticed this run (Mirrodin block completion)
 
-- **Darksteel remainder** (`scripts/set_gaps.py dst` — 11, was ~90). Each
-  wants one primitive:
-  - **Death-Mask Duplicant** — imprint-scoped keyword theft (the exiled card's
-    evasion keywords bleed onto the Duplicant).
-  - **Dismantle** — "if that artifact had counters on it, put that many +1/+1
-    *or* charge counters on an artifact you control": needs the destroyed
-    permanent's counter total off LKI plus a counter-kind pick.
-  - **Hallow** — prevent all damage a target *spell* would deal, and gain that
-    much life; the prevention primitives are all recipient-scoped.
-  - **Mycosynth Lattice** — two of three clauses are missing: an
-    everything-is-colorless static and a global "spend mana as any color".
-  - **Panoptic Mirror / Spellbinder** — imprint an instant/sorcery and cast a
-    free copy of it later; `CastWithoutPayingImmediate` has no
-    copy-the-exiled-card entry point.
-  - **Shriveling Rot** — an Entwine modal needing a turn-scoped "whenever a
-    creature is dealt damage, destroy it" replacement and a
-    lose-life-equal-to-toughness death watcher.
-  - **Pulse of the Dross** — reveal-three-and-an-opponent-picks-one discard.
-  - **Turn the Tables** — "all *combat* damage that would be dealt to you this
-    turn"; the only redirect primitive
-    (`Effect::RedirectYourDamageToChosen`) is the broader Gideon's-Sacrifice
-    shape (all damage, you and your permanents).
-  - **Synod Artificer** — `{X}, {T}: Tap X target noncreature artifacts`: an
-    X-scaled *target count*, which no cast/activate path collects.
-  - **Thought Dissector** — reveal-until-artifact with an X cap.
-- **Talon of Pain re-charges off its own shot.** `EventScope::
-  YourSourceDamagedOpponent` can't express the printed "a source you control
-  *other than this artifact*"; the scope matches on the damage event's
-  `from_controller`, which has no source identity to exclude.
-- **Auriok Siege Sled's second mode is a blanket can't-block.** "Target
-  artifact creature can't block *this creature*" needs a per-pair block lock
-  (the `cant_block_pairs` table exists — wire an `Effect` onto it).
-- **Gemini Engine's Twin has fixed P/T.** `TokenDefinition.dynamic_pt` is
-  evaluated in the token's own context, so "equal to this creature's power"
-  can't read the minting Engine.
-- ✅ ~~**`add_card_to_battlefield` skips `enters_with_counters`.**~~ — shipped
-  as `GameState::add_card_to_battlefield_with_counters`, which applies the
-  printed CR 614.12 spec (constant and board-count values; cast-scoped X /
-  converge still evaluate against an empty context).
+**Darksteel is done** (`scripts/set_gaps.py dst` = 0) — every card that was
+blocked on a primitive shipped with that primitive. Mirrodin is at 96 (was
+194).
+
+- **Mirrodin remainder, grouped by the primitive each still wants:**
+  - **Non-mana Entwine costs.** `Keyword::Entwine` only carries a `ManaCost`,
+    so "Entwine—Sacrifice two/three lands" can't be expressed: Solar Tide,
+    Betrayal of Flesh. (Journey of Discovery, Roar of the Kha, Wail of the Nim,
+    Dream's Grip, Blinding Beam, Incite War and One Dozen Eyes have mana
+    entwine costs and are only waiting on their mode bodies.)
+  - **Artifact-source damage reduction.** "If an artifact would deal damage to
+    you, prevent 1 of that damage" (Sphere of Purity) needs a
+    source-filtered flat reduction; the existing reduction statics are
+    recipient- or colour-scoped.
+  - **Imprint payoffs beyond keyword theft.** Mirror Golem (protection from
+    each of the exiled card's card types), Mourner's Shield (colour-matched
+    prevention), Extraplanar Lens (name-matched land doubling), Soul Foundry
+    (token copy of the exiled card), Spellweaver Helix (name-matched free
+    copy of the *other* exiled card).
+  - **"Can't attack or block unless you pay N per counter"** — Myr Prototype.
+  - **Reveal-and-guess** — Liar's Pendulum needs a name guess by an opponent.
+  - **Control-another-player** (CR 723) — Mindslaver.
+  - **Global type-changing** — March of the Machines (every noncreature
+    artifact becomes an MV/MV artifact creature), Quicksilver Fountain (flood
+    counters retype lands), Shared Fate (draw replacement into an opponent's
+    library).
+  - **Whole-board wipe with an exception** — Worldslayer.
+  - Smaller ones: Confusion in the Ranks (shared-type control exchange),
+    Fatespinner (opponent skips a chosen step), Psychogenic Probe (shuffle
+    watcher), Scythe of the Wretched (damaged-creature reanimation +
+    re-attach), Timesifter (highest-MV extra turns), Proteus Staff
+    (bottom-then-reveal-until-creature), Power Conduit (counter shuffling),
+    Vulshok Battlemaster (attach every Equipment on entry).
+- **`add_card_to_battlefield` fires no ETB triggers**, by design. Several
+  batch-1 tests had to cast the permanent instead. A
+  `add_card_to_battlefield_entering` fixture that dispatches the entry
+  triggers would make ETB tests much shorter.
+- **`Effect::MayDo` inside a triggered ability consumes a scripted answer
+  before any nested `CastWithoutPayingImmediate` ask**, so a Panoptic-Mirror-
+  shaped test needs two `Bool(true)`s. Worth collapsing the double ask when
+  the inner effect is itself optional.
 
 ## Noticed this run (OTJ gap batch, `decks::recent309`)
 
