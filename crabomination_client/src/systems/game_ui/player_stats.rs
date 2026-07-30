@@ -673,7 +673,7 @@ pub fn update_player_chip_target_outline(
         None
     };
     let attack_pick = cv.step == TurnStep::DeclareAttackers
-        && cv.active_player == your_seat
+        && cv.declares_attacks(your_seat)
         && cv.priority == your_seat
         && attacking.last_added.is_some();
 

@@ -284,6 +284,10 @@ pub struct ClientView {
     /// attack/block each combat" cap in play (Silent Arbiter), or `None` when
     /// combat participation is uncapped. Surfaced so the attack/block UI can
     /// stop the viewer from assembling a declaration the engine would reject.
+    /// Master Warcraft — the seat that declares attackers *and* blockers this
+    /// turn instead of the active/defending player. `None` in normal combat.
+    #[serde(default)]
+    pub combat_chooser: Option<usize>,
     #[serde(default)]
     pub max_attackers_per_combat: Option<u32>,
     #[serde(default)]
@@ -502,6 +506,23 @@ pub struct ClientView {
     /// hint. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub permanents_to_graveyard_this_turn: u32,
+}
+
+impl ClientView {
+    /// Does `seat` submit this turn's attack declaration? The active player,
+    /// unless a `combat_chooser` (Master Warcraft) took the job.
+    pub fn declares_attacks(&self, seat: usize) -> bool {
+        self.combat_chooser.unwrap_or(self.active_player) == seat
+    }
+
+    /// Does `seat` submit this turn's block declaration? Any defending player,
+    /// unless a `combat_chooser` took the job.
+    pub fn declares_blocks(&self, seat: usize) -> bool {
+        match self.combat_chooser {
+            Some(chooser) => chooser == seat,
+            None => self.active_player != seat,
+        }
+    }
 }
 
 /// A projected combat-damage summary, computed from the currently

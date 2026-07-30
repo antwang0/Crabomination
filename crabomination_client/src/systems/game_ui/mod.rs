@@ -1542,7 +1542,7 @@ pub fn update_hint(
     }
     let your_seat = cv.your_seat;
     let viewer_is_defending =
-        cv.step == TurnStep::DeclareBlockers && cv.active_player != your_seat && cv.priority == your_seat;
+        cv.step == TurnStep::DeclareBlockers && cv.declares_blocks(your_seat) && cv.priority == your_seat;
     if viewer_is_defending {
         let msg = if blocking.selected_blocker.is_some() {
             "Click / Enter on an attacker to assign the block. Esc cancels.".to_string()
@@ -3218,7 +3218,7 @@ pub fn auto_advance_p0(
     // either no attacker is targeting the viewer or the viewer has no
     // creature able to block (untapped, no Defender restriction —
     // summoning-sick creatures CAN block).
-    if cv.step == TurnStep::DeclareBlockers && cv.active_player != your_seat {
+    if cv.step == TurnStep::DeclareBlockers && cv.declares_blocks(your_seat) {
         use crabomination::card::Keyword;
         // We only get to DeclareBlockers if at least one attacker was
         // declared — but we still gate the *skip* on having a viable
@@ -3475,7 +3475,7 @@ pub fn handle_game_input(
             || keyboard.just_pressed(KeyCode::NumpadEnter);
 
         // ── Blocking (defending against any opponent's attack) ──────────────
-        if cv.step == TurnStep::DeclareBlockers && cv.active_player != your_seat && cv.priority == your_seat {
+        if cv.step == TurnStep::DeclareBlockers && cv.declares_blocks(your_seat) && cv.priority == your_seat {
             let pass = keyboard.just_pressed(KeyCode::Space) || btns.pass;
             if mouse.just_pressed(MouseButton::Right) || keyboard.just_pressed(KeyCode::Escape) {
                 blocking.selected_blocker = None;
@@ -3527,7 +3527,7 @@ pub fn handle_game_input(
         //   • `A` / Attack button (handled below) submits the plan, falling
         //     back to "attack all eligible at next opp" when empty.
         if cv.step == TurnStep::DeclareAttackers
-            && cv.active_player == your_seat
+            && cv.declares_attacks(your_seat)
             && cv.priority == your_seat
         {
             if mouse.just_pressed(MouseButton::Right) || keyboard.just_pressed(KeyCode::Escape) {

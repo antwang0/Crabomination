@@ -89,7 +89,7 @@ pub fn update_attack_all_visibility(
     }
     let your_seat = cv.your_seat;
     let attacking_step =
-        cv.step == TurnStep::DeclareAttackers && cv.active_player == your_seat;
+        cv.step == TurnStep::DeclareAttackers && cv.declares_attacks(your_seat);
     if !attacking_step {
         node.display = Display::None;
         return;

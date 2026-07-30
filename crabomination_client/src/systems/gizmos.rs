@@ -293,7 +293,7 @@ pub fn draw_blocking_gizmos(
     let Some(cv) = &view.0 else { return };
     // Active player is some opponent (any non-viewer seat) declaring attackers
     // we may need to block.
-    if cv.step != TurnStep::DeclareBlockers || cv.active_player == cv.your_seat { return; }
+    if cv.step != TurnStep::DeclareBlockers || !cv.declares_blocks(cv.your_seat) { return; }
 
     let mut positions: HashMap<CardId, Vec3> = HashMap::new();
     for (transform, gid, _) in &bf_cards {

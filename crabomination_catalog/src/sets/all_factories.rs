@@ -517,6 +517,7 @@ static CHK2: &[Factory] = &[
     super::rav::breath_of_fury,
     super::rav::sunforger,
     super::rav::eye_of_the_storm,
+    super::rav::master_warcraft,
     super::rav::cloudstone_curio,
     super::rav::circu_dimir_lobotomist,
     super::rav::sins_of_the_past,

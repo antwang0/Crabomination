@@ -22489,6 +22489,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseCombatThisTurn => {
+                self.combat_chooser = Some(ctx.controller);
+                Ok(())
+            }
+
             Effect::AdditionalCombatPhaseAfterMain { count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
                 self.additional_post_main_combats =

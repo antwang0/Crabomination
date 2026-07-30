@@ -494,6 +494,15 @@ impl GameState {
                 self.fire_step_triggers(TurnStep::EndCombat);
                 self.give_priority_to_active();
             }
+            // Master Warcraft — the declaration steps hand priority to the
+            // outside chooser so it, not the active/defending player, submits
+            // the declaration. Without a chooser these behave like `_`.
+            TurnStep::DeclareAttackers | TurnStep::DeclareBlockers
+                if self.combat_chooser.is_some() =>
+            {
+                self.priority.player_with_priority = self.combat_chooser.unwrap_or(self.active_player_idx);
+                self.priority.consecutive_passes = 0;
+            }
             _ => {
                 self.give_priority_to_active();
             }
@@ -2707,7 +2716,7 @@ impl GameState {
         // CR 505.1b — discard any unconsumed additional combat phases so they
         // don't bleed into the next turn (e.g. the turn ended before combat).
         self.additional_combat_phases = 0;
-        self.combat_chooser_this_turn = None;
+        self.combat_chooser = None;
         self.additional_post_main_combats = 0;
         self.combat_phases_this_turn = 0;
         self.additional_end_steps = 0;

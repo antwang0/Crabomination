@@ -6556,6 +6556,11 @@ pub enum Effect {
     /// Main-phase-cast "after this main phase, an additional combat + main"
     /// sorceries (Relentless Assault) use `AdditionalCombatPhaseAfterMain`.
     AdditionalCombatPhase { count: Value },
+    /// "You choose which creatures attack this turn, and which creatures
+    /// block and how." Master Warcraft — sets `GameState.combat_chooser` to
+    /// the resolving controller; both declaration steps then hand priority to
+    /// that seat instead of the active/defending player. Clears at cleanup.
+    ChooseCombatThisTurn,
     /// CR 505.1b — "After this main phase, there is an additional combat
     /// phase followed by an additional main phase." Banks a combat phase
     /// that begins when the active player leaves their current main phase;

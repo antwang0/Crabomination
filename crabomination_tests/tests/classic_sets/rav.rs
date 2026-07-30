@@ -3059,64 +3059,88 @@ fn eye_of_the_storm_replays_its_exile_pile() {
     assert_eq!(g.players[1].life, 17, "a free copy resolved instead");
 }
 
-/// Master Warcraft hands the attack declaration to its caster: everything able
-/// swings, and the defender's blocks are thrown away.
+/// Master Warcraft hands the caster both declarations: on the opponent's turn
+/// the defender declares the *attackers*, and the active player can't.
 #[test]
-fn master_warcraft_chooses_the_attacks_and_the_blocks() {
-    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+fn master_warcraft_moves_the_attack_declaration() {
     let mut g = two_player_game();
-    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let blocker = g.add_card_to_battlefield(0, catalog::serra_angel());
-    for id in [a, b, blocker] {
-        g.clear_sickness(id);
-    }
-    // Seat 0 casts it on seat 1's turn, before attackers.
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let mw = g.add_card_to_hand(1, catalog::master_warcraft());
+    g.players[1].mana_pool.add(Color::Red, 4);
     g.step = TurnStep::BeginCombat;
-    cast21(&mut g, 0, catalog::master_warcraft(), None);
-    assert_eq!(g.combat_chooser_this_turn, Some(0));
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mw, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast on the opponent's turn");
+    drain_stack(&mut g);
+    assert_eq!(g.combat_chooser, Some(1));
 
+    // Entering Declare Attackers hands priority to the chooser, and the active
+    // player's own declaration is rejected.
     while g.step != TurnStep::DeclareAttackers {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
+    assert_eq!(g.player_with_priority(), 1, "the chooser declares");
+    g.priority.player_with_priority = 0;
+    assert!(matches!(
+        g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]),
+        Err(GameError::NotYourPriority)
+    ));
     g.priority.player_with_priority = 1;
-    // Seat 1 tries to attack with one creature; the chooser's list wins.
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: a,
-        target: AttackTarget::Player(0),
-    }]))
-    .expect("declare");
-    assert_eq!(g.attacking.len(), 2, "the chooser swung with everything able");
-
-    let _ = blocker;
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])
+        .expect("the chooser declares the active player's attackers");
+    assert_eq!(g.attacking.len(), 1);
 }
 
-/// The other half: cast on your own turn, Master Warcraft throws away the
-/// defender's blocks.
+/// The block declaration moves too, and only the chooser may submit it.
 #[test]
-fn master_warcraft_discards_the_defenders_blocks() {
-    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+fn master_warcraft_moves_the_block_declaration() {
     let mut g = two_player_game();
-    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let blocker = g.add_card_to_battlefield(1, catalog::serra_angel());
-    g.clear_sickness(attacker);
-    g.clear_sickness(blocker);
-    cast21(&mut g, 0, catalog::master_warcraft(), None);
-    assert_eq!(g.combat_chooser_this_turn, Some(0));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let wall = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mw = g.add_card_to_hand(0, catalog::master_warcraft());
+    g.players[0].mana_pool.add(Color::White, 4);
+    g.step = TurnStep::BeginCombat;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mw, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast on our own turn");
+    drain_stack(&mut g);
+
     while g.step != TurnStep::DeclareAttackers {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker,
-        target: AttackTarget::Player(1),
-    }]))
-    .expect("attack");
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])
+        .expect("declare");
     while g.step != TurnStep::DeclareBlockers {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
-    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
-        .expect("declare blockers");
-    assert!(g.block_map.is_empty(), "the chooser declined every block");
+    assert_eq!(g.player_with_priority(), 0, "the chooser declares blocks");
+    // The defender can no longer block with its own creature.
+    g.priority.player_with_priority = 1;
+    assert!(matches!(g.declare_blockers(vec![(wall, bear)]), Err(GameError::NotYourPriority)));
+    g.priority.player_with_priority = 0;
+    g.declare_blockers(vec![]).expect("the chooser declines all blocks");
+    assert!(g.blockers_declared());
+}
+
+/// "Cast only before attackers are declared" — illegal once they're on board.
+#[test]
+fn master_warcraft_cant_be_cast_after_attackers() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let mw = g.add_card_to_hand(1, catalog::master_warcraft());
+    g.players[1].mana_pool.add(Color::Red, 4);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])
+        .expect("declare");
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: mw, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .is_err());
 }

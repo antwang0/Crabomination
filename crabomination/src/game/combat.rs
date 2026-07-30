@@ -109,29 +109,23 @@ impl GameState {
         })
     }
 
-    // ── Declare attackers ─────────────────────────────────────────────────────
-
-    /// The attack list `chooser` picks when Master Warcraft has handed them
-    /// the declaration: every creature the active player controls that can
-    /// legally attack, aimed at the chooser's own opponent (the active player
-    /// is the one being made to swing).
-    fn chosen_attacks_for(&self, chooser: usize) -> Vec<Attack> {
-        let active = self.active_player_idx;
-        let foes = self.opponents_of(active);
-        let Some(&defender) = foes.iter().find(|o| **o != chooser).or(foes.first()) else {
-            return Vec::new();
-        };
-        self.battlefield
-            .iter()
-            .filter(|c| {
-                c.controller == active
-                    && c.definition.is_creature()
-                    && !c.tapped
-                    && !c.summoning_sick
-            })
-            .map(|c| Attack { attacker: c.id, target: AttackTarget::Player(defender) })
-            .collect()
+    /// The seat that declares attackers this turn — the active player unless a
+    /// `combat_chooser` (Master Warcraft) is set.
+    pub fn attack_declarer(&self) -> usize {
+        self.combat_chooser.unwrap_or(self.active_player_idx)
     }
+
+    /// May `seat` submit the block declaration? Normally any non-active seat
+    /// (a defending player declares its own blocks); with a `combat_chooser`
+    /// set, only that seat.
+    pub fn may_declare_blocks(&self, seat: usize) -> bool {
+        match self.combat_chooser {
+            Some(chooser) => chooser == seat,
+            None => seat != self.active_player_idx,
+        }
+    }
+
+    // ── Declare attackers ─────────────────────────────────────────────────────
 
     pub fn declare_attackers(
         &mut self,
@@ -140,18 +134,13 @@ impl GameState {
         if self.step != TurnStep::DeclareAttackers {
             return Err(GameError::WrongStep { actual: self.step });
         }
-        let p = self.priority.player_with_priority;
-        if p != self.active_player_idx {
+        // Master Warcraft — an outside chooser declares in the active
+        // player's place; the attackers are still the active player's
+        // creatures, so only the *submitter* changes.
+        if self.priority.player_with_priority != self.attack_declarer() {
             return Err(GameError::NotYourPriority);
         }
-        // Master Warcraft — someone else chose this turn's attackers, so the
-        // submitted list is replaced by theirs. The chooser is an opponent of
-        // the attacking player in every printed case, and the headless policy
-        // is the hostile one: swing with everything able.
-        let attacks = match self.combat_chooser_this_turn {
-            Some(chooser) if chooser != p => self.chosen_attacks_for(chooser),
-            _ => attacks,
-        };
+        let p = self.active_player_idx;
 
         // Validate every attack target up-front. The defender must be an
         // *opponent* — not self, not a teammate. `same_team` returns true
@@ -935,13 +924,14 @@ impl GameState {
         if self.step != TurnStep::DeclareBlockers {
             return Err(GameError::WrongStep { actual: self.step });
         }
-        // Master Warcraft's second half — the chooser decides the blocks. Its
-        // caster is the attacker, so the headless policy is to block with
-        // nothing.
-        let assignments = match self.combat_chooser_this_turn {
-            Some(chooser) if chooser == self.active_player_idx => Vec::new(),
-            _ => assignments,
-        };
+        // Master Warcraft — only the chooser may submit. (Without one the
+        // engine keeps trusting the caller; blocker ownership is validated
+        // per assignment below.)
+        if let Some(chooser) = self.combat_chooser
+            && self.priority.player_with_priority != chooser
+        {
+            return Err(GameError::NotYourPriority);
+        }
 
         let computed = self.compute_battlefield();
         let cp_of = |id: CardId| computed.iter().find(|c| c.id == id);

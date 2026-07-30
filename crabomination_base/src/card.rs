@@ -2620,6 +2620,11 @@ pub struct CardDefinition {
     /// "Cast this spell only during combat before blockers are declared"
     /// (Blaze of Glory). Gated in the cast-timing check.
     pub cast_only_before_blockers: bool,
+    /// "Cast this spell only before attackers are declared" (Master Warcraft).
+    /// Gated in the cast-timing check: legal until the Declare Attackers step
+    /// has produced attackers.
+    #[serde(default)]
+    pub cast_only_before_attackers: bool,
     /// "You can't cast this spell unless [condition]" (Rakdos, Lord of Riots).
     /// Checked at the cast gate against the caster's game state.
     #[serde(default)]

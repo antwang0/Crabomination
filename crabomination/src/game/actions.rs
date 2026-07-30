@@ -5716,6 +5716,25 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
+        // "Cast only before attackers are declared" (Master Warcraft) — legal
+        // any time up to and including the Declare Attackers step, until an
+        // attacker is actually on the board.
+        if card.definition.cast_only_before_attackers
+            && (!self.attacking.is_empty()
+                || !matches!(
+                    self.step,
+                    crate::TurnStep::Untap
+                        | crate::TurnStep::Upkeep
+                        | crate::TurnStep::Draw
+                        | crate::TurnStep::PreCombatMain
+                        | crate::TurnStep::BeginCombat
+                        | crate::TurnStep::DeclareAttackers
+                ))
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // "You can't cast this spell unless …" (Rakdos, Lord of Riots).
         if let Some(cond) = card.definition.cast_condition.clone() {
             let ctx = crate::game::effects::EffectContext::for_trigger(card.id, p, None, 0);

@@ -247,10 +247,13 @@ impl Bot for RandomBot {
         let is_active = state.active_player_idx == seat;
 
         match state.step {
-            TurnStep::DeclareBlockers if !is_active => {
+            TurnStep::DeclareBlockers if state.may_declare_blocks(seat) => {
                 if !self.blocks_declared && !state.attacking().is_empty() {
                     self.blocks_declared = true;
-                    Some(GameAction::DeclareBlockers(pick_blocks(state, seat)))
+                    // Master Warcraft on our own turn: we're choosing the
+                    // *defender's* blocks, so decline them all.
+                    let blocks = if is_active { Vec::new() } else { pick_blocks(state, seat) };
+                    Some(GameAction::DeclareBlockers(blocks))
                 } else if state.blockers_declared() && state.stack.is_empty() {
                     // Post-block priority: a held pump trick that flips a
                     // fight one of our blockers is losing.
@@ -266,7 +269,17 @@ impl Bot for RandomBot {
             {
                 Some(pick_combat_trick(state, seat).unwrap_or(GameAction::PassPriority))
             }
-            TurnStep::DeclareAttackers if is_active => {
+            // Master Warcraft on an opponent's turn: we choose *their*
+            // attackers, so declare only the creatures that must attack.
+            TurnStep::DeclareAttackers if !is_active && state.attack_declarer() == seat => {
+                if !self.attackers_declared {
+                    self.attackers_declared = true;
+                    Some(GameAction::DeclareAttackers(forced_attacks(state)))
+                } else {
+                    Some(GameAction::PassPriority)
+                }
+            }
+            TurnStep::DeclareAttackers if is_active && state.attack_declarer() == seat => {
                 if !self.attackers_declared {
                     self.attackers_declared = true;
                     // Pick the attack target: prefer an opposing monarch (CR
@@ -704,6 +717,46 @@ impl Bot for RandomBot {
             ),
         }
     }
+}
+
+/// The minimum legal attack declaration for the active player: only the
+/// creatures that "attack each combat if able" (CR 508.1d — `MustAttack` or
+/// goaded). Master Warcraft's outside chooser declares this and nothing else.
+fn forced_attacks(state: &GameState) -> Vec<Attack> {
+    use crate::card::Keyword;
+    let active = state.active_player_idx;
+    let computed = state.compute_battlefield();
+    let mut out = Vec::new();
+    for c in state.battlefield.iter().filter(|c| c.controller == active) {
+        let kws = computed
+            .iter()
+            .find(|p| p.id == c.id)
+            .map(|p| p.keywords.as_slice())
+            .unwrap_or(&[]);
+        if !kws.contains(&Keyword::MustAttack) && c.goaded_by.is_empty() {
+            continue;
+        }
+        let able = c.definition.is_creature()
+            && !c.tapped
+            && (!kws.contains(&Keyword::Defender) || state.ignores_defender_for_attack(c))
+            && !kws.contains(&Keyword::CantAttack)
+            && (!c.summoning_sick || kws.contains(&Keyword::Haste));
+        if !able {
+            continue;
+        }
+        let opponents = || {
+            (0..state.players.len())
+                .filter(|&q| !state.same_team(active, q) && state.players[q].is_alive())
+        };
+        let Some(target) = opponents()
+            .find(|q| !c.goaded_by.contains(q))
+            .or_else(|| opponents().next())
+        else {
+            continue;
+        };
+        out.push(Attack { attacker: c.id, target: AttackTarget::Player(target) });
+    }
+    out
 }
 
 /// The combat-damage value an attacker on the battlefield actually assigns:
