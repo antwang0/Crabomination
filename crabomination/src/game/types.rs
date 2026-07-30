@@ -1364,6 +1364,11 @@ pub enum PendingEffectState {
     /// payload — Nykthos, Shrine to Nyx. The player picks a color, then the
     /// engine adds mana of that color equal to their devotion to it.
     DevotionColorPending { player: usize },
+    /// Suspended on a `ChooseColor` for `Effect::PreventAllDamageFromChosen
+    /// ColorThisTurn` (Avacyn, Guardian Angel). The already-resolved
+    /// prevention recipients are carried across the suspend; the apply step
+    /// pushes one shield per recipient scoped to the chosen source color.
+    PreventFromChosenColorPending { targets: Vec<PreventionTarget> },
     /// Suspended on a `DiscardChosen` decision (Inquisition of Kozilek,
     /// Thoughtseize). The caster picks cards from `target_player`'s hand;
     /// the apply step removes them and graveyards them.

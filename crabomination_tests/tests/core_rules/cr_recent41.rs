@@ -216,3 +216,33 @@ fn cr_615_7_prevention_with_counters_beats_the_sba_sweep() {
     assert!(g.battlefield_find(bear).is_some(), "all 3 prevented");
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
 }
+
+/// CR 615.7 — Avacyn's chosen source color is a real prompt for a UI seat
+/// (it used to be auto-picked off the resolving decider).
+#[test]
+fn cr_615_7_chosen_color_prevention_prompts_a_ui_seat() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    let avacyn = g.add_card_to_battlefield(0, catalog::avacyn_guardian_angel());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: avacyn, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate the creature-prevention half");
+    drain_stack(&mut g);
+    let pending = g.pending_decision.as_ref().expect("a ChooseColor prompt is raised");
+    assert!(matches!(pending.decision, Decision::ChooseColor { .. }));
+    assert!(g.prevention_shields.is_empty(), "nothing lands until the color is picked");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Color(Color::Red)))
+        .expect("pick red");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.prevention_shields.iter().filter(|s| s.source_color == Some(Color::Red)).count(),
+        1,
+        "the shield lands scoped to the chosen color",
+    );
+}

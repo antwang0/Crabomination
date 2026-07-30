@@ -12962,6 +12962,19 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::PreventFromChosenColorPending { targets } => {
+                let DecisionAnswer::Color(c) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                for s in targets.clone() {
+                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                        target: s,
+                        source_color: Some(*c),
+                        ..Default::default()
+                    });
+                }
+                Ok(vec![])
+            }
             PendingEffectState::DevotionColorPending { player } => {
                 let DecisionAnswer::Color(c) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

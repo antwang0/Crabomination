@@ -18526,18 +18526,30 @@ impl GameState {
 
             Effect::PreventAllDamageFromChosenColorThisTurn { target } => {
                 // CR 615 — Avacyn: a fog scoped to one recipient and one
-                // chosen source color. The color is picked synchronously off
-                // `self.decider` (no separate UI prompt today).
+                // chosen source color. A UI seat gets a real ChooseColor
+                // prompt; bots answer off `self.decider`.
                 use crate::decision::{Decision, DecisionAnswer};
                 let legal =
                     vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
                 let decision =
                     Decision::ChooseColor { source: ctx.source.unwrap_or(CardId(0)), legal };
+                let recipients = self.prevention_targets(target, ctx);
+                if recipients.is_empty() {
+                    return Ok(());
+                }
+                if self.players[ctx.controller].wants_ui {
+                    self.suspend_signal = Some((
+                        decision,
+                        PendingEffectState::PreventFromChosenColorPending { targets: recipients },
+                        Effect::Noop,
+                    ));
+                    return Ok(());
+                }
                 let color = match self.decider.decide(&decision) {
                     DecisionAnswer::Color(c) => c,
                     _ => Color::Black,
                 };
-                for s in self.prevention_targets(target, ctx) {
+                for s in recipients {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
                         source_color: Some(color),

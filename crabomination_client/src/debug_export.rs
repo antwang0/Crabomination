@@ -167,6 +167,8 @@ mod tests {
             extra_phase: false,
             permanents_to_graveyard_this_turn: 0,
             players: vec![PlayerView {
+                prevention_remaining: None,
+                prevention_source_colors: Vec::new(),
                 seat: 0,
                 name: "Alice".into(),
                 life: 20,

@@ -451,7 +451,7 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.doomed_next_damage {
         lines.push(String::from("(doomed: next damage destroys this instead)"));
     } else if p.has_prevention_shield {
-        lines.push(String::from("(warded: damage prevented this turn)"));
+        lines.push(format!("(warded: {})", prevention_summary(p.prevention_remaining, &p.prevention_source_colors)));
     }
     if p.finality_counter_count > 0 || p.has_finality_counters {
         lines.push(String::from("(finality: exiles instead of going to graveyard)"));
@@ -675,6 +675,28 @@ pub(crate) fn companion_restriction_text(rule: &crabomination::card::CompanionRu
 /// Short reminder text for the evergreen keywords. `None` for keywords
 /// whose name is self-explanatory or that carry their own cost label
 /// (Ward, Cycling, Flashback, …), so the reminder block stays compact.
+
+/// Render a CR 615 shield's remaining points and source restriction as the
+/// tooltip's parenthetical: "all damage prevented this turn", "prevents the
+/// next 3 damage", plus " from red sources" when the shield is color-scoped.
+pub(crate) fn prevention_summary(
+    remaining: Option<u32>,
+    colors: &[crabomination::mana::Color],
+) -> String {
+    let mut out = match remaining {
+        None => "all damage prevented this turn".to_string(),
+        Some(0) => "damage prevented this turn".to_string(),
+        Some(1) => "prevents the next 1 damage".to_string(),
+        Some(n) => format!("prevents the next {n} damage"),
+    };
+    if !colors.is_empty() {
+        let names: Vec<String> =
+            colors.iter().map(|c| format!("{c:?}").to_lowercase()).collect();
+        out.push_str(&format!(" from {} sources", names.join("/")));
+    }
+    out
+}
+
 pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
     use crabomination::card::Keyword as K;
     Some(match kw {
@@ -722,6 +744,8 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Exert => "You may exert it as it attacks — an exerted creature won't untap during your next untap step.",
         K::Phasing => "Phases out (and back in) during its controller's untap step; while phased out it's treated as though it doesn't exist.",
         K::Toxic(_) => "Players it deals combat damage to also get that many poison counters.",
+        K::Modular(_) => "Enters with that many +1/+1 counters; when it dies, you may move them to target artifact creature.",
+        K::Sunburst => "Enters with a counter for each color of mana spent to cast it.",
         K::Annihilator(_) => "Whenever it attacks, the defending player sacrifices that many permanents.",
         K::Firebending(_) | K::FirebendingPower | K::FirebendingCreaturesYouControl => "Whenever it attacks, add that much {R}; the mana lasts until end of combat.",
         K::Convoke => "You may tap untapped creatures to help pay this spell's cost.",
@@ -1315,7 +1339,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_tooltip_body, companion_restriction_text, humanize_keyword_debug, keyword_label, keyword_reminder, legend_rule_at_risk};
+    use super::{build_tooltip_body, companion_restriction_text, humanize_keyword_debug, keyword_label, keyword_reminder, legend_rule_at_risk, prevention_summary};
     use crabomination::card::{CardId, CardType, CounterType, Keyword};
     use crabomination::net::PermanentView;
 
@@ -1335,6 +1359,8 @@ mod tests {
 
     fn make_permanent_view(damage: u32, toughness: i32) -> PermanentView {
         PermanentView {
+            prevention_remaining: None,
+            prevention_source_colors: Vec::new(),
             id: CardId(0),
             name: "Grizzly Bears".into(),
             controller: 0,
@@ -1912,5 +1938,30 @@ mod tests {
         let mut e = b.clone();
         e.controller = 1;
         assert!(!legend_rule_at_risk(&[a.clone(), e], &a));
+    }
+
+    /// A CR 615 shield reads as its remaining points and (when scoped) its
+    /// source colors, not a bare "warded" badge.
+    #[test]
+    fn prevention_summary_reports_points_and_colors() {
+        use crabomination::mana::Color;
+        assert_eq!(prevention_summary(None, &[]), "all damage prevented this turn");
+        assert_eq!(prevention_summary(Some(3), &[]), "prevents the next 3 damage");
+        assert_eq!(prevention_summary(Some(1), &[]), "prevents the next 1 damage");
+        assert_eq!(
+            prevention_summary(None, &[Color::Red]),
+            "all damage prevented this turn from red sources",
+        );
+        assert_eq!(
+            prevention_summary(Some(2), &[Color::White, Color::Blue]),
+            "prevents the next 2 damage from white/blue sources",
+        );
+    }
+
+    /// The two Darksteel/Fifth Dawn keywords carry reminder text.
+    #[test]
+    fn modular_and_sunburst_have_reminders() {
+        assert!(keyword_reminder(&Keyword::Modular(3)).unwrap().contains("+1/+1 counters"));
+        assert!(keyword_reminder(&Keyword::Sunburst).unwrap().contains("color of mana spent"));
     }
 }

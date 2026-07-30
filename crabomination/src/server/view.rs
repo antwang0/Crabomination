@@ -528,6 +528,8 @@ fn project_player(
     let has_prevention_shield = prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Player(player_seat));
+    let (prevention_remaining, prevention_source_colors) =
+        summarize_prevention(state, PreventionTarget::Player(player_seat));
     let damage_fully_prevented = state.all_damage_to_player_prevented(player_seat);
     // Coven — three or more controlled creatures with different (computed) powers.
     let coven_active = {
@@ -711,6 +713,8 @@ fn project_player(
             })
             .collect(),
         has_prevention_shield,
+        prevention_remaining,
+        prevention_source_colors,
         damage_fully_prevented,
         devotion,
         is_monarch,
@@ -1113,6 +1117,31 @@ fn crew_saddle_power_bonus_in(cid: CardId, battlefield: &[CardInstance]) -> i32 
     bonus
 }
 
+
+/// CR 615.7 — summarize the *protective* shields aimed at `who`: how much
+/// damage they still soak (`None` when any of them is a blanket "prevent all
+/// damage this turn"; `Some(0)` when there are none) and which source colors
+/// they're restricted to.
+fn summarize_prevention(
+    state: &crate::game::GameState,
+    who: crate::game::types::PreventionTarget,
+) -> (Option<u32>, Vec<crate::mana::Color>) {
+    let mut remaining = Some(0u32);
+    let mut colors: Vec<crate::mana::Color> = Vec::new();
+    for s in state.prevention_shields.iter().filter(|s| s.target == who && !s.destroy) {
+        match s.remaining {
+            Some(n) => remaining = remaining.map(|acc| acc.saturating_add(n)),
+            None => remaining = None,
+        }
+        if let Some(c) = s.source_color
+            && !colors.contains(&c)
+        {
+            colors.push(c);
+        }
+    }
+    (remaining, colors)
+}
+
 fn project_permanent(
     card: &CardInstance,
     computed: &[crate::game::layers::ComputedPermanent],
@@ -1128,6 +1157,8 @@ fn project_permanent(
         .prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Permanent(card.id) && !s.destroy);
+    let (prevention_remaining, prevention_source_colors) =
+        summarize_prevention(state, PreventionTarget::Permanent(card.id));
     let doomed_next_damage = state
         .prevention_shields
         .iter()
@@ -1192,6 +1223,8 @@ fn project_permanent(
         dies_to_exile: card.definition.dies_to_exile,
         has_shield_counters: card.counter_count(crate::card::CounterType::Shield) > 0,
         has_prevention_shield,
+        prevention_remaining,
+        prevention_source_colors,
         doomed_next_damage,
         goaded: !card.goaded_by.is_empty(),
         monstrous: card.monstrous,
@@ -2505,7 +2538,35 @@ mod tests {
         let doomed_v = v.battlefield.iter().find(|p| p.id == doomed).unwrap();
         assert!(doomed_v.doomed_next_damage, "destroy shield reads as doomed");
         assert!(!doomed_v.has_prevention_shield, "a destroy shield is not protection");
+        assert_eq!(bear_v.prevention_remaining, Some(2), "the next-2 shield's points");
+        assert_eq!(v.players[0].prevention_remaining, None, "a blanket player fog");
         assert!(v.damage_cant_be_prevented_this_turn);
+    }
+
+    /// A color-scoped shield (Avacyn) surfaces its restriction, and stacked
+    /// next-N shields sum.
+    #[test]
+    fn prevention_detail_reports_points_and_source_colors() {
+        use crate::game::types::{PreventionShield, PreventionTarget};
+        let mut state = two_player_game();
+        let bear = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for n in [2, 3] {
+            state.prevention_shields.push(PreventionShield {
+                target: PreventionTarget::Permanent(bear),
+                remaining: Some(n),
+                ..Default::default()
+            });
+        }
+        state.prevention_shields.push(PreventionShield {
+            target: PreventionTarget::Player(0),
+            source_color: Some(crate::mana::Color::Red),
+            ..Default::default()
+        });
+        let v = project(&state, 0);
+        let bear_v = v.battlefield.iter().find(|p| p.id == bear).unwrap();
+        assert_eq!(bear_v.prevention_remaining, Some(5), "stacked shields sum");
+        assert!(bear_v.prevention_source_colors.is_empty());
+        assert_eq!(v.players[0].prevention_source_colors, vec![crate::mana::Color::Red]);
     }
 
     #[test]

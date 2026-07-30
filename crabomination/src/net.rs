@@ -728,6 +728,12 @@ pub struct PlayerView {
     /// player. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub has_prevention_shield: bool,
+    /// The player-side sibling of `PermanentView::prevention_remaining`.
+    #[serde(default)]
+    pub prevention_remaining: Option<u32>,
+    /// The player-side sibling of `PermanentView::prevention_source_colors`.
+    #[serde(default)]
+    pub prevention_source_colors: Vec<crate::mana::Color>,
     /// CR 615 — true when a blanket "prevent all damage that would be dealt to
     /// you" static (Glacial Chasm) shields this player from *all* damage this
     /// turn. Distinct from `has_prevention_shield` (a partial / next-N shield).
@@ -1377,6 +1383,17 @@ pub struct PermanentView {
     /// Cultist "destroy on next damage" shield — see `doomed_next_damage`.
     #[serde(default)]
     pub has_prevention_shield: bool,
+    /// How much damage the protective shields still soak (CR 615.7): the sum
+    /// of their remaining points, or `None` when any of them is a blanket
+    /// "prevent all damage this turn". Only meaningful while
+    /// `has_prevention_shield`. Lets a UI print "prevents 3" instead of a
+    /// bare shield badge.
+    #[serde(default)]
+    pub prevention_remaining: Option<u32>,
+    /// Source colors the shields are restricted to (CR 615.7 — Avacyn's
+    /// chosen color). Empty when the shields soak any source.
+    #[serde(default)]
+    pub prevention_source_colors: Vec<crate::mana::Color>,
     /// True when a Kill-Suit Cultist-style shield will *destroy* this
     /// permanent the next time damage would be dealt to it (the damage is
     /// prevented but the creature dies). A danger badge, not protection.
