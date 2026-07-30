@@ -79,17 +79,11 @@ gaps. Follow-ups that came out of it:
 
 ## Noticed this run (modern_decks — Kamigawa CHK gap wave)
 
-`sets::chk2` closed 71 CHK gaps; `set_gaps.py chk` is at 6. Follow-ups:
+`sets::chk2` closed 71 CHK gaps and `sets::chk3` closed the last 6 — CHK is
+complete. Follow-ups:
 
-- **Still-open CHK cards**, each blocked on real machinery: Hisoka's Guard
-  (wants a "you may choose not to untap this" keyword plus a grant that lasts
-  *while the source remains tapped* — the keyword twin of
-  `GainControlWhileSourceTapped`), Mindblaze (name a card *and* a number, then
-  count a revealed library), Moonring Mirror (a hand↔exile swap keyed on
-  cards exiled with the source), Reweave (reveal until a permanent card
-  sharing a card type with the sacrificed one), Struggle for Sanity
-  (alternating exile from a revealed hand), Swirl the Mists (a global
-  colour-word text rewrite).
+- ✅ ~~**Still-open CHK cards**~~ — `set_gaps.py chk` is at zero
+  (`sets::chk3`, tests `classic_sets/chk3`).
 - **Hankyu's removal is a resolution step, not a cost.** The printed line is
   "{T}, Remove all aim counters from Hankyu:"; the catalog does the removal at
   the head of the resolution so the damage can read the count. A real
@@ -125,6 +119,36 @@ gaps. Follow-ups that came out of it:
   wants a card-by-card read rather than another mechanical sweep. Run
   `python3 scripts/audit_catalog_stats.py <set>` for the detail.
 
+## Noticed this run (modern_decks — CHK closure + Ravnica block)
+
+- **The prepare-spell copy isn't materialized in exile.** CR 722.3c says the
+  copy lives in exile while the permanent stays prepared;
+  `GameAction::CastPrepareSpell` mints it at cast time instead. Nothing that
+  looks at exile can see or interact with it (`cr_recent45::cr_722_*`).
+- **`Effect::RevealLibraryNamedCountPunish` doesn't show the library.**
+  Mindblaze's "target player reveals their library" is resolved by the engine's
+  own count; there's no reveal state for a UI seat to look at.
+- **`Effect::AlternatingExileFromHand` never suspends.** Struggle for Sanity
+  drives both sides through the synchronous decider, so a UI seat doesn't get
+  its own picks.
+- **`Effect::ChangeTargetOfAbility` handles one target slot.** CR 115.7c
+  ("change any targets") and multi-slot abilities are out of scope; the
+  effect bails unless the ability has exactly one target.
+- **`Effect::WarpWorld` deploys in printed name order, not player choice.**
+  The two waves are correct (artifact/creature/land, then enchantment) but a
+  player never chooses the order within a wave, and Auras revealed this way
+  have no attach step.
+- **`StaticEffect::AllColorWordsBecomeChosen` only rewrites keywords.** Swirl
+  the Mists reaches `Keyword::Protection(color)` through the layer-3
+  `ReplaceColorWord` modification; colour words inside *ability text*
+  (`StaticEffect`/`Effect` colour parameters) are untouched.
+- **`Effect::LookAtHandCastFree` auto-picks.** Mindleech Mass takes the
+  priciest nonland card rather than prompting; the look is recorded in
+  `hands_revealed_to` so a UI seat can at least see the hand.
+- **`granted_replicate_cost` doesn't stack with printed replicate.** A card
+  that already has `Keyword::Replicate` keeps its printed cost under Djinn
+  Illuminatus (correct), but two Djinns don't grant two instances.
+
 ## Noticed this run (modern_decks — Ravnica-block gap sweep)
 
 - **Divided-damage abilities and the UI cursor.** `Effect::DealDamageDivided`
@@ -157,22 +181,15 @@ gaps. Follow-ups that came out of it:
 - **Tunnel Vision / the NameCard family auto-pick the densest name.** A
   `wants_ui` caster should be prompted for the name (the same residual as
   Petrified Hamlet's `NameCard`).
-- **Remaining Ravnica-block gap cards**, each blocked on real machinery:
-  Aetherplasm (put a creature from hand onto the battlefield *blocking*),
-  Djinn Illuminatus (a static granting replicate to your I/S spells),
-  Ink-Treader Nephilim (copy-for-each-other-legal-target), Mimeofacture
-  (search an opponent's library by a target permanent's name), Azorius
-  Aethermage (needs a "a permanent is returned to your hand" event),
-  Bloodbond March, Bottled Cloister (return-cards-exiled-with-this),
-  Breath of Fury, Chorus of the Conclave (a "pay any amount of mana as an
-  additional cost" static), Circu, Cloudstone Curio (a shares-a-permanent-type
-  filter), Crown of Convergence, Dimir Doppelganger, Dimir Machinations
-  (Transmute itself already ships — `shortcut::transmute`), Eye of the Storm,
-  Flickerform, Gaze of the Gorgon, Master Warcraft, Mindleech Mass,
-  Reroute (retarget an activated ability), Sins of the Past, Sisters of Stone
-  Death, Sunforger, Warp World, Experiment Kraj, and the DIS split cards.
-  `scripts/set_gaps.py {rav,gpt,dis}` is the live list — after this run
-  RAV is at 20 gaps (was 39), GPT at 4 (was 14), DIS at 5 (was 8).
+- **GPT and DIS are complete; RAV is at 5.** Remaining, each blocked on real
+  machinery: **Breath of Fury** (sac the enchanted creature, re-attach the Aura,
+  untap the team, and append a combat phase), **Eye of the Storm** (exile every
+  I/S cast, then re-cast free copies of the whole pile), **Flickerform** (blink
+  the host *and* its Auras, re-attaching them at the next end step),
+  **Master Warcraft** (one player chooses another's attackers and blocks —
+  needs the declaration steps to accept an outside chooser), **Sunforger**
+  (an unattach-as-cost activation plus search-and-cast-free).
+  `scripts/set_gaps.py rav` is the live list.
 
 ## Tier 4 — remaining SOS/SOA audit simplifications (2026-07)
 
@@ -4895,6 +4912,8 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   (`bot_soaks_the_swing_with_an_idle_wall`).
 - ⏳ **CR 121.8 / 121.9** — mid-cast face-down draw and reveal-on-draw, the two
   remaining CR 121 clauses.
+- ⏳ **CR 115.7c** — "change any targets" (any subset). `Effect::
+  ChangeTargetOfAbility` ships 115.7a/b for a single-target ability only.
 - ⏳ **Sector designations are auto-assigned.** `GameState::assign_sectors`
   (CR 704.5u) spreads a player's creatures round-robin instead of asking; a
   `wants_ui` seat should get the real choice. `Effect::ChooseSector` likewise

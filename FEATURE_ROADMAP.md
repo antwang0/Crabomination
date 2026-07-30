@@ -63,6 +63,30 @@ exercising each) was elided in a compaction pass; recover it from
   Tenza, Hankyu. New: `StaticEffect::MaxOneArtifactUntap` (CR 502.3 — Imi
   Statue) and `SpendRestriction::LegendarySpell` + `SpellKind.legendary`
   (Untaidake). Tests in `classic_sets/chk::gaps1`.
+- **Champions of Kamigawa complete** (`set_gaps.py chk` at zero — `sets::chk3`
+  closed the last six). New: `Keyword::MayChooseNotToUntap` (CR 502.3, asked in
+  `do_untap`), `Effect::GrantKeywordWhileSourceTapped` +
+  `EffectDuration::WhileSourceTapped` (CR 611.2c),
+  `Effect::{RevealLibraryNamedCountPunish, ExileHandThenReclaimLinked,
+  SacrificeThenRevealUntilSharedType, AlternatingExileFromHand}`, and
+  `StaticEffect::AllColorWordsBecomeChosen` (CR 612, four layer-3
+  `ReplaceColorWord` rewrites over every permanent). Tests in
+  `classic_sets/chk3`.
+- **Ravnica block: GPT and DIS complete, RAV at 5** (`sets::{rav::gaps21,
+  rav::gaps22, gpt::gaps9, dis::gaps9}`, 24 cards). New:
+  `Effect::{ExileHandLinked, ReturnLinkedExilesToHand, LookExileAnyNumberRestBack,
+  ExileFromGraveyardBecomeCopy, ReturnSameNameFromAllGraveyards, PutTopOnBottom,
+  MayReturnSharingPermanentType, LookAtHandCastFree, ChangeTargetOfAbility
+  (CR 115.7a/b), WarpWorld, ReturnSelfDeployBlocker,
+  CopySpellForEachOtherLegalCreature, SearchOpponentLibraryForSameName,
+  WishToLibrary, TokenUnlessOpponentLetsYouDraw}`;
+  `StaticEffect::{AnthemForColorSharedWithLibraryTop,
+  OpponentsCantCastNamesExiledWithSource, CreatureSpellsMayPayExtraForCounters,
+  YourISSpellsHaveReplicate, HasActivatedAbilitiesOfCounteredCreatures}`;
+  `SelectionRequirement::{InCombatWithSource, SpellTargetsOnlySource}`;
+  `EventKind`/`GameEvent::PermanentReturnedToHand`. Correctness: CR 103.7a
+  (`skip_first_draw` was consumed by whichever draw step came first). Tests in
+  `classic_sets/{rav,gpt,dis}`, `core_rules/cr_recent45`.
 - **Darksteel (DST) complete** (`set_gaps.py dst` at zero). The primitives that
   closure added: `GameEvent::DamageDealt.from_card` +
   `EventScope::YourOtherSourceDamagedOpponent` (the printed "other than this
