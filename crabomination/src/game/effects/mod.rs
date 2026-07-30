@@ -5334,6 +5334,16 @@ impl GameState {
 
             Effect::ChooseStepToSkipThisTurn { who } => self.choose_step_to_skip(who, ctx),
 
+            // CR 723.1 — "You control target player during that player's next
+            // turn." A later entry for the same seat overwrites (723.1a).
+            Effect::ControlPlayerNextTurn { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    self.pending_player_control.retain(|(c, _)| *c != p);
+                    self.pending_player_control.push((p, ctx.controller));
+                }
+                Ok(())
+            }
+
             Effect::PutCardFromHandOnTopOfLibrary { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let players: Vec<usize> = self.resolve_selector(who, ctx).into_iter()

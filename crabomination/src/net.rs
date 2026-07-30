@@ -687,6 +687,10 @@ pub struct PlayerView {
     /// combat skipped." Defaults to 0.
     #[serde(default)]
     pub skip_next_combat: u32,
+    /// CR 723.1 — the seat currently making this player's decisions
+    /// (Mindslaver), or `None` when they're playing themselves.
+    #[serde(default)]
+    pub controlled_by: Option<usize>,
     /// CR 402.2 — this player's maximum hand size: `Some(n)` (normally
     /// `Some(7)`) or `None` for "no maximum hand size" effects (Wisdom of
     /// Ages, Reliquary Tower). Surfaced so UIs can show the right limit and

@@ -321,6 +321,9 @@ impl GameState {
                     } => !(player == active && turn > installed_turn),
                     _ => true,
                 });
+                // CR 723.1 — a pending player-control effect applies to the
+                // next turn its target actually takes, and expires here.
+                self.apply_pending_player_control(self.active_player_idx);
                 events.push(GameEvent::TurnStarted {
                     player: self.active_player_idx,
                     turn: self.turn_number,

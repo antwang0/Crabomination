@@ -1051,6 +1051,16 @@ pub struct GameState {
     /// (Fatespinner). `(seat, step)`; cleared at cleanup.
     #[serde(default)]
     pub skipped_steps_this_turn: Vec<(usize, TurnStep)>,
+    /// CR 723.1 — `(controlled, controller)` pairs waiting for `controlled` to
+    /// actually take a turn (Mindslaver). A later entry for the same seat
+    /// overwrites the earlier one (CR 723.1a).
+    #[serde(default)]
+    pub pending_player_control: Vec<(usize, usize)>,
+    /// CR 723.1 — who is making `seat`'s decisions this turn, if anyone.
+    /// Indexed by seat; set as that player's turn begins and cleared when the
+    /// next turn begins.
+    #[serde(default)]
+    pub controlled_by: Vec<Option<usize>>,
     /// Registered replacement effects (Phase H — Commander prerequisite).
     /// Walked by zone-change paths (`place_card_in_dest`,
     /// `remove_from_battlefield_to_*`) at placement time; a matching
@@ -1485,6 +1495,8 @@ impl Clone for GameState {
             no_search_this_turn: self.no_search_this_turn,
             hands_revealed_to: self.hands_revealed_to.clone(),
             skipped_steps_this_turn: self.skipped_steps_this_turn.clone(),
+            pending_player_control: self.pending_player_control.clone(),
+            controlled_by: self.controlled_by.clone(),
             replacement_effects: self.replacement_effects.clone(),
             next_replacement_id: self.next_replacement_id,
             commander_cast_count: self.commander_cast_count.clone(),
@@ -1691,6 +1703,8 @@ impl GameState {
             no_search_this_turn: false,
             hands_revealed_to: Vec::new(),
             skipped_steps_this_turn: Vec::new(),
+            pending_player_control: Vec::new(),
+            controlled_by: Vec::new(),
             replacement_effects: Vec::new(),
             next_replacement_id: 1,
             commander_cast_count: HashMap::new(),
@@ -3956,6 +3970,33 @@ impl GameState {
     /// CR 614.10 — true when a battlefield static makes `player` skip
     /// `step` (Eon Hub's "players skip their upkeep steps", Stasis-style
     /// untap skipping).
+    /// CR 723 — the seat whose input drives `seat` right now: `seat` itself
+    /// unless another player is controlling them this turn (Mindslaver).
+    pub fn acting_seat_for(&self, seat: usize) -> usize {
+        self.controlled_by.get(seat).copied().flatten().unwrap_or(seat)
+    }
+
+    /// CR 723.1 — hand a pending player-control entry to the seat whose turn is
+    /// starting, and drop any control that expired with the previous turn.
+    /// Called from the turn-begin path.
+    pub fn apply_pending_player_control(&mut self, seat: usize) {
+        self.controlled_by.resize(self.players.len(), None);
+        for slot in self.controlled_by.iter_mut() {
+            *slot = None;
+        }
+        // CR 723.1a — the most recently created effect wins.
+        if let Some(pos) = self.pending_player_control.iter().rposition(|(c, _)| *c == seat) {
+            let (_, controller) = self.pending_player_control.remove(pos);
+            self.pending_player_control.retain(|(c, _)| *c != seat);
+            self.controlled_by[seat] = Some(controller);
+            // CR 723.4 — the controller sees everything the controlled player
+            // can see, starting with their hand.
+            if !self.hands_revealed_to.contains(&(controller, seat)) {
+                self.hands_revealed_to.push((controller, seat));
+            }
+        }
+    }
+
     pub(crate) fn step_skipped_for(&self, player: usize, step: TurnStep) -> bool {
         use crate::effect::StaticEffect;
         // CR 500.8 — a turn-scoped skip chosen this turn (Fatespinner).

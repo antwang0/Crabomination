@@ -1177,7 +1177,9 @@ fn handle_action(
         return true;
     }
 
-    let expected = expected_actor(state, &action);
+    // CR 723.5 — while a player is controlled, their controller makes every
+    // choice for them, so the controller's connection may send the action.
+    let expected = state.acting_seat_for(expected_actor(state, &action));
     if seat != expected {
         let err = format!("seat {seat} may not act now (expected seat {expected})");
         report_error(seat, &err, seat_tx);

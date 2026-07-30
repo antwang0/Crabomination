@@ -138,3 +138,18 @@ pub fn quicksilver_elemental() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mindslaver — {4}, {T}, sacrifice: take the wheel on a player's next turn.
+pub fn mindslaver() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::ControlPlayerNextTurn { who: PlayerRef::Target(0) },
+            ..Default::default()
+        }],
+        ..artifact("Mindslaver", cost(&[generic(6)]))
+    }
+}

@@ -945,6 +945,7 @@ impl Effect {
             Effect::LockTargetNameUntilYourNextTurn { what } => sel_has_target(what),
             Effect::NameOpponentCastLock => false,
             Effect::WinGame { who } | Effect::LoseGame { who } => player_has_target(who),
+            Effect::ControlPlayerNextTurn { who } => player_has_target(who),
             Effect::SkipTurns { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

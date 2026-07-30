@@ -6283,6 +6283,10 @@ pub enum Effect {
     /// end of turn" (Quicksilver Elemental) — the grants are stamped onto the
     /// source's `granted_activated_eot`.
     GainAllActivatedAbilitiesOf { what: Selector, duration: Duration },
+    /// CR 723.1 — "You control target player during that player's next turn."
+    /// Registers a pending control entry consumed when that player actually
+    /// takes a turn (Mindslaver).
+    ControlPlayerNextTurn { who: PlayerRef },
     /// CR 500.8 — "That player skips each instance of the chosen step or phase
     /// this turn." The affected player picks draw step / main phase / combat
     /// phase (`Decision::ChooseModes`); the pick is turn-scoped. Fatespinner.

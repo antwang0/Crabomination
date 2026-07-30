@@ -660,6 +660,7 @@ fn project_player(
         spell_cast_lock,
         even_mv_cast_locked,
         skip_next_combat: player.skip_next_combat,
+        controlled_by: state.controlled_by.get(player_seat).copied().flatten(),
         max_hand_size: player.max_hand_size,
         // Command zone is public — every viewer sees every card as
         // `Known`. We reuse `HandCardView` for the card shape since
