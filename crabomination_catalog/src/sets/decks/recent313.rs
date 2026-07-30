@@ -8,9 +8,9 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{
-    Effect, LibraryPosition, PlayerRef, StaticEffect, ZoneDest,
+    Duration, Effect, LibraryPosition, PlayerRef, StaticEffect, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, u, w, Color, ManaCost};
+use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
 
 fn creature(
     name: &'static str,
@@ -355,4 +355,103 @@ pub fn shield_of_kaldra() -> CardDefinition {
         }],
         ..Default::default()
     }
+}
+
+/// "Cast this spell only during combat on your turn."
+fn during_your_combat() -> crate::effect::Predicate {
+    use crate::effect::Predicate as P;
+    use crate::game::types::TurnStep as S;
+    P::All(vec![
+        P::IsTurnOf(PlayerRef::You),
+        P::Any(
+            [
+                S::BeginCombat,
+                S::DeclareAttackers,
+                S::DeclareBlockers,
+                S::FirstStrikeDamage,
+                S::CombatDamage,
+                S::EndCombat,
+            ]
+            .into_iter()
+            .map(P::CurrentStepIs)
+            .collect(),
+        ),
+    ])
+}
+
+/// Shunt — change the target of target spell with a single target.
+pub fn shunt() -> CardDefinition {
+    spell(
+        "Shunt",
+        cost(&[generic(1), r(), r()]),
+        false,
+        Effect::ChangeSpellTarget { what: target_filtered(R::IsSpellOnStack) },
+    )
+}
+
+/// Savage Beating — double strike for the team, or untap and take another
+/// combat phase. Entwine {1}{R}.
+pub fn savage_beating() -> CardDefinition {
+    let mine = R::Creature.and(R::ControlledByYou);
+    CardDefinition {
+        keywords: vec![Keyword::Entwine(cost(&[generic(1), r()]))],
+        cast_condition: Some(during_your_combat()),
+        ..spell(
+            "Savage Beating",
+            cost(&[generic(3), r(), r()]),
+            false,
+            Effect::ChooseMode(vec![
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(mine.clone()),
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Seq(vec![
+                    Effect::Untap { what: Selector::EachPermanent(mine), up_to: None },
+                    Effect::AdditionalCombatPhase { count: Value::ONE },
+                ]),
+            ]),
+        )
+    }
+}
+
+/// Stir the Pride — +2/+2 for the team, or lifelink for the team. Entwine
+/// {1}{W}.
+pub fn stir_the_pride() -> CardDefinition {
+    let mine = R::Creature.and(R::ControlledByYou);
+    CardDefinition {
+        keywords: vec![Keyword::Entwine(cost(&[generic(1), w()]))],
+        ..spell(
+            "Stir the Pride",
+            cost(&[generic(4), w()]),
+            false,
+            Effect::ChooseMode(vec![
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(mine.clone()),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(mine),
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        )
+    }
+}
+
+/// Scrounge — reanimate an artifact card out of an opponent's graveyard under
+/// your control. (You pick the card rather than its owner.)
+pub fn scrounge() -> CardDefinition {
+    spell(
+        "Scrounge",
+        cost(&[generic(2), b()]),
+        true,
+        Effect::Move {
+            what: target_filtered(R::Artifact.and(R::InOpponentGraveyard)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+    )
 }

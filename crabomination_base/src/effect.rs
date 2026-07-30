@@ -4942,6 +4942,12 @@ pub enum Effect {
     // ── Stack interaction ────────────────────────────────────────────────────
     /// Counter target spell (removes from stack; sends to owner's graveyard).
     CounterSpell { what: Selector },
+    /// CR 115.7 — "Change the target of target spell with a single target."
+    /// Re-enumerates the spell's legal targets and lets this effect's
+    /// controller repoint it (the current target is offered first, so an
+    /// auto-decider is a no-op). A spell with zero or several targets is
+    /// left alone. Shunt, Deflection.
+    ChangeSpellTarget { what: Selector },
     /// Test of Talents — "Counter target instant or sorcery spell. Search
     /// its controller's graveyard, hand, and library for any number of
     /// cards with the same name as that spell and exile them. That player

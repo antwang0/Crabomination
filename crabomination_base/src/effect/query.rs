@@ -718,6 +718,7 @@ impl Effect {
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what }
+            | Effect::ChangeSpellTarget { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellIfNameExiledWithSource { what }
             | Effect::CounterSpellExileSameNamed { what }
@@ -2340,6 +2341,7 @@ impl Effect {
                 | Effect::GrantFlashbackThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }
+                | Effect::ChangeSpellTarget { what }
                 | Effect::CounterSpell { what }
                 | Effect::CounterSpellIfNameExiledWithSource { what }
                 | Effect::CounterSpellExileSameNamed { what }

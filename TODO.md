@@ -875,27 +875,28 @@ factory doc comment:
 
 ## Noticed this run (Darksteel/Fifth Dawn completion)
 
-- **Darksteel remainder** (`scripts/set_gaps.py dst` — 15, was ~90). Each
+- **Darksteel remainder** (`scripts/set_gaps.py dst` — 11, was ~90). Each
   wants one primitive:
   - **Death-Mask Duplicant** — imprint-scoped keyword theft (the exiled card's
     evasion keywords bleed onto the Duplicant).
   - **Dismantle** — "if that artifact had counters on it, put that many +1/+1
     *or* charge counters on an artifact you control": needs the destroyed
     permanent's counter total off LKI plus a counter-kind pick.
-  - **Hallow / Shunt** — both target a *spell*: prevent-all-damage-from-a-
-    spell-source, and retarget-a-single-target-spell.
+  - **Hallow** — prevent all damage a target *spell* would deal, and gain that
+    much life; the prevention primitives are all recipient-scoped.
   - **Mycosynth Lattice** — two of three clauses are missing: an
     everything-is-colorless static and a global "spend mana as any color".
   - **Panoptic Mirror / Spellbinder** — imprint an instant/sorcery and cast a
     free copy of it later; `CastWithoutPayingImmediate` has no
     copy-the-exiled-card entry point.
-  - **Savage Beating / Shriveling Rot / Stir the Pride** — Entwine modals whose
-    bodies need an extra-combat-phase grant, a turn-scoped "damage destroys"
-    replacement, and a turn-scoped granted lifelink respectively.
+  - **Shriveling Rot** — an Entwine modal needing a turn-scoped "whenever a
+    creature is dealt damage, destroy it" replacement and a
+    lose-life-equal-to-toughness death watcher.
   - **Pulse of the Dross** — reveal-three-and-an-opponent-picks-one discard.
-  - **Scrounge** — target an artifact card in an *opponent's* graveyard
-    (`SelectionRequirement` has `InYourGraveyard` / `InGraveyard` but no
-    opponent-scoped sibling).
+  - **Turn the Tables** — "all *combat* damage that would be dealt to you this
+    turn"; the only redirect primitive
+    (`Effect::RedirectYourDamageToChosen`) is the broader Gideon's-Sacrifice
+    shape (all damage, you and your permanents).
   - **Synod Artificer** — `{X}, {T}: Tap X target noncreature artifacts`: an
     X-scaled *target count*, which no cast/activate path collects.
   - **Thought Dissector** — reveal-until-artifact with an X cap.

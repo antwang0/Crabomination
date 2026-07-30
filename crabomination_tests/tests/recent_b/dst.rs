@@ -865,3 +865,76 @@ fn shield_of_kaldra_protects_its_siblings() {
     g.battlefield_find_mut(shield).unwrap().attached_to = Some(bear);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));
 }
+
+/// Shunt repoints a single-target spell (CR 115.7).
+#[test]
+fn shunt_repoints_a_single_target_spell() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::coretapper());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(mine)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("they bolt your Bear");
+    let shunt = g.add_card_to_hand(0, catalog::shunt());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Target(Target::Permanent(theirs)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: shunt, target: Some(Target::Permanent(bolt)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast Shunt at the Bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_some(), "your Bear is spared");
+    assert!(g.battlefield_find(theirs).is_none(), "the Bolt lands on their rock");
+}
+
+/// Savage Beating's entwined halves need combat on your turn.
+#[test]
+fn savage_beating_only_casts_during_your_combat() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let beating = g.add_card_to_hand(0, catalog::savage_beating());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: beating, target: None, additional_targets: vec![], mode: Some(0),
+            x_value: None,
+        })
+        .is_err(),
+        "a main phase isn't combat",
+    );
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::CastSpell {
+        card_id: beating, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    })
+    .expect("combat on your turn is fine");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Scrounge steals an artifact out of an opponent's graveyard.
+#[test]
+fn scrounge_reanimates_an_opposing_artifact() {
+    let mut g = main_phase();
+    let buried = g.add_card_to_graveyard(1, catalog::coretapper());
+    let spell = g.add_card_to_hand(0, catalog::scrounge());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(buried)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(buried).map(|c| c.controller), Some(0));
+}

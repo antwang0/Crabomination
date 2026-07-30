@@ -17508,6 +17508,39 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChangeSpellTarget { what } => {
+                // CR 115.7 — repoint a single-target spell. `additional_targets`
+                // non-empty means "several targets", which this can't touch.
+                let Some(spell_id) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                        _ => None,
+                    })
+                else {
+                    return Ok(());
+                };
+                let found = self.stack.iter().enumerate().find_map(|(i, si)| match si {
+                    StackItem::Spell { card, target, additional_targets, .. }
+                        if card.id == spell_id
+                            && target.is_some()
+                            && additional_targets.is_empty() =>
+                    {
+                        Some((i, card.definition.clone(), target.clone()))
+                    }
+                    _ => None,
+                });
+                let Some((idx, def, current)) = found else { return Ok(()) };
+                let chosen = self.repoint_copy_target(&def, ctx.controller, &current);
+                if chosen != current
+                    && let Some(StackItem::Spell { target, .. }) = self.stack.get_mut(idx)
+                {
+                    *target = chosen;
+                }
+                Ok(())
+            }
+
             Effect::CopySpellMayChooseTargets { what, count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
