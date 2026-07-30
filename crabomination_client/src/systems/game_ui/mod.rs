@@ -1552,6 +1552,22 @@ pub fn update_hint(
         apply_hint(&mut t, &mut color, &mut font, msg, theme::ACCENT_GOLD, 13.0);
         return;
     }
+    // Master Warcraft — someone took over this turn's declarations. Say who,
+    // and (when it's the viewer) that the only thing they can submit from here
+    // is the empty declaration: the pickers still only reach their own
+    // creatures.
+    if let Some(chooser) = cv.combat_chooser
+        && matches!(cv.step, TurnStep::DeclareAttackers | TurnStep::DeclareBlockers)
+    {
+        let what = if cv.step == TurnStep::DeclareAttackers { "attackers" } else { "blocks" };
+        let msg = if chooser == your_seat {
+            format!("You choose this turn's {what}. P = declare none.")
+        } else {
+            format!("{} chooses this turn's {what}.", player_name(cv, chooser))
+        };
+        apply_hint(&mut t, &mut color, &mut font, msg, theme::ACCENT_GOLD, 13.0);
+        return;
+    }
     let body = match (cv.active_player == your_seat, cv.step) {
         (true, TurnStep::PreCombatMain) | (true, TurnStep::PostCombatMain) => {
             "Click / Enter to play. Tab,← →: select. F flip · L alt · M ability. P pass.".to_string()

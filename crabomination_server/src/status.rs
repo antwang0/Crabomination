@@ -530,7 +530,60 @@ fn read_request_line(stream: &mut impl Read) -> Vec<u8> {
 
 /// Spawn the status listener thread if `CRAB_STATUS_BIND` is set. Bind
 /// failures are non-fatal (the match server keeps running without telemetry).
+/// How many status connections may be in flight at once. The endpoint used to
+/// serve them strictly one at a time, so a peer that connected and then went
+/// quiet held telemetry hostage for the whole `IO_TIMEOUT`. Each connection now
+/// gets its own short-lived thread, capped here so a connection flood can't
+/// spawn threads without bound; over the cap a peer is turned away immediately
+/// rather than queued behind the stalled ones.
+const MAX_CONCURRENT_STATUS_CONNS: usize = 16;
+
+/// Decrements the in-flight counter on drop, so a panicking handler thread
+/// still frees its slot.
+struct InFlightGuard(&'static std::sync::atomic::AtomicUsize);
+
+impl Drop for InFlightGuard {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
+    }
+}
+
+/// Read one request line off `stream`, route it, and write the response.
+/// Split out of the accept loop so it can run on a per-connection thread.
+fn serve_connection(mut stream: impl Read + Write, started: Instant, slots: &SlotManager) {
+    let buf = read_request_line(&mut stream);
+    // HEAD gets headers only (an HTTP nicety for probes).
+    let mut head_only = false;
+    let (status, content_type, body, extra_headers) = match parse_request_line(&buf) {
+        Some((method, path)) => {
+            head_only = method == "HEAD";
+            route(method, path, started, slots)
+        }
+        None => (
+            "400 Bad Request",
+            "text/plain",
+            "bad request\n".to_string(),
+            "Cache-Control: no-store\r\n",
+        ),
+    };
+    let payload = if head_only { "" } else { &body };
+    let _ = write!(
+        stream,
+        "HTTP/1.0 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n{}Connection: close\r\n\r\n{}",
+        status,
+        content_type,
+        body.len(),
+        extra_headers,
+        payload
+    );
+}
+
+/// Spawn the status listener thread if `CRAB_STATUS_BIND` is set. Bind
+/// failures are non-fatal (the match server keeps running without telemetry).
 pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
+
     let Some(bind) = std::env::var_os("CRAB_STATUS_BIND") else { return };
     let bind = bind.to_string_lossy().into_owned();
     let listener = match TcpListener::bind(&bind) {
@@ -549,31 +602,30 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
             // Bound both directions; a stalled peer just gets dropped.
             let _ = stream.set_read_timeout(Some(IO_TIMEOUT));
             let _ = stream.set_write_timeout(Some(IO_TIMEOUT));
-            let buf = read_request_line(&mut stream);
-            // HEAD gets headers only (an HTTP nicety for probes).
-            let mut head_only = false;
-            let (status, content_type, body, extra_headers) = match parse_request_line(&buf) {
-                Some((method, path)) => {
-                    head_only = method == "HEAD";
-                    route(method, path, started, &slots)
-                }
-                None => (
-                    "400 Bad Request",
-                    "text/plain",
-                    "bad request\n".to_string(),
-                    "Cache-Control: no-store\r\n",
-                ),
-            };
-            let payload = if head_only { "" } else { &body };
-            let _ = write!(
-                stream,
-                "HTTP/1.0 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n{}Connection: close\r\n\r\n{}",
-                status,
-                content_type,
-                body.len(),
-                extra_headers,
-                payload
-            );
+            // Over the concurrency cap: answer immediately on the accept
+            // thread instead of queueing behind whatever is stalled.
+            if IN_FLIGHT.load(Ordering::Acquire) >= MAX_CONCURRENT_STATUS_CONNS {
+                let body = "too many status connections\n";
+                let _ = write!(
+                    stream,
+                    "HTTP/1.0 503 Service Unavailable\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nRetry-After: 1\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                continue;
+            }
+            IN_FLIGHT.fetch_add(1, Ordering::AcqRel);
+            let slots = slots.clone();
+            let spawned = std::thread::Builder::new()
+                .name("crab-status".into())
+                .spawn(move || {
+                    let _guard = InFlightGuard(&IN_FLIGHT);
+                    serve_connection(stream, started, &slots);
+                });
+            if spawned.is_err() {
+                // Thread creation failed (fd/memory pressure) — the guard was
+                // never constructed, so release the slot here.
+                IN_FLIGHT.fetch_sub(1, Ordering::AcqRel);
+            }
         }
     });
 }
@@ -671,6 +723,57 @@ mod tests {
         assert_eq!(route("GET", "/status.json?pretty=1", now, &slots).1, "application/json");
         assert_eq!(route("GET", "/status/", now, &slots).0, "200 OK");
         assert_eq!(route("GET", "/", now, &slots).0, "200 OK", "root still served after slash-trim");
+    }
+
+    /// A duplex `Read + Write` over in-memory buffers, so `serve_connection`
+    /// can be driven without a socket.
+    struct Wire {
+        input: std::io::Cursor<Vec<u8>>,
+        output: Vec<u8>,
+    }
+
+    impl Read for Wire {
+        fn read(&mut self, out: &mut [u8]) -> std::io::Result<usize> {
+            self.input.read(out)
+        }
+    }
+
+    impl Write for Wire {
+        fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+            self.output.write(data)
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn serve(request: &str) -> String {
+        let mut wire = Wire { input: std::io::Cursor::new(request.into()), output: Vec::new() };
+        serve_connection(&mut wire, Instant::now(), &SlotManager::new(10, 5));
+        String::from_utf8_lossy(&wire.output).into_owned()
+    }
+
+    #[test]
+    fn serve_connection_writes_a_full_response() {
+        let res = serve("GET /healthz HTTP/1.0\r\n\r\n");
+        assert!(res.starts_with("HTTP/1.0 200 OK"), "{res}");
+        assert!(res.contains("Content-Length: 3"));
+        assert!(res.ends_with("ok\n"));
+    }
+
+    #[test]
+    fn serve_connection_omits_the_body_for_head() {
+        let res = serve("HEAD /status HTTP/1.0\r\n\r\n");
+        assert!(res.starts_with("HTTP/1.0 200 OK"), "{res}");
+        // The length header still describes the entity (RFC 9110 §9.3.2)…
+        assert!(res.contains("Content-Length: "));
+        // …but nothing follows the header block.
+        assert!(res.ends_with("\r\n\r\n"), "HEAD must not send a body");
+    }
+
+    #[test]
+    fn serve_connection_400s_an_empty_read() {
+        assert!(serve("").starts_with("HTTP/1.0 400 Bad Request"));
     }
 
     #[test]
