@@ -1106,6 +1106,13 @@ fn exquisite_firecraft_deals_four_to_player() {
 #[test]
 fn sulfuric_vortex_deals_damage_at_upkeep() {
     let mut g = two_player_game();
+    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // fixtures that cross a turn boundary.
+    for seat in 0..2 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
     g.add_card_to_battlefield(0, catalog::sulfuric_vortex());
     let life_before = g.players[0].life;
 

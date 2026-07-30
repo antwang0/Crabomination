@@ -339,8 +339,11 @@ impl GameState {
                 return Ok(events);
             }
             TurnStep::Draw => {
-                if self.skip_first_draw {
-                    self.skip_first_draw = false;
+                // CR 103.7a — only the *starting player's first* draw step is
+                // skipped. Consuming the flag unconditionally handed the skip
+                // to whoever reached a draw step first, so a game advanced
+                // past turn 1 (every test fixture) robbed the wrong seat.
+                if std::mem::take(&mut self.skip_first_draw) && self.turn_number == 1 {
                 } else {
                     let p = self.active_player_idx;
                     // CR 504.1 — the turn-based draw-step draw is exempt from

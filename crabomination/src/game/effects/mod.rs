@@ -10910,14 +10910,25 @@ impl GameState {
                     StackItem::Trigger { target: Some(t), .. } => t.clone(),
                     _ => return Ok(()),
                 };
+                // CR 115.7a — the replacement must itself be a legal target
+                // for the ability, so enumerate against the ability's own
+                // effect rather than "anything on the board".
+                let (ability_effect, ability_controller) = match &self.stack[pos] {
+                    StackItem::Trigger { effect, controller, .. } => {
+                        ((**effect).clone(), *controller)
+                    }
+                    _ => return Ok(()),
+                };
                 let legal: Vec<Target> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.definition.is_creature())
-                    .map(|c| Target::Permanent(c.id))
-                    .chain((0..self.players.len()).map(Target::Player))
+                    .enumerate_legal_targets_with_source(
+                        &ability_effect,
+                        ability_controller,
+                        Some(id),
+                    )
+                    .into_iter()
                     .filter(|t| *t != current)
                     .collect();
+                // CR 115.7a — with no other legal target the original stands.
                 if legal.is_empty() {
                     return Ok(());
                 }

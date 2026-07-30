@@ -444,6 +444,13 @@ fn aetherborn_marauder_does_not_trigger_on_opponent_energy() {
 fn lathnu_hellion_survives_upkeep_when_energy_paid() {
     use crabomination::game::TurnStep;
     let mut g = two_player_game();
+    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // fixtures that cross a turn boundary.
+    for seat in 0..2 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
     let h = g.add_card_to_battlefield(0, catalog::lathnu_hellion());
     g.players[0].energy = 2;
     let mut iters = 0;
@@ -464,6 +471,13 @@ fn lathnu_hellion_survives_upkeep_when_energy_paid() {
 fn lathnu_hellion_sacrificed_when_energy_unpaid() {
     use crabomination::game::TurnStep;
     let mut g = two_player_game();
+    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // fixtures that cross a turn boundary.
+    for seat in 0..2 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
     let h = g.add_card_to_battlefield(0, catalog::lathnu_hellion());
     g.players[0].energy = 0;
     let mut iters = 0;

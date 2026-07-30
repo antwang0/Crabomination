@@ -956,6 +956,13 @@ fn surveilling_sprite_dies_draw() {
 fn zephyr_spirit_returns_on_block() {
     use crabomination::game::types::{Attack, AttackTarget, TurnStep};
     let mut g = two_player_game();
+    // CR 103.7a — only turn 1's draw is skipped; stock both libraries so
+    // crossing a turn boundary doesn't deck anyone.
+    for seat in 0..2 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
     // P1 attacks; P0's Zephyr Spirit blocks and returns to hand.
     let spirit = g.add_card_to_battlefield(0, catalog::zephyr_spirit());
     let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -2164,6 +2171,13 @@ fn plague_boiler_pops_at_three_counters() {
     use crabomination::card::CounterType;
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
+    // CR 103.7a — only turn 1's draw is skipped; stock both libraries so
+    // crossing a turn boundary doesn't deck anyone.
+    for seat in 0..2 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
     let boiler = g.add_card_to_battlefield(0, catalog::plague_boiler());
     g.battlefield_find_mut(boiler).unwrap().counters.insert(CounterType::Plague, 2);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -2259,6 +2273,13 @@ fn leashling_bounces_itself_for_a_card() {
 fn instill_furor_sacrifices_a_creature_that_didnt_attack() {
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
+    // CR 103.7a — only turn 1's draw is skipped; stock both libraries so
+    // crossing a turn boundary doesn't deck anyone.
+    for seat in 0..2 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let aura = g.add_card_to_battlefield(0, catalog::instill_furor());
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);

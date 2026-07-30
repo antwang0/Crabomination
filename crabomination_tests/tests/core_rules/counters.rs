@@ -537,6 +537,13 @@ fn cr_728_2_rad_milling_a_land_keeps_the_counter() {
 #[test]
 fn cr_122_1d_stun_counter_replaces_untap() {
     let mut g = two_player_game();
+    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // fixtures that cross a turn boundary.
+    for seat in 0..2 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     {
         let c = g.battlefield_find_mut(bear).unwrap();

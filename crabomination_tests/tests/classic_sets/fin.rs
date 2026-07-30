@@ -5420,6 +5420,13 @@ fn choco_digs_on_bird_attack() {
 #[test]
 fn firion_copies_equipment_then_sacrifices() {
     let mut g = two_player_game();
+    // CR 103.7a — only turn 1's draw is skipped; stock both libraries so
+    // crossing a turn boundary doesn't deck anyone.
+    for seat in 0..2 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
     g.add_card_to_battlefield(0, catalog::firion_wild_rose_warrior());
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
