@@ -1699,7 +1699,7 @@ fn honden_upkeep(effect: Effect) -> TriggeredAbility {
 pub fn honden_of_cleansing_fire() -> CardDefinition {
     CardDefinition {
         name: "Honden of Cleansing Fire",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Enchantment],
         supertypes: vec![Supertype::Legendary],
         subtypes: shrine(),
@@ -1718,7 +1718,7 @@ pub fn honden_of_lifes_web() -> CardDefinition {
     use crate::card::TokenDefinition;
     CardDefinition {
         name: "Honden of Life's Web",
-        cost: cost(&[generic(2), g()]),
+        cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Enchantment],
         supertypes: vec![Supertype::Legendary],
         subtypes: shrine(),
@@ -1744,7 +1744,7 @@ pub fn honden_of_lifes_web() -> CardDefinition {
 pub fn honden_of_nights_reach() -> CardDefinition {
     CardDefinition {
         name: "Honden of Night's Reach",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Enchantment],
         supertypes: vec![Supertype::Legendary],
         subtypes: shrine(),
@@ -1802,9 +1802,9 @@ pub fn battle_mad_ronin() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
         subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
-        power: 3,
+        power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Bushido(1), Keyword::MustAttack],
+        keywords: vec![Keyword::Bushido(2), Keyword::MustAttack],
         ..Default::default()
     }
 }

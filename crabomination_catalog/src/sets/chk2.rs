@@ -1879,3 +1879,167 @@ pub fn shell_of_the_last_kappa() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Petals of Insight — {4}{U} Sorcery — Arcane. Look at the top three; bottom
+/// them to return this to hand, or leave them and draw three.
+pub fn petals_of_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Petals of Insight",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::LookTopMayBottomAllElse {
+            count: Value::Const(3),
+            then: Box::new(Effect::ReturnResolvingSpellToHand),
+            else_: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Cut the Tethers — {2}{U}{U} Sorcery. Every Spirit goes home unless its
+/// controller pays {3}.
+pub fn cut_the_tethers() -> CardDefinition {
+    CardDefinition {
+        name: "Cut the Tethers",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ReturnEachUnlessPays {
+            filter: R::HasCreatureType(CreatureType::Spirit),
+            cost: cost(&[generic(3)]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Uba Mask — {4} artifact. Draws become face-up exiles their owner may play
+/// that turn.
+pub fn uba_mask() -> CardDefinition {
+    CardDefinition {
+        name: "Uba Mask",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "If a player would draw a card, that player exiles that card face up instead.",
+            effect: StaticEffect::PlayersDrawExiledPlayable,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tatsumasa, the Dragon's Fang — {6} legendary Equipment. +5/+5; {6}, exile it:
+/// mint a 5/5 flying Dragon Spirit that gives it back when it dies. Equip {3}.
+pub fn tatsumasa_the_dragons_fang() -> CardDefinition {
+    CardDefinition {
+        name: "Tatsumasa, the Dragon's Fang",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        supertypes: legendary(),
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 5,
+            toughness: 5,
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6)]),
+            exile_self_cost: true,
+            effect: Effect::CreateTokenReturnSelfWhenItDies {
+                definition: TokenDefinition {
+                    name: "Dragon Spirit".into(),
+                    power: 5,
+                    toughness: 5,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Blue],
+                    keywords: vec![Keyword::Flying],
+                    subtypes: types(vec![CreatureType::Dragon, CreatureType::Spirit]),
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nezumi Shortfang // Stabwhisker the Odious — {1}{B} 1/1 Rat Rogue. Its
+/// discard flips it once the victim is empty-handed; Stabwhisker then bleeds
+/// each opponent for every card short of three.
+pub fn nezumi_shortfang() -> CardDefinition {
+    let stabwhisker = CardDefinition {
+        name: "Stabwhisker the Odious",
+        card_types: vec![CardType::Creature],
+        supertypes: legendary(),
+        subtypes: types(vec![CreatureType::Rat, CreatureType::Shaman]),
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::OpponentControl,
+            ),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::Max(
+                    Box::new(Value::ZERO),
+                    Box::new(Value::Sum(vec![
+                        Value::Const(3),
+                        Value::Times(
+                            Box::new(Value::Const(-1)),
+                            Box::new(Value::CardsInHandMatching {
+                                who: PlayerRef::ActivePlayer,
+                                filter: R::Any,
+                            }),
+                        ),
+                    ])),
+                ),
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Nezumi Shortfang",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: types(vec![CreatureType::Rat, CreatureType::Rogue]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::OpponentPlayer,
+                    },
+                    amount: Value::ONE,
+                    random: false,
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtMost(
+                        Value::CardsInHandMatching {
+                            who: PlayerRef::Target(0),
+                            filter: R::Any,
+                        },
+                        Value::ZERO,
+                    ),
+                    then: Box::new(Effect::Flip {
+                        what: Selector::This,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        flip_face: Some(Box::new(stabwhisker)),
+        ..Default::default()
+    }
+}

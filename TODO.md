@@ -79,15 +79,17 @@ gaps. Follow-ups that came out of it:
 
 ## Noticed this run (modern_decks — Kamigawa CHK gap wave)
 
-`sets::chk2` closed 66 CHK gaps. Follow-ups:
+`sets::chk2` closed 71 CHK gaps; `set_gaps.py chk` is at 6. Follow-ups:
 
-- **Hisoka's Guard is unimplemented.** Needs two primitives: a "you may choose
-  not to untap this" keyword, and a grant that lasts *while the source remains
-  tapped* (`Effect::GrantKeywordWhileSourceTapped`, the keyword twin of
-  `GainControlWhileSourceTapped`).
-- **Petals of Insight is unimplemented.** Wants a "look at the top N; either
-  bottom them all and do X, or do Y" primitive — no existing effect models the
-  all-or-nothing bottom fork.
+- **Still-open CHK cards**, each blocked on real machinery: Hisoka's Guard
+  (wants a "you may choose not to untap this" keyword plus a grant that lasts
+  *while the source remains tapped* — the keyword twin of
+  `GainControlWhileSourceTapped`), Mindblaze (name a card *and* a number, then
+  count a revealed library), Moonring Mirror (a hand↔exile swap keyed on
+  cards exiled with the source), Reweave (reveal until a permanent card
+  sharing a card type with the sacrificed one), Struggle for Sanity
+  (alternating exile from a revealed hand), Swirl the Mists (a global
+  colour-word text rewrite).
 - **Hankyu's removal is a resolution step, not a cost.** The printed line is
   "{T}, Remove all aim counters from Hankyu:"; the catalog does the removal at
   the head of the resolution so the damage can read the count. A real
@@ -100,14 +102,18 @@ gaps. Follow-ups that came out of it:
   a granted colour/type (Changeling, Swirl the Mists) isn't seen. Same
   restriction applies to `StaticEffect::PumpPerBushido` (printed bushido only,
   so Sensei Golden-Tail's grant doesn't feed Takeno).
-- **Still-open CHK cards**, each blocked on real machinery: Cut the Tethers
-  (per-permanent "unless that player pays {3}"), Junkyo Bell, Kusari-Gama
-  (damage to a blocking creature splashing the rest of the defenders),
-  Mindblaze, Moonring Mirror / Uba Mask (exile-with-this + play permission),
-  Oathkeeper (return-if-Samurai on the equipped creature's death), Reweave,
-  Shell of the Last Kappa, Struggle for Sanity, Swirl the Mists (colour-word
-  text change), Tatsumasa (token-dies return), Nezumi Shortfang (flip card).
-  `scripts/set_gaps.py chk` is the live list.
+- **Kusari-Gama reads "defending player" as "the opponent".** Its splash hits
+  the opponent's non-blocking creatures, which is exact at two players only.
+- **`audit_catalog_stats.py` now understands flip/DFC faces** (a back-face
+  definition is compared against its own `card_faces` entry, and the
+  parameterized `ProtectionFrom*` keywords map to Scryfall's plain
+  "Protection"), which took CHK from 20 flagged rows to 0 and surfaced four
+  real bugs — the Honden of Cleansing Fire / Life's Web / Night's Reach costs
+  and Battle-Mad Ronin's P/T + bushido rating, all fixed. **The rest of the
+  catalog is still dirty**: `decks` alone reports 43 cost / 38 P/T / 20 type /
+  40 keyword drifts, plus a long tail across `stx` (12 cost), `mod_set`,
+  `one`, `eoe`, `dis`, … Worth a dedicated sweep — run
+  `python3 scripts/audit_catalog_stats.py <set>` for the per-card detail.
 
 ## Noticed this run (modern_decks — Ravnica-block gap sweep)
 

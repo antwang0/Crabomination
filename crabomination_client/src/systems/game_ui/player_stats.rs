@@ -871,6 +871,10 @@ pub fn update_player_stats_chips(
             if lock.creature_pw_locked {
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ creature/pw".to_string());
             }
+            // Dosan / Voice of Victory — this seat can't cast off-turn at all.
+            if lock.off_turn_locked {
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ off-turn".to_string());
+            }
         }
         // CR 601.3e — Void Winnower locks this player's even-mana-value casts.
         if p.even_mv_cast_locked {

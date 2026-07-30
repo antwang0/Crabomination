@@ -548,6 +548,11 @@ pub struct SpellCastLock {
     /// end of the lock owner's next turn.
     #[serde(default)]
     pub creature_pw_locked: bool,
+    /// This seat can't cast at all right now because it isn't the active
+    /// player: Dosan the Falling Leaf (symmetric) or an active-player
+    /// Voice of Victory / Grand Abolisher.
+    #[serde(default)]
+    pub off_turn_locked: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -26,7 +26,21 @@ COLOR = {"White": "W", "Blue": "U", "Black": "B", "Red": "R", "Green": "G"}
 ENGINE_KW = {"Flying","Vigilance","Menace","Trample","Deathtouch","Lifelink","First strike",
  "Double strike","Reach","Defender","Haste","Hexproof","Flash","Ward","Indestructible",
  "Shroud","Skulk","Horsemanship","Protection","Prowess","Changeling","Fear","Intimidate"}
-KMAP = {"FirstStrike": "First strike", "DoubleStrike": "Double strike"}
+KMAP = {
+    "FirstStrike": "First strike",
+    "DoubleStrike": "Double strike",
+    # Scryfall reports every parameterized protection as plain "Protection".
+    "ProtectionFromCreatureType": "Protection",
+    "ProtectionFromSpellSubtype": "Protection",
+    "ProtectionFromCardType": "Protection",
+    "ProtectionFromColoredSpells": "Protection",
+    "ProtectionFromCreatures": "Protection",
+    "ProtectionFromEverything": "Protection",
+    "ProtectionFromInstants": "Protection",
+    "ProtectionFromMonocolored": "Protection",
+    "ProtectionFromMulticolored": "Protection",
+    "ProtectionFromSpells": "Protection",
+}
 
 def sym(call):
     call = call.strip()
@@ -93,14 +107,30 @@ def toplevel_cost_args(body):
         k += 1
     return None
 
-def creature_subtypes_ref(card):
-    faces = card.get("card_faces") or []
-    for tl in [f.get("type_line") for f in faces] + [card.get("type_line")]:
+def face_for(card, name):
+    """The `card_faces` entry whose name matches `name`, else None.
+
+    A flip / DFC cache entry carries the FRONT face's stats at the top level,
+    so a back-face definition (Tok-Tok, Stabwhisker) has to be compared
+    against its own face or every one of them reads as drift.
+    """
+    for f in card.get("card_faces") or []:
+        if f.get("name", "").lower() == name.lower():
+            return f
+    return None
+
+def creature_subtypes_ref(card, face=None):
+    faces = [face] if face else (card.get("card_faces") or [])
+    for tl in [f.get("type_line") for f in faces] + ([] if face else [card.get("type_line")]):
         if tl and "Creature" in tl and "—" in tl:
             return set(tl.split("—", 1)[1].split("//")[0].split())
     return None
 
-def ref_keywords(card):
+def ref_keywords(card, face=None):
+    # Scryfall lists flip-card keywords at the card level only, so a face with
+    # an empty list carries no usable reference — signal "skip" with None.
+    if face is not None:
+        return set(face["keywords"]) & ENGINE_KW if face.get("keywords") else None
     out = set(card.get("keywords", []) or [])
     for f in card.get("card_faces", []) or []:
         out |= set(f.get("keywords", []) or [])
@@ -124,6 +154,7 @@ def audit():
             if not nm: continue
             card = CACHE_LC.get(nm.group(1).lower())
             if not card: continue
+            face = face_for(card, nm.group(1))
             d["checked"] += 1
             tag = (nm.group(1), src.name, m.group(1))
             # cost
@@ -133,18 +164,21 @@ def audit():
                 if all(syms):
                     got = "".join(syms)
                     refs = [card.get("mana_cost")] + [f.get("mana_cost") for f in card.get("card_faces", []) or []]
+                    if face is not None and face.get("mana_cost") is not None:
+                        refs = [face.get("mana_cost")]
                     refs = [r for r in refs if r]
                     if refs and all(norm(got) != norm(r) for r in refs):
                         d["cost"].append((tag, got, "|".join(refs)))
             # P/T
             pm = re.search(r"power:\s*(-?\d+)", body); tm = re.search(r"toughness:\s*(-?\d+)", body)
-            if pm and tm and card.get("power") is not None:
-                if (pm.group(1), tm.group(1)) != (str(card["power"]), str(card["toughness"])):
-                    d["pt"].append((tag, f"{pm.group(1)}/{tm.group(1)}", f"{card['power']}/{card['toughness']}"))
+            ref_pt = face if face is not None and face.get("power") is not None else card
+            if pm and tm and ref_pt.get("power") is not None:
+                if (pm.group(1), tm.group(1)) != (str(ref_pt["power"]), str(ref_pt["toughness"])):
+                    d["pt"].append((tag, f"{pm.group(1)}/{tm.group(1)}", f"{ref_pt['power']}/{ref_pt['toughness']}"))
             # creature subtypes
             i = body.find("creature_types:")
             ctv = vec_after(body, i) if i >= 0 else None
-            ref_ct = creature_subtypes_ref(card)
+            ref_ct = creature_subtypes_ref(card, face)
             if ctv is not None and ref_ct is not None:
                 code_ct = set(re.findall(r"CreatureType::(\w+)", ctv))
                 if code_ct and ref_ct and code_ct != ref_ct and not code_ct.issubset(ref_ct):
@@ -153,8 +187,8 @@ def audit():
             kwv = toplevel_keywords(body)
             if kwv is not None:
                 code_kw = {KMAP.get(k, k) for k in re.findall(r"Keyword::(\w+)", kwv)} & ENGINE_KW
-                rk = ref_keywords(card)
-                if code_kw != rk:
+                rk = ref_keywords(card, face)
+                if rk is not None and code_kw != rk:
                     d["kw"].append((tag, sorted(code_kw), sorted(rk)))
     return per_set
 

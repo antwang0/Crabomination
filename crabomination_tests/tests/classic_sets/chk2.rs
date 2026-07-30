@@ -538,3 +538,112 @@ fn junkyo_bell_pumps_then_kills_its_target() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(bear).is_none(), "sacrificed at end of turn");
 }
+
+/// Petals of Insight bottoms the batch and bounces itself, or draws three.
+#[test]
+fn petals_of_insight_forks_on_the_bottom_choice() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::mana::Color::*;
+    for (bottom, hand_delta) in [(true, 1), (false, 3)] {
+        let mut g = two_player_game();
+        for _ in 0..6 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let s = g.add_card_to_hand(0, catalog::petals_of_insight());
+        g.players[0].mana_pool.add(Blue, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(bottom)]));
+        let before = g.players[0].hand.len() - 1; // the spell leaves the hand
+        g.perform_action(GameAction::CastSpell {
+            card_id: s,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(
+            g.players[0].hand.len(),
+            before + hand_delta,
+            "bottom={bottom}: Petals returns itself, otherwise draws three"
+        );
+    }
+}
+
+/// Cut the Tethers bounces the Spirits nobody pays for.
+#[test]
+fn cut_the_tethers_bounces_unpaid_spirits() {
+    use crabomination::mana::Color::*;
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::lantern_kami()); // Spirit
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::cut_the_tethers());
+    g.players[0].mana_pool.add(Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "the unpaid Spirit went home");
+    assert!(g.battlefield_find(bear).is_some(), "non-Spirits are untouched");
+}
+
+/// Uba Mask turns draws into face-up exiles their owner may play this turn.
+#[test]
+fn uba_mask_exiles_draws_face_up() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::uba_mask());
+    let top = g.add_card_to_library(0, catalog::forest());
+    let before = g.players[0].hand.len();
+    let mut events = Vec::new();
+    assert!(g.draw_one(0, &mut events));
+    assert_eq!(g.players[0].hand.len(), before, "nothing reached hand");
+    let exiled = g.exile.iter().find(|c| c.id == top).expect("exiled instead");
+    assert!(exiled.may_play_until.is_some(), "playable from exile");
+}
+
+/// Tatsumasa trades itself for a Dragon and comes back when the token dies.
+#[test]
+fn tatsumasa_returns_when_its_dragon_dies() {
+    let mut g = two_player_game();
+    let blade = g.add_card_to_battlefield(0, catalog::tatsumasa_the_dragons_fang());
+    g.players[0].mana_pool.add_colorless(6);
+    act!(g, blade, 0, None);
+    assert!(g.exile.iter().any(|c| c.id == blade), "Tatsumasa exiled itself");
+    let token = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Dragon Spirit")
+        .map(|c| c.id)
+        .expect("minted the Dragon");
+    let events = g.remove_to_graveyard_with_triggers(token);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blade).is_some(), "Tatsumasa came back");
+}
+
+/// Nezumi Shortfang flips once its victim is empty-handed.
+#[test]
+fn nezumi_shortfang_flips_on_an_empty_hand() {
+    use crabomination::mana::Color::*;
+    let mut g = two_player_game();
+    let rat = g.add_card_to_battlefield(0, catalog::nezumi_shortfang());
+    g.clear_sickness(rat);
+    g.add_card_to_hand(1, catalog::forest());
+    g.players[0].mana_pool.add(Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    act!(g, rat, 0, Some(Target::Player(1)));
+    assert_eq!(
+        g.battlefield_find(rat).unwrap().definition.name,
+        "Stabwhisker the Odious",
+        "flipped once the opponent ran dry"
+    );
+}

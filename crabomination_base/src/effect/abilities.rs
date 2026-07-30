@@ -1956,6 +1956,12 @@ pub enum StaticEffect {
     /// replacement rides `draw_one`; the play permission rides the exile
     /// zone's `may_play_by`.
     SharedFate,
+    /// Uba Mask — "If a player would draw a card, that player exiles that card
+    /// face up instead. Each player may play lands and cast spells from among
+    /// cards they exiled with this artifact this turn." The draw replacement
+    /// rides `draw_one`; the permission rides the exile zone's `may_play_by`,
+    /// scoped to the turn the card was exiled.
+    PlayersDrawExiledPlayable,
     /// CR 506.2 — "No more than N creatures can attack each combat" (Silent
     /// Arbiter). Global; enforced in `declare_attackers` against the whole
     /// declared batch.

@@ -305,6 +305,11 @@ impl Effect {
             Effect::Unattach { what } => sel_has_target(what),
             Effect::SetSaddled { what } => sel_has_target(what),
             Effect::AtNextEndStep { body } => body.requires_target(),
+            Effect::LookTopMayBottomAllElse { then, else_, .. } => {
+                then.requires_target() || else_.requires_target()
+            }
+            Effect::ReturnEachUnlessPays { .. }
+            | Effect::CreateTokenReturnSelfWhenItDies { .. } => false,
             Effect::RevealFiveDraftAgainstOpponent => false,
             Effect::EncoreTokens => false,
             // Targets an opponent, but resolution auto-binds slot 0 / the

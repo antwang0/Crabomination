@@ -1249,7 +1249,13 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `SelectionRequirement::SharesColor/CreatureTypeWithAttachedHost` (Konda's
   Banner), `CardDefinition.attach_only_filter` (CR 301.5c, gates equip *and* the
   704.5n unattach sweep), `SpendRestriction::LegendarySpellsOnly` (Untaidake),
-  `AdditionalCastCost::SacrificeAll` + `Value::SacrificedTotalPower` (Soulblast).
+  `AdditionalCastCost::SacrificeAll` + `Value::SacrificedTotalPower` (Soulblast),
+  `Effect::LookTopMayBottomAllElse` (Petals of Insight),
+  `Effect::ReturnEachUnlessPays` (Cut the Tethers),
+  `Effect::CreateTokenReturnSelfWhenItDies` + `DelayedKind::WhenTokenDies`
+  (Tatsumasa), `StaticEffect::PlayersDrawExiledPlayable` (Uba Mask), and the
+  `PlayerView.spell_cast_lock.off_turn_locked` flag behind the client's
+  "⊘ off-turn" chip.
   `EventScope::FromYourGraveyard` now matches object events by the subject's
   controller (Blood Speaker), `EventKind::TappedForMana` matches `SelfSource`
   (Forbidden Orchard), and a self-scoped `SkipNextUntap` rider no longer stops

@@ -590,6 +590,19 @@ fn project_player(
             nonartifact_reached: player.nonartifact_spells_cast_this_game_turn >= 1
                 && any_static(&|e| matches!(e, StaticEffect::OneNonartifactSpellPerTurn)),
             creature_pw_locked: !state.creature_pw_cast_locks.is_empty(),
+            off_turn_locked: player_seat != state.active_player_idx
+                && (any_static(&|e| matches!(e, StaticEffect::PlayersCastOnlyOnOwnTurn))
+                    || state.battlefield.iter().any(|c| {
+                        c.controller == state.active_player_idx
+                            && !state.same_team(player_seat, state.active_player_idx)
+                            && c.definition.static_abilities.iter().any(|sa| {
+                                matches!(
+                                    sa.effect,
+                                    StaticEffect::OpponentsCantCastDuringYourTurn
+                                        | StaticEffect::OpponentsCantActDuringYourTurn
+                                )
+                            })
+                    })),
         }
     };
     // CR 601.3e — an opponent's Void Winnower locks this player's even-MV casts.
@@ -3898,6 +3911,17 @@ mod tests {
         let after = project(&g, 0).players[0].spell_cast_lock.clone();
         assert!(after.noncreature_reached, "noncreature lock reached after a noncreature cast");
         assert!(!after.any_reached, "no Rule of Law in play → the any-spell lock stays clear");
+    }
+
+    #[test]
+    fn off_turn_cast_lock_surfaces_for_the_nonactive_seat() {
+        let mut g = two_player_game();
+        assert!(!project(&g, 1).players[1].spell_cast_lock.off_turn_locked);
+        g.add_card_to_battlefield(0, catalog::dosan_the_falling_leaf());
+        // Dosan is symmetric: the non-active seat is locked, its controller
+        // (the active player) is not.
+        assert!(project(&g, 1).players[1].spell_cast_lock.off_turn_locked);
+        assert!(!project(&g, 0).players[0].spell_cast_lock.off_turn_locked);
     }
 
     #[test]

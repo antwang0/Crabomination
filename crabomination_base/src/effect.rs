@@ -3615,6 +3615,19 @@ pub enum Effect {
     /// resolution's slot-0/1 targets (a generic `DelayedKind::NextEndStep`
     /// wrapper — Stolen Uniform's delayed unattach).
     AtNextEndStep { body: Box<Effect> },
+    /// "Look at the top `count` cards of your library. You may put those cards
+    /// on the bottom in any order. If you do, `then`; otherwise `else_`."
+    /// Petals of Insight. The controller is asked once for the whole batch.
+    LookTopMayBottomAllElse { count: Value, then: Box<Effect>, else_: Box<Effect> },
+    /// "For each [filter], return it to its owner's hand unless that permanent's
+    /// controller pays `cost`." Cut the Tethers — one pay-or-bounce decision per
+    /// permanent, asked of its controller.
+    ReturnEachUnlessPays { filter: SelectionRequirement, cost: crate::mana::ManaCost },
+    /// "Create `definition`. Return this card to the battlefield under its
+    /// owner's control when that token dies." Tatsumasa, the Dragon's Fang —
+    /// pairs with an `exile_self_cost` activation, so the source is in exile
+    /// while the token lives.
+    CreateTokenReturnSelfWhenItDies { definition: crate::card::TokenDefinition },
     /// Firion — reduce the generic portion of each resolved permanent's
     /// printed Equip cost by `amount` (stamped onto the minted token copy).
     ReduceEquipCost { what: Selector, amount: u32 },

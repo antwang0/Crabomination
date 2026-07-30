@@ -569,6 +569,11 @@ static CHK2: &[Factory] = &[
     super::chk2::kusari_gama,
     super::chk2::oathkeeper_takenos_daisho,
     super::chk2::shell_of_the_last_kappa,
+    super::chk2::petals_of_insight,
+    super::chk2::cut_the_tethers,
+    super::chk2::uba_mask,
+    super::chk2::tatsumasa_the_dragons_fang,
+    super::chk2::nezumi_shortfang,
 ];
 static CURSES: &[Factory] = &[
     super::curses::psychic_possession,

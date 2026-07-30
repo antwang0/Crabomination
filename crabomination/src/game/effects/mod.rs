@@ -358,6 +358,109 @@ impl EntityRef {
 }
 
 impl GameState {
+    /// Petals of Insight — look at the top `count`, then either bottom the
+    /// whole batch and run `then`, or leave them and run `else_`.
+    #[inline(never)]
+    fn run_look_top_may_bottom_all(
+        &mut self,
+        count: &crate::effect::Value,
+        then: &Effect,
+        else_: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let n = self.evaluate_value(count, ctx).max(0) as usize;
+        let p = ctx.controller;
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let Some(bottom) = self.ask_seat_bool(
+            &mut cursor,
+            p,
+            "Put those cards on the bottom of your library?".into(),
+            source,
+            effect,
+        ) else {
+            return Ok(());
+        };
+        self.clear_answer_log();
+        if bottom {
+            let moved: Vec<CardId> =
+                self.players[p].library.iter().take(n).map(|c| c.id).collect();
+            for id in moved {
+                if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
+                    let card = self.players[p].library.remove(pos);
+                    self.players[p].library.push(card);
+                }
+            }
+            self.run_effect(then, ctx, events)
+        } else {
+            self.run_effect(else_, ctx, events)
+        }
+    }
+
+    /// Cut the Tethers — each matching permanent's controller pays or loses it.
+    #[inline(never)]
+    fn run_return_each_unless_pays(
+        &mut self,
+        filter: &SelectionRequirement,
+        cost: &crate::mana::ManaCost,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let source = ctx.source.unwrap_or(CardId(0));
+        let targets: Vec<(CardId, usize)> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                self.evaluate_requirement_static(
+                    filter,
+                    &Target::Permanent(c.id),
+                    c.controller,
+                    Some(source),
+                )
+            })
+            .map(|c| (c.id, c.controller))
+            .collect();
+        let mut cursor = 0;
+        let mut bounce: Vec<CardId> = Vec::new();
+        for (id, owner_seat) in targets {
+            // Ask only when the pool could actually cover it (CR 118.6 — you
+            // can't choose to pay a cost you can't pay).
+            let can_pay = {
+                let mut probe = self.players[owner_seat].mana_pool.clone();
+                probe.pay(cost).is_ok()
+            };
+            let paid = can_pay
+                && match self.ask_seat_bool(
+                    &mut cursor,
+                    owner_seat,
+                    "Pay to keep this permanent?".into(),
+                    source,
+                    effect,
+                ) {
+                    Some(yes) => yes,
+                    None => return Ok(()),
+                };
+            if paid {
+                let _ = self.players[owner_seat].mana_pool.pay(cost);
+            } else {
+                bounce.push(id);
+            }
+        }
+        self.clear_answer_log();
+        for id in bounce {
+            self.move_card_to(
+                id,
+                &crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                ctx,
+                events,
+            );
+        }
+        Ok(())
+    }
+
     /// Ask `seat` a yes/no question inside a (possibly multi-question)
     /// resolution effect, replaying `resolution_answer_log` first. Returns
     /// `None` when the effect must suspend for a `wants_ui` seat (the
@@ -19672,6 +19775,47 @@ impl GameState {
                         miracle: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
+                }
+                Ok(())
+            }
+
+            Effect::LookTopMayBottomAllElse { count, then, else_ } => {
+                self.run_look_top_may_bottom_all(count, then, else_, ctx, events, effect)
+            }
+
+            Effect::ReturnEachUnlessPays { filter, cost } => {
+                self.run_return_each_unless_pays(filter, cost, ctx, events, effect)
+            }
+
+            Effect::CreateTokenReturnSelfWhenItDies { definition } => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                self.run_effect(
+                    &Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: crate::effect::Value::ONE,
+                        definition: definition.clone(),
+                    },
+                    ctx,
+                    events,
+                )?;
+                // Watch the token we just minted; when it dies the source card
+                // comes back from wherever the activation put it (exile).
+                if let Some(&token) = self.last_created_tokens.last() {
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: crate::game::types::DelayedKind::WhenTokenDies(token),
+                        effect: Effect::Move {
+                            what: Selector::This,
+                            to: crate::effect::ZoneDest::Battlefield {
+                                controller: PlayerRef::OwnerOf(Box::new(Selector::This)),
+                                tapped: false,
+                            },
+                        },
+                        target: None,
+                        bound_token: None,
+                        fires_once: true,
+                    });
                 }
                 Ok(())
             }

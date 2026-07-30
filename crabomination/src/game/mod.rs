@@ -9746,6 +9746,23 @@ impl GameState {
             events.push(GameEvent::PermanentExiled { card_id });
             return true;
         }
+        // CR 614 — Uba Mask: "If a player would draw a card, that player exiles
+        // that card face up instead" and may play it from exile this turn.
+        if global_static(&crate::effect::StaticEffect::PlayersDrawExiledPlayable) {
+            let Some(mut card) = self.players[p].library.first().cloned() else { return false };
+            self.players[p].library.remove(0);
+            card.may_play_until = Some(crate::card::MayPlayPermission {
+                player: p,
+                granted_turn: self.turn_number,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                exile_after: false,
+                miracle: false,
+            });
+            let card_id = card.id;
+            self.exile.push(card);
+            events.push(GameEvent::PermanentExiled { card_id });
+            return true;
+        }
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
         }
@@ -10678,6 +10695,7 @@ impl GameState {
                 let watched_id = match dt.kind {
                     // CR 702.55 — Haunt's death-watch fires any turn.
                     DelayedKind::WhenCardDies(cid)
+                    | DelayedKind::WhenTokenDies(cid)
                     | DelayedKind::WhenHauntedCreatureDies(cid) => Some(cid),
                     _ => None,
                 };
@@ -15733,6 +15751,8 @@ fn static_effect_to_effects(
             // layer effect.
             | StaticEffect::PlayersSkipDraws
             | StaticEffect::SharedFate
+            // Uba Mask — consulted by `draw_one`; no layer effect.
+            | StaticEffect::PlayersDrawExiledPlayable
             // CounterAmplifierOncePerTurn (Cursed Wombat) — consulted in the
             // `Effect::AddCounter` +1/+1 path; no layer effect.
             | StaticEffect::CounterAmplifierOncePerTurn
