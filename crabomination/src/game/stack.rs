@@ -2675,6 +2675,7 @@ impl GameState {
         self.damaged_creatures_die_this_turn = false;
         self.creature_deaths_drain_toughness_this_turn = false;
         self.no_search_this_turn = false;
+        self.skipped_steps_this_turn.clear();
         self.block_poison_this_turn = 0;
         // CR 500.4 — "kept this turn" mana (Savage Ventmaw) expires now, so the
         // final empty of the turn actually removes it.

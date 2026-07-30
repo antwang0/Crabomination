@@ -11129,7 +11129,9 @@ impl GameState {
                 targets: vec![],
                 trigger_source: None,
                 mode: 0,
-                x_value: 0,
+                // The gate can read the announced X (Soul Foundry's "X is the
+                // mana value of that card").
+                x_value: x_value.unwrap_or(0),
                 converged_value: 0,
                 mana_spent: 0,
                 mana_spent_by_color: Vec::new(),
@@ -12302,6 +12304,19 @@ impl GameState {
                 counter_type: kind,
                 count,
             });
+        }
+
+        // Exile-top-of-library-as-cost (CR 602.5b — Arc-Slogger). Paid after
+        // tap/mana, before the ability resolves; a short library exiles what
+        // it has.
+        if ability.exile_top_cost > 0 {
+            for _ in 0..ability.exile_top_cost {
+                if self.players[p].library.is_empty() {
+                    break;
+                }
+                let card = self.players[p].library.remove(0);
+                self.place_card_in_dest(card, p, &crate::effect::ZoneDest::Exile, &mut events);
+            }
         }
 
         // Remove-X-counters-as-cost (Arcbound Javelineer): strip the paid X.

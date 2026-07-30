@@ -793,7 +793,11 @@ fn project_hand_card(
     owner_seat: usize,
     viewer_seat: usize,
 ) -> HandCardView {
-    if owner_seat == viewer_seat {
+    // CR 701.19 — a hand the viewer has looked at stays visible to them
+    // (Wanderguard Sentry, Thought Prison).
+    if owner_seat == viewer_seat
+        || state.hands_revealed_to.contains(&(viewer_seat, owner_seat))
+    {
         HandCardView::Known(known_card_in(card, Some(state)))
     } else {
         HandCardView::Hidden { id: card.id }

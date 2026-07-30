@@ -1516,6 +1516,32 @@ impl GameState {
                     _ => false,
                 })
             }
+            // Thought Prison — the cast spell shares a colour or mana value
+            // with the imprinted card.
+            Predicate::CastSharesColorOrManaValueWithExiledBySource => {
+                let Some(src) = ctx.source else { return false };
+                let Some(imprint) = self.exile.iter().find(|c| c.exiled_with == Some(src)) else {
+                    return false;
+                };
+                let (colors, mv) =
+                    (imprint.definition.printed_colors(), imprint.definition.cost.cmc());
+                let cid = match ctx.trigger_source {
+                    Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
+                    _ => return false,
+                };
+                self.find_card_anywhere(cid).is_some_and(|trig| {
+                    trig.definition.cost.cmc() == mv
+                        || trig.definition.printed_colors().iter().any(|c| colors.contains(c))
+                })
+            }
+            // Soul Foundry — "{X}, {T}: … X is the mana value of that card."
+            Predicate::ExiledWithSourceManaValueIsX => {
+                let Some(src) = ctx.source else { return false };
+                self.exile
+                    .iter()
+                    .find(|c| c.exiled_with == Some(src))
+                    .is_some_and(|c| c.definition.cost.cmc() == ctx.x_value)
+            }
             Predicate::SharesCardTypeWithExiledBySource => {
                 let Some(src) = ctx.source else { return false };
                 // Card types of whatever this source exiled (CR — the
@@ -2768,6 +2794,19 @@ impl GameState {
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.named_card.as_deref())
                         .is_some_and(|n| n == card.definition.name),
+                    // Mourner's Shield — "shares a color with the exiled card".
+                    R::SharesColorWithExiledBySource => source.is_some_and(|sid| {
+                        self.exile
+                            .iter()
+                            .find(|c| c.exiled_with == Some(sid))
+                            .is_some_and(|imp| {
+                                let colors = imp.definition.printed_colors();
+                                card.definition
+                                    .printed_colors()
+                                    .iter()
+                                    .any(|c| colors.contains(c))
+                            })
+                    }),
                     // Zone-agnostic atoms (spell/enchantment subtype, token
                     // flags, …) the battlefield walker doesn't special-case
                     // are evaluated against the located card. Keeps the two
@@ -2910,6 +2949,13 @@ impl GameState {
             R::ProducesColorless => card.definition.produces_colorless(),
             R::IsSnow => card.definition.is_snow(),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+            // Needs the ability's source, which only the static walker carries.
+            R::SharesColorWithExiledBySource => false,
+            // Glissa Sunseeker — "if its mana value is equal to the amount of
+            // unspent mana you have".
+            R::ManaValueEqualsYourUnspentMana => {
+                card.definition.cost.cmc() == self.players[controller].mana_pool.total()
+            }
             // CR — "with the lowest mana value" among nonland permanents; a tie
             // leaves every tied permanent legal (Culling Scales).
             R::LowestManaValueAmongNonland => {

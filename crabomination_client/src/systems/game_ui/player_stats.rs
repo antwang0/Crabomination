@@ -22,6 +22,19 @@ use super::{
 /// Per-stat visual style for a player stat chip: (background, text colour).
 /// Picked to mirror the mana-pip palette — saturated enough to register
 /// as distinct chips, dim enough not to compete with the action buttons.
+/// "👁 Ponder, Swamp" for an opponent hand the viewer has looked at; `None`
+/// when the hand is still hidden (or empty).
+fn revealed_hand_label(hand: &[crabomination::net::HandCardView]) -> Option<String> {
+    let names: Vec<&str> = hand
+        .iter()
+        .filter_map(|c| match c {
+            crabomination::net::HandCardView::Known(k) => Some(k.name.as_str()),
+            crabomination::net::HandCardView::Hidden { .. } => None,
+        })
+        .collect();
+    (!names.is_empty()).then(|| format!("👁 {}", names.join(", ")))
+}
+
 fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
     match kind {
         StatChipKind::Name => (Color::srgba(0.18, 0.22, 0.34, 1.0), theme::TEXT_INFO),
@@ -65,6 +78,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Revealed library top (CR 401.5 — Courser of Kruphix) — a library
         // parchment green so the public information reads at a glance.
         StatChipKind::TopCard => (Color::srgba(0.16, 0.30, 0.18, 1.0), theme::TEXT_PRIMARY),
+        // A hand the viewer has looked at (CR 701.19) — the same green as the
+        // hand chip it sits beside, dimmed so the count still reads first.
+        StatChipKind::RevealedHand => (Color::srgba(0.14, 0.20, 0.26, 1.0), theme::TEXT_BODY),
         // Speed (CR 702.179 — "Start your engines!") — an Aetherdrift racing
         // crimson; the chip label reads "🏁 MAX" once the player hits speed 4.
         StatChipKind::Speed => (Color::srgba(0.40, 0.14, 0.10, 1.0), theme::TEXT_PRIMARY),
@@ -144,6 +160,7 @@ pub(super) enum StatChipKind {
     NoLifegain,
     Fog,
     TopCard,
+    RevealedHand,
     Speed,
     Coven,
     Dungeon,
@@ -1235,6 +1252,11 @@ pub fn update_opponent_stats_rows(
                 // CR 401.5 — an opponent's revealed library top is public.
                 if let Some(top) = p.library.known_top.first() {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::TopCard, format!("▲ {}", top.name));
+                }
+                // CR 701.19 — a hand we've looked at comes across as Known
+                // cards; list them so the knowledge is actually usable.
+                if let Some(label) = revealed_hand_label(&p.hand) {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::RevealedHand, label);
                 }
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
                 if p.poison_counters > 0 {

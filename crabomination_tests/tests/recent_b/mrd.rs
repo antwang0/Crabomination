@@ -1562,3 +1562,349 @@ fn temporal_cascade_entwines_reset_and_refill() {
     assert_eq!(g.players[0].hand.len(), 7);
     assert_eq!(g.players[1].hand.len(), 7);
 }
+
+// ── Mirrodin gap batch 5 (`decks::recent320`) ──
+
+/// Wanderguard Sentry's look sticks: the server view keeps showing that hand.
+#[test]
+fn wanderguard_sentry_reveals_the_hand_to_the_looker() {
+    let mut g = main_phase();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let sentry = g.add_card_to_hand(0, catalog::wanderguard_sentry());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sentry, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.hands_revealed_to.contains(&(0, 1)));
+    assert_eq!(g.players[1].hand.len(), 1);
+    let view = crabomination::server::view::project(&g, 0);
+    assert!(matches!(
+        view.players[1].hand[0],
+        crabomination::net::HandCardView::Known(_)
+    ));
+    let opp_view = crabomination::server::view::project(&g, 1);
+    assert!(matches!(
+        opp_view.players[0].hand[0],
+        crabomination::net::HandCardView::Hidden { .. }
+    ));
+}
+
+/// Psychogenic Probe punishes a shuffle caused by an effect.
+#[test]
+fn psychogenic_probe_burns_on_a_shuffle() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::psychogenic_probe());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let evs = vec![crabomination::game::types::GameEvent::LibraryShuffled { player: 1 }];
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// Arc-Slogger pays ten cards off the top for two damage.
+#[test]
+fn arc_slogger_exiles_ten_to_burn() {
+    let mut g = main_phase();
+    let slogger = g.add_card_to_battlefield(0, catalog::arc_slogger());
+    for _ in 0..12 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.clear_sickness(slogger);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: slogger, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 2);
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// Neurok Spy walks past a defender holding an artifact.
+#[test]
+fn neurok_spy_is_unblockable_through_an_artifact() {
+    let mut g = main_phase();
+    let spy = g.add_card_to_battlefield(0, catalog::neurok_spy());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(spy);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: spy, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(blocker, spy)])).is_ok(),
+        "no artifact yet, so the block is legal"
+    );
+    let mut g = main_phase();
+    let spy = g.add_card_to_battlefield(0, catalog::neurok_spy());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::tanglebloom());
+    g.clear_sickness(spy);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: spy, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, spy)])).is_err());
+}
+
+/// March of the Machines animates every noncreature artifact at its mana value.
+#[test]
+fn march_of_the_machines_animates_artifacts() {
+    let mut g = main_phase();
+    let rock = g.add_card_to_battlefield(0, catalog::tanglebloom());
+    g.add_card_to_battlefield(0, catalog::march_of_the_machines());
+    let cp = g.computed_permanent(rock).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature));
+    assert_eq!((cp.power, cp.toughness), (1, 1), "MV/MV");
+}
+
+/// Myr Prototype charges its own counter count to attack.
+#[test]
+fn myr_prototype_taxes_its_own_counters() {
+    let mut g = main_phase();
+    let myr = g.add_card_to_battlefield(0, catalog::myr_prototype());
+    g.battlefield_find_mut(myr).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.clear_sickness(myr);
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.declare_attackers(vec![Attack { attacker: myr, target: AttackTarget::Player(1) }])
+            .is_err(),
+        "no mana for the {{2}} toll"
+    );
+    g.players[0].mana_pool.add_colorless(2);
+    g.declare_attackers(vec![Attack { attacker: myr, target: AttackTarget::Player(1) }])
+        .expect("paid");
+}
+
+/// Golem-Skin Gauntlets count every Equipment on the host, themselves included.
+#[test]
+fn golem_skin_gauntlets_scale_with_attachments() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gauntlets = g.add_card_to_battlefield(0, catalog::golem_skin_gauntlets());
+    let blade = g.add_card_to_battlefield(0, catalog::banshees_blade());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::Equip { equipment: gauntlets, target: bear }).expect("equip 1");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "just itself");
+    g.perform_action(GameAction::Equip { equipment: blade, target: bear }).expect("equip 2");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+}
+
+/// Glissa Sunseeker only cracks an artifact matching the mana she has open.
+#[test]
+fn glissa_sunseeker_matches_unspent_mana() {
+    let mut g = main_phase();
+    let glissa = g.add_card_to_battlefield(0, catalog::glissa_sunseeker());
+    let rock = g.add_card_to_battlefield(1, catalog::tanglebloom());
+    g.clear_sickness(glissa);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: glissa, ability_index: 0, target: Some(Target::Permanent(rock)),
+            additional_targets: vec![], x_value: None,
+        })
+        .is_err(),
+        "two open mana doesn't match a {{1}} artifact"
+    );
+    g.players[0].mana_pool.spend_generic(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: glissa, ability_index: 0, target: Some(Target::Permanent(rock)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("one open mana matches");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none());
+}
+
+/// Blinkmoth Urn hands the active player mana per artifact they control.
+#[test]
+fn blinkmoth_urn_pays_the_active_player() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::blinkmoth_urn());
+    g.add_card_to_battlefield(1, catalog::tanglebloom());
+    g.add_card_to_battlefield(1, catalog::tanglebloom());
+    g.active_player_idx = 1;
+    g.step = TurnStep::Draw;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.step, TurnStep::PreCombatMain);
+    assert_eq!(g.players[1].mana_pool.total(), 2);
+}
+
+/// Fatespinner makes an opponent skip their draw step.
+#[test]
+fn fatespinner_skips_an_opponents_step() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::fatespinner());
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::Untap;
+    let before = g.players[1].hand.len();
+    while g.step != TurnStep::PreCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.skipped_steps_this_turn.contains(&(1, TurnStep::Draw)));
+    assert_eq!(g.players[1].hand.len(), before, "the draw step never happened");
+}
+
+/// Mirror Golem takes protection from the imprinted card's types.
+#[test]
+fn mirror_golem_copies_the_imprints_types() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let gy = g.players[1].graveyard[0].id;
+    let golem = g.add_card_to_hand(0, catalog::mirror_golem());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: golem, target: Some(Target::Permanent(gy)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(golem)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::ProtectionFromCardType(CardType::Creature))
+    );
+}
+
+/// Soul Foundry stamps out copies of the creature it imprinted.
+#[test]
+fn soul_foundry_copies_the_imprinted_creature() {
+    let mut g = main_phase();
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let foundry = g.add_card_to_hand(0, catalog::soul_foundry());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: foundry, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: foundry, ability_index: 0, target: None, additional_targets: vec![],
+        x_value: Some(2),
+    })
+    .expect("stamp a copy");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        1
+    );
+}
+
+/// Thought Prison burns anyone casting something that shares the imprint's
+/// colour or mana value.
+#[test]
+fn thought_prison_burns_matching_casts() {
+    let mut g = main_phase();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let prison = g.add_card_to_hand(0, catalog::thought_prison());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: prison, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(prison)).count(), 1);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast a matching spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "Thought Prison's 2, not the Bolt");
+}
+
+/// War Elemental grows on every point of damage an opponent takes.
+#[test]
+fn war_elemental_feeds_on_opponent_damage() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("soften them up");
+    drain_stack(&mut g);
+    let elem = g.add_card_to_hand(0, catalog::war_elemental());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: elem, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elem).is_some(), "an opponent was damaged, so it sticks");
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("again");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(elem).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+/// Lumengrid Augur untaps itself when the loot bins an artifact.
+#[test]
+fn lumengrid_augur_untaps_on_an_artifact_discard() {
+    let mut g = main_phase();
+    let augur = g.add_card_to_battlefield(0, catalog::lumengrid_augur());
+    g.add_card_to_hand(0, catalog::tanglebloom());
+    g.add_card_to_library(0, catalog::tanglebloom());
+    g.clear_sickness(augur);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: augur, ability_index: 0, target: Some(Target::Player(0)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(augur).unwrap().tapped);
+}
+
+/// Power Conduit trades any counter for a +1/+1 counter.
+#[test]
+fn power_conduit_recycles_a_counter() {
+    let mut g = main_phase();
+    let conduit = g.add_card_to_battlefield(0, catalog::power_conduit());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(conduit).unwrap().add_counters(CounterType::Charge, 1);
+    g.clear_sickness(conduit);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: conduit, ability_index: 1, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(conduit).unwrap().counter_count(CounterType::Charge), 0);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}

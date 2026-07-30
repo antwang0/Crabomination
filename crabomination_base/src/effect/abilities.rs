@@ -309,6 +309,10 @@ pub enum StaticEffect {
         #[serde(default)]
         requires_five: bool,
     },
+    /// CR 613 — each noncreature artifact becomes an artifact creature
+    /// (layer 4) with base power and toughness each equal to its mana value
+    /// (layer 7b). March of the Machines.
+    NoncreatureArtifactsAreCreatures,
     /// CR 613 layer 4 — "All nonland permanents are legendary" (Leyline of
     /// Singularity). Adds the Legendary supertype to every nonland permanent
     /// on the battlefield, so the legend rule (CR 704.5j) collapses duplicates
@@ -864,6 +868,9 @@ pub enum StaticEffect {
     /// protection-from-a-colour. Live-resolved in
     /// `gather_continuous_effects_inner` (it reads the exile zone).
     GainKeywordsFromExiledWith { keywords: Vec<Keyword> },
+    /// Mirror Golem — "this creature has protection from each of the exiled
+    /// card's card types" (CR 702.16). Live-resolved off the exile zone.
+    ProtectionFromExiledWithCardTypes,
     /// CR 609.4b — "Players may spend mana as though it were mana of any
     /// color" (Mycosynth Lattice). Consulted by the payment funnel, which
     /// relaxes the cost's coloured pips to generic for every seat while any
@@ -2364,6 +2371,11 @@ pub struct ActivatedAbility {
     /// `Value::CountersOn { This, kind }` sees the new total.
     #[serde(default)]
     pub add_counter_cost: Option<(crate::card::CounterType, u32)>,
+    /// CR 602.5b — "Exile the top N cards of your library:" as an activation
+    /// cost (Arc-Slogger). Gated on the library holding that many; paid after
+    /// tap/mana but before the effect resolves.
+    #[serde(default)]
+    pub exile_top_cost: u32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

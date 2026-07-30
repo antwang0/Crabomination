@@ -1070,6 +1070,10 @@ pub enum Keyword {
     /// attackers/blockers are declared; declining makes the declaration
     /// illegal.
     CantAttackOrBlockUnlessPay(u32),
+    /// CR 508.1a / 509.1a — the same tax, scaled by the source's own counters:
+    /// "can't attack or block unless you pay {1} for each +1/+1 counter on it"
+    /// (Myr Prototype).
+    CantAttackOrBlockUnlessPayPerCounter(CounterType),
     /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
     /// unless there are four or more card types among cards in your graveyard"
     /// (Delirium; Patchwork Beastie). Enforced against `delirium_active`.
@@ -1290,6 +1294,10 @@ pub enum Keyword {
     /// in the stateful block-declaration path (`declare_blockers`) rather than
     /// the pure two-creature `can_block_attacker_computed`. CR 509.1b.
     CantBeBlockedIfControllerCastSpells(u32),
+    /// CR 509.1b — "can't be blocked as long as defending player controls a
+    /// [filter]" (Neurok Spy). Enforced in `declare_blockers` against the
+    /// defender's board.
+    CantBeBlockedIfDefenderControls(Box<SelectionRequirement>),
     /// "Creatures with power less than the number of [filter] you control
     /// can't block this creature" (Kraken of the Straits). The threshold is
     /// the attacker controller's count of matching permanents, so it's
@@ -1526,6 +1534,12 @@ pub enum SelectionRequirement {
     /// The permanent's mana value ties the lowest among all nonland permanents
     /// on the battlefield (Culling Scales' "with the lowest mana value").
     LowestManaValueAmongNonland,
+    /// Shares a colour with the card exiled with the ability's source
+    /// (Mourner's Shield's imprint).
+    SharesColorWithExiledBySource,
+    /// The permanent's mana value equals the evaluating player's unspent
+    /// (floating) mana — Glissa Sunseeker.
+    ManaValueEqualsYourUnspentMana,
     IsBasicLand,
     /// True for a land that is **not** basic (CR 305.6) — i.e. a land card
     /// lacking the Basic supertype. Powers Thalia, Heretic Cathar's
@@ -3250,6 +3264,11 @@ pub struct EquipScale {
     /// any board/graveyard count.
     #[serde(default)]
     pub count_host_colors: bool,
+    /// When set, the count is the number of permanents matching this filter
+    /// attached to the *host* (Golem-Skin Gauntlets — "+1/+0 for each
+    /// Equipment attached to it"), rather than a controlled-permanent count.
+    #[serde(default)]
+    pub count_host_attachments: Option<SelectionRequirement>,
     /// When true, the count is the number of cards in the *host creature's
     /// controller's* hand (Righteous Authority — "+1/+1 for each card in its
     /// controller's hand"), rather than the source-controller counts above.

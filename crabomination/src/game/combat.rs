@@ -498,8 +498,16 @@ impl GameState {
         // {N}" (Oppressive Rays). Same pool as the Propaganda tax above.
         for atk in &attacks {
             for k in computed_kw(atk.attacker) {
-                if let Keyword::CantAttackOrBlockUnlessPay(n) = k {
-                    total_tax += n;
+                match k {
+                    Keyword::CantAttackOrBlockUnlessPay(n) => total_tax += n,
+                    // Myr Prototype — the tax is its own counter count.
+                    Keyword::CantAttackOrBlockUnlessPayPerCounter(kind) => {
+                        total_tax += self
+                            .battlefield_find(atk.attacker)
+                            .map(|c| c.counter_count(*kind))
+                            .unwrap_or(0);
+                    }
+                    _ => {}
                 }
             }
         }
@@ -1065,6 +1073,25 @@ impl GameState {
                     {
                         return Err(GameError::CannotBlock(blocker_id));
                     }
+                    // CR 509.1b — "can't be blocked as long as defending player
+                    // controls a [filter]" (Neurok Spy).
+                    if let Keyword::CantBeBlockedIfDefenderControls(f) = kw {
+                        let def = self
+                            .battlefield_find(blocker_id)
+                            .map(|c| c.controller)
+                            .unwrap_or(atk_ctl);
+                        if self.battlefield.iter().any(|c| {
+                            c.controller == def
+                                && self.evaluate_requirement_static(
+                                    f,
+                                    &crate::game::types::Target::Permanent(c.id),
+                                    def,
+                                    None,
+                                )
+                        }) {
+                            return Err(GameError::CannotBlock(blocker_id));
+                        }
+                    }
                     // CR 509.1b — "creatures with power less than the number of
                     // [filter] you control can't block" (Kraken of the Straits).
                     if let Keyword::CantBeBlockedByPowerLessThanCount(f) = kw {
@@ -1174,8 +1201,18 @@ impl GameState {
                     continue;
                 };
                 for kw in kws_of(blocker_id) {
-                    if let Keyword::CantAttackOrBlockUnlessPay(n) = kw {
-                        *owed.entry(seat).or_default() += n;
+                    match kw {
+                        Keyword::CantAttackOrBlockUnlessPay(n) => {
+                            *owed.entry(seat).or_default() += n;
+                        }
+                        Keyword::CantAttackOrBlockUnlessPayPerCounter(kind) => {
+                            let n = self
+                                .battlefield_find(blocker_id)
+                                .map(|c| c.counter_count(*kind))
+                                .unwrap_or(0);
+                            *owed.entry(seat).or_default() += n;
+                        }
+                        _ => {}
                     }
                 }
             }

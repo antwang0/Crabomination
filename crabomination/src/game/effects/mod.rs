@@ -5106,6 +5106,66 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 701.19 — "Look at [player]'s hand." The knowledge sticks, so
+            // the server view keeps showing it to the looker.
+            Effect::LookAtHand { who } => {
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for p in seats {
+                    if p != ctx.controller && !self.hands_revealed_to.contains(&(ctx.controller, p))
+                    {
+                        self.hands_revealed_to.push((ctx.controller, p));
+                    }
+                }
+                Ok(())
+            }
+
+            // CR 500.8 — Fatespinner: the affected player picks which of draw
+            // step / main phase / combat phase they skip for the rest of the
+            // turn. The auto-decider takes the first mode (draw step).
+            Effect::ChooseStepToSkipThisTurn { who } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let source = ctx.source.unwrap_or(CardId(0));
+                for p in self.resolve_players(who, ctx) {
+                    let answer = self.decider.decide(&Decision::ChooseModes {
+                        source,
+                        num_modes: 3,
+                        count: 1,
+                        default: vec![0],
+                        mode_texts: vec![
+                            "Skip your draw step".into(),
+                            "Skip your main phases".into(),
+                            "Skip your combat phase".into(),
+                        ],
+                    });
+                    let pick = match answer {
+                        DecisionAnswer::Modes(m) => m.first().copied().unwrap_or(0),
+                        _ => 0,
+                    };
+                    let steps: &[TurnStep] = match pick {
+                        1 => &[TurnStep::PreCombatMain, TurnStep::PostCombatMain],
+                        2 => &[
+                            TurnStep::BeginCombat,
+                            TurnStep::DeclareAttackers,
+                            TurnStep::DeclareBlockers,
+                            TurnStep::CombatDamage,
+                            TurnStep::EndCombat,
+                        ],
+                        _ => &[TurnStep::Draw],
+                    };
+                    for st in steps {
+                        self.skipped_steps_this_turn.push((p, *st));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PutCardFromHandOnTopOfLibrary { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let players: Vec<usize> = self.resolve_selector(who, ctx).into_iter()

@@ -1318,6 +1318,12 @@ pub enum Predicate {
     /// plays a land or casts a spell, if it shares a card type with the
     /// exiled card, …" (Cemetery Gatekeeper, Cemetery Protector).
     SharesCardTypeWithExiledBySource,
+    /// The just-cast spell shares a colour or mana value with the card exiled
+    /// with the trigger's source (Thought Prison's imprint).
+    CastSharesColorOrManaValueWithExiledBySource,
+    /// The activation's chosen X equals the mana value of the card exiled with
+    /// the source (Soul Foundry's "{X}, {T}" — X is that card's mana value).
+    ExiledWithSourceManaValueIsX,
     /// True if the just-cast spell (via `ctx.trigger_source`) was kicked —
     /// read off the stack instance's `kicked` flag, so cast triggers
     /// ("when you cast this spell, if it was kicked" — Scourge of the
@@ -3120,6 +3126,10 @@ pub enum Effect {
     /// (CR 701). No-op if the hand is empty. Enter the Infinite's "then put a
     /// card from your hand on top of your library."
     PutCardFromHandOnTopOfLibrary { who: Selector },
+    /// CR 701.19 — "Look at [who]'s hand." The resolving controller sees the
+    /// hand for the rest of the game (`GameState.hands_revealed_to`), so the
+    /// server view and client mirror it. Wanderguard Sentry, Thought Prison.
+    LookAtHand { who: Selector },
     /// "Put the cards in your hand on the bottom of your library in any order,
     /// then draw that many cards" (Mindmoil). The hand order is the caster's,
     /// so the bottoming order is the hand order.
@@ -6254,6 +6264,10 @@ pub enum Effect {
     /// by `advance_turn`. Time Walk, Temporal Manipulation, Ral Zarek's
     /// -7 coin-flip emblem.
     TakeExtraTurn { who: PlayerRef, count: Value },
+    /// CR 500.8 — "That player skips each instance of the chosen step or phase
+    /// this turn." The affected player picks draw step / main phase / combat
+    /// phase (`Decision::ChooseModes`); the pick is turn-scoped. Fatespinner.
+    ChooseStepToSkipThisTurn { who: PlayerRef },
     /// CR 728 — "End the turn." Exiles all spells and abilities from the
     /// stack (including the resolving card), removes everything from combat,
     /// and skips straight to the cleanup step. Sundial of the Infinite,

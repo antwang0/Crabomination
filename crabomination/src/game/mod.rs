@@ -1042,6 +1042,15 @@ pub struct GameState {
     pub damage_redirect_this_turn: Vec<(usize, CardId)>,
     /// CR — Shadow of Doubt: no player may search a library this turn.
     pub no_search_this_turn: bool,
+    /// CR 701.19 — `(viewer, owner)` pairs where `viewer` has looked at
+    /// `owner`'s hand and keeps seeing it (Wanderguard Sentry, Thought
+    /// Prison). Surfaced through the server view so a UI seat renders it.
+    #[serde(default)]
+    pub hands_revealed_to: Vec<(usize, usize)>,
+    /// CR 500.8 — steps/phases a player skips for the rest of this turn
+    /// (Fatespinner). `(seat, step)`; cleared at cleanup.
+    #[serde(default)]
+    pub skipped_steps_this_turn: Vec<(usize, TurnStep)>,
     /// Registered replacement effects (Phase H — Commander prerequisite).
     /// Walked by zone-change paths (`place_card_in_dest`,
     /// `remove_from_battlefield_to_*`) at placement time; a matching
@@ -1474,6 +1483,8 @@ impl Clone for GameState {
             damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
             creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
             no_search_this_turn: self.no_search_this_turn,
+            hands_revealed_to: self.hands_revealed_to.clone(),
+            skipped_steps_this_turn: self.skipped_steps_this_turn.clone(),
             replacement_effects: self.replacement_effects.clone(),
             next_replacement_id: self.next_replacement_id,
             commander_cast_count: self.commander_cast_count.clone(),
@@ -1678,6 +1689,8 @@ impl GameState {
             damaged_creatures_die_this_turn: false,
             creature_deaths_drain_toughness_this_turn: false,
             no_search_this_turn: false,
+            hands_revealed_to: Vec::new(),
+            skipped_steps_this_turn: Vec::new(),
             replacement_effects: Vec::new(),
             next_replacement_id: 1,
             commander_cast_count: HashMap::new(),
@@ -3945,6 +3958,10 @@ impl GameState {
     /// untap skipping).
     pub(crate) fn step_skipped_for(&self, player: usize, step: TurnStep) -> bool {
         use crate::effect::StaticEffect;
+        // CR 500.8 — a turn-scoped skip chosen this turn (Fatespinner).
+        if self.skipped_steps_this_turn.contains(&(player, step)) {
+            return true;
+        }
         self.battlefield.iter().any(|c| {
             c.definition.static_abilities.iter().any(|sa| match &sa.effect {
                 StaticEffect::SkipStep { step: s, all_players } if *s == step => {
@@ -5047,7 +5064,21 @@ impl GameState {
                     .iter()
                     .find(|c| c.id == target)
                     .map(|c| c.controller);
-                let n = if scale.count_host_controller_hand {
+                let n = if let Some(att_filter) = &scale.count_host_attachments {
+                    // "+1/+0 for each Equipment attached to it" (Golem-Skin
+                    // Gauntlets) — count the host's own attachments.
+                    self.battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.attached_to == Some(target)
+                                && self.evaluate_requirement_on_card(
+                                    att_filter,
+                                    c,
+                                    card.controller,
+                                )
+                        })
+                        .count() as i32
+                } else if scale.count_host_controller_hand {
                     // "+1/+1 for each card in its controller's hand".
                     host_controller
                         .map(|hc| self.players[hc].hand.len() as i32)
@@ -5681,6 +5712,41 @@ impl GameState {
                 });
             }
         }
+        // CR 613 — March of the Machines: each noncreature artifact becomes an
+        // `MV/MV` artifact creature. Gathered state-aware alongside Opalescence
+        // (the affected set is "artifact and not already a creature").
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                if !matches!(sa.effect, crate::effect::StaticEffect::NoncreatureArtifactsAreCreatures)
+                {
+                    continue;
+                }
+                use crate::card::SelectionRequirement as R;
+                let affected = AffectedPermanents::CardMatch {
+                    source_controller: card.controller,
+                    requirement: Box::new(R::Artifact.and(R::Not(Box::new(R::Creature)))),
+                };
+                let ts = card.object_timestamp();
+                all_effects.push(ContinuousEffect {
+                    timestamp: ts,
+                    source: card.id,
+                    affected: affected.clone(),
+                    layer: Layer::L4Type,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddCardType(CardType::Creature),
+                });
+                all_effects.push(ContinuousEffect {
+                    timestamp: ts,
+                    source: card.id,
+                    affected,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::SetValue),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::SetPowerToughnessToManaValue,
+                });
+            }
+        }
         // Sliver Legion — "each [type] gets +P/+T for each OTHER [type]".
         // The bonus differs per affected permanent (it excludes itself), so
         // this is gathered state-aware: one Specific effect per matching
@@ -5865,6 +5931,33 @@ impl GameState {
                             modification: Modification::AddKeyword(kw.clone()),
                         });
                     }
+                }
+            }
+        }
+        // Mirror Golem — "protection from each of the exiled card's card types"
+        // (CR 702.16), live-resolved off the imprint.
+        for card in &self.battlefield {
+            if !card.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::ProtectionFromExiledWithCardTypes
+                )
+            }) {
+                continue;
+            }
+            for exiled in self.exile.iter().filter(|c| c.exiled_with == Some(card.id)) {
+                for ct in &exiled.definition.card_types {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(
+                            crate::card::Keyword::ProtectionFromCardType(ct.clone()),
+                        ),
+                    });
                 }
             }
         }
@@ -15183,6 +15276,7 @@ fn static_effect_to_effects(
             // GainKeywordsFromExiledWith — live-resolved in
             // `gather_continuous_effects_inner` (reads the exile zone).
             | StaticEffect::GainKeywordsFromExiledWith { .. }
+            | StaticEffect::ProtectionFromExiledWithCardTypes
             // TokenCreationAddsToken — consulted in the resolve_effect
             // epilogue (Quina's extra-Frog rider); not a layer effect.
             | StaticEffect::TokenCreationAddsToken { .. }
@@ -15231,6 +15325,7 @@ fn static_effect_to_effects(
             // NonAuraEnchantmentsAreCreatures — Starfield's gate reads the live
             // enchantment count; resolved in `gather_continuous_effects`.
             | StaticEffect::NonAuraEnchantmentsAreCreatures { .. }
+            | StaticEffect::NoncreatureArtifactsAreCreatures
             // AllNonlandPermanentsAreLegendary — Leyline of Singularity scans
             // the live battlefield; resolved in `gather_continuous_effects`.
             | StaticEffect::AllNonlandPermanentsAreLegendary

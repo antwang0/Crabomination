@@ -204,6 +204,7 @@ impl Effect {
         }
         match self {
             Effect::Noop
+            | Effect::ChooseStepToSkipThisTurn { .. }
             | Effect::SearchExileThenTokensPerCard { .. }
             | Effect::SearchAuraAttachToSource
             | Effect::GrantExtraLoyaltyActivations
@@ -595,6 +596,7 @@ impl Effect {
             Effect::CastUpToNFromOpponentsExile { count } => value_has_target(count),
             Effect::DiscardAnyNumber { who } => sel_has_target(who),
             Effect::SetNoMaxHandSize { who }
+            | Effect::LookAtHand { who }
             | Effect::PutCardFromHandOnTopOfLibrary { who } => sel_has_target(who),
             Effect::LookTopExileOneOfN { who, .. }
             | Effect::NameCardRevealUntilThenBin { who }
@@ -2355,6 +2357,7 @@ impl Effect {
                 Effect::Destroy { what }
                 | Effect::DestroyAndRemember { what }
                 | Effect::DestroyNoRegen { what }
+                | Effect::Unattach { what }
                     | Effect::ExileIfWouldDieThisTurn { what }
                 | Effect::GrantFlashbackThisTurn { what }
                 | Effect::GrantMiracle { what, .. }

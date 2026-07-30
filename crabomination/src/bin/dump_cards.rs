@@ -190,6 +190,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackOrBlockUnlessHandSizeAtMost(_)
         | Keyword::CantAttackOrBlockUnlessDelirium
         | Keyword::CantAttackOrBlockUnlessPay(_)
+        | Keyword::CantAttackOrBlockUnlessPayPerCounter(_)
         | Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn
         | Keyword::CantAttackOrBlockUnlessDescend(_)
         | Keyword::CantAttackOrBlockUnlessCityBlessing
@@ -202,6 +203,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeBlockedByPowerAtMost(_)
         | Keyword::CantBeBlockedByPowerAtLeast(_)
         | Keyword::CantBeBlockedIfControllerCastSpells(_)
+        | Keyword::CantBeBlockedIfDefenderControls(_)
         | Keyword::AttackCostBounce(_)
         | Keyword::CantBeBlockedByPowerLessThanCount(_)
         | Keyword::CantBeBlockedUnlessAllBlock
