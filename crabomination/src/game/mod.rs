@@ -975,11 +975,12 @@ pub struct GameState {
     /// opponents of `controller`; cleared at `controller`'s untap.
     #[serde(default)]
     pub turn_scoped_spell_taxes: Vec<TurnScopedSpellTax>,
-    /// CR 615.7 — sources whose damage is prevented entirely this turn
-    /// (Burrenton Forge-Tender's chosen source). The optional seat gains life
-    /// equal to each prevented event (Hallow). Cleared at cleanup.
+    /// CR 615.7 — `(source, life-gain beneficiary, next-instance-only)`:
+    /// sources whose damage is prevented this turn (Burrenton Forge-Tender's
+    /// chosen source, Hallow's life refund, Awe Strike's single instance per
+    /// CR 615.8). Cleared at cleanup.
     #[serde(default)]
-    pub(crate) damage_prevented_sources: Vec<(CardId, Option<usize>)>,
+    pub(crate) damage_prevented_sources: Vec<(CardId, Option<usize>, bool)>,
     /// Shriveling Rot mode 1 — "until end of turn, whenever a creature is
     /// dealt damage, destroy it". Any creature with damage marked on it is
     /// destroyed by the lethal-damage SBA while set. Cleared at cleanup.
@@ -4537,6 +4538,13 @@ impl GameState {
             symbols.push(ManaSymbol::Generic(relaxed));
         }
         crate::mana::ManaCost::new(symbols)
+    }
+
+    /// Test/inspection accessor for the CR 615.7 chosen-source shields
+    /// (`(source, life-gain beneficiary, next-instance-only)`).
+    #[doc(hidden)]
+    pub fn damage_prevented_sources_debug(&self) -> Vec<(CardId, Option<usize>, bool)> {
+        self.damage_prevented_sources.clone()
     }
 
     pub fn player_unlife_active(&self, seat: usize) -> bool {

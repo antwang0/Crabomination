@@ -6268,6 +6268,11 @@ pub enum Effect {
         what: Selector,
         #[serde(default)]
         gain_life: bool,
+        /// CR 615.8 — "the **next** time `what` would deal damage this turn":
+        /// the shield soaks one whole damage instance and then expires (Awe
+        /// Strike). `false` is the turn-long blanket (Hallow).
+        #[serde(default)]
+        next_instance_only: bool,
     },
     /// CR 615.7 — "The next time a [filter] source of your choice would deal
     /// damage to you this turn, prevent that damage." A one-event,

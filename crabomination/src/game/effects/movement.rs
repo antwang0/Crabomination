@@ -75,7 +75,7 @@ impl GameState {
     /// prevented for the turn (Hallow, Burrenton Forge-Tender's chosen source).
     pub(crate) fn source_damage_fully_prevented(&self, source: crate::card::CardId) -> bool {
         !self.damage_cant_be_prevented_this_turn
-            && self.damage_prevented_sources.iter().any(|(s, _)| *s == source)
+            && self.damage_prevented_sources.iter().any(|(s, ..)| *s == source)
     }
 
     /// CR 615.1 / 615.7 / 615.12 — apply prevention shields to a pending
@@ -127,6 +127,36 @@ impl GameState {
             })
         {
             return amount;
+        }
+        // CR 615.7 — "prevent all damage [source] would deal this turn"
+        // (Burrenton Forge-Tender's chosen source, Hallow, Awe Strike). Lives
+        // here rather than in `deal_damage_to_from` so the combat path — which
+        // reaches this funnel directly — honours it too.
+        if let Some(src) = source
+            && let Some((_, beneficiary, one_instance)) =
+                self.damage_prevented_sources.iter().find(|(s, ..)| *s == src).copied()
+        {
+            // CR 615.8 — a "next time it would deal damage" shield expires
+            // after soaking one instance.
+            if one_instance {
+                self.damage_prevented_sources.retain(|(s, ..)| *s != src);
+            }
+            if amount > 0 {
+                let (to_player, to_card) = match ent {
+                    EntityRef::Player(p) => (Some(p), None),
+                    EntityRef::Permanent(id) | EntityRef::Card(id) => (None, Some(id)),
+                };
+                events.push(GameEvent::DamagePrevented { amount, to_player, to_card });
+                // Hallow / Awe Strike — "gain life equal to the damage
+                // prevented this way."
+                if let Some(seat) = beneficiary {
+                    let applied = self.adjust_life_applied(seat, amount as i32);
+                    if applied > 0 {
+                        events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });
+                    }
+                }
+            }
+            return 0;
         }
         // Protection from everything (The One Ring) — all damage to the
         // player is prevented until their next turn.
@@ -515,35 +545,6 @@ impl GameState {
                     _ => None,
                 })
         });
-        // CR 615.7 — "prevent all damage [chosen source] would deal this
-        // turn" (Burrenton Forge-Tender), unless prevention is off (615.12).
-        if let Some(src) = source
-            && !self.damage_cant_be_prevented_this_turn
-            && let Some((_, beneficiary)) =
-                self.damage_prevented_sources.iter().find(|(s, _)| *s == src).copied()
-        {
-            events.push(GameEvent::DamagePrevented {
-                amount,
-                to_player: match ent {
-                    EntityRef::Player(p) => Some(p),
-                    _ => None,
-                },
-                to_card: match ent {
-                    EntityRef::Permanent(id) | EntityRef::Card(id) => Some(id),
-                    _ => None,
-                },
-            });
-            // Hallow — "you gain life equal to the damage prevented this way."
-            if let Some(seat) = beneficiary
-                && amount > 0
-            {
-                let applied = self.adjust_life_applied(seat, amount as i32);
-                if applied > 0 {
-                    events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });
-                }
-            }
-            return;
-        }
         // CR 614.9 — redirect the whole event to a Palisade-Giant-style
         // permanent. One redirect per event (CR 614.5; the flag also stops
         // two redirectors ping-ponging).

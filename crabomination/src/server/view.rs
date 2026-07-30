@@ -2579,7 +2579,7 @@ mod tests {
     fn source_side_prevention_surfaces_on_the_permanent() {
         let mut state = two_player_game();
         let bear = state.add_card_to_battlefield(1, catalog::grizzly_bears());
-        state.damage_prevented_sources.push((bear, None));
+        state.damage_prevented_sources.push((bear, None, false));
         let v = project(&state, 0);
         assert!(v.battlefield.iter().find(|p| p.id == bear).unwrap().damage_prevented_as_source);
         // CR 615.12 — with prevention off, the shield reports as inert.

@@ -2105,9 +2105,11 @@ impl GameState {
                     // — a Maze-of-Ith'd attacker deals no combat damage either.
                     should_deal: attacker_filter(kws)
                         && !kws.contains(&Keyword::DealsNoCombatDamage)
-                        && !self.combat_damage_prevented_creatures.contains(&cp.id)
-                        // CR 615.7 — chosen-source prevention (Forge-Tender).
-                        && !self.damage_prevented_sources.iter().any(|(s, _)| *s == cp.id),
+                        // CR 615.7 chosen-source prevention (Forge-Tender,
+                        // Hallow, Awe Strike) is NOT short-circuited here: the
+                        // damage still has to reach `apply_prevention_shields`
+                        // so its life-gain / counter riders fire (CR 615.5).
+                        && !self.combat_damage_prevented_creatures.contains(&cp.id),
                 })
             })
             .collect();
@@ -2374,8 +2376,6 @@ impl GameState {
                     .filter(|bid| !self.combat_damage_prevented_creatures.contains(bid))
                     // CR 615.1 — "prevent all combat damage it would deal" (Azorius Ploy).
                     .filter(|bid| !self.combat_damage_prevented_from(*bid))
-                    // CR 615.7 — chosen-source prevention (Forge-Tender).
-                    .filter(|bid| !self.damage_prevented_sources.iter().any(|(s, _)| *s == *bid))
                     // CR 615.1 — fog (with Inspire Awe's per-dealer exception).
                     .filter(|&bid| !self.combat_damage_prevented_for_dealer(bid))
                     // CR 702.16e — a blocker whose color the attacker has

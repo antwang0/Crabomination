@@ -18218,22 +18218,24 @@ impl GameState {
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());
                 };
-                if !self.damage_prevented_sources.iter().any(|(id, _)| *id == chosen) {
-                    self.damage_prevented_sources.push((chosen, None));
+                if !self.damage_prevented_sources.iter().any(|(id, ..)| *id == chosen) {
+                    self.damage_prevented_sources.push((chosen, None, false));
                 }
                 Ok(())
             }
 
-            Effect::PreventAllDamageFromTargetThisTurn { what, gain_life } => {
+            Effect::PreventAllDamageFromTargetThisTurn { what, gain_life, next_instance_only } => {
                 let beneficiary = gain_life.then_some(ctx.controller);
                 for ent in self.resolve_selector(what, ctx) {
                     let (EntityRef::Permanent(id) | EntityRef::Card(id)) = ent else { continue };
                     if let Some(slot) =
-                        self.damage_prevented_sources.iter_mut().find(|(s, _)| *s == id)
+                        self.damage_prevented_sources.iter_mut().find(|(s, ..)| *s == id)
                     {
                         slot.1 = slot.1.or(beneficiary);
+                        // A turn-long shield subsumes a one-instance one.
+                        slot.2 &= *next_instance_only;
                     } else {
-                        self.damage_prevented_sources.push((id, beneficiary));
+                        self.damage_prevented_sources.push((id, beneficiary, *next_instance_only));
                     }
                 }
                 Ok(())

@@ -261,6 +261,7 @@ pub fn hallow() -> CardDefinition {
         Effect::PreventAllDamageFromTargetThisTurn {
             what: target_filtered(R::IsSpellOnStack),
             gain_life: true,
+            next_instance_only: false,
         },
     )
 }
