@@ -2129,8 +2129,19 @@ impl GameState {
         // itself tapped (the "you may choose not to untap this artifact"
         // clause, modeled as: stay tapped while it still locks a creature); a
         // locked permanent skips its untap while its source remains tapped.
-        let lock_sources: std::collections::HashSet<crate::card::CardId> =
-            self.battlefield.iter().filter_map(|c| c.untap_locked_by).collect();
+        // Vedalken Shackles joins the same set: while it holds a stolen
+        // creature it stays tapped ("you may choose not to untap this").
+        let lock_sources: std::collections::HashSet<crate::card::CardId> = self
+            .battlefield
+            .iter()
+            .filter_map(|c| c.untap_locked_by)
+            .chain(
+                self.temporary_control
+                    .iter()
+                    .filter(|tc| tc.while_source_tapped)
+                    .filter_map(|tc| tc.source),
+            )
+            .collect();
         let tapped_now_set: std::collections::HashSet<crate::card::CardId> =
             self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect();
         // Shipbreaker Kraken — a presence-lock holds while its source is still
@@ -2944,6 +2955,63 @@ impl GameState {
                                 amount: crate::card::Value::Const(dmg as i32),
                             },
                         ]),
+                        subject: None,
+                        event_amount: 0,
+                        mode: None,
+                        intervening_if: None,
+                    },
+                    None,
+                );
+            }
+        }
+
+        // CR 611.2c — "for as long as this artifact remains tapped" steals
+        // (Vedalken Shackles) end the moment the source untaps or leaves.
+        if self.temporary_control.iter().any(|tc| tc.while_source_tapped) {
+            let mut kept = Vec::new();
+            for tc in std::mem::take(&mut self.temporary_control) {
+                let holds = !tc.while_source_tapped
+                    || tc.source.and_then(|s| self.battlefield_find(s)).is_some_and(|c| c.tapped);
+                if holds {
+                    kept.push(tc);
+                } else {
+                    self.change_control(tc.card, tc.original_controller);
+                }
+            }
+            self.temporary_control = kept;
+        }
+
+        // CR 603.8 state trigger — "When you control no other [filter],
+        // sacrifice this permanent" (Synod Centurion). Latched in
+        // `no_other_sacrifice_armed` so it queues once while the condition
+        // holds; the latch clears as soon as a match is back.
+        let no_other: Vec<(CardId, usize, crate::card::SelectionRequirement)> = self
+            .battlefield
+            .iter()
+            .filter_map(|c| {
+                let f = c.definition.sacrifice_when_you_control_no_other.clone()?;
+                Some((c.id, c.controller, f))
+            })
+            .collect();
+        for (id, seat, filter) in no_other {
+            let alone = !self.battlefield.iter().any(|o| {
+                o.id != id
+                    && o.controller == seat
+                    && self.evaluate_requirement_static(
+                        &filter,
+                        &crate::game::types::Target::Permanent(o.id),
+                        seat,
+                        Some(id),
+                    )
+            });
+            if !alone {
+                self.no_other_sacrifice_armed.remove(&id);
+            } else if self.no_other_sacrifice_armed.insert(id) {
+                self.push_pending_trigger(
+                    crate::game::types::PendingTriggerPush {
+                        source: id,
+                        controller: seat,
+                        effect: Effect::SacrificeSource,
                         subject: None,
                         event_amount: 0,
                         mode: None,

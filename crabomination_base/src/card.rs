@@ -207,6 +207,8 @@ pub enum CreatureType {
     Toy,
     // Modern Horizons 3 (Cursed Wombat).
     Wombat,
+    // Fifth Dawn (the Bringer cycle, Summoning Station's Pincher token).
+    Bringer, Pincher,
 }
 
 /// Land subtypes (basic land types + others).
@@ -1465,6 +1467,10 @@ pub enum SelectionRequirement {
     /// (Scourge of Fleets' Islands). The count is taken from the evaluating
     /// player's battlefield.
     ToughnessAtMostYourCount(Box<SelectionRequirement>),
+    /// "Power X or less, where X is the number of [filter] you control"
+    /// (Vedalken Shackles' Islands) — the power-side mirror of
+    /// `ToughnessAtMostYourCount`.
+    PowerAtMostYourCount(Box<SelectionRequirement>),
     WithCounter(CounterType),
     /// True when the candidate has at least one counter of any kind on it —
     /// "a creature with a counter on it" (Delta Bloodflies, Stalwart
@@ -2325,6 +2331,12 @@ pub struct CardDefinition {
     /// SBA pass; latched per-instance so it fires once per control change.
     #[serde(default)]
     pub sacrifice_and_burn_when_stolen: Option<u32>,
+    /// CR 603.8 state trigger — "When you control no other [filter], sacrifice
+    /// this permanent" (Synod Centurion). Checked in the SBA pass against the
+    /// controller's other permanents; latched per-instance so the sacrifice is
+    /// queued once while the condition holds.
+    #[serde(default)]
+    pub sacrifice_when_you_control_no_other: Option<SelectionRequirement>,
     /// CR 604.3 — characteristic-defining dynamic P/T formula (Tarmogoyf,
     /// Death's Shadow). When `Some`, `compute_battlefield` injects a
     /// layer-7a SetPT effect from the formula on every recompute.

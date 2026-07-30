@@ -23,6 +23,22 @@ fn max_blocks_for(kws: &[Keyword]) -> usize {
 impl GameState {
     /// `max_blocks_for` plus the board-dependent riders keyed on the blocker
     /// itself ("…for each Equipment attached to this creature").
+    /// CR 506.2 / 509.1b — the tightest "no more than N creatures can
+    /// attack/block each combat" cap in play (Silent Arbiter), or `None` when
+    /// nothing caps participation.
+    pub(crate) fn combat_participation_cap(&self, blocking: bool) -> Option<u32> {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match (&sa.effect, blocking) {
+                (StaticEffect::MaxAttackersPerCombat(n), false) => Some(*n),
+                (StaticEffect::MaxBlockersPerCombat(n), true) => Some(*n),
+                _ => None,
+            })
+            .min()
+    }
+
     pub(crate) fn max_blocks_on(&self, blocker: CardId, kws: &[Keyword]) -> usize {
         use crate::effect::StaticEffect;
         let base = max_blocks_for(kws);
@@ -200,6 +216,16 @@ impl GameState {
             }) {
                 return Err(GameError::CannotAttack(attacks[0].attacker));
             }
+        }
+
+        // CR 506.2 — Silent Arbiter: "No more than N creatures can attack each
+        // combat." The cap covers the whole combat, so count attackers already
+        // declared this combat alongside the incoming batch.
+        if let Some(cap) = self.combat_participation_cap(false)
+            && let Some(first) = attacks.first()
+            && self.attacking.len() + attacks.len() > cap as usize
+        {
+            return Err(GameError::CannotAttack(first.attacker));
         }
 
         let mut events = vec![];
@@ -898,6 +924,19 @@ impl GameState {
         // allowance, and reject a repeat of the same pair.
         let mut batch_blocks: std::collections::HashMap<CardId, Vec<CardId>> =
             std::collections::HashMap::new();
+        // CR 509.1b — Silent Arbiter: "No more than N creatures can block each
+        // combat." Count distinct blockers across already-declared blocks and
+        // this batch.
+        if let Some(cap) = self.combat_participation_cap(true)
+            && let Some(&(first, _)) = assignments.first()
+        {
+            let mut distinct: std::collections::HashSet<CardId> =
+                self.block_map.keys().copied().collect();
+            distinct.extend(assignments.iter().map(|(b, _)| *b));
+            if distinct.len() > cap as usize {
+                return Err(GameError::CannotBlock(first));
+            }
+        }
         for &(blocker_id, attacker_id) in &assignments {
             let taken = batch_blocks.entry(blocker_id).or_default();
             if taken.contains(&attacker_id) || self.blocks(blocker_id, attacker_id) {

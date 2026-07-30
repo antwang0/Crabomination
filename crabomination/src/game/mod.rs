@@ -415,6 +415,11 @@ pub struct GameState {
     /// read by `Value::SacrificedPower` (e.g. Thud). Reset between
     /// independent spell/ability resolutions.
     pub(crate) sacrificed_power: Option<i32>,
+    /// Transient: how many permanents the current cost payment / resolution
+    /// sacrificed. Read by `Value::SacrificedCount` ("for each creature
+    /// sacrificed this way" — Vicious Betrayal). Reset with the siblings.
+    #[serde(default)]
+    pub(crate) sacrificed_count: u32,
     /// Transient: toughness of the most recently sacrificed creature within
     /// the current effect resolution. Set by `Effect::SacrificeAndRemember`
     /// alongside `sacrificed_power`; read by `Value::SacrificedToughness`
@@ -1258,6 +1263,11 @@ pub struct GameState {
     /// Cleared for a card when control returns to its owner. `#[serde(default)]`.
     #[serde(default)]
     pub steal_penalty_armed: std::collections::HashSet<CardId>,
+    /// CR 603.8 latch for `sacrifice_when_you_control_no_other` (Synod
+    /// Centurion) — the sibling of `steal_penalty_armed`. Cleared for a card
+    /// as soon as the controller has a matching permanent again.
+    #[serde(default)]
+    pub no_other_sacrifice_armed: std::collections::HashSet<CardId>,
     /// CR 702.170d — cards plotted *this* turn can't be cast until a later
     /// turn. Cleared at cleanup. `#[serde(default)]` for back-compat.
     #[serde(default)]
@@ -1312,6 +1322,10 @@ pub(crate) struct TempControl {
     /// `on_left_battlefield`. `duration` is `Permanent` so turn sweeps skip it.
     #[serde(default)]
     pub(crate) source: Option<CardId>,
+    /// Vedalken Shackles: the steal holds only while `source` stays **tapped**.
+    /// The SBA sweep reverts it once the source untaps or leaves.
+    #[serde(default)]
+    pub(crate) while_source_tapped: bool,
 }
 
 /// A turn-scoped spell tax — see `GameState.turn_scoped_spell_taxes`.
@@ -1392,6 +1406,7 @@ impl Clone for GameState {
             delayed_triggers: self.delayed_triggers.clone(),
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
+            sacrificed_count: self.sacrificed_count,
             sacrificed_was_artifact: self.sacrificed_was_artifact,
             sacrificed_was_outlaw: self.sacrificed_was_outlaw,
             sacrificed_was_vehicle: self.sacrificed_was_vehicle,
@@ -1525,6 +1540,7 @@ impl Clone for GameState {
             foretold_this_turn: self.foretold_this_turn.clone(),
             plotted_cards: self.plotted_cards.clone(),
             steal_penalty_armed: self.steal_penalty_armed.clone(),
+            no_other_sacrifice_armed: self.no_other_sacrifice_armed.clone(),
             plotted_this_turn: self.plotted_this_turn.clone(),
             triggered_once_per_turn_used: self.triggered_once_per_turn_used.clone(),
             per_subject_trigger_uses: self.per_subject_trigger_uses.clone(),
@@ -1602,6 +1618,7 @@ impl GameState {
             delayed_triggers: Vec::new(),
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
+            sacrificed_count: 0,
             sacrificed_was_artifact: None,
             sacrificed_was_outlaw: None,
             sacrificed_was_vehicle: None,
@@ -1733,6 +1750,7 @@ impl GameState {
             foretold_this_turn: std::collections::HashSet::new(),
             plotted_cards: std::collections::HashSet::new(),
             steal_penalty_armed: std::collections::HashSet::new(),
+            no_other_sacrifice_armed: std::collections::HashSet::new(),
             plotted_this_turn: std::collections::HashSet::new(),
             triggered_once_per_turn_used: std::collections::HashSet::new(),
             per_subject_trigger_uses: std::collections::HashMap::new(),
@@ -15546,6 +15564,13 @@ fn static_effect_to_effects(
             // MaxOneNonbasicLandUntap (Winter Moon) — consulted by `do_untap`;
             // no layer effect.
             | StaticEffect::MaxOneNonbasicLandUntap
+            // Silent Arbiter's combat caps — consulted by `declare_attackers` /
+            // `declare_blockers`; no layer effect.
+            | StaticEffect::MaxAttackersPerCombat(_)
+            | StaticEffect::MaxBlockersPerCombat(_)
+            // Fist of Suns — consulted by `effective_alternative_cost` at cast
+            // time; no layer effect.
+            | StaticEffect::FiveColorAlternativeCost
             // CounterAmplifierOncePerTurn (Cursed Wombat) — consulted in the
             // `Effect::AddCounter` +1/+1 path; no layer effect.
             | StaticEffect::CounterAmplifierOncePerTurn

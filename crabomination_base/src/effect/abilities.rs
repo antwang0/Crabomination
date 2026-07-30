@@ -1932,6 +1932,18 @@ pub enum StaticEffect {
     /// each untapping player untaps at most one nonbasic land (the rest stay
     /// tapped). Global — applies to every player, not just the controller.
     MaxOneNonbasicLandUntap,
+    /// CR 506.2 — "No more than N creatures can attack each combat" (Silent
+    /// Arbiter). Global; enforced in `declare_attackers` against the whole
+    /// declared batch.
+    MaxAttackersPerCombat(u32),
+    /// CR 509.1b — "No more than N creatures can block each combat" (Silent
+    /// Arbiter). Global; enforced in `declare_blockers` against the distinct
+    /// blockers already declared plus the incoming batch.
+    MaxBlockersPerCombat(u32),
+    /// CR 118.9 — "You may pay {W}{U}{B}{R}{G} rather than pay the mana cost
+    /// for spells you cast" (Fist of Suns). Surfaces a WUBRG alternative cost
+    /// on every spell the controller casts.
+    FiveColorAlternativeCost,
     /// "Permanents you control have: whenever one or more +1/+1 counters are put
     /// on this permanent, put an additional +1/+1 counter on it. This ability
     /// triggers only once each turn." Cursed Wombat. Consulted in the
@@ -2293,6 +2305,13 @@ pub struct ActivatedAbility {
     /// available; the auto-picker drains lowest-value permanents first.
     #[serde(default)]
     pub remove_counter_among_x: Option<(crate::card::CounterType, SelectionRequirement)>,
+    /// Kind-restricted sibling of `remove_counter_among_filter`: remove `count`
+    /// counters of any of the listed kinds from among matching permanents you
+    /// control ("Remove a +1/+1 counter or a charge counter from a permanent
+    /// you control" — Ion Storm).
+    #[serde(default)]
+    pub remove_counter_among_kinds:
+        Option<(Vec<crate::card::CounterType>, u32, SelectionRequirement)>,
     /// True if activating this ability returns the source permanent to its
     /// owner's hand as part of the cost (CR 602.5b "Return this … to its
     /// owner's hand:" cost lines). The bounce happens after tap/mana/life

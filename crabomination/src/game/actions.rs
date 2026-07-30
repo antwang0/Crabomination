@@ -33,6 +33,64 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
     }
 }
 
+impl GameState {
+    /// The alternative cost `p` may use to cast the hand card `card_id`: the
+    /// printed one, or the CR 118.9 WUBRG cost Fist of Suns grants to every
+    /// spell its controller casts.
+    pub(crate) fn effective_alternative_cost(
+        &self,
+        p: usize,
+        card_id: CardId,
+    ) -> Option<crate::card::AlternativeCost> {
+        let printed =
+            self.players[p].hand.iter().find(|c| c.id == card_id)?.definition.alternative_cost.clone();
+        if printed.is_some() {
+            return printed;
+        }
+        let five_color = self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::FiveColorAlternativeCost)
+                    })
+        });
+        five_color.then(|| crate::card::AlternativeCost {
+            mana_cost: crate::mana::cost(&[
+                crate::mana::w(),
+                crate::mana::u(),
+                crate::mana::b(),
+                crate::mana::r(),
+                crate::mana::g(),
+            ]),
+            ..Default::default()
+        })
+    }
+}
+
+/// The "remove N counters from among permanents you control" cost of an
+/// activated ability, normalized across the any-kind
+/// (`remove_counter_among_filter`) and kind-restricted
+/// (`remove_counter_among_kinds`) spellings. `None` kinds = any kind.
+fn counter_drain_cost(
+    ability: &crate::effect::ActivatedAbility,
+) -> Option<(Option<Vec<crate::card::CounterType>>, u32, crate::card::SelectionRequirement)> {
+    if let Some((kind, count, filter)) = ability.remove_counter_among_filter.as_ref() {
+        return Some((kind.map(|k| vec![k]), *count, filter.clone()));
+    }
+    let (kinds, count, filter) = ability.remove_counter_among_kinds.as_ref()?;
+    Some((Some(kinds.clone()), *count, filter.clone()))
+}
+
+/// Counters on `c` that a `counter_drain_cost` of the given kinds could take.
+fn drainable_counters(c: &CardInstance, kinds: Option<&[crate::card::CounterType]>) -> u32 {
+    match kinds {
+        Some(ks) => ks.iter().map(|k| c.counter_count(*k)).sum(),
+        None => c.counters.values().sum(),
+    }
+}
+
 /// Returns true if the given effect is purely a mana ability — only adds
 /// mana and uses no targets. Mana abilities resolve immediately without the stack.
 fn is_mana_ability(effect: &Effect) -> bool {
@@ -5939,6 +5997,7 @@ impl GameState {
                 def.effect = Effect::WithSacrificedPt {
                     power: pw,
                     toughness: tough,
+                    count: self.sacrificed_count,
                     mana_value: mv,
                     card: sac_card,
                     body: Box::new(def.effect.clone()),
@@ -6312,6 +6371,7 @@ impl GameState {
                             })
                             .collect()
                     };
+                    self.sacrificed_count = chosen.len() as u32;
                     for (idx, (id, power, is_creature, tough, mv, is_artifact, is_vehicle, colors)) in
                         chosen.into_iter().enumerate()
                     {
@@ -8314,15 +8374,7 @@ impl GameState {
         }
         // Validate the spell actually has an alternative cost; clone it before
         // any mutation so we don't borrow the card twice.
-        let alt = self.players[p]
-            .hand
-            .iter()
-            .find(|c| c.id == card_id)
-            .ok_or(GameError::CardNotInHand(card_id))?
-            .definition
-            .alternative_cost
-            .clone()
-            .ok_or(GameError::NoAlternativeCost)?;
+        let alt = self.effective_alternative_cost(p, card_id).ok_or(GameError::NoAlternativeCost)?;
 
         // Force of Negation–style "you may pay this alt cost only if it's
         // not your turn." Reject the alt cast on the caster's own turn —
@@ -11755,18 +11807,15 @@ impl GameState {
 
         // Pre-flight remove-counters-from-among gate (Hopeful Initiate): the
         // matching permanents you control must together carry `count` counters.
-        if let Some((kind, count, filter)) = ability.remove_counter_among_filter.as_ref() {
+        if let Some((kinds, count, filter)) = counter_drain_cost(&ability) {
             let have: u32 = self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
-                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, Some(card_id)))
-                .map(|c| match kind {
-                    Some(k) => c.counter_count(*k),
-                    None => c.counters.values().sum(),
-                })
+                .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id)))
+                .map(|c| drainable_counters(c, kinds.as_deref()))
                 .sum();
-            if have < *count {
+            if have < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
         }
@@ -12341,17 +12390,11 @@ impl GameState {
         // Remove-counters-from-among-cost (Hopeful Initiate): drain `count`
         // counters distributed across matching permanents you control. The
         // auto-picker takes them lowest-power-first (validated pre-flight).
-        if let Some((kind, count, filter)) = ability.remove_counter_among_filter.clone() {
-            let total = |c: &CardInstance| -> u32 {
-                match kind {
-                    Some(k) => c.counter_count(k),
-                    None => c.counters.values().sum(),
-                }
-            };
+        if let Some((kinds, count, filter)) = counter_drain_cost(&ability) {
             let mut picks: Vec<(CardId, i32)> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == p && total(c) > 0)
+                .filter(|c| c.controller == p && drainable_counters(c, kinds.as_deref()) > 0)
                 .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id)))
                 .map(|c| (c.id, c.power()))
                 .collect();
@@ -12360,24 +12403,16 @@ impl GameState {
             for (cid, _) in picks {
                 if left == 0 { break; }
                 if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
-                    match kind {
-                        Some(k) => {
-                            let take = left.min(c.counter_count(k));
-                            c.remove_counters(k, take);
-                            left -= take;
-                        }
-                        None => {
-                            // Any-kind drain: take from each present kind in
-                            // turn until the quota is met.
-                            let kinds: Vec<_> =
-                                c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect();
-                            for k in kinds {
-                                if left == 0 { break; }
-                                let take = left.min(c.counter_count(k));
-                                c.remove_counters(k, take);
-                                left -= take;
-                            }
-                        }
+                    // Drain each eligible kind in turn until the quota is met.
+                    let present: Vec<_> = match kinds.as_deref() {
+                        Some(ks) => ks.iter().copied().filter(|k| c.counter_count(*k) > 0).collect(),
+                        None => c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect(),
+                    };
+                    for k in present {
+                        if left == 0 { break; }
+                        let take = left.min(c.counter_count(k));
+                        c.remove_counters(k, take);
+                        left -= take;
                     }
                 }
             }
@@ -12591,6 +12626,7 @@ impl GameState {
                 Some((power, toughness)) => Effect::WithSacrificedPt {
                     power,
                     toughness,
+                    count: 1,
                     mana_value: cost_sac_mv,
                     card: Some(card_id),
                     body: Box::new(ability.effect.clone()),
@@ -12622,6 +12658,7 @@ impl GameState {
                 Some((power, toughness)) => Effect::WithSacrificedPt {
                     power,
                     toughness,
+                    count: 1,
                     mana_value: cost_sac_mv,
                     card: Some(card_id),
                     body: Box::new(ability.effect),

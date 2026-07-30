@@ -985,6 +985,7 @@ impl GameState {
         // Reset sacrificed-power / sacrificed-toughness / sacrificed-mana-value
         // scratch for this independent resolution.
         self.sacrificed_power = None;
+        self.sacrificed_count = 0;
         self.sacrificed_toughness = None;
         self.sacrificed_mana_value = None;
         self.last_discarded_mana_value = None;
@@ -10403,6 +10404,7 @@ impl GameState {
                             original_controller: prev,
                             duration: *duration,
                             source: None,
+                            while_source_tapped: false,
                         });
                     }
                 }
@@ -10424,9 +10426,37 @@ impl GameState {
                             original_controller: prev,
                             duration: crate::effect::Duration::Permanent,
                             source: Some(src),
+                            while_source_tapped: false,
                         });
                     }
                 }
+                Ok(())
+            }
+
+            Effect::GainControlWhileSourceTapped { what } => {
+                // CR 611.2c — the steal lasts while the source stays tapped;
+                // the SBA sweep unwinds it when it untaps or leaves.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let new_ctrl = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(prev) = self.change_control(cid, new_ctrl)
+                        && !self.temporary_control.iter().any(|t| t.card == cid)
+                    {
+                        self.temporary_control.push(crate::game::TempControl {
+                            card: cid,
+                            original_controller: prev,
+                            duration: crate::effect::Duration::Permanent,
+                            source: Some(src),
+                            while_source_tapped: true,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::DoubleUnspentMana => {
+                self.players[ctx.controller].mana_pool.double_all();
                 Ok(())
             }
 
@@ -13038,10 +13068,12 @@ impl GameState {
                     candidates,
                     eligible: eligible.clone(),
                 };
-                // SearchPickedBy (Inevitable Betrayal): "put onto the
+                // SearchPickedBy (Inevitable Betrayal, Acquire): "put onto the
                 // battlefield under YOUR control" — pre-resolve the dest's
                 // `You` to the effect controller, since `place_card_in_dest`
-                // later resolves refs against the *searched* player.
+                // later resolves refs against the *searched* player (which is
+                // what a plain `Search` wants: Path to Exile's basic enters
+                // under the searching player's control).
                 let to = if picker_ref.is_some() {
                     match to.clone() {
                         crate::effect::ZoneDest::Battlefield { controller, tapped } => {
@@ -16286,9 +16318,10 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WithSacrificedPt { power, toughness, mana_value, card, body } => {
+            Effect::WithSacrificedPt { power, toughness, count, mana_value, card, body } => {
                 self.sacrificed_power = Some(*power);
                 self.sacrificed_toughness = Some(*toughness);
+                self.sacrificed_count = *count;
                 self.sacrificed_mana_value = Some(*mana_value);
                 self.sacrificed_card = *card;
                 self.run_effect(body, ctx, events)

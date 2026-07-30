@@ -803,11 +803,12 @@ impl Effect {
             | Effect::AddCounterOfPresentKind { what } => sel_has_target(what),
             Effect::Proliferate => false,
             Effect::BlockersPoisonedThisTurn { .. } => false,
-            Effect::AuraSwapFromHand => false,
+            Effect::AuraSwapFromHand | Effect::DoubleUnspentMana => false,
             // Targets slot 0 (a creature) but reads it straight off ctx.
             Effect::PreventNextDamageByTargetMintMites => true,
             Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what }
+            | Effect::GainControlWhileSourceTapped { what }
             | Effect::WeldArtifacts { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
             | Effect::CreateTokenAttacking { who, count, .. }
@@ -1141,6 +1142,7 @@ impl Effect {
             | Effect::CopySpellMayChooseTargets { what, .. }
             | Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what }
+            | Effect::GainControlWhileSourceTapped { what }
             | Effect::WeldArtifacts { what } => sel_filter(what),
             // The target may be the moved object (`what`: Kor Outfitter's
             // "target Equipment") or the host (`to`: Maul's "attach this to
@@ -2385,6 +2387,7 @@ impl Effect {
                 | Effect::ClearSuspected { what }
                 | Effect::GainControl { what, .. }
                 | Effect::GainControlWhileSourceRemains { what }
+            | Effect::GainControlWhileSourceTapped { what }
                 | Effect::WeldArtifacts { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::ExilePlayerGraveyard { who }

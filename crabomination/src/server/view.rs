@@ -843,6 +843,11 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
         } else {
             (Vec::new(), Vec::new(), Vec::new())
         };
+    // The effective alt cost includes Fist of Suns' granted WUBRG (CR 118.9),
+    // so the client offers the alt-cast affordance on every hand card.
+    let alt_cost = state
+        .and_then(|st| st.effective_alternative_cost(card.owner, card.id))
+        .or_else(|| card.definition.alternative_cost.clone());
     KnownCard {
         id: card.id,
         name: card.definition.name.to_string(),
@@ -850,19 +855,10 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
         card_types: card.definition.card_types.clone(),
         needs_target: cursor_needs_target(&card.definition.effect),
         target_optional: card.definition.effect.target_slot_optional(0, None),
-        has_alternative_cost: card.definition.alternative_cost.is_some(),
-        alt_cost_needs_pitch: card
-            .definition
-            .alternative_cost
-            .as_ref()
-            .is_some_and(|a| a.exile_filter.is_some()),
-        alt_cost_label: card
-            .definition
-            .alternative_cost
-            .as_ref()
-            .map(format_alt_cost_label)
-            .unwrap_or_default(),
-        alt_cost_available: card.definition.alternative_cost.as_ref().is_none_or(|a| {
+        has_alternative_cost: alt_cost.is_some(),
+        alt_cost_needs_pitch: alt_cost.as_ref().is_some_and(|a| a.exile_filter.is_some()),
+        alt_cost_label: alt_cost.as_ref().map(format_alt_cost_label).unwrap_or_default(),
+        alt_cost_available: alt_cost.as_ref().is_none_or(|a| {
             // Condition-gated alt costs (Prowl, Archive Trap) and
             // not-your-turn pitches grey out when unavailable; without a
             // GameState handle (command-zone views) report available.

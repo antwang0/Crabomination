@@ -551,6 +551,7 @@ impl GameState {
                 }
             }
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::SacrificedCount => self.sacrificed_count as i32,
             Value::TappedForCostPower => self.tapped_for_cost_power.unwrap_or(0),
             Value::SacrificedToughness => self.sacrificed_toughness.unwrap_or(0),
             Value::SacrificedManaValue => self.sacrificed_mana_value.unwrap_or(0) as i32,
@@ -2620,6 +2621,19 @@ impl GameState {
                                 .unwrap_or_else(|| card.toughness())
                                 <= n
                     }
+                    R::PowerAtMostYourCount(inner) => {
+                        let n = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                            .count() as i32;
+                        card.definition.is_creature()
+                            && self
+                                .computed_permanent(card.id)
+                                .map(|cp| cp.power)
+                                .unwrap_or_else(|| card.power())
+                                <= n
+                    }
                     R::ManaValueAtMostPermanentsInYourGraveyard => {
                         let n = self.players[controller]
                             .graveyard
@@ -2999,6 +3013,19 @@ impl GameState {
                         .computed_permanent(card.id)
                         .map(|cp| cp.toughness)
                         .unwrap_or_else(|| card.toughness())
+                        <= n
+            }
+            R::PowerAtMostYourCount(inner) => {
+                let n = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                    .count() as i32;
+                card.definition.is_creature()
+                    && self
+                        .computed_permanent(card.id)
+                        .map(|cp| cp.power)
+                        .unwrap_or_else(|| card.power())
                         <= n
             }
             R::ManaValueAtMostPermanentsInYourGraveyard => {

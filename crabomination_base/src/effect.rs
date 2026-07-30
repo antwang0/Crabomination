@@ -600,6 +600,10 @@ pub enum Value {
     /// (set by `Effect::SacrificeAndRemember`). Used by Thud / Greater
     /// Gargadon-style sacrifice + damage spells.
     SacrificedPower,
+    /// How many permanents the cast's additional cost (or the current
+    /// resolution) sacrificed — "for each creature sacrificed this way"
+    /// (Vicious Betrayal). Reads `GameState.sacrificed_count`.
+    SacrificedCount,
     /// CR 702.184a — power of the creature tapped to pay a Station ability's
     /// cost, carried to resolution by `Effect::WithTappedPower`.
     TappedForCostPower,
@@ -4633,6 +4637,15 @@ pub enum Effect {
     /// Gain control of the resolved permanents for as long as the effect's
     /// source remains on the battlefield (Sower of Temptation).
     GainControlWhileSourceRemains { what: Selector },
+    /// CR 611.2c — "gain control of `what` for as long as this permanent
+    /// remains tapped" (Vedalken Shackles). The steal unwinds in the SBA
+    /// sweep once the source untaps or leaves; while it holds something the
+    /// source skips its own untap step ("you may choose not to untap").
+    GainControlWhileSourceTapped { what: Selector },
+    /// "Double the amount of each type of unspent mana you have" (Doubling
+    /// Cube) — every color and colorless pip in the controller's pool is
+    /// duplicated, restrictions included.
+    DoubleUnspentMana,
     /// CR 614.5 — "If any source you control would deal damage … this turn,
     /// it deals double that damage instead." Sets the controller's
     /// turn-scoped flag read by `scale_damage_to` (Quest for Pure Flame).
@@ -5806,6 +5819,10 @@ pub enum Effect {
     WithSacrificedPt {
         power: i32,
         toughness: i32,
+        /// How many permanents the cost sacrificed (Vicious Betrayal's "for
+        /// each creature sacrificed this way" — `Value::SacrificedCount`).
+        #[serde(default)]
+        count: u32,
         #[serde(default)]
         mana_value: u32,
         /// The sacrificed permanent itself, for `Selector::SacrificedCard`.

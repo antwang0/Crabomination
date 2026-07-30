@@ -639,6 +639,25 @@ impl ManaPool {
         self.colorless += amount;
     }
 
+    /// "Double the amount of each type of unspent mana you have" (Doubling
+    /// Cube). Every bucket — colored, colorless, snow, and the spend-
+    /// restricted pools — doubles in place.
+    pub fn double_all(&mut self) {
+        self.white *= 2;
+        self.blue *= 2;
+        self.black *= 2;
+        self.red *= 2;
+        self.green *= 2;
+        self.colorless *= 2;
+        self.snow *= 2;
+        for (_, n, _) in self.restricted.iter_mut() {
+            *n *= 2;
+        }
+        for (n, _) in self.restricted_colorless.iter_mut() {
+            *n *= 2;
+        }
+    }
+
     /// Add mana from a snow source. The mana is both colored and snow.
     pub fn add_snow(&mut self, color: Color, amount: u32) {
         *self.slot_mut(color) += amount;
