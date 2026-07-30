@@ -15520,6 +15520,10 @@ fn static_effect_to_effects(
             // OpponentsCantCastNamed (Ashiok's Erasure) — cast-legality gate,
             // no layer effect.
             | StaticEffect::OpponentsCantCastNamed
+            | StaticEffect::OpponentsCantCastNamesExiledWithSource
+            // CreatureSpellsMayPayExtraForCounters — an additional-cost offer
+            // read at cast time; no continuous-layer effect.
+            | StaticEffect::CreatureSpellsMayPayExtraForCounters
             // SpellsYouCastHaveDelve (Teval) — read at cast time by
             // `controller_grants_spells_delve`; no layer effect.
             | StaticEffect::SpellsYouCastHaveDelve

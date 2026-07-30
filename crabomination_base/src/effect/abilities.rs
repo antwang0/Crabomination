@@ -1803,6 +1803,14 @@ pub enum StaticEffect {
     /// the source's `named_card` (the exiled card's name). Unlike
     /// `NamedSpellCantBeCast` (which locks everyone), this is controller-scoped.
     OpponentsCantCastNamed,
+    /// Circu, Dimir Lobotomist — the controller's opponents can't cast spells
+    /// sharing a name with any card exiled with the source (`exiled_with`).
+    /// The broad sibling of `OpponentsCantCastNamed`, which reads one name.
+    OpponentsCantCastNamesExiledWithSource,
+    /// Chorus of the Conclave — "as an additional cost to cast creature
+    /// spells, you may pay any amount of mana; that creature enters with that
+    /// many additional +1/+1 counters."
+    CreatureSpellsMayPayExtraForCounters,
     /// Dress Down / Humility-lite — all creatures lose all abilities
     /// (layer 6 `RemoveAllAbilities`).
     CreaturesLoseAllAbilities,

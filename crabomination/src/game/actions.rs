@@ -5066,6 +5066,25 @@ impl GameState {
         {
             return Err(GameError::SpellNameLocked);
         }
+        // Circu, Dimir Lobotomist — an opponent of the caster controls a
+        // permanent, and a card exiled with it shares this spell's name.
+        if let Some(name) = spell_name
+            && self.battlefield.iter().any(|c| {
+                !self.same_team(c.controller, p)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::OpponentsCantCastNamesExiledWithSource
+                        )
+                    })
+                    && self
+                        .exile
+                        .iter()
+                        .any(|e| e.exiled_with == Some(c.id) && e.definition.name == name)
+            })
+        {
+            return Err(GameError::SpellNameLocked);
+        }
         // Academic Probation mode 0 — an opponent of the caster named this
         // spell ("Opponents can't cast spells with the chosen name until your
         // next turn"); the lock lives on the naming player until their turn.
@@ -5980,6 +5999,39 @@ impl GameState {
             .saturating_sub(self.players[p].mana_pool.total());
         card.cast_mana_spent_by_color =
             spent_by_color(&receipt.pool_before, &self.players[p].mana_pool);
+
+        // Chorus of the Conclave — "as an additional cost to cast creature
+        // spells, you may pay any amount of mana." Offered after the printed
+        // cost is paid, capped by what's still floating; the amount rides
+        // `pending_etb_counters` to the battlefield.
+        if card.definition.is_creature()
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::CreatureSpellsMayPayExtraForCounters
+                        )
+                    })
+            })
+        {
+            let floating = self.players[p].mana_pool.total();
+            if floating > 0 {
+                let extra = match self.decider.decide(&crate::decision::Decision::ChooseAmount {
+                    source: card_id,
+                    prompt: "Pay extra mana for +1/+1 counters?".to_string(),
+                    max: floating,
+                }) {
+                    crate::decision::DecisionAnswer::Amount(n) => n.min(floating),
+                    _ => 0,
+                };
+                if extra > 0 {
+                    self.players[p].mana_pool.spend_generic(extra);
+                    card.pending_etb_counters
+                        .push((crate::card::CounterType::PlusOnePlusOne, extra));
+                }
+            }
+        }
 
         let mut auto_events = receipt.auto_events;
         auto_events.push(GameEvent::SpellCast {

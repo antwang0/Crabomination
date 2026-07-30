@@ -10801,6 +10801,221 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayReturnSharingPermanentType { with } => {
+                // Cloudstone Curio. "Permanent type" = the entering permanent's
+                // card types intersected with the candidate's.
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(entered) = self
+                    .resolve_selector(with, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let types = self
+                    .computed_permanent(entered)
+                    .map(|cp| cp.card_types)
+                    .unwrap_or_default();
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == ctx.controller
+                            && c.id != entered
+                            && c.definition.card_types.iter().any(|t| types.contains(t))
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let pick = match self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Return a permanent sharing a type?".to_string(),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: 1,
+                }) {
+                    DecisionAnswer::Cards(ids) => ids.into_iter().next(),
+                    _ => None,
+                };
+                if let Some(cid) = pick.filter(|id| candidates.iter().any(|(c, _)| c == id)) {
+                    self.move_card_to(
+                        cid,
+                        &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
+            Effect::LookAtHandCastFree { who } => {
+                // Mindleech Mass. The look sticks (CR 701.19) and the caster
+                // may cast one card from the revealed hand for free.
+                let Some(p) = self.resolve_selector(who, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Player(p) => Some(p),
+                    _ => None,
+                }) else {
+                    return Ok(());
+                };
+                if p != ctx.controller && !self.hands_revealed_to.contains(&(ctx.controller, p)) {
+                    self.hands_revealed_to.push((ctx.controller, p));
+                }
+                // Prefer the priciest castable card — the whole point of the
+                // trigger. `CastWithoutPayingImmediate` re-checks legality.
+                let Some(pick) = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| !c.definition.is_land())
+                    .max_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| c.id)
+                else {
+                    return Ok(());
+                };
+                self.run_effect(
+                    &Effect::CastWithoutPayingImmediate {
+                        what: Selector::Target(0),
+                        source_zone: crate::card::Zone::Hand,
+                        exile_after: false,
+                        copy: false,
+                    },
+                    &EffectContext { targets: vec![Target::Permanent(pick)], ..ctx.clone() },
+                    events,
+                )
+            }
+
+            Effect::ChangeTargetOfAbility { what } => {
+                // Reroute (CR 115.7b) — retarget a single-target activated
+                // ability on the stack. The new target must be legal for the
+                // ability; the retargeter picks it (headless: the first legal
+                // target that isn't the current one).
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(id) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let Some(pos) = self.stack.iter().position(|si| match si {
+                    StackItem::Trigger { source, activated, target, .. } => {
+                        *source == id && *activated && target.is_some()
+                    }
+                    _ => false,
+                }) else {
+                    return Ok(());
+                };
+                let current = match &self.stack[pos] {
+                    StackItem::Trigger { target: Some(t), .. } => t.clone(),
+                    _ => return Ok(()),
+                };
+                let legal: Vec<Target> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| Target::Permanent(c.id))
+                    .chain((0..self.players.len()).map(Target::Player))
+                    .filter(|t| *t != current)
+                    .collect();
+                if legal.is_empty() {
+                    return Ok(());
+                }
+                let chosen = match self.decider.decide(&Decision::ChooseTarget {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    legal: legal.clone(),
+                    source_name: "Reroute".to_string(),
+                    description: "Retarget the ability".to_string(),
+                    optional: false,
+                }) {
+                    DecisionAnswer::Target(t) if legal.contains(&t) => t,
+                    _ => legal[0].clone(),
+                };
+                if let StackItem::Trigger { target, .. } = &mut self.stack[pos] {
+                    *target = Some(chosen);
+                }
+                Ok(())
+            }
+
+            Effect::WarpWorld => {
+                // CR 701.20 — every player shuffles their permanents in, then
+                // reveals that many and redeploys in two waves so an Aura has
+                // something to attach to.
+                use crate::card::CardType as CT;
+                let seats: Vec<usize> = (0..self.players.len()).collect();
+                let mut revealed: Vec<(usize, Vec<CardId>)> = Vec::new();
+                for p in seats {
+                    let owned: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.owner == p && !c.is_token)
+                        .map(|c| c.id)
+                        .collect();
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.owner == p)
+                        .count();
+                    for cid in owned {
+                        self.move_card_to(
+                            cid,
+                            &crate::effect::ZoneDest::Library {
+                                who: crate::effect::PlayerRef::Seat(p),
+                                pos: crate::effect::LibraryPosition::Top,
+                            },
+                            ctx,
+                            events,
+                        );
+                    }
+                    // Tokens cease to exist; they still counted for the reveal.
+                    self.battlefield.retain(|c| c.owner != p || !c.is_token);
+                    self.shuffle_library(p, events);
+                    let take: Vec<CardId> = self.players[p]
+                        .library
+                        .iter()
+                        .take(n)
+                        .map(|c| c.id)
+                        .collect();
+                    revealed.push((p, take));
+                }
+                for wave in [
+                    vec![CT::Artifact, CT::Creature, CT::Land],
+                    vec![CT::Enchantment],
+                ] {
+                    for (p, ids) in &revealed {
+                        for cid in ids {
+                            let hit = self.players[*p]
+                                .library
+                                .iter()
+                                .find(|c| c.id == *cid)
+                                .is_some_and(|c| {
+                                    c.definition.card_types.iter().any(|t| wave.contains(t))
+                                });
+                            if hit {
+                                self.move_card_to(
+                                    *cid,
+                                    &crate::effect::ZoneDest::Battlefield {
+                                        controller: crate::effect::PlayerRef::Seat(*p),
+                                        tapped: false,
+                                    },
+                                    ctx,
+                                    events,
+                                );
+                            }
+                        }
+                    }
+                }
+                for (p, ids) in revealed {
+                    for cid in ids {
+                        if let Some(i) = self.players[p].library.iter().position(|c| c.id == cid) {
+                            let card = self.players[p].library.remove(i);
+                            self.players[p].library.push(card);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileHandThenReclaimLinked => {
                 // Moonring Mirror's upkeep. "If you do" — declining leaves the
                 // stash alone; an empty hand still counts as doing it (CR

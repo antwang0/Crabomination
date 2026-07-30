@@ -4165,6 +4165,20 @@ pub enum Effect {
     /// "Put the top card of your library on the bottom of your library."
     /// Crown of Convergence's {G}{W}.
     PutTopOnBottom { who: Selector },
+    /// Cloudstone Curio — "you may return another permanent you control that
+    /// shares a permanent type with `with` to its owner's hand." `with` is the
+    /// permanent that just entered.
+    MayReturnSharingPermanentType { with: Selector },
+    /// Mindleech Mass — look at the resolved player's hand and cast one of the
+    /// cards from it without paying its mana cost.
+    LookAtHandCastFree { who: Selector },
+    /// Reroute — change the target of the resolved activated ability on the
+    /// stack to a new legal one (CR 115.7b). Single-target abilities only.
+    ChangeTargetOfAbility { what: Selector },
+    /// Warp World — each player shuffles all permanents they own into their
+    /// library, reveals that many cards, battlefields every artifact, creature
+    /// and land, then every enchantment, and bottoms the rest.
+    WarpWorld,
     /// "You choose a card matching `filter` from `who`'s graveyard or hand
     /// and exile it." A single cross-zone choice (Memory Leak). Auto-picks
     /// the highest-mana-value match (a `wants_ui` chooser is a follow-up).

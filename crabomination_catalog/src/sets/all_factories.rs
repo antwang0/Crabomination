@@ -503,6 +503,13 @@ static CHK: &[Factory] = &[
     super::chk::journeyers_kite,
 ];
 static CHK2: &[Factory] = &[
+    super::rav::cloudstone_curio,
+    super::rav::circu_dimir_lobotomist,
+    super::rav::sins_of_the_past,
+    super::rav::mindleech_mass,
+    super::rav::reroute,
+    super::rav::warp_world,
+    super::rav::chorus_of_the_conclave,
     super::rav::blood_funnel,
     super::rav::bottled_cloister,
     super::rav::crown_of_convergence,

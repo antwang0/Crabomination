@@ -2774,3 +2774,145 @@ fn sisters_of_stone_death_eats_and_redeploys_a_blocker() {
         "redeployed under the Sisters' controller"
     );
 }
+
+// ── Gap wave 22 ──────────────────────────────────────────────────────────────
+
+/// Cloudstone Curio bounces a permanent sharing a type with the entrant.
+#[test]
+fn cloudstone_curio_bounces_a_shared_type() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cloudstone_curio());
+    let old = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![old])]));
+    cast21(&mut g, 0, catalog::serra_angel(), None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == old), "the older creature bounced");
+}
+
+/// Circu strips a card per blue/black cast and locks its name for opponents.
+#[test]
+fn circu_locks_the_names_it_exiles() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let circu = g.add_card_to_battlefield(0, catalog::circu_dimir_lobotomist());
+    g.players[1].library.clear();
+    let top = g.add_card_to_library(1, catalog::grizzly_bears());
+    // A blue cast strips the top card of the targeted library.
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let spell = g.add_card_to_hand(0, catalog::counterspell());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast a blue spell");
+    drain_stack(&mut g);
+    assert!(
+        g.exile.iter().any(|c| c.id == top && c.exiled_with == Some(circu)),
+        "stripped and linked to Circu"
+    );
+    let blocked = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: blocked, target: None, additional_targets: vec![],
+            mode: None, x_value: None,
+        })
+        .is_err(),
+        "the opponent can't cast that name"
+    );
+}
+
+/// Sins of the Past lets a graveyard spell be recast for free and exiles both.
+#[test]
+fn sins_of_the_past_frees_a_graveyard_spell() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let sins = cast21(&mut g, 0, catalog::sins_of_the_past(), Some(Target::Permanent(bolt)));
+    assert!(g.exile.iter().any(|c| c.id == sins), "Sins exiled itself");
+    let granted = g.players[0].graveyard.iter().find(|c| c.id == bolt).expect("Bolt still there");
+    let perm = granted.may_play_until.as_ref().expect("castable from the graveyard");
+    assert!(perm.exile_after, "and it exiles instead of returning");
+}
+
+/// Mindleech Mass casts the best card out of the defender's hand.
+#[test]
+fn mindleech_mass_casts_from_the_defenders_hand() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let mass = g.add_card_to_battlefield(0, catalog::mindleech_mass());
+    g.clear_sickness(mass);
+    let angel = g.add_card_to_hand(1, catalog::serra_angel());
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: mass,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(angel).is_some_and(|c| c.controller == 0),
+        "the stolen Angel entered under the attacker"
+    );
+}
+
+/// Reroute points a single-target activated ability somewhere else.
+#[test]
+fn reroute_retargets_an_activated_ability() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let prodigal = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer());
+    g.clear_sickness(prodigal);
+    g.add_card_to_library(0, catalog::forest());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: prodigal, ability_index: 0, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("ping my bear");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    cast21(&mut g, 0, catalog::reroute(), Some(Target::Permanent(prodigal)));
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "the ping went upstairs instead");
+    assert_eq!(g.battlefield_find(mine).map(|c| c.damage), Some(0));
+}
+
+/// Warp World shuffles everyone's board away and redeploys off the top.
+#[test]
+fn warp_world_redeploys_from_the_library() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::serra_angel());
+    cast21(&mut g, 0, catalog::warp_world(), None);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0).count(),
+        1,
+        "one permanent in, one revealed and redeployed"
+    );
+    assert_eq!(g.players[0].library.len(), 1, "the other revealed card is bottomed");
+}
+
+/// Chorus of the Conclave buys extra +1/+1 counters with leftover mana.
+#[test]
+fn chorus_of_the_conclave_buys_counters_with_extra_mana() {
+    use crabomination::card::CounterType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::chorus_of_the_conclave());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(3)]));
+    let bear = cast21(&mut g, 0, catalog::grizzly_bears(), None);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "three extra mana, three counters"
+    );
+}

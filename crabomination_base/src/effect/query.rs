@@ -796,7 +796,11 @@ impl Effect {
             }
             Effect::ExileFromGraveyardBecomeCopy { what }
             | Effect::ReturnSameNameFromAllGraveyards { what } => sel_has_target(what),
-            Effect::PutTopOnBottom { who } => sel_has_target(who),
+            Effect::PutTopOnBottom { who }
+            | Effect::LookAtHandCastFree { who } => sel_has_target(who),
+            Effect::MayReturnSharingPermanentType { with: what }
+            | Effect::ChangeTargetOfAbility { what } => sel_has_target(what),
+            Effect::WarpWorld => false,
             Effect::ChooseColorForSelf => false,
             Effect::Populate { .. } => false,
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
@@ -1177,9 +1181,11 @@ impl Effect {
             | Effect::ReturnSameNameFromAllGraveyards { what }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::WeldArtifacts { what } => sel_filter(what),
-            Effect::LookExileAnyNumberRestBack { who, .. } | Effect::PutTopOnBottom { who } => {
-                sel_filter(who)
-            }
+            Effect::LookExileAnyNumberRestBack { who, .. }
+            | Effect::PutTopOnBottom { who }
+            | Effect::LookAtHandCastFree { who } => sel_filter(who),
+            Effect::MayReturnSharingPermanentType { with: what }
+            | Effect::ChangeTargetOfAbility { what } => sel_filter(what),
             Effect::RevealLibraryNamedCountPunish { who, .. }
             | Effect::AlternatingExileFromHand { who } => sel_filter(who),
             // The target may be the moved object (`what`: Kor Outfitter's
@@ -2436,7 +2442,11 @@ impl Effect {
                 | Effect::ExileHandLinked
                 | Effect::ReturnLinkedExilesToHand => None,
                 Effect::LookExileAnyNumberRestBack { who, .. }
-                | Effect::PutTopOnBottom { who } => sel_find(who, slot),
+                | Effect::PutTopOnBottom { who }
+                | Effect::LookAtHandCastFree { who } => sel_find(who, slot),
+                Effect::MayReturnSharingPermanentType { with: what }
+                | Effect::ChangeTargetOfAbility { what } => sel_find(what, slot),
+                Effect::WarpWorld => None,
                 Effect::ExileFromGraveyardBecomeCopy { what }
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
