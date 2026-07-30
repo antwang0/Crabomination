@@ -48,6 +48,18 @@ pub fn demons_horn() -> CardDefinition {
     color_watch_horn("Demon's Horn", Color::Black)
 }
 
+/// Kraken's Eye — {2} Artifact. Whenever a player casts a blue spell, you may
+/// gain 1 life.
+pub fn krakens_eye() -> CardDefinition {
+    color_watch_horn("Kraken's Eye", Color::Blue)
+}
+
+/// Wurm's Tooth — {2} Artifact. Whenever a player casts a green spell, you may
+/// gain 1 life.
+pub fn wurms_tooth() -> CardDefinition {
+    color_watch_horn("Wurm's Tooth", Color::Green)
+}
+
 /// Darksteel Pendant — {2} indestructible Artifact. {1}, {T}: Scry 1.
 pub fn darksteel_pendant() -> CardDefinition {
     CardDefinition {

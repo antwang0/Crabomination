@@ -701,6 +701,11 @@ pub enum Keyword {
     /// same combat-damage poison rider as Toxic (the wording differs but the
     /// effect is identical), so it folds into the same combat path.
     Poisonous(u32),
+    /// Modular N (CR 702.43) — a marker keyword. The enters-with-N-counters
+    /// half rides `enters_with_counters` and the death trigger rides
+    /// `shortcut::modular_dies()`; the keyword makes "creature with modular"
+    /// filters (Arcbound Overseer) exact and surfaces the ability in the UI.
+    Modular(u32),
     /// Compleated (CR 702.150) — if any of this planeswalker's Phyrexian
     /// pips were paid with life, it enters with two fewer loyalty counters
     /// per 2 life paid (tracked via `CardInstance.compleated_life_paid`).
@@ -1424,6 +1429,9 @@ pub enum SelectionRequirement {
     /// `HasKeyword(Toxic(n))` — matches "a creature you control with toxic"
     /// regardless of the toxic value (Slaughter Singer, Skrelv's Hive).
     HasToxic,
+    /// Has Modular N for any N (CR 702.43) — "each creature you control with
+    /// modular" (Arcbound Overseer).
+    HasModular,
     /// CR 702.140 — the card has a mutate cost (Pollywog Symbiote's
     /// "creature spell you cast … if it has mutate").
     HasMutate,
@@ -1588,6 +1596,12 @@ pub enum SelectionRequirement {
     /// creature") intersect this with the source id in the cost path, since a
     /// source-blind requirement can't know which permanent "this" is.
     AttachedToSource,
+    /// The mirror of `AttachedToSource`: true when the candidate is the
+    /// permanent the *source* is attached to. Source-blind evaluators answer
+    /// `true`; the cost path intersects against the real host, which is what
+    /// makes "{T}, Unattach this Equipment" costs tap the right creature
+    /// (Leonin Bola, Surestrike Trident).
+    IsHostOfSource,
     /// True when the candidate permanent has at least `n` Equipment attached
     /// (CR 301.5). Battlefield-only. Balan's "double strike as long as two or
     /// more Equipment are attached to it".
@@ -4830,6 +4844,12 @@ impl CardInstance {
     pub fn has_toxic(&self) -> bool {
         self.definition.keywords.iter().chain(self.granted_keywords_eot.iter())
             .any(|k| matches!(k, Keyword::Toxic(_)))
+    }
+
+    /// True if this permanent has Modular N for any N (CR 702.43).
+    pub fn has_modular(&self) -> bool {
+        self.definition.keywords.iter().chain(self.granted_keywords_eot.iter())
+            .any(|k| matches!(k, Keyword::Modular(_)))
     }
 
     /// True if this permanent can't be destroyed — either the

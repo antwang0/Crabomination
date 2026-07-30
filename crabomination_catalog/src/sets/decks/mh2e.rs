@@ -232,6 +232,7 @@ pub fn liquimetal_torque() -> CardDefinition {
                 effect: Effect::AddCardTypeIndefinitely {
                     what: target_filtered(R::Permanent.and(R::Land.negate())),
                     card_type: CardType::Artifact,
+                    until_eot: true,
                 },
                 ..Default::default()
             },

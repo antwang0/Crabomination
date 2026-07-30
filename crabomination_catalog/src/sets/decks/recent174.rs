@@ -101,7 +101,7 @@ pub fn spire_mechcycle() -> CardDefinition {
             exhaust: true,
             tap_other_filter: Some(vehicles_you_control.clone()),
             effect: Effect::Seq(vec![
-                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature },
+                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature, until_eot: false },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,

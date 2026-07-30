@@ -255,6 +255,7 @@ pub fn phyrexian_scriptures() -> CardDefinition {
                         Effect::AddCardTypeIndefinitely {
                             what: Selector::Target(0),
                             card_type: CT::Artifact,
+                            until_eot: false,
                         },
                     ])),
                 },

@@ -15484,6 +15484,20 @@ pub(crate) fn requirement_mentions_attached_to_source(req: &SelectionRequirement
     }
 }
 
+/// True when `req` contains an `IsHostOfSource` leaf — the cost path uses this
+/// to intersect candidates against the source's own host (Leonin Bola).
+pub(crate) fn requirement_mentions_host_of_source(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::IsHostOfSource => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_mentions_host_of_source(a) || requirement_mentions_host_of_source(b)
+        }
+        R::Not(inner) => requirement_mentions_host_of_source(inner),
+        _ => false,
+    }
+}
+
 fn affected_from_requirement(
     req: &SelectionRequirement,
     source_controller: usize,
@@ -15801,6 +15815,7 @@ fn blocker_matches_block_filter(
         R::Colorless => computed.colors.is_empty(),
         R::HasKeyword(k) => computed.keywords.contains(k),
         R::HasToxic => computed.keywords.iter().any(|k| matches!(k, Keyword::Toxic(_))),
+        R::HasModular => computed.keywords.iter().any(|k| matches!(k, Keyword::Modular(_))),
         R::HasMutate => blocker.definition.mutate.is_some(),
         R::HasCreatureType(t) => blocker.definition.subtypes.creature_types.contains(t)
             || computed.keywords.contains(&Keyword::Changeling),

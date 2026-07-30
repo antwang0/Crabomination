@@ -1417,7 +1417,7 @@ pub fn arcbound_condor() -> CardDefinition {
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::Modular(3)],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
         triggered_abilities: vec![
             modular_dies(),

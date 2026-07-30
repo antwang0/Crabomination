@@ -18972,7 +18972,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::AddCardTypeIndefinitely { what, card_type } => {
+            Effect::AddCardTypeIndefinitely { what, card_type, until_eot } => {
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
                 };
@@ -18987,7 +18987,11 @@ impl GameState {
                         affected: AffectedPermanents::Specific(vec![id]),
                         layer: Layer::L4Type,
                         sublayer: None,
-                        duration: EffectDuration::Indefinite,
+                        duration: if *until_eot {
+                            EffectDuration::UntilEndOfTurn
+                        } else {
+                            EffectDuration::Indefinite
+                        },
                         modification: Modification::AddCardType(card_type.clone()),
                     });
                 }

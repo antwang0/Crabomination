@@ -748,8 +748,6 @@ pub fn everflowing_chalice() -> CardDefinition {
 }
 
 /// Arcbound Worker — {1} Artifact Creature — Construct, 0/0, Modular 1.
-/// Enters with one +1/+1 counter; on death moves its counters to a target
-/// artifact creature.
 pub fn arcbound_worker() -> CardDefinition {
     use crate::card::{CounterType, CreatureType};
     CardDefinition {
@@ -760,6 +758,7 @@ pub fn arcbound_worker() -> CardDefinition {
             creature_types: vec![CreatureType::Construct],
             ..Default::default()
         },
+        keywords: vec![Keyword::Modular(1)],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
         triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
         ..Default::default()
@@ -777,7 +776,7 @@ pub fn arcbound_stinger() -> CardDefinition {
             creature_types: vec![CreatureType::Insect],
             ..Default::default()
         },
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::Modular(1)],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
         triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
         ..Default::default()
@@ -796,6 +795,7 @@ pub fn arcbound_ravager() -> CardDefinition {
             creature_types: vec![CreatureType::Beast],
             ..Default::default()
         },
+        keywords: vec![Keyword::Modular(1)],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
@@ -813,7 +813,7 @@ pub fn arcbound_ravager() -> CardDefinition {
     }
 }
 
-/// Arcbound Slith — {1} Artifact Creature — Slith, 1/1, Modular 1.
+/// Arcbound Slith — {2} Artifact Creature — Slith, 0/0, Modular 1.
 /// "Whenever this deals combat damage to a player, put a +1/+1 counter on it."
 pub fn arcbound_slith() -> CardDefinition {
     use crate::card::{CounterType, CreatureType};
@@ -825,6 +825,7 @@ pub fn arcbound_slith() -> CardDefinition {
             creature_types: vec![CreatureType::Slith],
             ..Default::default()
         },
+        keywords: vec![Keyword::Modular(1)],
         power: 0,
         toughness: 0,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
@@ -843,7 +844,7 @@ pub fn arcbound_slith() -> CardDefinition {
     }
 }
 
-/// Arcbound Hybrid — {3} Artifact Creature — Beast, 0/0, Haste, Modular 2.
+/// Arcbound Hybrid — {4} Artifact Creature — Beast, 0/0, Haste, Modular 2.
 pub fn arcbound_hybrid() -> CardDefinition {
     use crate::card::{CounterType, CreatureType};
     CardDefinition {
@@ -854,14 +855,14 @@ pub fn arcbound_hybrid() -> CardDefinition {
             creature_types: vec![CreatureType::Beast],
             ..Default::default()
         },
-        keywords: vec![Keyword::Haste],
+        keywords: vec![Keyword::Haste, Keyword::Modular(2)],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
         ..Default::default()
     }
 }
 
-/// Arcbound Bruiser — {4} Artifact Creature — Golem, 0/0, Modular 3.
+/// Arcbound Bruiser — {5} Artifact Creature — Golem, 0/0, Modular 3.
 pub fn arcbound_bruiser() -> CardDefinition {
     use crate::card::{CounterType, CreatureType};
     CardDefinition {
@@ -872,6 +873,7 @@ pub fn arcbound_bruiser() -> CardDefinition {
             creature_types: vec![CreatureType::Golem],
             ..Default::default()
         },
+        keywords: vec![Keyword::Modular(3)],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
         triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
         ..Default::default()

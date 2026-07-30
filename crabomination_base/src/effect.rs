@@ -5835,8 +5835,15 @@ pub enum Effect {
 
     /// `what` becomes the given card type *in addition* to its other types,
     /// indefinitely (anchored to the permanent — expires when it leaves).
-    /// Phyrexian Scriptures chapter I's "becomes an artifact".
-    AddCardTypeIndefinitely { what: Selector, card_type: crate::card::CardType },
+    /// Phyrexian Scriptures chapter I's "becomes an artifact". With
+    /// `until_eot` the grant is a CR 611.2 end-of-turn effect instead
+    /// (Liquimetal Torque, Myr Landshaper).
+    AddCardTypeIndefinitely {
+        what: Selector,
+        card_type: crate::card::CardType,
+        #[serde(default)]
+        until_eot: bool,
+    },
 
     /// Grant `what` an activated ability. `Duration::Permanent` anchors the
     /// grant to the permanent (`CardInstance.granted_activated_abilities`,

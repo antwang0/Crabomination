@@ -580,7 +580,11 @@ fn arcbound(
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes { creature_types: types, ..Default::default() },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(n))),
-        keywords: kws,
+        keywords: {
+            let mut kws = kws;
+            kws.push(Keyword::Modular(n as u32));
+            kws
+        },
         triggered_abilities: vec![modular_dies()],
         ..Default::default()
     }

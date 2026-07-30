@@ -5575,6 +5575,7 @@ pub fn unctus_grand_metatect() -> CardDefinition {
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 card_type: CardType::Artifact,
+                until_eot: false,
             },
             ..Default::default()
         }],

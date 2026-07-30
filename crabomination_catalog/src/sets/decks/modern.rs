@@ -25312,6 +25312,7 @@ pub fn power_depot() -> CardDefinition {
     CardDefinition {
         name: "Power Depot",
         card_types: vec![CardType::Artifact, CardType::Land],
+        keywords: vec![crate::card::Keyword::Modular(1)],
         enters_with_counters: Some((crate::card::CounterType::PlusOnePlusOne, Value::Const(1))),
         activated_abilities: vec![
             super::super::tap_add_colorless(),

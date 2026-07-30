@@ -26,6 +26,7 @@ pub fn arcbound_javelineer() -> CardDefinition {
             creature_types: vec![CreatureType::Soldier],
             ..Default::default()
         },
+        keywords: vec![Keyword::Modular(1)],
         toughness: 1,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
         triggered_abilities: vec![modular_dies()],
@@ -198,6 +199,7 @@ pub fn zabaz_the_glimmerwasp() -> CardDefinition {
             creature_types: vec![CreatureType::Insect],
             ..Default::default()
         },
+        keywords: vec![Keyword::Modular(1)],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
         triggered_abilities: vec![modular_dies()],
         static_abilities: vec![StaticAbility {

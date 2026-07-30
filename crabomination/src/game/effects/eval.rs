@@ -2411,6 +2411,7 @@ impl GameState {
                     R::HasColor(c) => card.definition.printed_colors().contains(c),
                     R::HasKeyword(kw) => card.has_keyword(kw),
                     R::HasToxic => card.has_toxic(),
+                    R::HasModular => card.has_modular(),
                     R::HasMutate => card.definition.mutate.is_some(),
                     R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                         k,
@@ -2849,6 +2850,7 @@ impl GameState {
             R::HasColor(c) => card.definition.printed_colors().contains(c),
             R::HasKeyword(kw) => card.has_keyword(kw),
             R::HasToxic => card.has_toxic(),
+            R::HasModular => card.has_modular(),
             R::HasMutate => card.definition.mutate.is_some(),
             R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                 k,
@@ -3054,6 +3056,7 @@ impl GameState {
             // permanent must be attached to *this* source) happens in the
             // sac-cost path, which knows the source id.
             R::AttachedToSource => card.attached_to.is_some(),
+            R::IsHostOfSource => true,
             // `self.attacking` keys by card id, so a card not on the battlefield
             // is never listed — this stays false there (Static Snare's affinity
             // "for each attacking creature" reads it from the affinity counter).

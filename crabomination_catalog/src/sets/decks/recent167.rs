@@ -388,7 +388,7 @@ pub fn marshals_pathcruiser() -> CardDefinition {
             mana_cost: cost(&[w(), u(), b(), r(), g()]),
             exhaust: true,
             effect: Effect::Seq(vec![
-                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature },
+                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature, until_eot: false },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,

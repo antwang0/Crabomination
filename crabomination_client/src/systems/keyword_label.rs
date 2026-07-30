@@ -83,6 +83,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Ward(_) => "Ward",
         Toxic(_) => "Tox",
         Poisonous(_) => "Psn",
+        // Modular N — the counters it carries (and hands off on death) are a
+        // real board read.
+        Modular(_) => "Mod",
         // Prowess — a noncreature spell can swing this creature's combat math,
         // so an opponent should weigh the controller's open cards before blocking.
         Prowess => "Prw",
@@ -343,7 +346,7 @@ fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
     }
     let n = match kw {
         Rampage(n) | Bushido(n) | Frenzy(n) | Annihilator(n) | Absorb(n) | Toxic(n)
-        | Poisonous(n) | CantBeBlockedExceptByN(n) | Crew(n) | Saddle(n) => *n,
+        | Poisonous(n) | CantBeBlockedExceptByN(n) | Crew(n) | Saddle(n) | Modular(n) => *n,
         // The power threshold in the evasion/blocker restrictions is a real
         // combat read — "Eva≤2" (Rust-Shield Rampager) vs "Eva≤3" gate
         // different blockers; "NoBlk≥4" says which attackers this can't stop.

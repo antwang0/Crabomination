@@ -28,6 +28,7 @@ pub fn emergent_haunting() -> CardDefinition {
                     Effect::AddCardTypeIndefinitely {
                         what: Selector::This,
                         card_type: CardType::Creature,
+                        until_eot: false,
                     },
                     Effect::SetBasePT {
                         what: Selector::This,

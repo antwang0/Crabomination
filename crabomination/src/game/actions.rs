@@ -11412,11 +11412,14 @@ impl GameState {
             // this creature").
             let needs_attached_to_source =
                 crate::game::requirement_mentions_attached_to_source(filter);
+            let needs_host_of_source = crate::game::requirement_mentions_host_of_source(filter);
+            let host = self.battlefield_find(card_id).and_then(|c| c.attached_to);
             let candidates: Vec<CardId> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.id != card_id && c.controller == p)
                 .filter(|c| !needs_attached_to_source || c.attached_to == Some(card_id))
+                .filter(|c| !needs_host_of_source || host == Some(c.id))
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                 .map(|c| c.id)
                 .collect();
@@ -11484,10 +11487,13 @@ impl GameState {
         let tap_other_pick: Option<CardId> = if let Some(filter) =
             ability.tap_other_filter.as_ref()
         {
+            let host = self.battlefield_find(card_id).and_then(|c| c.attached_to);
+            let needs_host_of_source = crate::game::requirement_mentions_host_of_source(filter);
             let candidates: Vec<CardId> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.id != card_id && c.controller == p && !c.tapped)
+                .filter(|c| !needs_host_of_source || host == Some(c.id))
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                 .map(|c| c.id)
                 .collect();

@@ -763,7 +763,7 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         R::WithAnyCounter | R::WithCounter(_) => true,
         R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
         | R::HasArtifactSubtype(_) | R::HasEnchantmentSubtype(_) | R::HasCardType(_)
-        | R::HasKeyword(_) | R::HasToxic | R::HasMutate => true,
+        | R::HasKeyword(_) | R::HasToxic | R::HasModular | R::HasMutate => true,
         // OtherThanSource is matched in `affects()` (which knows the source id),
         // so it's safe to route a filter containing it through CardMatch.
         R::OtherThanSource => true,
@@ -834,6 +834,7 @@ pub(crate) fn requirement_matches_card(
         R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
         R::HasKeyword(k) => def.keywords.contains(k),
         R::HasToxic => def.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Toxic(_))),
+        R::HasModular => def.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Modular(_))),
         R::HasMutate => def.mutate.is_some(),
         R::HasColor(c) => def
             .cost

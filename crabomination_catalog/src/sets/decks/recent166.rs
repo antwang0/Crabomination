@@ -357,7 +357,7 @@ pub fn invasion_submersible() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             exhaust: true,
             effect: Effect::Seq(vec![
-                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature },
+                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature, until_eot: false },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
