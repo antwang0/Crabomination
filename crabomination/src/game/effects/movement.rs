@@ -61,6 +61,23 @@ impl GameState {
         })
     }
 
+    /// CR 614.9 — the permanent `seat`'s *combat* damage is redirected to
+    /// (Turn the Tables), if any. Narrower than `damage_redirect_target`, which
+    /// also covers noncombat damage and permanents.
+    pub(crate) fn combat_damage_redirect_for(&self, seat: usize) -> Option<crate::card::CardId> {
+        self.combat_damage_redirect_this_turn
+            .iter()
+            .find(|(p, to)| *p == seat && self.battlefield_find(*to).is_some())
+            .map(|(_, to)| *to)
+    }
+
+    /// CR 615.7 — true while every point of damage `source` would deal is
+    /// prevented for the turn (Hallow, Burrenton Forge-Tender's chosen source).
+    pub(crate) fn source_damage_fully_prevented(&self, source: crate::card::CardId) -> bool {
+        !self.damage_cant_be_prevented_this_turn
+            && self.damage_prevented_sources.iter().any(|(s, _)| *s == source)
+    }
+
     /// CR 615.1 / 615.7 / 615.12 — apply prevention shields to a pending
     /// damage event aimed at `ent`. "Prevent all" shields zero the event;
     /// "prevent next N" shields soak up to N and then expire. The whole

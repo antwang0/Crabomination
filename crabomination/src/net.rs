@@ -270,6 +270,11 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// CR 609.4b — true while any permanent lets every player spend mana as
+    /// though it were mana of any colour (Mycosynth Lattice). Surfaced so UIs
+    /// can stop rendering coloured pips as hard requirements.
+    #[serde(default)]
+    pub spend_mana_as_any_color: bool,
     /// CR 615.1 — true while a "prevent all combat damage this turn" fog is
     /// active (Fog, Holy Day, Inspire Awe). Surfaced so UIs can warn that
     /// combat won't deal damage this turn. `#[serde(default)]` for back-compat.
@@ -740,6 +745,11 @@ pub struct PlayerView {
     /// Surfaced so UIs can show a full-immunity badge. `#[serde(default)]`.
     #[serde(default)]
     pub damage_fully_prevented: bool,
+    /// CR 614.9 — the permanent this player's incoming damage is redirected to
+    /// (Palisade Giant, Turn the Tables' combat-only redirect), with its name
+    /// for display. `None` when nothing is redirecting.
+    #[serde(default)]
+    pub damage_redirect_to: Option<(CardId, String)>,
     /// CR 700.5 — this player's devotion to each color, ordered W, U, B, R,
     /// G (the count of mana symbols of that color among the mana costs of
     /// permanents they control). Surfaced so UIs can show a devotion readout
@@ -1394,6 +1404,10 @@ pub struct PermanentView {
     /// chosen color). Empty when the shields soak any source.
     #[serde(default)]
     pub prevention_source_colors: Vec<crate::mana::Color>,
+    /// CR 615.7 — true while all damage this permanent would *deal* is
+    /// prevented for the turn (Hallow, Burrenton Forge-Tender's chosen source).
+    #[serde(default)]
+    pub damage_prevented_as_source: bool,
     /// True when a Kill-Suit Cultist-style shield will *destroy* this
     /// permanent the next time damage would be dealt to it (the damage is
     /// prevented but the creature dies). A danger badge, not protection.

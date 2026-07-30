@@ -98,6 +98,12 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Blanket damage immunity (CR 615 — Glacial Chasm) — a cool warding
         // blue so total prevention reads as a hard shield, not a partial one.
         StatChipKind::Shield => (Color::srgba(0.12, 0.22, 0.36, 1.0), theme::TEXT_PRIMARY),
+        // Damage redirection (CR 614.9) — an amber diversion, distinct from the
+        // blue prevention family: the damage still happens, elsewhere.
+        StatChipKind::Redirect => (Color::srgba(0.36, 0.26, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // Spend-as-any-colour (CR 609.4b) — a neutral pewter, matching the
+        // colorless mana pip: colour requirements have stopped mattering.
+        StatChipKind::AnyColorMana => (Color::srgba(0.30, 0.30, 0.33, 1.0), theme::TEXT_PRIMARY),
         // Player-level hexproof (CR 702.11 — Aegis, Leyline of Sanctity) — a
         // teal ward, distinct from the damage-immunity shield.
         StatChipKind::PlayerHexproof => (Color::srgba(0.10, 0.28, 0.28, 1.0), theme::TEXT_PRIMARY),
@@ -169,6 +175,11 @@ pub(super) enum StatChipKind {
     /// CR 606.3 — loyalty activations banked past the per-turn limit
     /// (The Chain Veil).
     Loyalty,
+    /// CR 614.9 — this seat's incoming damage lands on a permanent instead
+    /// (Palisade Giant, Turn the Tables).
+    Redirect,
+    /// CR 609.4b — mana is spendable as any colour (Mycosynth Lattice).
+    AnyColorMana,
 }
 
 /// Label for the land-drop chip (CR 305.2). `None` on the ordinary
@@ -981,9 +992,22 @@ pub fn update_player_stats_chips(
         if p.damage_fully_prevented {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Shield, "🛡 immune".to_string());
         }
+        // CR 614.9 — your incoming damage is landing somewhere else.
+        if let Some((_, name)) = &p.damage_redirect_to {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Redirect, format!("↪ dmg → {name}"));
+        }
         // CR 702.11 — player-level hexproof (Aegis, Leyline of Sanctity).
         if p.has_hexproof {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::PlayerHexproof, "◈ hexproof".to_string());
+        }
+        // CR 609.4b — a global permission; surface it once, on the viewer's row.
+        if cv.spend_mana_as_any_color {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::AnyColorMana,
+                "◆ any colour".to_string(),
+            );
         }
     });
 }
@@ -1278,6 +1302,10 @@ pub fn update_opponent_stats_rows(
                 // CR 615 — an opponent with blanket damage immunity (Glacial Chasm).
                 if p.damage_fully_prevented {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Shield, "🛡 immune".to_string());
+                }
+                // CR 614.9 — an opponent's damage is being redirected.
+                if let Some((_, name)) = &p.damage_redirect_to {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Redirect, format!("↪ dmg → {name}"));
                 }
                 // CR 702.11 — an opponent with player-level hexproof.
                 if p.has_hexproof {

@@ -453,6 +453,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     } else if p.has_prevention_shield {
         lines.push(format!("(warded: {})", prevention_summary(p.prevention_remaining, &p.prevention_source_colors)));
     }
+    // CR 615.7 — the deal-side shield: this permanent's own damage is off for
+    // the turn (Hallow, Burrenton Forge-Tender's chosen source).
+    if p.damage_prevented_as_source {
+        lines.push(String::from("(defanged: deals no damage this turn)"));
+    }
     if p.finality_counter_count > 0 || p.has_finality_counters {
         lines.push(String::from("(finality: exiles instead of going to graveyard)"));
     } else if p.dies_to_exile {
@@ -1391,6 +1396,7 @@ mod tests {
             dealt_damage_this_turn: false,
             has_shield_counters: false,
             has_prevention_shield: false,
+            damage_prevented_as_source: false,
             doomed_next_damage: false,
             goaded: false,
             monstrous: false,

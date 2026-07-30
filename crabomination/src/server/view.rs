@@ -115,6 +115,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
             .collect(),
         game_over: state.game_over,
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
+        spend_mana_as_any_color: state.spend_mana_as_any_color_active(),
         combat_damage_prevented_this_turn: state.prevent_combat_damage_this_turn,
         day_night: state.day_night.map(|dn| dn == crate::game::types::DayNight::Day),
         combat_preview: combat_preview(state),
@@ -531,6 +532,16 @@ fn project_player(
     let (prevention_remaining, prevention_source_colors) =
         summarize_prevention(state, PreventionTarget::Player(player_seat));
     let damage_fully_prevented = state.all_damage_to_player_prevented(player_seat);
+    // CR 614.9 — Palisade Giant / Turn the Tables: where this seat's incoming
+    // damage lands instead.
+    let damage_redirect_to = state
+        .combat_damage_redirect_for(player_seat)
+        .or_else(|| {
+            state.damage_redirect_target(crate::game::effects::EntityRef::Player(player_seat))
+        })
+        .and_then(|id| {
+            state.battlefield_find(id).map(|c| (id, c.definition.name.to_string()))
+        });
     // Coven — three or more controlled creatures with different (computed) powers.
     let coven_active = {
         let powers: std::collections::HashSet<i32> = state
@@ -716,6 +727,7 @@ fn project_player(
         prevention_remaining,
         prevention_source_colors,
         damage_fully_prevented,
+        damage_redirect_to,
         devotion,
         is_monarch,
         // CR 303.4a — Auras enchanting this player (Curses, Psychic Possession).
@@ -1225,6 +1237,7 @@ fn project_permanent(
         has_prevention_shield,
         prevention_remaining,
         prevention_source_colors,
+        damage_prevented_as_source: state.source_damage_fully_prevented(card.id),
         doomed_next_damage,
         goaded: !card.goaded_by.is_empty(),
         monstrous: card.monstrous,
@@ -2541,6 +2554,38 @@ mod tests {
         assert_eq!(bear_v.prevention_remaining, Some(2), "the next-2 shield's points");
         assert_eq!(v.players[0].prevention_remaining, None, "a blanket player fog");
         assert!(v.damage_cant_be_prevented_this_turn);
+    }
+
+    /// The Lattice permission and the combat-damage redirect surface per-view.
+    #[test]
+    fn lattice_permission_and_damage_redirect_surface() {
+        let mut state = two_player_game();
+        let v = project(&state, 0);
+        assert!(!v.spend_mana_as_any_color);
+        assert!(v.players[0].damage_redirect_to.is_none());
+        state.add_card_to_battlefield(1, catalog::mycosynth_lattice());
+        let wall = state.add_card_to_battlefield(1, catalog::grizzly_bears());
+        state.combat_damage_redirect_this_turn.push((0, wall));
+        let v = project(&state, 0);
+        assert!(v.spend_mana_as_any_color, "the Lattice is a global permission");
+        assert_eq!(
+            v.players[0].damage_redirect_to.as_ref().map(|(_, n)| n.as_str()),
+            Some("Grizzly Bears"),
+        );
+    }
+
+    /// A source whose damage is prevented for the turn reads as defanged.
+    #[test]
+    fn source_side_prevention_surfaces_on_the_permanent() {
+        let mut state = two_player_game();
+        let bear = state.add_card_to_battlefield(1, catalog::grizzly_bears());
+        state.damage_prevented_sources.push((bear, None));
+        let v = project(&state, 0);
+        assert!(v.battlefield.iter().find(|p| p.id == bear).unwrap().damage_prevented_as_source);
+        // CR 615.12 — with prevention off, the shield reports as inert.
+        state.damage_cant_be_prevented_this_turn = true;
+        let v = project(&state, 0);
+        assert!(!v.battlefield.iter().find(|p| p.id == bear).unwrap().damage_prevented_as_source);
     }
 
     /// A color-scoped shield (Avacyn) surfaces its restriction, and stacked
