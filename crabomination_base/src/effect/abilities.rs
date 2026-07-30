@@ -837,6 +837,11 @@ pub enum StaticEffect {
     /// clause also blanks the colour of cards in other zones, which nothing in
     /// the engine reads.
     GrantColorless { applies_to: Selector },
+    /// CR 704.7 — "If you would lose the game, instead shuffle your hand, your
+    /// graveyard, and all permanents you own into your library, then draw seven
+    /// cards and your life total becomes 20" (Lich's Mirror). One application
+    /// replaces every simultaneous loss state-based action.
+    ReplaceControllerLossWithReset,
     /// Death-Mask Duplicant — "as long as a card exiled with this creature has
     /// [keyword], this creature has [keyword]". Each entry in `keywords` is
     /// matched against the exiled cards' keywords by *variant*, so

@@ -6081,6 +6081,8 @@ static DECKS: &[Factory] = &[
     super::decks::pulse_of_the_dross,
     super::decks::shriveling_rot,
     super::decks::turn_the_tables,
+    super::decks::lichs_mirror,
+    super::decks::rusted_sentinel,
     super::decks::cartel_aristocrat,
     super::decks::bloodflow_connoisseur,
     super::decks::vampire_aristocrat,

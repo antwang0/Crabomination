@@ -2349,6 +2349,18 @@ impl GameState {
         }
     }
 
+    /// CR 616.1c / 616.1g — the "enters as a copy" replacement is applied
+    /// *before* the enters-tapped one, so the entrant enters tapped only if its
+    /// **copied** characteristics say so (Essence of the Wild's copy of Rusted
+    /// Sentinel loses the printed enters-tapped ability and enters untapped).
+    /// The engine applies enters-tapped first, so re-decide once a copy lands.
+    pub(crate) fn reapply_enters_tapped_after_copy(&mut self, card_id: CardId) {
+        if let Some(c) = self.battlefield_find_mut(card_id) {
+            c.tapped = false;
+        }
+        self.apply_enters_tapped_replacement(card_id);
+    }
+
     /// CR 704.5g (Zilortha) — true iff some active `LethalDamageByPower` static
     /// matches the creature `card_id`, so its lethal-damage threshold is power
     /// rather than toughness.

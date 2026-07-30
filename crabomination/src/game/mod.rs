@@ -9360,6 +9360,59 @@ impl GameState {
     /// instead" static (Laboratory Maniac, Jace, Wielder of Mysteries):
     /// then every other player is eliminated and the SBA pass promotes the
     /// win.
+    /// CR 704.7 — Lich's Mirror: replace `p`'s loss with a full reset (hand,
+    /// graveyard and every permanent they own shuffled into their library,
+    /// draw seven, life becomes 20). Returns true when a replacement applied;
+    /// a single application covers every loss SBA that fired at once. The
+    /// Mirror itself is among the shuffled permanents, so it is consumed.
+    pub(crate) fn apply_loss_reset(&mut self, p: usize) -> bool {
+        use crate::effect::StaticEffect;
+        use rand::seq::SliceRandom;
+        let has = self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::ReplaceControllerLossWithReset))
+        });
+        if !has {
+            return false;
+        }
+        let mut into_library: Vec<crate::card::CardInstance> =
+            std::mem::take(&mut *self.players[p].hand);
+        into_library.extend(std::mem::take(&mut *self.players[p].graveyard));
+        // Tokens cease to exist rather than joining the library (CR 111.7).
+        let owned: Vec<CardId> =
+            self.battlefield.iter().filter(|c| c.owner == p).map(|c| c.id).collect();
+        for id in owned {
+            if let Some(idx) = self.battlefield.iter().position(|c| c.id == id) {
+                let card = self.battlefield.remove(idx);
+                if !card.is_token {
+                    into_library.push(card);
+                }
+            }
+        }
+        // CR 122.2 — counters cease to exist on the zone change.
+        for card in &mut into_library {
+            card.counters.clear();
+            card.keyword_counters.clear();
+            card.controller = card.owner;
+            card.tapped = false;
+            card.damage = 0;
+            card.attached_to = None;
+        }
+        self.players[p].library.extend(into_library);
+        self.players[p].library.shuffle(&mut rand::rng());
+        let mut events = Vec::new();
+        for _ in 0..7 {
+            self.draw_one(p, &mut events);
+        }
+        self.players[p].life = 20;
+        self.players[p].poison_counters = 0;
+        self.commander_damage.retain(|(victim, _), _| *victim != p);
+        true
+    }
+
     pub fn lose_to_empty_draw(&mut self, p: usize) {
         let wins = self.battlefield.iter().any(|c| {
             c.controller == p
@@ -9384,7 +9437,7 @@ impl GameState {
                     self.players[idx].loss_cause.get_or_insert(LossCause::Other);
                 }
             }
-        } else if !self.player_cant_lose_game(p) {
+        } else if !self.player_cant_lose_game(p) && !self.apply_loss_reset(p) {
             self.players[p].eliminated = true;
             self.players[p].loss_cause.get_or_insert(LossCause::Decked);
         }
@@ -14935,6 +14988,9 @@ fn static_effect_to_effects(
             // PlayersMaySpendManaAsAnyColor — read by the payment funnel via
             // `relax_cost_colors` (Mycosynth Lattice); no layer effect.
             | StaticEffect::PlayersMaySpendManaAsAnyColor
+            // ReplaceControllerLossWithReset — read by the loss SBA via
+            // `apply_loss_reset` (Lich's Mirror); no layer effect.
+            | StaticEffect::ReplaceControllerLossWithReset
             // ArtifactActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Collector Ouphe); no layer effect.
             | StaticEffect::ArtifactActivatedAbilitiesLocked

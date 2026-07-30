@@ -4525,6 +4525,20 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   (704.5x via `defeat_battle`). 6 MOM Invasions in `decks::mom`. ⏳ multiplayer
   protector choice.
 
+- ✅ **CR 609.4b — "spend mana as though it were mana of any color"** —
+  `StaticEffect::PlayersMaySpendManaAsAnyColor` (Mycosynth Lattice) relaxes a
+  cost's coloured/hybrid pips to generic at the payment funnel
+  (`GameState::relax_cost_colors`, mirrored in the bot's affordability probe);
+  the printed cost and the mana actually spent are unchanged
+  (`cr_recent42::cr_609_4b_*`).
+- 🟡 **CR 616 — Interaction of Replacement and/or Prevention Effects** —
+  616.1c/616.1g ✅: the enters-as-a-copy replacement outranks the enters-tapped
+  one, so tappedness is re-decided against the copied characteristics
+  (`reapply_enters_tapped_after_copy`; Clone of Rusted Sentinel enters tapped —
+  `cr_recent42::cr_616_1c_*`). Remaining: 616.1a self-replacement priority, and
+  the 616.1e player *choice* of which applicable replacement to apply (the
+  engine applies them in a fixed order).
+
 ### Partial (🟡) — remaining gap noted
 - ✅ **CR 702.43 — Modular.** `Keyword::Modular(N)` is a real marker keyword
   alongside `enters_with_counters` + `shortcut::modular_dies()`;
@@ -4559,8 +4573,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `cr_704_5g_zero_toughness_creature_dies`). Battle-with-no-defense-counters
   defeat ✅ (704.5x via `defeat_battle`, `tests/mom.rs`). Speed SBA ✅ (704.5z —
   `check_state_based_actions` seeds speed 1 for engines controllers; test
-  `cr_704_5z_engines_seed_speed_sba`). Dungeon SBA remains; multi-SBA
-  "collapse into one replacement" (704.7).
+  `cr_704_5z_engines_seed_speed_sba`). Multi-SBA "collapse into one
+  replacement" ✅ (704.7 — `StaticEffect::ReplaceControllerLossWithReset` +
+  `GameState::apply_loss_reset`; Lich's Mirror replaces a life *and* poison
+  loss once, and covers the draw-from-empty loss too; `cr_recent42::cr_704_7_*`).
+  Dungeon SBA remains.
 - 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3). (EOT keyword grants now join the walk timestamped — audit P1 row closed. Static keyword-grant scopes now route a `ToughnessGreaterThanPower` leaf through the `CardMatch` dynamic path — read against printed P/T + counters per the `CardMatchPowerGated` approximation — so Tapestry Warden / Ancient Lumberknot grant their keyword only to your T>P creatures.) Layer-4 additive card-type static ✅ (`StaticEffect::AddCardTypeToMatching` — "nontoken artifacts you control are lands in addition to their other types", Toph, the First Metalbender; `toph_metalbender_artifacts_are_lands_and_end_step_earthbend`). **CR 613.2 computed-subtype consistency ✅** — `HasArtifactSubtype`/`HasLandType`/`HasSupertype` requirements now read a battlefield permanent's *computed* (post-layer) subtypes/supertypes, matching card-type and creature-type checks, so continuous subtype grants (Sugar Coat's Food, Vraska's Treasure, Song of the Dryads' Forest, the Ring-bearer's Legendary) are seen by aura-legality SBAs and filters (`blb::sugar_coat_makes_a_food`; fixed the Alpine Moon test that had leaned on the printed-subtype read). `EquipBonus.set_artifact_types` installs the layer-4 artifact-subtype override.
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b). 208.3 noncreature P/T now observable for `*`-power Vehicles: `DynamicPt::LandsControlledPower` sets power off a count while toughness stays printed, `computed_permanent()` reports it on a non-crewed (noncreature) Vehicle (Lumbering Worldwagon `*`/4; test `lumbering_worldwagon_power_tracks_lands`). Conditional base-P/T set ✅ (`StaticEffect::SetBasePtIf` — live layer-7b SetPowerToughness gated on a predicate; counters/+N stack on top per 613.7c/f — Snowmelt Stag "5/2 during your turn"; `snowmelt_stag_*`). CR 604.3 CDAs: `DynamicPt::LandsControlledPlusLandsInControllerGraveyard` (Multani, Yavimaya's Avatar), `DynamicPt::CardTypesInOpponentsGraveyards` (Nighthawk Scavenger), `DynamicPt::InstantsSorceriesInControllerGraveyard` (Enigma Drake), `DynamicPt::CreaturesControlledPower` (Suki `*`/4), `DynamicPt::PlusCountersOnLandsControlledPower` (Toph `*`/3), `DynamicPt::NoncreatureNonlandCardsInControllerGraveyard` (Dragonfly Swarm `*`/3), `DynamicPt::ColorsAmongAlliesControlledPower` (Earthen Ally `*`/2), `DynamicPt::EnchantmentsInPlay` (Yavimaya Enchantress `2/2`, +1/+1 per enchantment in play — `tests/recent72.rs`), `DynamicPt::ForestsInPlay` (Traproot Kami `0/*`, toughness = Forests on the battlefield — `tests/recent100.rs`), all live-recomputed by `computed_permanent()`; `tests/recent47.rs`, `tests/recent50.rs`, `tests/tla.rs`.
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). 119.7 rest-of-game lifegain lock ✅ (`Effect::LifeGainLockGame` sets the permanent `Player.cannot_gain_life` flag, distinct from the turn-scoped lock — Screaming Nemesis via `Selector::Target(0)`; test `screaming_nemesis_redirects_damage`). Life-total-threshold statics ✅ (`Predicate::PlayerLifeAtLeast` gates a live self-anthem — Angel of Vitality's +2/+2 at 25+ life; `cr_119_*`, `tests/recent17.rs`). Life-vs-*starting*-total statics ✅ (`Predicate::PlayerLifeAtLeastAboveStarting` gates tiered self-pumps — Elenda, Saint of Dusk +1/+1/menace above starting, +5/+5 more at 10+ above; `elenda_scales_with_life`). Exact-life gate ✅ (`Predicate::PlayerLifeExactly` — Hidetsugu's Second Rite deals 10 only if the targeted player is at exactly 10; `hidetsugus_second_rite_needs_exactly_ten`). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. (Audit follow-up closed: every `LifeGained` emitter now uses `adjust_life_applied`, and `SetLifeTotal`/`ExchangeLifeTotals` route through the funnel — so a can't-gain-life lock on the player who would gain blocks their half of an exchange while the other still loses; test `cr_119_7_exchange_life_totals_respects_cant_gain_life`.)

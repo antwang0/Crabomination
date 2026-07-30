@@ -1237,6 +1237,10 @@ impl GameState {
                     // Applied here, before the first SBA sweep, so a 0/0
                     // copier (Clone, Phantasmal Image) never dies as a 0/0.
                     if self.apply_enters_as_copy(card_id, caster, &mut events) {
+                        // CR 616.1c/616.1g — the copy replacement outranks the
+                        // enters-tapped one, so re-decide tappedness against the
+                        // copied characteristics.
+                        self.reapply_enters_tapped_after_copy(card_id);
                         // CR 707.5 — the copy's own ETB triggers fire. The
                         // list collected above was the copier's (usually
                         // empty); re-read it from the post-copy definition.
@@ -3753,7 +3757,9 @@ impl GameState {
             // CR 104.3d — a player who can't lose (Angel's Grace, Platinum
             // Angel, an opponent's Abyssal Persecutor) skips the loss SBAs;
             // the qualifying state (life ≤ 0, poison ≥ 10) persists.
-            if lost && !self.player_cant_lose_game(i) {
+            // CR 704.7 — a single loss replacement (Lich's Mirror) covers
+            // every SBA that would end the game for this player at once.
+            if lost && !self.player_cant_lose_game(i) && !self.apply_loss_reset(i) {
                 // Stamp the authoritative cause most-specific-first, matching
                 // the SBA order that would fire (life, then poison, then
                 // commander damage — CR 704.5a/c/v).
